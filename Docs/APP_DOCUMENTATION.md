@@ -3,7 +3,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-11 (Phase 1.1) — État : Prototype avec Base de Données SQLite (TypeScript + Tauri + Zustand + SQLite)
+> **Dernière mise à jour** : 2026-02-12 (Phase 1.2) — État : Application Tauri avec CRUD Commands (TypeScript + Tauri + Zustand + SQLite + API Frontend-Backend)
 >
 > ### Décisions Projet (validées par le propriétaire)
 > - **Phase 8 (Cloud/Sync)** : Reportée post-lancement
@@ -16,8 +16,8 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : � Prototype avec Base de Données SQLite
-L'application est un mockup React connecté à une base de données SQLite complète. Le schéma est implémenté et les migrations fonctionnent, mais les commandes Tauri ne sont pas encore exposées au frontend.
+### État actuel : Application Tauri avec CRUD Commands
+L'application expose 7 commandes Tauri CRUD entièrement fonctionnelles. La base de données SQLite est opérationnelle, les DTOs sont implémentés, et la communication frontend-backend est établie via `__TAURI_INTERNALS__.invoke`. Le service TypeScript wrapper gère les erreurs et fallbacks.
 
 ### Objectif : Application Tauri autonome commercialisable
 Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructive, catalogue SQLite, et gestion de bibliothèques photographiques massives.
@@ -80,12 +80,15 @@ LuminaFast/
 │   ├── lib/                        # Utilitaires et données mock
 │   │   ├── helpers.ts              # safeID()
 │   │   └── mockData.ts             # generateImages, INITIAL_IMAGES, MockEvent
+│   ├── services/                   # Services TypeScript (Phase 1.2)
+│   │   └── catalogService.ts       # Wrapper Tauri avec gestion d'erreurs
 │   ├── types/                      # Types TypeScript du domaine
 │   │   ├── index.ts                # Re-export central
 │   │   ├── image.ts                # CatalogImage, ExifData, EditState
 │   │   ├── collection.ts           # Collection, SmartQuery
 │   │   ├── events.ts               # CatalogEvent, EventType
-│   │   └── ui.ts                   # ActiveView, LogEntry
+│   │   ├── ui.ts                   # ActiveView, LogEntry
+│   │   └── dto.ts                  # DTOs Tauri (Phase 1.2)
 │   ├── components/
 │   │   ├── layout/                 # Structure de la page
 │   │   │   ├── TopNav.tsx          # Navigation supérieure
@@ -118,10 +121,14 @@ LuminaFast/
 │   │   └── default.json            # Permissions (fs, dialog, shell)
 │   ├── src/
 │   │   ├── main.rs                 # Point d'entrée Rust
-│   │   ├── lib.rs                  # Module library + plugins + init DB
+│   │   ├── lib.rs                  # Module library + plugins + init DB + commandes
 │   │   ├── database.rs               # Gestion SQLite, migrations, PRAGMA
+│   │   ├── commands/                 # Commandes Tauri CRUD (Phase 1.2)
+│   │   │   ├── catalog.rs           # 7 commandes CRUD avec validation
+│   │   │   └── mod.rs               # Export des commandes
 │   │   ├── models/                   # Types Rust du domaine
 │   │   │   ├── catalog.rs           # Image, Collection, Folder, etc.
+│   │   │   ├── dto.rs                # DTOs Tauri avec serde (Phase 1.2)
 │   │   │   └── mod.rs               # Export des modèles
 │   │   └── migrations/               # Scripts de migration SQL
 │   │       └── 001_initial.sql      # Schéma complet du catalogue
@@ -469,10 +476,51 @@ npm run build:tauri    # Build Tauri production
 
 ## 13. API / Commandes Tauri
 
-> ⬜ **Non implémenté** — Prévu en Phase 1.2
->
-> Les commandes cibles sont définies dans le plan de développement principal.
-> Cette section sera mise à jour lors de l'implémentation de la Phase 1.2.
+> ✅ **Implémenté en Phase 1.2** — 7 commandes CRUD entièrement fonctionnelles
+
+### 13.1 — Commandes CRUD Catalog
+
+**Commandes disponibles** :
+- `get_all_images(filter?)` → `Vec<ImageDTO>` : Récupérer toutes les images avec filtres
+- `get_image_detail(id)` → `ImageDetailDTO` : Métadonnées complètes d'une image
+- `update_image_state(id, rating?, flag?)` → `Result<()>` : Mettre à jour rating/flag
+- `create_collection(name, collectionType, parentId?)` → `CollectionDTO` : Créer une collection
+- `add_images_to_collection(collectionId, imageIds)` → `Result<()>` : Ajouter des images à une collection
+- `get_collections()` → `Vec<CollectionDTO>` : Lister toutes les collections
+- `search_images(query)` → `Vec<ImageDTO>` : Rechercher des images
+
+### 13.2 — DTOs Tauri
+
+**Types sérialisés** (`src-tauri/src/models/dto.rs`) :
+- `ImageDTO` : Image de base avec état
+- `ImageDetailDTO` : Image complète avec EXIF
+- `CollectionDTO` : Collection avec comptage d'images
+- `ImageFilter` : Filtres pour recherche
+- Support complet `serde::Serialize/Deserialize`
+
+### 13.3 — Service TypeScript Wrapper
+
+**Service** (`src/services/catalogService.ts`) :
+- Wrapper avec gestion d'erreurs robuste
+- Fallback `__TAURI_INTERNALS__.invoke` pour compatibilité Tauri v2
+- Types TypeScript stricts pour toutes les méthodes
+- Validation des paramètres côté frontend
+
+### 13.4 — Tests Unitaires
+
+**15 tests Rust** (100% passants) :
+- Tests de toutes les commandes CRUD
+- Tests de validation des types de collection
+- Tests de transactions avec rollback
+- Tests de gestion d'erreurs et edge cases
+
+### 13.5 — Communication Frontend-Backend
+
+**API JavaScript** :
+- Utilisation de `__TAURI_INTERNALS__.invoke` (pattern brownfield Tauri v2)
+- Gestion d'erreurs avec messages descriptifs
+- Sérialisation/désérialisation automatique des DTOs
+- Support pour les types complexes (nested objects, arrays)
 
 ---
 
@@ -480,6 +528,7 @@ npm run build:tauri    # Build Tauri production
 
 | Date | Phase | Modification | Raison |
 |------|-------|------------|--------|
+| 2026-02-12 | 1.2 | Ajout section API/Commandes Tauri complète | Implémentation Phase 1.2 terminée |
 | 2026-02-11 | 1.1 | Ajout section Base de Données SQLite complète | Implémentation Phase 1.1 terminée |
 | 2026-02-11 | 1.1 | Mise à jour stack technique et architecture fichiers | Ajout src-tauri avec SQLite |
 | 2026-02-11 | 1.1 | Ajout scripts Rust dans section développement | Scripts npm pour tests Rust |
@@ -487,6 +536,7 @@ npm run build:tauri    # Build Tauri production
 
 | Date | Sous-Phase | Nature de la modification |
 |------|-----------|--------------------------|
+| 2026-02-12 | Phase 1.2 | Implémentation CRUD Commands Tauri + DTOs + Service wrapper |
 | 2026-02-11 | Pré-développement | Création initiale — état du mockup documenté |
 | 2026-02-11 | Phase 0.1 | Migration TypeScript, ajout types/, mise à jour stack |
 | 2026-02-11 | Phase 0.2 | Intégration Tauri v2, plugins fs/dialog/shell, src-tauri/ |

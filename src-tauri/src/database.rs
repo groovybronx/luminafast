@@ -46,6 +46,22 @@ impl Database {
         Ok(db)
     }
     
+    /// Get reference to the underlying SQLite connection
+    pub fn connection(&self) -> &Connection {
+        &self.connection
+    }
+    
+    /// Execute a transaction with the given function
+    pub fn execute_transaction<F, R>(&mut self, f: F) -> DatabaseResult<R>
+    where
+        F: FnOnce(&rusqlite::Transaction) -> DatabaseResult<R>,
+    {
+        let tx = self.connection.transaction()?;
+        let result = f(&tx)?;
+        tx.commit()?;
+        Ok(result)
+    }
+    
     /// Initialize database schema (run migrations)
     pub fn initialize(&mut self) -> DatabaseResult<()> {
         // Create migrations table if not exists
@@ -146,11 +162,6 @@ impl Database {
         
         log::info!("Applied migration: {} ({} statements)", version, statements_executed);
         Ok(())
-    }
-    
-    /// Get database connection for direct queries (used in tests)
-    pub fn connection(&self) -> &Connection {
-        &self.connection
     }
 }
 

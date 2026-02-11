@@ -30,3 +30,14 @@ export type {
   LogEntry,
   SliderParam,
 } from './ui';
+
+// --- Phase 1.2: Tauri Command DTOs ---
+export type {
+  ImageDTO,
+  ImageDetailDTO,
+  ExifMetadataDTO,
+  CollectionDTO,
+  CreateCollectionDTO,
+  ImageFilter,
+  CommandResult,
+} from './dto';

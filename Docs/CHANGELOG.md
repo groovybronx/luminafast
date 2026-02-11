@@ -14,8 +14,8 @@
 | 0 | 0.3 | Décomposition Modulaire Frontend | ✅ Complétée | 2026-02-11 | Cascade |
 | 0 | 0.4 | State Management (Zustand) | ✅ Complétée | 2026-02-11 | Cascade |
 | 0 | 0.5 | Pipeline CI & Linting | ✅ Complétée | 2026-02-11 | Cascade |
-| 1 | 1.1 | Schéma SQLite du Catalogue | ✅ Complétée | 2026-02-11 | Cascade |
-| 1 | 1.2 | Tauri Commands CRUD | ⬜ En attente | — | — |
+| Phase 1 | 1.1 | Schéma SQLite du Catalogue | ✅ Complétée | 2026-02-11 | Cascade |
+| 1 | 1.2 | Tauri Commands CRUD | ✅ Complétée | 2026-02-11 | Cascade |
 | 1 | 1.3 | Service BLAKE3 (CAS) | ⬜ En attente | — | — |
 | 1 | 1.4 | Gestion du Système de Fichiers | ⬜ En attente | — | — |
 | 2 | 2.1 | Discovery & Ingestion de Fichiers | ⬜ En attente | — | — |
@@ -374,18 +374,6 @@ Intégration complète de Tauri v2 dans le projet React+Vite+TypeScript. L'UI mo
 - [Toute décision prise pendant la sous-phase avec justification]
 
 #### Notes / Observations
-- [Informations utiles pour les phases suivantes]
-```
-
----
-
-## Phase 1.1 — Schéma SQLite du Catalogue ✅
-**Date** : 2026-02-11  
-**Agent** : Cascade  
-**Durée** : ~2 heures
-
-### Objectifs
-- Implémenter le schéma SQLite complet selon les spécifications du plan
 - Configurer les PRAGMA SQLite pour performance optimale
 - Créer les modèles Rust correspondants
 - Mettre en place le système de migrations
@@ -470,7 +458,7 @@ Phase 1.2 — Tauri Commands CRUD (exposer les commandes Rust via IPC)
 ## Statistiques du Projet
 
 - **Sous-phases totales** : 38
-- **Complétées** : 6 / 38 (15.8%)
+- **Complétées** : 7 / 38 (18.4%)
 - **En cours** : 0
 - **Bloquées** : 0
 - **Dernière mise à jour** : 2026-02-11

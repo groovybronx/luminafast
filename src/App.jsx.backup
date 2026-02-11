@@ -1,0 +1,767 @@
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { 
+  Library, Sliders, Database, Activity, HardDrive, 
+  Search, Filter, ChevronRight, ChevronDown, 
+  Camera, Aperture, Clock, MapPin, Hash, Check, X,
+  Maximize2, Grid, List, Zap, Layers, Image as ImageIcon,
+  History, RotateCcw, Import, Download, MoreHorizontal,
+  Monitor, Settings, ChevronLeft
+} from 'lucide-react';
+
+// --- STYLES ---
+const GlobalStyles = () => (
+  <style>{`
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #09090b; 
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #27272a; 
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #3f3f46; 
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  `}</style>
+);
+
+// --- HELPERS ---
+
+// Safe ID generator (replacement for crypto.randomUUID for better compatibility)
+const safeID = () => Math.random().toString(36).substring(2, 11);
+
+// Generate a deterministic hash based on ID (Simulating BLAKE3)
+const generateHash = (id) => `b3-${id.toString(16).padStart(8, '0')}-af92`;
+
+// Generate mock images
+const generateImages = (count, startId = 0) => {
+  return Array.from({ length: count }, (_, i) => {
+    const id = startId + i;
+    return {
+      id: id,
+      hash: generateHash(id),
+      filename: `DSCF_${1000 + id}.RAF`,
+      width: 6240,
+      height: 4160,
+      capturedAt: new Date(2024, 0, 1 + (i % 30)).toISOString(),
+      exif: {
+        iso: [160, 200, 400, 800, 1600, 3200][id % 6],
+        fstop: [1.4, 2.0, 2.8, 4.0, 5.6, 8.0, 11][id % 7],
+        shutter: [`1/${125 + (id * 10)}`, "1/500", "1/2000", "1/50"][id % 4],
+        lens: ["35mm f/1.4", "23mm f/2", "56mm f/1.2"][id % 3],
+        camera: "Fujifilm X-T5"
+      },
+      state: {
+        rating: 0,
+        flag: null,
+        edits: {
+          exposure: 0,
+          contrast: 0,
+          highlights: 0,
+          shadows: 0,
+          temp: 5500,
+          tint: 0
+        }
+      },
+      sizeOnDisk: "24.5 MB",
+      previewStatus: "Smart Preview (Lossy DNG)"
+    };
+  });
+};
+
+const INITIAL_IMAGES = generateImages(48);
+
+// --- COMPONENTS ---
+
+const ArchitectureMonitor = ({ logs }) => {
+  const scrollRef = useRef(null);
+  
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [logs]);
+
+  return (
+    <div className="fixed bottom-4 right-4 w-80 bg-zinc-950/95 backdrop-blur border border-zinc-800 rounded-lg shadow-2xl overflow-hidden text-[10px] font-mono z-50 transition-opacity hover:opacity-100 opacity-80 pointer-events-none">
+      <div className="bg-zinc-900 px-3 py-1.5 border-b border-zinc-800 flex justify-between items-center">
+        <span className="text-zinc-400 font-bold flex items-center gap-2">
+          <Activity size={12} className="text-emerald-500" />
+          KERNEL MONITOR
+        </span>
+        <span className="text-zinc-600">v1.0.1</span>
+      </div>
+      <div ref={scrollRef} className="h-24 overflow-y-auto p-2 space-y-1 bg-black/50 custom-scrollbar pointer-events-auto">
+        {logs.map((log, i) => (
+          <div key={i} className="flex gap-2">
+            <span className="text-zinc-600 shrink-0 opacity-50">[{log.time}]</span>
+            <span className={`${log.color}`}>{log.message}</span>
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-3 divide-x divide-zinc-800 border-t border-zinc-800 bg-zinc-900/50">
+        <div className="p-1.5 text-center">
+          <div className="text-zinc-600 text-[9px]">WRITE</div>
+          <div className="text-blue-500 font-bold">SQLite</div>
+        </div>
+        <div className="p-1.5 text-center">
+          <div className="text-zinc-600 text-[9px]">READ</div>
+          <div className="text-amber-500 font-bold">DuckDB</div>
+        </div>
+        <div className="p-1.5 text-center">
+          <div className="text-zinc-600 text-[9px]">HASH</div>
+          <div className="text-emerald-500 font-bold">BLAKE3</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const TopMenu = () => (
+    <div className="h-8 bg-zinc-950 flex items-center px-2 border-b border-black text-xs select-none shrink-0">
+        <div className="flex gap-4 text-zinc-400">
+            <span className="hover:text-white cursor-pointer">File</span>
+            <span className="hover:text-white cursor-pointer">Edit</span>
+            <span className="hover:text-white cursor-pointer">Library</span>
+            <span className="hover:text-white cursor-pointer">Photo</span>
+            <span className="hover:text-white cursor-pointer">Metadata</span>
+            <span className="hover:text-white cursor-pointer">View</span>
+            <span className="hover:text-white cursor-pointer">Window</span>
+            <span className="hover:text-white cursor-pointer">Help</span>
+        </div>
+        <div className="ml-auto text-zinc-600 flex items-center gap-2">
+            <Monitor size={12} />
+            <span>GPU Acceleration: Active</span>
+        </div>
+    </div>
+);
+
+const Histogram = () => {
+  const bars = useMemo(() => 
+    Array.from({ length: 40 }, (_, i) => ({
+      id: i,
+      height: Math.random() * 80 + 10
+    })), []
+  );
+
+  return (
+    <div className="h-24 bg-zinc-900 rounded border border-zinc-800 relative overflow-hidden flex items-end px-1 gap-[1px]">
+      {bars.map((bar) => (
+        <div 
+          key={bar.id} 
+          className="flex-1 bg-zinc-700 opacity-50 hover:opacity-80 transition-opacity" 
+          style={{ height: `${bar.height}%` }}
+        ></div>
+      ))}
+      <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/20 to-transparent pointer-events-none"></div>
+      <div className="absolute top-1 left-1 text-[9px] text-zinc-500 font-mono">
+        ISO 200 | 35mm | f/2.8
+      </div>
+    </div>
+  );
+};
+
+const ImportModal = ({ onClose, onImport }) => {
+    const [progress, setProgress] = useState(0);
+    const [stage, setStage] = useState('Scanning');
+    const importTriggered = useRef(false);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setProgress(prev => {
+                if (prev >= 100) {
+                    clearInterval(interval);
+                    if (!importTriggered.current) {
+                        importTriggered.current = true;
+                        setStage('Complete');
+                        setTimeout(onImport, 500);
+                    }
+                    return 100;
+                }
+                
+                const next = prev + 4; // Faster simulation
+                if (next > 30) setStage('Hashing (BLAKE3)');
+                if (next > 70) setStage('Generating Previews');
+                
+                return next;
+            });
+        }, 50);
+        return () => clearInterval(interval);
+    }, [onImport]);
+
+    return (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center">
+            <div className="bg-zinc-900 border border-zinc-700 w-[500px] p-6 rounded-lg shadow-2xl">
+                <h3 className="text-zinc-200 font-bold mb-4 flex items-center gap-2">
+                    <Import size={18} /> Import from Device
+                </h3>
+                <div className="mb-2 flex justify-between text-xs text-zinc-400">
+                    <span>{stage}...</span>
+                    <span>{Math.min(100, progress)}%</span>
+                </div>
+                <div className="h-2 bg-zinc-800 rounded-full overflow-hidden mb-6">
+                    <div 
+                        className="h-full bg-blue-500 transition-all duration-75"
+                        style={{ width: `${progress}%` }}
+                    />
+                </div>
+                <div className="space-y-2 text-xs text-zinc-500 font-mono border-t border-zinc-800 pt-4">
+                    <div className="flex justify-between">
+                        <span>Source:</span>
+                        <span className="text-zinc-300">/Volumes/EOS_DIGITAL/DCIM</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span>Strategy:</span>
+                        <span className="text-zinc-300">Copy as DNG</span>
+                    </div>
+                     <div className="flex justify-between">
+                        <span>Previews:</span>
+                        <span className="text-zinc-300">Embedded & Sidecar</span>
+                    </div>
+                </div>
+                <button onClick={onClose} className="mt-6 w-full py-2 bg-zinc-800 hover:bg-zinc-700 rounded text-sm text-zinc-300">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// --- SUB-VIEWS ---
+
+const LibraryGrid = ({ filteredImages, selection, toggleSelection, thumbnailSize, setActiveView }) => (
+  <div className="flex-1 overflow-y-auto p-4 bg-zinc-950 custom-scrollbar" id="grid-container">
+    <div 
+      className="grid gap-4"
+      style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${100 + (thumbnailSize * 30)}px, 1fr))` }}
+    >
+      {filteredImages.map((img) => {
+        const isSelected = selection.includes(img.id);
+        return (
+          <div 
+            key={img.id}
+            onClick={(e) => toggleSelection(img.id, e.shiftKey || e.metaKey)}
+            onDoubleClick={() => setActiveView('loupe')}
+            className={`
+              group relative aspect-[3/2] bg-zinc-900 rounded overflow-hidden border transition-all duration-75 select-none
+              ${isSelected ? 'border-zinc-300 ring-1 ring-zinc-300' : 'border-zinc-800 hover:border-zinc-600'}
+            `}
+          >
+            <div 
+              className="w-full h-full flex items-center justify-center relative"
+              style={{ backgroundColor: `hsl(${img.id * 10}, 10%, 20%)` }}
+            >
+              <ImageIcon size={32} className="opacity-10 text-white" />
+              
+              <div className="absolute top-2 left-2 flex gap-1">
+                 {img.state.flag === 'pick' && <div className="w-2 h-2 rounded-full bg-white shadow-sm border border-black/20"></div>}
+                 {img.state.flag === 'reject' && <div className="w-2 h-2 rounded-full bg-red-500 shadow-sm border border-black/20"></div>}
+              </div>
+              <div className="absolute bottom-2 left-2 flex gap-0.5 text-yellow-500">
+                  {img.state.rating > 0 && Array(img.state.rating).fill(0).map((_,i) => <span key={i} className="text-[10px] drop-shadow-md">★</span>)}
+              </div>
+            </div>
+
+            <div className="absolute bottom-0 inset-x-0 bg-zinc-900/90 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity border-t border-zinc-800">
+              <div className="text-[10px] text-zinc-300 font-mono truncate">{img.filename}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+    <div className="h-32 text-center text-zinc-700 pt-10 text-xs font-mono">
+      {filteredImages.length} Photos • 42.1 GB
+    </div>
+  </div>
+);
+
+const LoupeView = ({ images, selection }) => {
+  const activeImg = images.find(i => i.id === selection[0]);
+  if (!activeImg) return <div className="flex-1 bg-zinc-950"></div>;
+
+  return (
+      <div className="flex-1 flex items-center justify-center bg-zinc-950 relative overflow-hidden">
+           <div 
+           className="w-full h-full max-w-[90%] max-h-[90%] shadow-2xl relative transition-all duration-75 flex items-center justify-center"
+           style={{
+               backgroundColor: `hsl(${activeImg.id * 10}, ${10 + (activeImg.state.edits.contrast/5)}%, ${20 + (activeImg.state.edits.exposure/5)}%)`
+           }}
+         >
+         <span className="text-white/10 font-black text-6xl uppercase tracking-widest">
+            RAW Preview
+         </span>
+         <div className="absolute top-4 left-4 bg-black/50 backdrop-blur px-2 py-1 rounded text-xs font-mono text-zinc-400">
+            {activeImg.filename}
+         </div>
+       </div>
+      </div>
+  );
+};
+
+const DevelopView = ({ images, selection }) => {
+  const activeImg = images.find(i => i.id === selection[0]);
+  if (!activeImg) return <div className="flex-1 flex items-center justify-center text-zinc-500">No Image Selected</div>;
+
+  return (
+    <div className="flex-1 flex bg-zinc-950 overflow-hidden relative">
+      <div className="flex-1 flex items-center justify-center p-8 relative">
+         <div 
+           className="w-full max-w-4xl aspect-[3/2] shadow-2xl relative transition-all duration-75"
+           style={{
+               backgroundColor: `hsl(${activeImg.id * 10}, ${10 + (activeImg.state.edits.contrast/5)}%, ${20 + (activeImg.state.edits.exposure/5)}%)`
+           }}
+         >
+         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span className="text-white/10 font-black text-6xl uppercase tracking-widest rotate-[-15deg]">
+                Lumina RAW
+            </span>
+         </div>
+         <div className="absolute top-4 left-4 font-mono text-[10px] text-green-500/80 bg-black/60 px-2 py-1 rounded backdrop-blur-sm border border-green-900/30">
+            BLAKE3: {activeImg.hash.substring(0, 16)}...
+         </div>
+       </div>
+    </div>
+  );
+};
+
+export default function LuminaApp() {
+  const [activeView, setActiveView] = useState('library'); // 'library' | 'develop' | 'loupe'
+  const [images, setImages] = useState(INITIAL_IMAGES);
+  const [selection, setSelection] = useState([0]); 
+  const [logs, setLogs] = useState([]);
+  const [filterText, setFilterText] = useState("");
+  const [eventLog, setEventLog] = useState([]);
+  const [showImport, setShowImport] = useState(false);
+  const [thumbnailSize, setThumbnailSize] = useState(4);
+
+  // --- LOGIC HELPER ---
+
+  const addLog = (message, type = 'info') => {
+    const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' });
+    let color = "text-zinc-300";
+    if (type === 'sqlite') color = "text-blue-400";
+    if (type === 'duckdb') color = "text-amber-400";
+    if (type === 'compute') color = "text-purple-400";
+    if (type === 'io') color = "text-emerald-400";
+
+    setLogs(prev => [...prev.slice(-12), { time, message, color }]);
+  };
+
+  const dispatchEvent = (eventType, payload) => {
+    const event = {
+      id: safeID(),
+      timestamp: Date.now(),
+      type: eventType,
+      payload: payload,
+      targets: selection
+    };
+    
+    setEventLog(prev => [event, ...prev]);
+
+    setImages(prevImages => {
+      return prevImages.map(img => {
+        if (selection.includes(img.id)) {
+          const newState = { ...img.state };
+          
+          switch (eventType) {
+            case 'RATING_SET':
+              newState.rating = payload.rating;
+              break;
+            case 'FLAG_SET':
+              newState.flag = payload.flag;
+              break;
+            case 'EDIT_PARAM':
+              newState.edits = { ...newState.edits, [payload.param]: payload.value };
+              break;
+            default: break;
+          }
+          return { ...img, state: newState };
+        }
+        return img;
+      });
+    });
+
+    if (eventType === 'EDIT_PARAM') {
+      addLog(`EVENT: ${eventType} > Buffering stream...`, 'compute');
+    } else {
+      addLog(`SQLITE: Committed ${selection.length} record(s)`, 'sqlite');
+    }
+  };
+
+  const handleImport = () => {
+    const newBatch = generateImages(24, images.length);
+    setImages(prev => [...prev, ...newBatch]);
+    setShowImport(false);
+    addLog(`IMPORT: Ingested ${newBatch.length} files. Hash: BLAKE3`, 'io');
+  };
+
+  const handleRating = (rating) => dispatchEvent('RATING_SET', { rating });
+  const handleFlag = (flag) => dispatchEvent('FLAG_SET', { flag });
+  const handleEdit = (param, value) => dispatchEvent('EDIT_PARAM', { param, value });
+
+  const toggleSelection = (id, multi) => {
+    if (multi) {
+      setSelection(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    } else {
+      setSelection([id]);
+    }
+  };
+
+  const filteredImages = useMemo(() => {
+    if (!filterText) return images;
+    
+    const result = images.filter(img => {
+        const query = filterText.toLowerCase();
+        return (
+            img.filename.toLowerCase().includes(query) ||
+            img.exif.lens.toLowerCase().includes(query) ||
+            (query.includes('iso') && img.exif.iso.toString().includes(query.replace('iso', '').trim())) ||
+            (query === 'flagged' && img.state.flag === 'pick') ||
+            (query.includes('star') && img.state.rating >= parseInt(query))
+        );
+    });
+    
+    return result;
+  }, [images, filterText]);
+
+  // Performance logging effect
+  useEffect(() => {
+    if (filterText.length > 2) {
+      const start = performance.now();
+      const result = filteredImages;
+      const end = performance.now();
+      addLog(`DUCKDB: Scan in ${(end - start).toFixed(2)}ms. Results: ${result.length}`, 'duckdb');
+    }
+  }, [filteredImages, filterText.length]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Prevent browser shortcuts when focusing inputs
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if (['1','2','3','4','5','0'].includes(e.key)) handleRating(parseInt(e.key));
+      if (e.key.toLowerCase() === 'p') handleFlag('pick');
+      if (e.key.toLowerCase() === 'x') handleFlag('reject');
+      if (e.key.toLowerCase() === 'u') handleFlag(null);
+      
+      if (e.key.toLowerCase() === 'g') setActiveView('library');
+      if (e.key.toLowerCase() === 'd') setActiveView('develop');
+      if (e.code === 'Space' && activeView !== 'develop') {
+          e.preventDefault();
+          setActiveView(prev => prev === 'library' ? 'loupe' : 'library');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selection, activeView, handleRating, handleFlag]);
+
+  return (
+    <div className="flex flex-col h-screen w-full bg-zinc-950 text-zinc-200 font-sans select-none overflow-hidden">
+      <GlobalStyles />
+      <TopMenu />
+
+      <div className="flex flex-1 min-h-0">
+        {/* --- LEFT SIDEBAR --- */}
+        <div className="w-64 bg-zinc-900 border-r border-black flex flex-col shrink-0">
+          <div className="h-10 flex items-center px-4 border-b border-black gap-2 shrink-0">
+            <Layers className="text-blue-500" size={16} />
+            <span className="font-bold tracking-tight text-sm">LUMINA</span>
+            <span className="text-[10px] text-zinc-500 uppercase px-1 border border-zinc-700 rounded ml-auto">Pro</span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto py-2 custom-scrollbar">
+            
+            <div className="px-2 mb-6">
+              <div className="text-[10px] font-bold text-zinc-500 uppercase px-2 mb-2 tracking-wider">Catalog</div>
+              <div className="space-y-0.5">
+                <button onClick={() => { setFilterText(""); setActiveView('library'); }} className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-zinc-800 flex items-center gap-2 text-zinc-300 group transition-colors">
+                    <Database size={14} className="group-hover:text-blue-400" /> All Photographs 
+                    <span className="ml-auto text-[10px] text-zinc-600 group-hover:text-zinc-400">{images.length}</span>
+                </button>
+                <button onClick={() => { setFilterText("flagged"); setActiveView('library'); }} className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-zinc-800 flex items-center gap-2 text-zinc-300 group transition-colors">
+                    <Check size={14} className="group-hover:text-green-400" /> Quick Collection 
+                    <span className="ml-auto text-[10px] text-zinc-600 group-hover:text-zinc-400">12</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="px-2 mb-6">
+              <div className="text-[10px] font-bold text-zinc-500 uppercase px-2 mb-2 tracking-wider flex justify-between items-center">
+                  <span>Smart Collections</span>
+                  <Search size={10} className="text-zinc-600" />
+              </div>
+              <div className="space-y-0.5">
+                {['High ISO (>1600)', '5 Stars', 'Portraits (56mm)', 'Last Import'].map((item, i) => (
+                    <button key={i} onClick={() => setFilterText(item.split(' ')[0].toLowerCase())} className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-zinc-800 flex items-center gap-2 text-zinc-400 group">
+                        <Zap size={12} className="text-amber-600 group-hover:text-amber-400" /> {item}
+                    </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="px-2">
+              <div className="text-[10px] font-bold text-zinc-500 uppercase px-2 mb-2 tracking-wider">Folders</div>
+              <div className="pl-2 space-y-1">
+                  {['2025-01-20_Studio', '2025-01-18_Street', '2025-01-15_Landscape', '2024-12-25_Family'].map(folder => (
+                      <div key={folder} className="flex items-center gap-2 text-xs text-zinc-400 py-1 hover:text-white cursor-pointer transition-colors">
+                          <HardDrive size={12} /> <span className="truncate">{folder}</span>
+                      </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="p-2 border-t border-black bg-zinc-900 shrink-0">
+               <button 
+                onClick={() => setShowImport(true)}
+                className="w-full py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-xs flex items-center justify-center gap-2 border border-zinc-700 transition-colors shadow-sm"
+               >
+                   <Import size={14} /> Import...
+               </button>
+          </div>
+        </div>
+
+        {/* --- CENTER AREA --- */}
+        <div className="flex-1 flex flex-col min-w-0 bg-zinc-950">
+          
+          {/* Main Toolbar */}
+          <div className="h-10 bg-zinc-900 border-b border-black flex items-center px-4 justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                 {/* View Switcher */}
+                 <div className="flex bg-zinc-950 p-0.5 rounded border border-zinc-800">
+                    <button 
+                      onClick={() => setActiveView('library')}
+                      title="Grid View (G)"
+                      className={`p-1.5 rounded-sm ${activeView === 'library' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+                    >
+                        <Grid size={14} />
+                    </button>
+                    <button 
+                      onClick={() => setActiveView('loupe')}
+                      title="Loupe View (Space)"
+                      className={`p-1.5 rounded-sm ${activeView === 'loupe' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+                    >
+                        <Maximize2 size={14} />
+                    </button>
+                    <button 
+                      onClick={() => setActiveView('develop')}
+                      title="Develop (D)"
+                      className={`p-1.5 rounded-sm ${activeView === 'develop' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+                    >
+                        <Sliders size={14} />
+                    </button>
+                 </div>
+              </div>
+
+              {/* Filter Bar */}
+              {activeView === 'library' && (
+                <div className="flex items-center gap-2">
+                     <span className="text-[10px] text-zinc-500 font-bold uppercase mr-2">DuckDB Filter:</span>
+                     <div className="relative group">
+                        <Search className="absolute left-2 top-1.5 text-zinc-500" size={12} />
+                        <input 
+                            type="text" 
+                            placeholder="ex: iso 800, star > 3..."
+                            value={filterText}
+                            onChange={(e) => setFilterText(e.target.value)}
+                            className="bg-black/40 border border-zinc-800 rounded pl-7 pr-3 py-1 text-xs text-zinc-300 w-64 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono placeholder:text-zinc-700"
+                        />
+                     </div>
+                </div>
+              )}
+
+              {/* Thumbnail Size */}
+              {activeView === 'library' && (
+                  <div className="flex items-center gap-2 w-32">
+                      <span className="text-[10px] text-zinc-600"><ImageIcon size={10}/></span>
+                      <input 
+                        type="range" min="1" max="10" 
+                        value={thumbnailSize} 
+                        onChange={(e) => setThumbnailSize(parseInt(e.target.value))}
+                        className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-zinc-500"
+                      />
+                      <span className="text-[10px] text-zinc-600"><ImageIcon size={14}/></span>
+                  </div>
+              )}
+          </div>
+
+          {/* Canvas */}
+          {activeView === 'library' ? (
+            <LibraryGrid 
+              filteredImages={filteredImages}
+              selection={selection}
+              toggleSelection={toggleSelection}
+              thumbnailSize={thumbnailSize}
+              setActiveView={setActiveView}
+            />
+          ) : activeView === 'loupe' ? (
+            <LoupeView images={images} selection={selection} />
+          ) : (
+            <DevelopView images={images} selection={selection} />
+          )}
+
+          {/* Filmstrip */}
+          <div className="h-24 bg-zinc-900 border-t border-black shrink-0 flex flex-col">
+              <div className="h-5 flex items-center justify-between px-2 bg-zinc-950 border-b border-black shrink-0">
+                   <div className="text-[10px] text-zinc-500 font-medium flex items-center gap-2">
+                      <span>Filmstrip</span>
+                      <span className="text-zinc-700">|</span>
+                      <span className="text-zinc-400">{selection.length} selected</span>
+                   </div>
+                   <div className="flex gap-2 text-zinc-600">
+                       <ChevronLeft size={12} className="cursor-pointer hover:text-white" />
+                       <ChevronRight size={12} className="cursor-pointer hover:text-white" />
+                   </div>
+              </div>
+              <div className="flex-1 flex items-center overflow-x-auto px-4 gap-2 no-scrollbar">
+                {images.slice(0, 30).map(img => (
+                    <div 
+                        key={img.id} 
+                        onClick={(e) => toggleSelection(img.id, e.shiftKey)}
+                        className={`
+                            h-14 aspect-[3/2] bg-zinc-800 shrink-0 rounded border relative cursor-pointer
+                            ${selection.includes(img.id) ? 'border-zinc-300 ring-1 ring-zinc-300 opacity-100' : 'border-transparent opacity-50 hover:opacity-80'}
+                        `}
+                        style={{ backgroundColor: `hsl(${img.id * 10}, 10%, 20%)` }}
+                    >
+                        {img.state.flag === 'pick' && <div className="absolute top-0.5 left-0.5 w-1 h-1 bg-white rounded-full"></div>}
+                        {img.state.rating > 0 && <div className="absolute bottom-0.5 left-0.5 text-[6px] text-yellow-500">★</div>}
+                    </div>
+                ))}
+              </div>
+          </div>
+        </div>
+
+        {/* --- RIGHT SIDEBAR --- */}
+        <div className="w-72 bg-zinc-900 border-l border-black flex flex-col shrink-0 overflow-y-auto custom-scrollbar">
+          
+          <div className="p-4 border-b border-black bg-zinc-950 shrink-0">
+              <Histogram />
+              <div className="flex justify-between mt-2 text-[9px] text-zinc-500 font-mono">
+                  <span>ISO {images.find(i => i.id === selection[0])?.exif.iso || '--'}</span>
+                  <span>{images.find(i => i.id === selection[0])?.exif.lens || '--'}</span>
+                  <span>{images.find(i => i.id === selection[0])?.exif.shutter || '--'}</span>
+                  <span>f/{images.find(i => i.id === selection[0])?.exif.fstop || '--'}</span>
+              </div>
+          </div>
+
+          {activeView === 'develop' ? (
+              <div className="p-4 space-y-6">
+                  {/* Basic Tone Panel */}
+                  <div className="bg-zinc-800/30 p-2 rounded border border-zinc-800">
+                      <div className="flex justify-between items-center mb-4 cursor-pointer">
+                          <span className="text-xs font-bold text-zinc-300 uppercase flex items-center gap-1">
+                              <ChevronDown size={12} /> Basic Tone
+                          </span>
+                          <span className="text-[9px] text-zinc-600 font-mono border border-zinc-700 px-1 rounded">AUTO</span>
+                      </div>
+                      
+                      {['Exposure', 'Contrast', 'Highlights', 'Shadows', 'Whites', 'Blacks'].map(param => (
+                          <div key={param} className="mb-3 group">
+                              <div className="flex justify-between text-[10px] text-zinc-400 mb-1">
+                                  <span>{param}</span>
+                                  <input 
+                                    type="text" 
+                                    value={images.find(i => i.id === selection[0])?.state.edits[param.toLowerCase()] || 0} 
+                                    readOnly
+                                    className="w-8 text-right bg-transparent text-zinc-500 focus:text-white focus:outline-none"
+                                  />
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <input 
+                                    type="range" 
+                                    min="-100" max="100" 
+                                    value={images.find(i => i.id === selection[0])?.state.edits[param.toLowerCase()] || 0}
+                                    onChange={(e) => handleEdit(param.toLowerCase(), parseInt(e.target.value))}
+                                    className="flex-1 h-0.5 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-zinc-400 hover:accent-white transition-all"
+                                />
+                              </div>
+                          </div>
+                      ))}
+                  </div>
+
+                  <div className="border-t border-zinc-800 pt-4">
+                       <div className="flex justify-between items-center mb-3">
+                          <span className="text-xs font-bold text-zinc-400 uppercase flex items-center gap-2">
+                               <History size={12} /> Event Log
+                          </span>
+                      </div>
+                      <div className="space-y-0.5 max-h-40 overflow-y-auto font-mono text-[9px] border-l-2 border-zinc-800 pl-2 custom-scrollbar">
+                          {eventLog.slice(0, 10).map(event => (
+                              <div key={event.id} className="text-zinc-500 hover:text-zinc-300 flex justify-between group">
+                                  <span className="group-hover:text-blue-400 transition-colors">{event.type.split('_')[0]}</span>
+                                  <span className="opacity-50">{JSON.stringify(event.payload).substring(0, 12)}</span>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              </div>
+          ) : (
+              <div className="p-4 space-y-6">
+                  {/* Quick Develop */}
+                  <div className="bg-zinc-800/30 p-3 rounded border border-zinc-800">
+                      <div className="flex justify-between items-center mb-2">
+                          <span className="text-xs font-bold text-zinc-400 uppercase">Quick Develop</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                          <button onClick={() => handleRating(5)} className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-400 py-1 rounded">Auto Tone</button>
+                          <button onClick={() => handleFlag('pick')} className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-400 py-1 rounded">Reset All</button>
+                      </div>
+                  </div>
+
+                  {/* Metadata */}
+                  <div>
+                       <div className="flex justify-between items-center mb-3">
+                          <span className="text-xs font-bold text-zinc-400 uppercase">File Info</span>
+                      </div>
+                      <div className="grid grid-cols-[80px_1fr] gap-y-2 text-[10px] text-zinc-400">
+                          <span className="text-zinc-600">File Name</span>
+                          <span className="text-zinc-200 truncate">{images.find(i => i.id === selection[0])?.filename}</span>
+                          
+                          <span className="text-zinc-600">Folder</span>
+                          <span className="text-zinc-200">/Volumes/SSD/Photos</span>
+
+                          <span className="text-zinc-600">Dimensions</span>
+                          <span className="text-zinc-200">6240 x 4160 (26MP)</span>
+
+                          <span className="text-zinc-600">Size</span>
+                          <span className="text-zinc-200">24.5 MB</span>
+                      </div>
+                  </div>
+
+                  {/* Tags */}
+                   <div className="border-t border-zinc-800 pt-4">
+                       <div className="flex justify-between items-center mb-3">
+                          <span className="text-xs font-bold text-zinc-400 uppercase">Keywording</span>
+                      </div>
+                      <textarea 
+                        className="w-full bg-black/30 border border-zinc-800 rounded p-2 text-xs text-zinc-300 h-20 focus:border-blue-500 focus:outline-none resize-none"
+                        placeholder="Add keywords (comma separated)..."
+                      ></textarea>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                          {['Portrait', 'Studio', 'Fujifilm', 'Color'].map(tag => (
+                              <span key={tag} className="bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-sm text-[10px] border border-zinc-700 hover:border-zinc-500 cursor-pointer">
+                                  {tag}
+                              </span>
+                          ))}
+                      </div>
+                  </div>
+              </div>
+          )}
+        </div>
+      </div>
+
+      <ArchitectureMonitor logs={logs} />
+      {showImport && <ImportModal onClose={() => setShowImport(false)} onImport={handleImport} />}
+      
+    </div>
+  );
+}

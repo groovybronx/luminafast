@@ -383,7 +383,7 @@ export default function App() {
         </div>
 
         {/* --- MAIN CENTER CANVAS --- */}
-        <div className="flex-1 flex flex-col bg-zinc-950 min-w-0 relative">
+        <div className="flex-1 flex flex-col bg-zinc-950 min-h-0 relative">
             
             {/* TOOLBAR */}
             <div className="h-11 bg-zinc-900/60 border-b border-black flex items-center justify-between px-4 shrink-0 backdrop-blur-sm">
@@ -420,10 +420,13 @@ export default function App() {
                 </div>
             </div>
 
-            <div className="flex-1 overflow-hidden relative">
+            <div className="flex-1 overflow-hidden">
                 {activeView === 'library' ? (
-                    <div className="overflow-y-auto p-4 grid gap-3 content-start custom-scrollbar"
-                         style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${thumbnailSize * 30}px, 1fr))` }}>
+                    <div className="h-full overflow-y-auto p-4 grid gap-x-3 gap-y-4 auto-rows-min custom-scrollbar"
+                         style={{ 
+                           gridTemplateColumns: `repeat(auto-fill, minmax(${thumbnailSize * 30}px, 1fr))`,
+                           gridAutoFlow: 'row'
+                         }}>
                         {filteredImages.map(img => {
                             const isSelected = selection.includes(img.id);
                             return (

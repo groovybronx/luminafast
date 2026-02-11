@@ -34,12 +34,14 @@ Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructiv
 | Icônes | Lucide React | 0.563.0 | ✅ En place |
 | Langage | TypeScript (TSX) | strict | ✅ Complété (Phase 0.1) |
 | Shell natif | Tauri v2 | 2.10.2 | ✅ Complété (Phase 0.2) |
-| Backend | Rust | 1.92.0 | ✅ Complété (Phase 0.2) |
+| Backend | Rust | stable | ✅ Complété (Phase 0.2) |
+| State management | Zustand | 5.0.11 | ✅ Complété (Phase 0.4) |
+| Linting | ESLint + TypeScript | 9.39.1 | ✅ Complété (Phase 0.5) |
+| Tests | Vitest + jsdom | 4.0.18 | ✅ Complété (Phase 0.5) |
+| CI/CD | GitHub Actions | — | ✅ Complété (Phase 0.5) |
 | DB transactionnelle | SQLite | — | ⬜ Non installé (Phase 1.1) |
 | DB analytique | DuckDB | — | ⬜ Non installé (Phase 6.2) |
 | Hashing | BLAKE3 | — | ⬜ Non installé (Phase 1.3) |
-| State management | useState (React) | — | 🟡 Migration Zustand prévue (Phase 0.4) |
-| Tests | — | — | ⬜ Non configuré (Phase 0.5) |
 
 ---
 
@@ -47,6 +49,12 @@ Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructiv
 
 ```
 LuminaFast/
+├── .github/
+│   └── workflows/
+│       └── ci.yml                    # Pipeline CI/CD GitHub Actions
+├── .rustfmt.toml                     # Configuration Rust formatting
+├── clippy.toml                       # Configuration Clippy linting
+├── rust-toolchain.toml                # Configuration toolchain Rust
 ├── Docs/
 │   ├── archives/
 │   │   ├── Lightroomtechnique.md   # Analyse architecture Lightroom Classic
@@ -101,6 +109,9 @@ LuminaFast/
 │   │       ├── ImportModal.tsx     # Modal d'import
 │   │       ├── BatchBar.tsx        # Actions batch
 │   │       └── KeyboardOverlay.tsx # Raccourcis clavier
+│   ├── test/                        # Configuration et utilitaires de tests
+│   │   ├── setup.ts                 # Setup global Vitest
+│   │   └── storeUtils.ts             # Utilitaires pour tests Zustand
 │   └── assets/
 │       └── react.svg
 ├── src-tauri/
@@ -333,7 +344,64 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 
 ---
 
-## 11. API / Commandes Tauri
+## 11. Outils de Qualité et CI/CD
+
+### 11.1 — Linting et Formatting
+
+**Frontend (TypeScript/React)**
+- **ESLint** : Configuration étendue avec règles TypeScript strictes
+  - Interdiction de `any` et `non-null assertion`
+  - Règles React Hooks (exhaustive-deps)
+  - Formatage automatique avec `lint:fix`
+- **Commandes** : `npm run lint`, `npm run lint:fix`
+
+**Backend (Rust)**
+- **Clippy** : Linting statique avec règles de qualité
+  - Détection de code non sécurisé
+  - Règles de performance et complexité
+  - Configuration adaptée au projet
+- **rustfmt** : Formatting automatique du code Rust
+- **Commandes** : `cargo clippy`, `cargo fmt`
+
+### 11.2 — Tests et Coverage
+
+**Framework de tests** : Vitest avec jsdom
+- **65 tests unitaires** couvrant tous les stores Zustand et les types
+- **Coverage** : 98.93% (bien au-dessus des 80% requis)
+- **Types de tests** :
+  - Tests stores : catalogStore, uiStore, editStore, systemStore
+  - Tests types : validation des interfaces TypeScript
+- **Commandes** : `npm test`, `npm run test:ci`
+
+### 11.3 — Pipeline CI/CD
+
+**GitHub Actions** (`.github/workflows/ci.yml`)
+- **Frontend** : Type checking, linting, tests, build
+- **Backend** : Formatting, clippy, build, tests
+- **Integration** : Build Tauri complet
+- **Security** : Audit des dépendances (Node.js + Rust)
+- **Déclenchement** : Push sur main/develop/phase/*, PRs
+
+### 11.4 — Scripts de Développement
+
+```bash
+# Frontend
+npm run dev              # Serveur de développement
+npm run build           # Build production
+npm run type-check      # Vérification TypeScript
+npm run lint           # Linting ESLint
+npm run lint:fix       # Auto-correction linting
+npm run test           # Tests interactifs
+npm run test:ci        # Tests avec coverage
+
+# Tauri
+npm run tauri:dev       # Développement Tauri
+npm run build:tauri    # Build Tauri production
+```
+
+---
+
+## 12. API / Commandes Tauri
 
 > ⬜ **Non implémenté** — Prévu en Phase 1.2
 >
@@ -342,7 +410,7 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 
 ---
 
-## 12. Historique des Modifications de ce Document
+## 13. Historique des Modifications de ce Document
 
 | Date | Sous-Phase | Nature de la modification |
 |------|-----------|--------------------------|
@@ -351,3 +419,4 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 | 2026-02-11 | Phase 0.2 | Intégration Tauri v2, plugins fs/dialog/shell, src-tauri/ |
 | 2026-02-11 | Phase 0.3 | Décomposition modulaire : 17 composants + 2 modules utilitaires |
 | 2026-02-11 | Phase 0.4 | State Management Zustand : 4 stores, élimination props drilling |
+| 2026-02-11 | Phase 0.5 | Pipeline CI & Linting : ESLint, Clippy, GitHub Actions, coverage 98.93% |

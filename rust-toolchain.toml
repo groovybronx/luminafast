@@ -1,0 +1,5 @@
+# Rust toolchain configuration for LuminaFast
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
+profile = "default"

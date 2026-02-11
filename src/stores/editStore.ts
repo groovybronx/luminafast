@@ -41,12 +41,12 @@ export const useEditStore = create<EditStore>((set, get) => ({
   
   undo: () => {
     // TODO: Implémenter undo/redo quand on aura l'historique des edits
-    console.log('Undo not implemented yet');
+    console.warn('Undo not implemented yet');
   },
   
   redo: () => {
     // TODO: Implémenter undo/redo quand on aura l'historique des edits
-    console.log('Redo not implemented yet');
+    console.warn('Redo not implemented yet');
   },
   
   // Getters

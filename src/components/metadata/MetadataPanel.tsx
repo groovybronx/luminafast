@@ -1,10 +1,10 @@
 import React from 'react';
 import { Tag, X, Cloud, Info } from 'lucide-react';
-import type { CatalogImage, FlagType, EditState } from '../../types';
+import type { CatalogImage, EditState } from '../../types';
 
 interface MetadataPanelProps {
   activeImg: CatalogImage;
-  onDispatchEvent: (eventType: string, payload: number | string | FlagType | Partial<EditState>) => void;
+  onDispatchEvent: (eventType: string, payload: number | string | 'pick' | 'reject' | null | Partial<EditState>) => void;
 }
 
 export const MetadataPanel = ({ activeImg, onDispatchEvent }: MetadataPanelProps) => (

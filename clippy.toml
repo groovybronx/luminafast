@@ -1,0 +1,39 @@
+# Clippy configuration for LuminaFast
+# Enable more lints for better code quality
+
+# Cognitive complexity
+cognitive-complexity-threshold = 15
+
+# Function size limits
+too-many-arguments-threshold = 7
+too-many-lines-threshold = 100
+
+# Documentation
+missing-docs-in-crate-items = true
+
+# Performance
+vec-box-size-threshold = 4096
+trivial-copy-size-limit = 256
+
+# Style
+enum-variant-name-threshold = 3
+single-char-binding-names-threshold = 3
+
+# Allowed scripts
+allowed-scripts = ["Latin"]
+
+# Disallowed methods and types
+disallowed-methods = [
+    # Prefer Result over panic/unwrap in production code
+    # Note: Tauri's generated code uses unwrap, so we can't completely disallow it
+    "std::option::Option::unwrap",
+]
+
+# Disallowed names
+disallowed-names = ["foo", "bar", "baz"]
+
+# Upper bound on allowed complexity
+type-complexity-threshold = 250
+
+# Avoid certain patterns
+avoid-breaking-exported-api = true

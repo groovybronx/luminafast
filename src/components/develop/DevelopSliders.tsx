@@ -1,9 +1,9 @@
 import { RefreshCw, Sun, Layers, Droplets, Wind, Palette } from 'lucide-react';
-import type { CatalogImage, FlagType, EditState } from '../../types';
+import type { CatalogImage, EditState } from '../../types';
 
 interface DevelopSlidersProps {
   activeImg: CatalogImage;
-  onDispatchEvent: (eventType: string, payload: number | string | FlagType | Partial<EditState>) => void;
+  onDispatchEvent: (eventType: string, payload: number | string | 'pick' | 'reject' | null | Partial<EditState>) => void;
 }
 
 export const DevelopSliders = ({ activeImg, onDispatchEvent }: DevelopSlidersProps) => (

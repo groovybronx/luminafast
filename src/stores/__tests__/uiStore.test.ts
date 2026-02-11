@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act } from '@testing-library/react';
 import { useUiStore } from '../uiStore';
-import type { ActiveView } from '../../types';
 
 describe('uiStore', () => {
   beforeEach(() => {

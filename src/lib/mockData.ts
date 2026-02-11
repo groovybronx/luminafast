@@ -4,7 +4,7 @@ export interface MockEvent {
   id: string;
   timestamp: number;
   type: string;
-  payload: number | string | FlagType | Partial<EditState>;
+  payload: number | string | 'pick' | 'reject' | null | Partial<EditState>;
   targets: number[];
 }
 
@@ -21,10 +21,13 @@ const FSTOP_VALUES = [1.2, 1.4, 2.0, 2.8, 4.0, 5.6, 8.0, 11, 16] as const;
 const SHUTTER_VALUES = ['1/500', '1/2000', '1/4000', '1/125', '1/60', '1/30', '2.5s'] as const;
 const LOCATION_VALUES = ['Paris, France', 'Tokyo, Japan', 'Reykjavík, Iceland', 'New York, USA'] as const;
 
-export const generateImages = (count: number, startId: number = 0): CatalogImage[] => {
+export const generateImages = (count: number, startId = 0): CatalogImage[] => {
   return Array.from({ length: count }, (_, i) => {
     const id = startId + i;
-    const theme = IMAGE_THEMES[id % IMAGE_THEMES.length]!;
+    const theme = IMAGE_THEMES[id % IMAGE_THEMES.length];
+    if (!theme) {
+      throw new Error(`No theme found for index ${id % IMAGE_THEMES.length}`);
+    }
     return {
       id: id,
       hash: `b3-${id.toString(16).padStart(12, '0')}-af92`,
@@ -32,12 +35,12 @@ export const generateImages = (count: number, startId: number = 0): CatalogImage
       url: `https://picsum.photos/seed/${id}/800/533`,
       capturedAt: new Date(2025, 1, Math.max(1, (id % 28))).toISOString(),
       exif: {
-        iso: ISO_VALUES[id % ISO_VALUES.length]!,
-        fstop: FSTOP_VALUES[id % FSTOP_VALUES.length]!,
-        shutter: SHUTTER_VALUES[id % SHUTTER_VALUES.length]!,
+        iso: ISO_VALUES[id % ISO_VALUES.length] ?? 160,
+        fstop: FSTOP_VALUES[id % FSTOP_VALUES.length] ?? 2.8,
+        shutter: SHUTTER_VALUES[id % SHUTTER_VALUES.length] ?? '1/500',
         lens: theme.lens,
         camera: theme.camera,
-        location: LOCATION_VALUES[id % LOCATION_VALUES.length]!
+        location: LOCATION_VALUES[id % LOCATION_VALUES.length] ?? 'Paris, France'
       },
       state: {
         rating: Math.floor(Math.random() * 6),

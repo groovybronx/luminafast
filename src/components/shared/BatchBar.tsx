@@ -1,9 +1,9 @@
 import { Check, Star, Tag, RefreshCw, X } from 'lucide-react';
-import type { FlagType, EditState } from '../../types';
+import type { EditState } from '../../types';
 
 interface BatchBarProps {
   selectionCount: number;
-  onDispatchEvent: (eventType: string, payload: number | string | FlagType | Partial<EditState>) => void;
+  onDispatchEvent: (eventType: string, payload: number | string | 'pick' | 'reject' | null | Partial<EditState>) => void;
   onAddLog: (message: string, type?: string) => void;
   onClearSelection: () => void;
 }

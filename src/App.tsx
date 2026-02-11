@@ -68,7 +68,7 @@ export default function App() {
   }, [setImages]);
 
 
-  const dispatchEvent = useCallback((eventType: string, payload: number | string | FlagType | Partial<EditState>) => {
+  const dispatchEvent = useCallback((eventType: string, payload: number | string | 'pick' | 'reject' | null | Partial<EditState>) => {
     const event: MockEvent = { id: safeID(), timestamp: Date.now(), type: eventType, payload, targets: selection };
     addEvent(event as unknown as CatalogEvent);
     
@@ -105,7 +105,7 @@ export default function App() {
     setShowImport(false);
     addLog(`DUCKDB: Indexed ${newBatch.length} new binary references`, 'duckdb');
     addLog(`IO: File descriptors closed.`, 'io');
-  }, [images.length, images, setImages, setShowImport, addLog]);
+  }, [images, setImages, setShowImport, addLog]);
 
 
   useEffect(() => {
@@ -115,7 +115,7 @@ export default function App() {
       const end = performance.now();
       setTimeout(() => addLog(`DUCKDB Scan: ${resultCount} rows found in ${(end - start).toFixed(2)}ms`, 'duckdb'), 0);
     }
-  }, [filteredImages, filterText, addLog]);
+  }, [filteredImages, filterText, addLog, setActiveView]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -130,7 +130,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selection, dispatchEvent]);
+  }, [dispatchEvent, setActiveView]);
 
   const activeImg = images.find(i => i.id === selection[0]) ?? images[0];
 
@@ -165,7 +165,7 @@ export default function App() {
             ) : (
               <DevelopView activeImg={activeImg} showBeforeAfter={showBeforeAfter} />
             )}
-            <BatchBar selectionCount={selection.length} onDispatchEvent={dispatchEvent} onAddLog={addLog} onClearSelection={() => setSingleSelection(selection[0]!)} />
+            <BatchBar selectionCount={selection.length} onDispatchEvent={dispatchEvent} onAddLog={addLog} onClearSelection={() => setSingleSelection(selection[0] ?? 0)} />
           </div>
 
           <Filmstrip images={images} selection={selection} selectionCount={selection.length} imageCount={images.length} onToggleSelection={handleToggleSelection} />

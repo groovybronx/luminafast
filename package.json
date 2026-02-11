@@ -17,7 +17,11 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "build:tauri": "tauri build"
+    "build:tauri": "tauri build",
+    "rust": "cd src-tauri && cargo",
+    "rust:test": "cd src-tauri && cargo test",
+    "rust:check": "cd src-tauri && cargo check",
+    "rust:build": "cd src-tauri && cargo build"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",

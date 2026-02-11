@@ -3,7 +3,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-11 (Phase 0.4) — État : Prototype / Mockup (TypeScript + Tauri + Zustand)
+> **Dernière mise à jour** : 2026-02-11 (Phase 1.1) — État : Prototype avec Base de Données SQLite (TypeScript + Tauri + Zustand + SQLite)
 >
 > ### Décisions Projet (validées par le propriétaire)
 > - **Phase 8 (Cloud/Sync)** : Reportée post-lancement
@@ -16,8 +16,8 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : 🟡 Prototype / Mockup
-L'application est actuellement un mockup React avec des données simulées. Aucune fonctionnalité n'est connectée à un backend réel.
+### État actuel : � Prototype avec Base de Données SQLite
+L'application est un mockup React connecté à une base de données SQLite complète. Le schéma est implémenté et les migrations fonctionnent, mais les commandes Tauri ne sont pas encore exposées au frontend.
 
 ### Objectif : Application Tauri autonome commercialisable
 Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructive, catalogue SQLite, et gestion de bibliothèques photographiques massives.
@@ -39,7 +39,7 @@ Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructiv
 | Linting | ESLint + TypeScript | 9.39.1 | ✅ Complété (Phase 0.5) |
 | Tests | Vitest + jsdom | 4.0.18 | ✅ Complété (Phase 0.5) |
 | CI/CD | GitHub Actions | — | ✅ Complété (Phase 0.5) |
-| DB transactionnelle | SQLite | — | ⬜ Non installé (Phase 1.1) |
+| DB transactionnelle | SQLite | rusqlite 0.31.0 | ✅ Complété (Phase 1.1) |
 | DB analytique | DuckDB | — | ⬜ Non installé (Phase 6.2) |
 | Hashing | BLAKE3 | — | ⬜ Non installé (Phase 1.3) |
 
@@ -107,22 +107,24 @@ LuminaFast/
 │   │       ├── GlobalStyles.tsx    # Styles CSS inline
 │   │       ├── ArchitectureMonitor.tsx # Console monitoring
 │   │       ├── ImportModal.tsx     # Modal d'import
-│   │       ├── BatchBar.tsx        # Actions batch
-│   │       └── KeyboardOverlay.tsx # Raccourcis clavier
-│   ├── test/                        # Configuration et utilitaires de tests
-│   │   ├── setup.ts                 # Setup global Vitest
-│   │   └── storeUtils.ts             # Utilitaires pour tests Zustand
-│   └── assets/
-│       └── react.svg
-├── src-tauri/
-│   ├── Cargo.toml                  # Dépendances Rust
-│   ├── tauri.conf.json             # Config Tauri (fenêtre, CSP, build)
-│   ├── build.rs                    # Script de build Tauri
+│   │       └── SearchBar.tsx        # Barre de recherche
+│   └── hooks/                       # Hooks React personnalisés
+│       └── useKeyboardShortcuts.ts # Raccourcis clavier
+├── src-tauri/                         # Backend Rust Tauri
+│   ├── Cargo.toml                    # Dépendances Rust (rusqlite, etc.)
+│   ├── tauri.conf.json              # Configuration Tauri
+│   ├── build.rs                      # Build script
 │   ├── capabilities/
 │   │   └── default.json            # Permissions (fs, dialog, shell)
 │   ├── src/
 │   │   ├── main.rs                 # Point d'entrée Rust
-│   │   └── lib.rs                  # Module library + plugins
+│   │   ├── lib.rs                  # Module library + plugins + init DB
+│   │   ├── database.rs               # Gestion SQLite, migrations, PRAGMA
+│   │   ├── models/                   # Types Rust du domaine
+│   │   │   ├── catalog.rs           # Image, Collection, Folder, etc.
+│   │   │   └── mod.rs               # Export des modèles
+│   │   └── migrations/               # Scripts de migration SQL
+│   │       └── 001_initial.sql      # Schéma complet du catalogue
 │   └── icons/                      # Icônes d'application (16 fichiers)
 ├── index.html                      # HTML racine
 ├── package.json                    # Dépendances npm + scripts tauri
@@ -395,13 +397,77 @@ npm run test           # Tests interactifs
 npm run test:ci        # Tests avec coverage
 
 # Tauri
+npm run tauri:dev         # Développement Tauri
+npm run tauri:build       # Build production
+npm run rust:test         # Tests unitaires Rust
+npm run rust:check         # Vérification compilation Rust
+npm run rust:build        # Build compilation Rust
 npm run tauri:dev       # Développement Tauri
 npm run build:tauri    # Build Tauri production
 ```
 
 ---
 
-## 12. API / Commandes Tauri
+## 12. Base de Données SQLite
+
+> ✅ **Implémenté en Phase 1.1** — Schéma complet et migrations fonctionnelles
+
+### 12.1 — Schéma du Catalogue
+
+**Tables principales** :
+- `images` : Table pivot avec BLAKE3 hash, métadonnées de base
+- `folders` : Structure hiérarchique des dossiers importés
+- `exif_metadata` : Métadonnées EXIF complètes (ISO, ouverture, objectif, GPS)
+- `collections` : Collections statiques/smart/quick avec requêtes JSON
+- `collection_images` : Relation many-to-many avec ordre de tri
+- `image_state` : Rating (0-5), flags (pick/reject), color labels
+- `tags` + `image_tags` : Système de tags hiérarchique
+- `migrations` : Tracking des migrations appliquées
+
+**Index stratégiques** :
+- Index sur `blake3_hash` (détection doublons)
+- Index sur `filename`, `captured_at`, `imported_at`
+- Index sur `folders.path`, `collections.type`
+- Index sur `image_state.rating`, `image_state.flag`
+
+### 12.2 — Configuration SQLite
+
+**PRAGMA optimisés** :
+- `journal_mode = WAL` : Concurrency optimale pour lectures/écritures simultanées
+- `synchronous = NORMAL` : Équilibre performance/sécurité des données
+- `cache_size = -20000` : Cache 20MB en mémoire pour performance
+- `page_size = 4096` : Taille de page optimisée pour les métadonnées images
+- `temp_store = memory` : Tables temporaires en RAM
+- `foreign_keys = ON` : Contraintes référentielles activées
+
+### 12.3 — Système de Migrations
+
+- **Automatique** : Migration `001_initial` appliquée au démarrage
+- **Idempotent** : Les migrations peuvent être réappliquées sans erreur
+- **Tracking** : Table `migrations` enregistre les versions appliquées
+- **Tests** : 11 tests unitaires valident le système complet
+
+### 12.4 — Types Rust
+
+**Modèles sérialisables** (`src-tauri/src/models/catalog.rs`) :
+- `Image`, `Folder`, `ExifMetadata`, `Collection`
+- `CollectionType`, `ImageFlag`, `ColorLabel`
+- `NewImage`, `NewFolder`, `NewExifMetadata` (pour insertion)
+- Support complet `serde::Serialize/Deserialize`
+
+### 12.5 — Tests Unitaires
+
+**11 tests Rust** (100% passants) :
+- Tests de création et initialisation de la base de données
+- Tests de migration et idempotence
+- Tests CRUD basiques (insertion, requête)
+- Tests de contraintes de clés étrangères
+- Tests de validation d'index
+- Tests de sérialisation des types
+
+---
+
+## 13. API / Commandes Tauri
 
 > ⬜ **Non implémenté** — Prévu en Phase 1.2
 >
@@ -411,6 +477,13 @@ npm run build:tauri    # Build Tauri production
 ---
 
 ## 13. Historique des Modifications de ce Document
+
+| Date | Phase | Modification | Raison |
+|------|-------|------------|--------|
+| 2026-02-11 | 1.1 | Ajout section Base de Données SQLite complète | Implémentation Phase 1.1 terminée |
+| 2026-02-11 | 1.1 | Mise à jour stack technique et architecture fichiers | Ajout src-tauri avec SQLite |
+| 2026-02-11 | 1.1 | Ajout scripts Rust dans section développement | Scripts npm pour tests Rust |
+| 2026-02-11 | 0.5 | Mise à jour après complétion Phase 0.5 | CI/CD implémenté et fonctionnel |
 
 | Date | Sous-Phase | Nature de la modification |
 |------|-----------|--------------------------|

@@ -14,7 +14,7 @@
 | 0 | 0.3 | Décomposition Modulaire Frontend | ✅ Complétée | 2026-02-11 | Cascade |
 | 0 | 0.4 | State Management (Zustand) | ✅ Complétée | 2026-02-11 | Cascade |
 | 0 | 0.5 | Pipeline CI & Linting | ✅ Complétée | 2026-02-11 | Cascade |
-| 1 | 1.1 | Schéma SQLite du Catalogue | ⬜ En attente | — | — |
+| 1 | 1.1 | Schéma SQLite du Catalogue | ✅ Complétée | 2026-02-11 | Cascade |
 | 1 | 1.2 | Tauri Commands CRUD | ⬜ En attente | — | — |
 | 1 | 1.3 | Service BLAKE3 (CAS) | ⬜ En attente | — | — |
 | 1 | 1.4 | Gestion du Système de Fichiers | ⬜ En attente | — | — |
@@ -379,6 +379,74 @@ Intégration complète de Tauri v2 dans le projet React+Vite+TypeScript. L'UI mo
 
 ---
 
+## Phase 1.1 — Schéma SQLite du Catalogue ✅
+**Date** : 2026-02-11  
+**Agent** : Cascade  
+**Durée** : ~2 heures
+
+### Objectifs
+- Implémenter le schéma SQLite complet selon les spécifications du plan
+- Configurer les PRAGMA SQLite pour performance optimale
+- Créer les modèles Rust correspondants
+- Mettre en place le système de migrations
+- Écrire les tests unitaires de validation
+
+### Fichiers Créés/Modifiés
+- `src-tauri/Cargo.toml` : Ajout dépendances `rusqlite`, `thiserror`, `chrono`, `tempfile`
+- `src-tauri/src/database.rs` : Module gestion SQLite avec migrations et PRAGMA
+- `src-tauri/migrations/001_initial.sql` : Schéma SQL complet (9 tables + index)
+- `src-tauri/src/models/catalog.rs` : Types Rust correspondants au schéma
+- `src-tauri/src/models/mod.rs` : Export des modèles
+- `src-tauri/src/lib.rs` : Initialisation DB au démarrage de l'application
+- `package.json` : Scripts npm pour tests Rust (`rust:test`, `rust:check`, `rust:build`)
+
+### Schéma Implémenté
+- ✅ `images` : Table pivot avec BLAKE3 hash, métadonnées de base
+- ✅ `folders` : Structure hiérarchique des dossiers
+- ✅ `exif_metadata` : Métadonnées EXIF complètes
+- ✅ `collections` : Collections statiques/smart/quick avec requêtes JSON
+- ✅ `collection_images` : Relation many-to-many avec ordre
+- ✅ `image_state` : Rating, flags, color labels
+- ✅ `tags` + `image_tags` : Système de tags hiérarchique
+- ✅ `migrations` : Tracking des migrations appliquées
+
+### PRAGMA Configurés
+- `journal_mode = WAL` : Concurrency optimale
+- `synchronous = NORMAL` : Équilibre performance/sécurité
+- `cache_size = -20000` : Cache 20MB en mémoire
+- `page_size = 4096` : Taille de page optimisée
+- `temp_store = memory` : Tables temporaires en RAM
+- `foreign_keys = ON` : Contraintes référentielles activées
+
+### Tests Unitaires (11/11 passants)
+- `test_database_creation` : Création connexion SQLite
+- `test_migration_simple` : Migration automatique complète
+- `test_migration_debug` : Debug parsing SQL
+- `test_manual_migration` : Exécution manuelle CREATE TABLE
+- `test_database_initialization` : Validation schéma complet
+- `test_migration_idempotency` : Double migration sans erreur
+- `test_insert_and_query_image` : CRUD basique images
+- `test_foreign_key_constraints` : Validation contraintes FK
+- `test_indexes_created` : Vérification index stratégiques
+- `models::catalog::tests::test_image_serialization` : Sérialisation types
+- `models::catalog::tests::test_collection_type_serialization` : Enums sérialisables
+
+### Problèmes Résolus
+- **Parsing SQL incorrect** : Correction du parsing des statements SQL avec gestion des commentaires
+- **Contraintes FK** : Configuration `foreign_keys = ON` dans PRAGMA
+- **Tests de migration** : Gestion du cas où table `migrations` n'existe pas encore
+- **Scripts npm** : Ajout raccourcis pour tests Rust (`npm run rust:test`)
+
+### Performance
+- **Compilation** : <3s pour build complet
+- **Tests** : <50ms pour 11 tests unitaires
+- **Migration** : <10ms pour schéma complet
+
+### Prochaine Étape
+Phase 1.2 — Tauri Commands CRUD (exposer les commandes Rust via IPC)
+
+---
+
 ## Blocages & Demandes d'Approbation
 
 > _Section réservée aux problèmes nécessitant l'intervention du propriétaire._
@@ -402,7 +470,7 @@ Intégration complète de Tauri v2 dans le projet React+Vite+TypeScript. L'UI mo
 ## Statistiques du Projet
 
 - **Sous-phases totales** : 38
-- **Complétées** : 5 / 38 (13.2%)
+- **Complétées** : 6 / 38 (15.8%)
 - **En cours** : 0
 - **Bloquées** : 0
 - **Dernière mise à jour** : 2026-02-11

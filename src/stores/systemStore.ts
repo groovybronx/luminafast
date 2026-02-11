@@ -46,7 +46,7 @@ export const useSystemStore = create<SystemStore>((set) => ({
     const newLog: LogEntry = { time, message, color };
     
     return {
-      logs: [...state.logs.slice(-15), newLog]
+      logs: [...state.logs, newLog].slice(-15)
     };
   }),
   

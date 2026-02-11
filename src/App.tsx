@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import type { FlagType, EditState, CatalogEvent } from './types';
 import { safeID } from './lib/helpers';
 import { generateImages, INITIAL_IMAGES, type MockEvent } from './lib/mockData';
@@ -22,12 +22,34 @@ export default function App() {
   const setActiveView = useUiStore((state) => state.setActiveView);
   const images = useCatalogStore((state) => state.images);
   const setImages = useCatalogStore((state) => state.setImages);
-  const selection = useCatalogStore((state) => state.getSelectionArray());
+  const selectionSet = useCatalogStore((state) => state.selection);
   const toggleSelection = useCatalogStore((state) => state.toggleSelection);
   const setSingleSelection = useCatalogStore((state) => state.setSingleSelection);
   const filterText = useCatalogStore((state) => state.filterText);
   const setFilterText = useCatalogStore((state) => state.setFilterText);
-  const filteredImages = useCatalogStore((state) => state.getFilteredImages());
+  
+  // Compute derived values with useMemo
+  const selection = useMemo(() => Array.from(selectionSet), [selectionSet]);
+  
+  const filteredImages = useMemo(() => {
+    if (!filterText) return images;
+    
+    const q = filterText.toLowerCase();
+    return images.filter(img => {
+      if (q.startsWith('star')) return img.state.rating >= parseInt(q.split(' ')[1] ?? '0');
+      if (q.includes('gfx')) return img.exif.camera.toLowerCase().includes('gfx');
+      if (q.includes('iso')) {
+        const val = parseInt(q.replace(/[^0-9]/g, ''));
+        return img.exif.iso >= val;
+      }
+      return (
+        img.filename.toLowerCase().includes(q) || 
+        img.exif.lens.toLowerCase().includes(q) ||
+        img.state.tags.some(t => t.toLowerCase().includes(q))
+      );
+    });
+  }, [images, filterText]);
+  
   const logs = useSystemStore((state) => state.logs);
   const addLog = useSystemStore((state) => state.addLog);
   const eventLog = useEditStore((state) => state.eventLog);
@@ -110,7 +132,16 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selection, dispatchEvent]);
 
-  const activeImg = images.find(i => i.id === selection[0]) ?? images[0]!;
+  const activeImg = images.find(i => i.id === selection[0]) ?? images[0];
+
+  // Ne pas rendre l'app si aucune image n'est disponible
+  if (!activeImg) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-zinc-950 text-zinc-400">
+        Chargement des images...
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen w-full bg-zinc-950 text-zinc-300 font-sans overflow-hidden select-none">

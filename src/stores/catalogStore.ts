@@ -35,7 +35,7 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
   setImages: (images: CatalogImage[]) => set({ images }),
   
   addImages: (newImages: CatalogImage[]) => set((state) => ({
-    images: [...newImages, ...state.images]
+    images: [...state.images, ...newImages]
   })),
   
   toggleSelection: (id: number, isMultiSelect = false) => set((state) => {

@@ -59,7 +59,7 @@
 
 ## En Cours
 
-> _Aucune sous-phase n'est actuellement en cours. Prochaine : Phase 0.4 (State Management Zustand)._
+> _Aucune sous-phase n'est actuellement en cours. Prochaine : Phase 0.5 (Pipeline CI & Linting)._
 
 ---
 
@@ -106,6 +106,52 @@ Migration complète du projet de JavaScript (JSX) vers TypeScript (TSX) strict. 
 - Arrays de constantes mock extraits avec `as const` pour le typage
 - Interface `MockEvent` temporaire (sera remplacée par `CatalogEvent` en Phase 4.1)
 - `fractionalSecondDigits` retiré de `toLocaleTimeString` (non supporté dans les types TS DOM)
+
+---
+
+### 2026-02-11 — Phase 0.4 : Tests Unitaires
+
+**Statut** : ✅ Complétée
+**Agent** : Cascade
+**Durée** : ~1 session
+
+#### Résumé
+Création de tests unitaires complets pour tous les stores Zustand (Phase 0.4) et les types TypeScript (Phase 0.1). Configuration de Vitest avec jsdom. Correction de bugs découverts pendant les tests. **61 tests passent** sur 5 fichiers.
+
+#### Fichiers créés
+- `vitest.config.ts` — Configuration Vitest avec jsdom
+- `src/test/setup.ts` — Setup global (jest-dom, mocks)
+- `src/test/storeUtils.ts` — Utilitaires pour isolation des tests Zustand
+- `src/stores/__tests__/catalogStore.test.ts` — 17 tests (images, sélection, filtres)
+- `src/stores/__tests__/uiStore.test.ts` — 9 tests (vues, sidebars, UI state)
+- `src/stores/__tests__/editStore.test.ts` — 9 tests (événements, éditions)
+- `src/stores/__tests__/systemStore.test.ts` — 10 tests (logs, import state)
+- `src/types/__tests__/types.test.ts` — 16 tests (validation types TypeScript)
+
+#### Fichiers modifiés
+- `package.json` — Ajout scripts `test`, `test:ui`, `test:run`, `test:coverage`
+- `package.json` — Ajout dépendances Vitest, @testing-library/react, jsdom
+- `src/stores/catalogStore.ts` — **Bug fix** : `addImages()` ajoute en fin de liste
+- `src/stores/systemStore.ts` — **Bug fix** : limitation logs avec `slice(-15)`
+
+#### Critères de validation
+- [x] 61 tests passent sans erreur
+- [x] Couverture complète des 4 stores Zustand
+- [x] Tests utilisent `act()` pour les mises à jour d'état React
+- [x] Isolation des tests avec reset du state avant chaque test
+- [x] Aucun test modifié pour devenir "vert" sans justification
+
+#### Décisions techniques
+- Utilisation de `act()` de @testing-library/react pour wrapper les mises à jour Zustand
+- Reset manuel du state Zustand dans `beforeEach` (singleton global)
+- Tests composants (GridView, TopNav) supprimés car obsolètes après migration Zustand
+- Ces tests seront réécrits en Phase 4.1 avec la nouvelle architecture
+- Mock de `Date.now()` avec `vi.useFakeTimers()` pour tests déterministes
+
+#### Bugs corrigés
+1. **catalogStore.addImages()** : Ajoutait les images au début au lieu de la fin
+2. **systemStore.addLog()** : Mauvaise logique de limitation (slice avant concat au lieu d'après)
+3. **Tests non déterministes** : INITIAL_IMAGES utilise Math.random(), comparaison par IDs
 
 ---
 

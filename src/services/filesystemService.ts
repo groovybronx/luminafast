@@ -3,7 +3,6 @@
  * Fournit une interface moderne avec gestion d'erreurs et fallbacks
  */
 
-import { invoke } from '@tauri-apps/api/core';
 import {
   FileEvent,
   FileEventType,
@@ -23,6 +22,10 @@ import {
   isValidPath,
 } from '../types/filesystem';
 
+// ============================================================================
+// Service Configuration
+// ============================================================================
+
 /**
  * Service filesystem avec interface Tauri + fallbacks
  */
@@ -33,6 +36,33 @@ export class FilesystemService {
 
   private constructor() {
     this.isTauriAvailable = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+  }
+
+  /**
+   * Get Tauri invoke function (handle both __TAURI__ and __TAURI_INTERNALS__)
+   */
+  private static getInvoke() {
+    if (typeof window !== 'undefined') {
+      // Try __TAURI__ first (normal case)
+      const tauriWindow = window as unknown as {
+        __TAURI__?: { invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown> };
+        __TAURI_INTERNALS__?: { invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown> };
+      };
+      
+      if (tauriWindow.__TAURI__?.invoke) {
+        return tauriWindow.__TAURI__.invoke;
+      }
+      // Fallback to __TAURI_INTERNALS__ (brownfield pattern)
+      if (tauriWindow.__TAURI_INTERNALS__?.invoke) {
+        return tauriWindow.__TAURI_INTERNALS__.invoke;
+      }
+    }
+    
+    // Mock fallback for tests
+    return async (command: string, args?: Record<string, unknown>) => {
+      console.warn(`[FilesystemService] Tauri not available, mocking command: ${command}`, { args });
+      throw new Error(`Tauri not available: ${command}`);
+    };
   }
 
   /**
@@ -53,7 +83,8 @@ export class FilesystemService {
       if (!this.isTauriAvailable) return false;
       
       // Test simple avec une commande existante
-      await invoke('path_exists', { path: '/' });
+      const invokeFn = FilesystemService.getInvoke();
+      await invokeFn('path_exists', { path: '/' });
       return true;
     } catch {
       this.isTauriAvailable = false;
@@ -73,7 +104,8 @@ export class FilesystemService {
         return this.createMockResult<T>(command, args);
       }
 
-      const result = await invoke<T>(command, args);
+      const invokeFn = FilesystemService.getInvoke();
+      const result = await invokeFn(command, args) as T;
       return {
         success: true,
         data: result,

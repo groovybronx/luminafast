@@ -28,7 +28,7 @@ tauri-plugin-dialog = "2"
 tauri-plugin-shell = "2"
 
 # Database dependencies
-rusqlite = { version = "0.31.0", features = ["bundled"] }
+rusqlite = { version = "0.31.0", features = ["bundled", "chrono"] }
 thiserror = "1.0"
 chrono = { version = "0.4.38", features = ["serde"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
@@ -41,6 +41,7 @@ tokio = { version = "1.40", features = ["rt-multi-thread", "fs", "io-util", "mac
 # Filesystem dependencies
 notify = "7.0"
 parking_lot = "0.12"
+walkdir = "2.5"
 
 [dev-dependencies]
 tempfile = "3.0"

@@ -43,7 +43,10 @@ pub fn run() {
             // Initialize filesystem service for Phase 1.4
             commands::filesystem::initialize_filesystem_service();
             
-            log::info!("Hashing and filesystem services initialized");
+            // Initialize discovery services for Phase 2.1
+            commands::discovery::initialize_discovery_services();
+            
+            log::info!("Hashing, filesystem and discovery services initialized");
             
             Ok(())
         })
@@ -74,6 +77,20 @@ pub fn run() {
             commands::filesystem::list_directory,
             commands::filesystem::path_exists,
             commands::filesystem::get_file_size,
+            // Discovery commands
+            commands::discovery::start_discovery,
+            commands::discovery::stop_discovery,
+            commands::discovery::get_discovery_status,
+            commands::discovery::get_all_discovery_sessions,
+            commands::discovery::get_discovered_files,
+            commands::discovery::ingest_file,
+            commands::discovery::batch_ingest,
+            commands::discovery::create_discovery_config,
+            commands::discovery::get_supported_formats,
+            commands::discovery::validate_discovery_path,
+            commands::discovery::get_default_discovery_config,
+            commands::discovery::cleanup_discovery_sessions,
+            commands::discovery::get_discovery_stats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

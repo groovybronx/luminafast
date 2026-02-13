@@ -1,22 +1,11 @@
 // --- Re-export all domain types ---
 
-export type {
-  ExifData,
-  EditState,
-  FlagType,
-  ImageState,
-  CatalogImage,
-  ImageTheme,
-} from './image';
-
-export { DEFAULT_EDIT_STATE } from './image';
-
-export type {
-  CollectionType,
-  Collection,
-  SmartQueryRule,
-  SmartQuery,
-} from './collection';
+export * from './image';
+export * from './collection';
+export * from './events';
+export * from './ui';
+export * from './dto';
+export * from './hashing';
 
 export type {
   EventType,

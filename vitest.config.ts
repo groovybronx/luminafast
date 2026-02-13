@@ -8,6 +8,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     globals: true,
+    watch: false, // Les tests s'arrêtent après exécution
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

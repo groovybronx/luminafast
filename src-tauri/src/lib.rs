@@ -1,6 +1,7 @@
+mod commands;
 mod database;
 mod models;
-mod commands;
+mod services;
 
 use tauri::Manager;
 use database::Database;
@@ -35,6 +36,12 @@ pub fn run() {
             let app_state = AppState { db: std::sync::Arc::new(std::sync::Mutex::new(db)) };
             app.manage(app_state);
             
+            // Initialize hashing service for Phase 1.3
+            let hashing_state = commands::hashing::HashingState::new();
+            app.manage(hashing_state);
+            
+            log::info!("Hashing service initialized");
+            
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -44,7 +51,14 @@ pub fn run() {
             commands::catalog::create_collection,
             commands::catalog::add_images_to_collection,
             commands::catalog::get_collections,
-            commands::catalog::search_images
+            commands::catalog::search_images,
+            commands::hashing::hash_file,
+            commands::hashing::hash_files_batch,
+            commands::hashing::detect_duplicates,
+            commands::hashing::verify_file_integrity,
+            commands::hashing::clear_hash_cache,
+            commands::hashing::get_hash_cache_stats,
+            commands::hashing::benchmark_hashing
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

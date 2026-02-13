@@ -32,5 +32,11 @@ rusqlite = { version = "0.31.0", features = ["bundled"] }
 thiserror = "1.0"
 chrono = { version = "0.4.38", features = ["serde"] }
 
+# Hashing dependencies
+blake3 = "1.5"
+rayon = "1.10"
+tokio = { version = "1.40", features = ["rt-multi-thread", "fs", "io-util", "macros"] }
+
 [dev-dependencies]
 tempfile = "3.0"
+tauri = { version = "2.9.1", features = ["rustls-tls", "devtools", "test"] }

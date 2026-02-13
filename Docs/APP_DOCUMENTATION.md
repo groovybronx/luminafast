@@ -326,10 +326,48 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 | `globals` | ^16.5.0 | Globales ESLint |
 | `@types/react` | ^19.2.7 | Types React (non utilisés — JS) |
 | `@types/react-dom` | ^19.2.3 | Types ReactDOM (non utilisés — JS) |
+| `typescript` | ^5.6.3 | TypeScript strict |
+| `typescript-eslint` | ^8.55.0 | ESLint pour TypeScript |
+| `@testing-library/react` | ^16.1.0 | Tests React |
+| `@vitest/coverage-v8` | ^1.6.0 | Coverage tests |
+| `vitest` | ^2.1.8 | Framework de tests |
+| `jsdom` | ^25.0.1 | Environnement DOM tests |
+| `zustand` | ^5.0.2 | State management |
+| `@tauri-apps/api` | ^2.2.0 | API Tauri frontend |
+| `@tauri-apps/plugin-fs` | ^2.2.0 | Plugin filesystem |
+| `@tauri-apps/plugin-dialog` | ^2.2.0 | Plugin dialogues |
+| `@tauri-apps/plugin-shell` | ^2.2.0 | Plugin shell |
 
 ---
 
-## 9. Configuration
+## 9. Dépendances Rust Actuelles
+
+### Production
+| Crate | Version | Usage |
+|-------|---------|-------|
+| `tauri` | ^2.9.1 | Framework desktop |
+| `tauri-plugin-log` | ^2 | Logging système |
+| `tauri-plugin-fs` | ^2 | Accès fichiers |
+| `tauri-plugin-dialog` | ^2 | Dialogues système |
+| `tauri-plugin-shell` | ^2 | Commandes système |
+| `serde` | ^1.0 | Sérialisation JSON |
+| `serde_json` | ^1.0 | JSON parsing/writing |
+| `rusqlite` | ^0.31.0 | Base de données SQLite |
+| `thiserror` | ^1.0 | Gestion d'erreurs |
+| `chrono` | ^0.4.38 | Dates et timestamps |
+| `blake3` | ^1.5 | Hachage cryptographique |
+| `rayon` | ^1.10 | Parallélisation |
+| `tokio` | ^1.40 | Runtime async |
+
+### Développement
+| Crate | Version | Usage |
+|-------|---------|-------|
+| `tauri-build` | ^2.5.1 | Build system |
+| `tempfile` | ^3.0 | Fichiers temporaires tests |
+
+---
+
+## 10. Configuration
 
 ### Vite (`vite.config.js`)
 - Plugins : `@vitejs/plugin-react` + `@tailwindcss/vite`
@@ -344,18 +382,49 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 
 ---
 
-## 10. Schéma de Base de Données
+## 11. Schéma de Base de Données
 
-> ⬜ **Non implémenté** — Prévu en Phase 1.1
->
-> Le schéma cible est défini dans le plan de développement principal.
-> Cette section sera mise à jour lors de l'implémentation de la Phase 1.1.
+> ✅ **Implémenté en Phase 1.1** — Schéma complet avec 9 tables et migrations automatiques
+
+### 11.1 — Architecture du Catalogue
+
+**Tables principales** :
+- `images` : Table pivot avec BLAKE3 hash, métadonnées de base (filename, path, filesize)
+- `folders` : Structure hiérarchique des dossiers (parent_id, path, name)
+- `exif_metadata` : Métadonnées EXIF complètes (camera, lens, settings, dates)
+- `collections` : Collections statiques/smart/quick avec requêtes JSON
+- `collection_images` : Relation many-to-many avec ordre manuel
+- `image_state` : Rating, flags, color labels par image
+- `tags` + `image_tags` : Système de tags hiérarchique
+- `migrations` : Tracking des migrations appliquées
+
+**Index stratégiques** :
+- Index sur `images.blake3_hash` (déduplication)
+- Index sur `images.filename`, `folders.path`, `collections.type`
+- Index sur `image_state.rating`, `image_state.flag`
+
+### 11.2 — Configuration SQLite
+
+**PRAGMA optimisés** :
+- `journal_mode = WAL` : Concurrency optimale pour lectures/écritures simultanées
+- `synchronous = NORMAL` : Équilibre performance/sécurité
+- `cache_size = -20000` : Cache 20MB en mémoire
+- `page_size = 4096` : Taille de page optimisée
+- `temp_store = memory` : Tables temporaires en RAM
+- `foreign_keys = ON` : Contraintes référentielles activées
+
+### 11.3 — Système de Migrations
+
+- **Automatique** : Migration `001_initial` appliquée au démarrage
+- **Idempotent** : Les migrations peuvent être réappliquées sans erreur
+- **Tracking** : Table `migrations` enregistre les versions appliquées
+- **Tests** : 11 tests unitaires valident le système complet
 
 ---
 
-## 11. Outils de Qualité et CI/CD
+## 12. Outils de Qualité et CI/CD
 
-### 11.1 — Linting et Formatting
+### 12.1 — Linting et Formatting
 
 **Frontend (TypeScript/React)**
 - **ESLint** : Configuration étendue avec règles TypeScript strictes
@@ -372,17 +441,19 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 - **rustfmt** : Formatting automatique du code Rust
 - **Commandes** : `cargo clippy`, `cargo fmt`
 
-### 11.2 — Tests et Coverage
+### 12.2 — Tests et Coverage
 
 **Framework de tests** : Vitest avec jsdom
-- **65 tests unitaires** couvrant tous les stores Zustand et les types
+- **115 tests unitaires** au total (stores + types + services)
 - **Coverage** : 98.93% (bien au-dessus des 80% requis)
 - **Types de tests** :
-  - Tests stores : catalogStore, uiStore, editStore, systemStore
-  - Tests types : validation des interfaces TypeScript
-- **Commandes** : `npm test`, `npm run test:ci`
+  - Tests stores (4) : catalogStore, uiStore, editStore, systemStore
+  - Tests types (2) : validation des interfaces TypeScript et hashing
+  - Tests services (2) : hashingService avec Tauri commands et fallbacks
+  - Tests Rust (11) : base de données, modèles, et hashing service
+- **Commandes** : `npm test`, `npm run test:ci`, `npm run rust:test`
 
-### 11.3 — Pipeline CI/CD
+### 12.3 — Pipeline CI/CD
 
 **GitHub Actions** (`.github/workflows/ci.yml`)
 - **Frontend** : Type checking, linting, tests, build
@@ -391,7 +462,7 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 - **Security** : Audit des dépendances (Node.js + Rust)
 - **Déclenchement** : Push sur main/develop/phase/*, PRs
 
-### 11.4 — Scripts de Développement
+### 12.4 — Scripts de Développement
 
 ```bash
 # Frontend
@@ -474,60 +545,11 @@ npm run build:tauri    # Build Tauri production
 
 ---
 
-## 13. API / Commandes Tauri
-
-> ✅ **Implémenté en Phase 1.2** — 7 commandes CRUD entièrement fonctionnelles
-
-### 13.1 — Commandes CRUD Catalog
-
-**Commandes disponibles** :
-- `get_all_images(filter?)` → `Vec<ImageDTO>` : Récupérer toutes les images avec filtres
-- `get_image_detail(id)` → `ImageDetailDTO` : Métadonnées complètes d'une image
-- `update_image_state(id, rating?, flag?)` → `Result<()>` : Mettre à jour rating/flag
-- `create_collection(name, collectionType, parentId?)` → `CollectionDTO` : Créer une collection
-- `add_images_to_collection(collectionId, imageIds)` → `Result<()>` : Ajouter des images à une collection
-- `get_collections()` → `Vec<CollectionDTO>` : Lister toutes les collections
-- `search_images(query)` → `Vec<ImageDTO>` : Rechercher des images
-
-### 13.2 — DTOs Tauri
-
-**Types sérialisés** (`src-tauri/src/models/dto.rs`) :
-- `ImageDTO` : Image de base avec état
-- `ImageDetailDTO` : Image complète avec EXIF
-- `CollectionDTO` : Collection avec comptage d'images
-- `ImageFilter` : Filtres pour recherche
-- Support complet `serde::Serialize/Deserialize`
-
-### 13.3 — Service TypeScript Wrapper
-
-**Service** (`src/services/catalogService.ts`) :
-- Wrapper avec gestion d'erreurs robuste
-- Fallback `__TAURI_INTERNALS__.invoke` pour compatibilité Tauri v2
-- Types TypeScript stricts pour toutes les méthodes
-- Validation des paramètres côté frontend
-
-### 13.4 — Tests Unitaires
-
-**15 tests Rust** (100% passants) :
-- Tests de toutes les commandes CRUD
-- Tests de validation des types de collection
-- Tests de transactions avec rollback
-- Tests de gestion d'erreurs et edge cases
-
-### 13.5 — Communication Frontend-Backend
-
-**API JavaScript** :
-- Utilisation de `__TAURI_INTERNALS__.invoke` (pattern brownfield Tauri v2)
-- Gestion d'erreurs avec messages descriptifs
-- Sérialisation/désérialisation automatique des DTOs
-- Support pour les types complexes (nested objects, arrays)
-
----
-
-## 13. Historique des Modifications de ce Document
+## 14. Historique des Modifications de ce Document
 
 | Date | Phase | Modification | Raison |
 |------|-------|------------|--------|
+| 2026-02-13 | 1.3 | Mise à jour complète après Phase 1.3 (BLAKE3) | Synchronisation documentation avec état actuel |
 | 2026-02-12 | 1.2 | Ajout section API/Commandes Tauri complète | Implémentation Phase 1.2 terminée |
 | 2026-02-11 | 1.1 | Ajout section Base de Données SQLite complète | Implémentation Phase 1.1 terminée |
 | 2026-02-11 | 1.1 | Mise à jour stack technique et architecture fichiers | Ajout src-tauri avec SQLite |

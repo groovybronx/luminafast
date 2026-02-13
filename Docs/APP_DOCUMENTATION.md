@@ -545,10 +545,79 @@ npm run build:tauri    # Build Tauri production
 
 ---
 
+## 13. Service Filesystem
+
+> ✅ **Implémenté en Phase 1.4** - Service complet de gestion du système de fichiers avec watchers et locks
+
+### 13.1 — Architecture du Service
+
+**Composants principaux** :
+- `FilesystemService` : Service singleton avec gestion d'état async
+- `FileWatcher` : Watchers de fichiers avec debounce et filtres
+- `FileLock` : Système de verrous partagés/exclusifs
+- `EventQueue` : Queue d'événements avec traitement batch
+
+**Performance cibles** :
+- <10ms détection d'événements filesystem
+- <1ms acquisition/libération de verrous
+- Support de milliers de watchers simultanés
+
+### 13.2 — Types Unifiés
+
+**Sérialisation serde custom** :
+- `PathBuf` ↔ `String` : Chemins de fichiers cross-platform
+- `DateTime<Utc>` ↔ `String` : Timestamps ISO 8601
+- `Duration` ↔ `String` : Durées formatées
+- `Uuid` ↔ `String` : Identifiants uniques
+
+**Types principaux** :
+- `FileEvent` : Événements filesystem (created, modified, deleted, etc.)
+- `FileLock` : Verrous avec timeout et héritage
+- `WatcherConfig` : Configuration des watchers (filtres, debounce, récursivité)
+- `FilesystemState` : État global du service
+
+### 13.3 — Concurrence et Performance
+
+**tokio::sync::RwLock** :
+- Lecture concurrente autorisée pour les opérations non-mutantes
+- Écriture exclusive pour les modifications d'état
+- Pas de deadlocks avec les patterns async/await
+
+**Batch processing** :
+- Événements groupés par batch (configurable 50-1000)
+- Debounce configurable (100ms-5s)
+- Processing async pour ne pas bloquer le thread principal
+
+### 13.4 — Commandes Tauri
+
+**15 commandes exposées** :
+- `start_watcher` / `stop_watcher` : Gestion des watchers
+- `acquire_lock` / `release_lock` / `is_file_locked` : Gestion des verrous
+- `get_pending_events` / `clear_events` : Gestion des événements
+- `get_filesystem_state` / `get_active_locks` / `list_active_watchers` : État du service
+- `get_file_metadata` / `get_directory_contents` : Opérations fichiers/dossiers
+- `create_directory` / `delete_file` : Opérations de base
+
+### 13.5 — Tests et Validation
+
+**Tests Rust (26 unitaires)** :
+- Tests du service filesystem avec mocks
+- Tests des commandes Tauri
+- Tests de concurrence et performance
+- Tests de gestion d'erreurs
+
+**Tests TypeScript (75 lignes)** :
+- Tests des types filesystem
+- Tests du wrapper service
+- Mocks Vitest pour Tauri API
+
+---
+
 ## 14. Historique des Modifications de ce Document
 
 | Date | Phase | Modification | Raison |
 |------|-------|------------|--------|
+| 2026-02-13 | 1.4 | Ajout section Service Filesystem complète | Implémentation Phase 1.4 terminée |
 | 2026-02-13 | 1.3 | Mise à jour complète après Phase 1.3 (BLAKE3) | Synchronisation documentation avec état actuel |
 | 2026-02-12 | 1.2 | Ajout section API/Commandes Tauri complète | Implémentation Phase 1.2 terminée |
 | 2026-02-11 | 1.1 | Ajout section Base de Données SQLite complète | Implémentation Phase 1.1 terminée |
@@ -558,6 +627,7 @@ npm run build:tauri    # Build Tauri production
 
 | Date | Sous-Phase | Nature de la modification |
 |------|-----------|--------------------------|
+| 2026-02-13 | Phase 1.4 | Implémentation Service Filesystem complet (watchers, locks, événements) |
 | 2026-02-12 | Phase 1.2 | Implémentation CRUD Commands Tauri + DTOs + Service wrapper |
 | 2026-02-11 | Pré-développement | Création initiale — état du mockup documenté |
 | 2026-02-11 | Phase 0.1 | Migration TypeScript, ajout types/, mise à jour stack |

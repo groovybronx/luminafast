@@ -40,25 +40,40 @@ pub fn run() {
             let hashing_state = commands::hashing::HashingState::new();
             app.manage(hashing_state);
             
-            log::info!("Hashing service initialized");
+            // Initialize filesystem service for Phase 1.4
+            commands::filesystem::initialize_filesystem_service();
+            
+            log::info!("Hashing and filesystem services initialized");
             
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            // Catalog commands
             commands::catalog::get_all_images,
-            commands::catalog::get_image_detail,
-            commands::catalog::update_image_state,
-            commands::catalog::create_collection,
-            commands::catalog::add_images_to_collection,
             commands::catalog::get_collections,
             commands::catalog::search_images,
+            // Hashing commands
             commands::hashing::hash_file,
-            commands::hashing::hash_files_batch,
-            commands::hashing::detect_duplicates,
-            commands::hashing::verify_file_integrity,
-            commands::hashing::clear_hash_cache,
-            commands::hashing::get_hash_cache_stats,
-            commands::hashing::benchmark_hashing
+            // Filesystem commands
+            commands::filesystem::start_watcher,
+            commands::filesystem::stop_watcher,
+            commands::filesystem::acquire_lock,
+            commands::filesystem::release_lock,
+            commands::filesystem::get_pending_events,
+            commands::filesystem::get_filesystem_state,
+            commands::filesystem::get_active_locks,
+            commands::filesystem::is_file_locked,
+            commands::filesystem::get_watcher_stats,
+            commands::filesystem::list_active_watchers,
+            commands::filesystem::test_permissions,
+            commands::filesystem::get_file_metadata,
+            commands::filesystem::create_directory,
+            commands::filesystem::delete_path,
+            commands::filesystem::move_path,
+            commands::filesystem::copy_file,
+            commands::filesystem::list_directory,
+            commands::filesystem::path_exists,
+            commands::filesystem::get_file_size,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

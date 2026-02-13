@@ -31,11 +31,16 @@ tauri-plugin-shell = "2"
 rusqlite = { version = "0.31.0", features = ["bundled"] }
 thiserror = "1.0"
 chrono = { version = "0.4.38", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
 
 # Hashing dependencies
 blake3 = "1.5"
 rayon = "1.10"
 tokio = { version = "1.40", features = ["rt-multi-thread", "fs", "io-util", "macros"] }
+
+# Filesystem dependencies
+notify = "7.0"
+parking_lot = "0.12"
 
 [dev-dependencies]
 tempfile = "3.0"

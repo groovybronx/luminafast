@@ -17,12 +17,17 @@ export class CatalogService {
   private static getInvoke() {
     if (typeof window !== 'undefined') {
       // Try __TAURI__ first (normal case)
-      if ((window as any).__TAURI__?.invoke) {
-        return (window as any).__TAURI__.invoke;
+      const tauriWindow = window as unknown as {
+        __TAURI__?: { invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown> };
+        __TAURI_INTERNALS__?: { invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown> };
+      };
+      
+      if (tauriWindow.__TAURI__?.invoke) {
+        return tauriWindow.__TAURI__.invoke;
       }
       // Fallback to __TAURI_INTERNALS__ (brownfield pattern)
-      if ((window as any).__TAURI_INTERNALS__?.invoke) {
-        return (window as any).__TAURI_INTERNALS__.invoke;
+      if (tauriWindow.__TAURI_INTERNALS__?.invoke) {
+        return tauriWindow.__TAURI_INTERNALS__.invoke;
       }
     }
     throw new Error('Tauri API not available');
@@ -40,7 +45,7 @@ export class CatalogService {
         throw new Error(result);
       }
       
-      return result;
+      return result as ImageDTO[];
     } catch (error) {
       console.error('Failed to get all images:', error);
       throw error;
@@ -59,7 +64,7 @@ export class CatalogService {
         throw new Error(result);
       }
       
-      return result;
+      return result as ImageDetailDTO;
     } catch (error) {
       console.error(`Failed to get image detail for ID ${id}:`, error);
       throw error;
@@ -76,18 +81,13 @@ export class CatalogService {
   ): Promise<void> {
     try {
       const invoke = this.getInvoke();
-      const result = await invoke('update_image_state', { 
+      await invoke('update_image_state', { 
         id, 
         rating, 
         flag 
       });
-      
-      if (typeof result === 'string') {
-        throw new Error(result);
-      }
     } catch (error) {
-      console.error(`Failed to update image state for ID ${id}:`, error);
-      throw error;
+      throw this.parseError(error);
     }
   }
   
@@ -106,15 +106,9 @@ export class CatalogService {
         collection_type: collectionType,
         parent_id: parentId
       });
-      
-      if (typeof result === 'string') {
-        throw new Error(result);
-      }
-      
-      return result;
+      return result as CollectionDTO;
     } catch (error) {
-      console.error('Failed to create collection:', error);
-      throw error;
+      throw this.parseError(error);
     }
   }
   
@@ -127,17 +121,12 @@ export class CatalogService {
   ): Promise<void> {
     try {
       const invoke = this.getInvoke();
-      const result = await invoke('add_images_to_collection', {
+      await invoke('add_images_to_collection', {
         collection_id: collectionId,
         image_ids: imageIds
       });
-      
-      if (typeof result === 'string') {
-        throw new Error(result);
-      }
     } catch (error) {
-      console.error(`Failed to add images to collection ${collectionId}:`, error);
-      throw error;
+      throw this.parseError(error);
     }
   }
   
@@ -148,34 +137,22 @@ export class CatalogService {
     try {
       const invoke = this.getInvoke();
       const result = await invoke('get_collections');
-      
-      if (typeof result === 'string') {
-        throw new Error(result);
-      }
-      
-      return result;
+      return result as CollectionDTO[];
     } catch (error) {
-      console.error('Failed to get collections:', error);
-      throw error;
+      throw this.parseError(error);
     }
   }
   
   /**
    * Search images by text query
    */
-  static async searchImages(query: string): Promise<ImageDTO[]> {
+  static async searchImages(query: string, filters?: ImageFilter): Promise<ImageDTO[]> {
     try {
       const invoke = this.getInvoke();
-      const result = await invoke('search_images', { query });
-      
-      if (typeof result === 'string') {
-        throw new Error(result);
-      }
-      
-      return result;
+      const result = await invoke('search_images', { query, filters });
+      return result as ImageDTO[];
     } catch (error) {
-      console.error(`Failed to search images with query "${query}":`, error);
-      throw error;
+      throw this.parseError(error);
     }
   }
   
@@ -184,6 +161,19 @@ export class CatalogService {
    */
   static isError<T>(result: T | string): result is string {
     return typeof result === 'string';
+  }
+  
+  /**
+   * Parse error from Tauri command
+   */
+  private static parseError(error: unknown): Error {
+    if (error instanceof Error) {
+      return error;
+    }
+    if (typeof error === 'string') {
+      return new Error(error);
+    }
+    return new Error('Unknown error occurred');
   }
   
   /**

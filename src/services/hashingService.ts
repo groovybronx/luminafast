@@ -5,13 +5,13 @@ import type {
   HashError,
   HashProgressCallback,
 } from '@/types';
-import { HashErrorType } from '@/types';
+import { HashType, HashErrorType } from '../types/hashing';
 
 // Déclarations pour les globals Tauri
 declare global {
   interface Window {
     __TAURI_INTERNALS__?: {
-      invoke: (command: string, args?: any) => Promise<any>;
+      invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>;
     };
   }
 }
@@ -126,7 +126,7 @@ export class HashingService {
    */
   static async benchmarkHashing(
     filePath: string,
-    iterations: number = 5
+    iterations = 5
   ): Promise<HashBenchmarkResult> {
     try {
       const result = await this.invokeTauri('benchmark_hashing', {
@@ -158,7 +158,7 @@ export class HashingService {
    */
   static async hashFileWithTimeout(
     filePath: string,
-    timeoutMs: number = 30000
+    timeoutMs = 30000
   ): Promise<FileHash> {
     return Promise.race([
       this.hashFile(filePath),
@@ -175,7 +175,7 @@ export class HashingService {
    */
   static async analyzeDirectoryForDuplicates(
     _directoryPath: string,
-    _recursive: boolean = true,
+    _recursive = true,
     _progressCallback?: HashProgressCallback
   ): Promise<DuplicateAnalysis> {
     try {
@@ -195,8 +195,8 @@ export class HashingService {
    */
   private static async invokeTauri(
     command: string,
-    args: Record<string, any>
-  ): Promise<any> {
+    args: Record<string, unknown>
+  ): Promise<unknown> {
     if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
       return window.__TAURI_INTERNALS__.invoke(command, args);
     }
@@ -209,7 +209,7 @@ export class HashingService {
   /**
    * Mock des commandes Tauri pour développement
    */
-  private static mockTauriCommand(command: string, args: any): any {
+  private static mockTauriCommand(command: string, args: Record<string, unknown>): unknown {
     switch (command) {
       case 'hash_file':
         return {
@@ -219,8 +219,9 @@ export class HashingService {
           hashed_at: new Date().toISOString(),
         };
       
-      case 'hash_files_batch':
-        return args.filePaths.map((path: string) => [
+      case 'hash_files_batch': {
+        const filePaths = args.filePaths as string[];
+        return filePaths.map((path: string) => [
           path,
           {
             hash: 'mock_hash_b3a2416c7c8a9b0f1e2d3c4b5a6f7e8d9c0b1a2f3e4d5c6b7a8f9e0d1c2b34',
@@ -229,15 +230,18 @@ export class HashingService {
             hashed_at: new Date().toISOString(),
           },
         ]);
+      }
       
-      case 'detect_duplicates':
+      case 'detect_duplicates': {
+        const duplicatePaths = args.filePaths as string[];
         return {
-          total_files: args.filePaths.length,
+          total_files: duplicatePaths.length,
           duplicate_groups: 0,
           duplicate_files: 0,
           wasted_space: 0,
           duplicates: [],
         };
+      }
       
       case 'verify_file_integrity':
         return true;
@@ -268,39 +272,44 @@ export class HashingService {
   /**
    * Parse et valide un FileHash
    */
-  private static parseFileHash(data: any): FileHash {
+  private static parseFileHash(data: unknown): FileHash {
     if (!data || typeof data !== 'object') {
       throw new Error('Invalid FileHash response');
     }
 
+    const dataObj = data as Record<string, unknown>;
     return {
-      hash: String(data.hash || ''),
-      hash_type: data.hash_type || 'Blake3',
-      file_size: Number(data.file_size || 0),
-      hashed_at: data.hashed_at || new Date().toISOString(),
+      hash: String(dataObj.hash || ''),
+      hash_type: ((dataObj.hash_type as string) || 'Blake3') as HashType,
+      file_size: Number(dataObj.file_size || 0),
+      hashed_at: (dataObj.hashed_at as string) || new Date().toISOString(),
     };
   }
 
   /**
    * Parse et valide une DuplicateAnalysis
    */
-  private static parseDuplicateAnalysis(data: any): DuplicateAnalysis {
+  private static parseDuplicateAnalysis(data: unknown): DuplicateAnalysis {
     if (!data || typeof data !== 'object') {
       throw new Error('Invalid DuplicateAnalysis response');
     }
 
+    const dataObj = data as Record<string, unknown>;
     return {
-      total_files: Number(data.total_files || 0),
-      duplicate_groups: Number(data.duplicate_groups || 0),
-      duplicate_files: Number(data.duplicate_files || 0),
-      wasted_space: Number(data.wasted_space || 0),
-      duplicates: Array.isArray(data.duplicates) 
-        ? data.duplicates.map((d: any) => ({
-            hash: String(d.hash || ''),
-            file_paths: Array.isArray(d.file_paths) ? d.file_paths.map(String) : [],
-            file_size: Number(d.file_size || 0),
-            first_detected: d.first_detected || new Date().toISOString(),
-          }))
+      total_files: Number(dataObj.total_files || 0),
+      duplicate_groups: Number(dataObj.duplicate_groups || 0),
+      duplicate_files: Number(dataObj.duplicate_files || 0),
+      wasted_space: Number(dataObj.wasted_space || 0),
+      duplicates: Array.isArray(dataObj.duplicates) 
+        ? (dataObj.duplicates as unknown[]).map((d: unknown) => {
+            const dObj = d as Record<string, unknown>;
+            return {
+              hash: String(dObj.hash || ''),
+              file_paths: Array.isArray(dObj.file_paths) ? (dObj.file_paths as unknown[]).map(String) : [],
+              file_size: Number(dObj.file_size || 0),
+              first_detected: (dObj.first_detected as string) || new Date().toISOString(),
+            };
+          })
         : [],
     };
   }
@@ -308,27 +317,28 @@ export class HashingService {
   /**
    * Parse et valide un HashBenchmarkResult
    */
-  private static parseBenchmarkResult(data: any): HashBenchmarkResult {
+  private static parseBenchmarkResult(data: unknown): HashBenchmarkResult {
     if (!data || typeof data !== 'object') {
       throw new Error('Invalid HashBenchmarkResult response');
     }
 
+    const dataObj = data as Record<string, unknown>;
     return {
-      file_path: String(data.file_path || ''),
-      file_size: Number(data.file_size || 0),
-      iterations: Number(data.iterations || 0),
-      total_time_ms: Number(data.total_time_ms || 0),
-      avg_time_per_hash_ms: Number(data.avg_time_per_hash_ms || 0),
-      throughput_mbps: Number(data.throughput_mbps || 0),
-      all_hashes_identical: Boolean(data.all_hashes_identical),
-      sample_hash: String(data.sample_hash || ''),
+      file_path: String(dataObj.file_path || ''),
+      file_size: Number(dataObj.file_size || 0),
+      iterations: Number(dataObj.iterations || 0),
+      total_time_ms: Number(dataObj.total_time_ms || 0),
+      avg_time_per_hash_ms: Number(dataObj.avg_time_per_hash_ms || 0),
+      throughput_mbps: Number(dataObj.throughput_mbps || 0),
+      all_hashes_identical: Boolean(dataObj.all_hashes_identical),
+      sample_hash: String(dataObj.sample_hash || ''),
     };
   }
 
   /**
    * Parse et normalise les erreurs
    */
-  private static parseError(error: any): HashError {
+  private static parseError(error: unknown): HashError {
     if (error instanceof Error) {
       // Tenter de déterminer le type d'erreur basé sur le message
       const message = error.message.toLowerCase();

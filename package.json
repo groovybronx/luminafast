@@ -17,6 +17,7 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
+    "tauri:dev:ci": "tauri dev",
     "build:tauri": "tauri build",
     "rust": "cd src-tauri && cargo",
     "rust:test": "cd src-tauri && cargo test",

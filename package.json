@@ -22,7 +22,9 @@
     "rust": "cd src-tauri && cargo",
     "rust:test": "cd src-tauri && cargo test",
     "rust:check": "cd src-tauri && cargo check",
-    "rust:build": "cd src-tauri && cargo build"
+    "rust:build": "cd src-tauri && cargo build",
+    "site:update": "./scripts/update-site.sh",
+    "site:build": "npm run site:update && git push origin gh-pages"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",

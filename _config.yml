@@ -29,6 +29,14 @@ exclude:
   - .github/
   - Docs/
   - .windsurf/
+  - public/
+  - index.html
+  - src-test-tauri.html
+  - .rustfmt.toml
+  - clippy.toml
+  - rust-toolchain.toml
+  - vitest.config.ts
+  - README.md
 
 # Include specific files
 include:

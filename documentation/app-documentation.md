@@ -24,7 +24,7 @@ next:
 
 ## Vue d'Ensemble
 
-**LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
+**LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) moderne avec des optimisations avancées (DuckDB, BLAKE3, Event Sourcing).
 
 ### État actuel : Application Tauri avec Build Errors Corrigés
 Toutes les erreurs de build et de tests Rust sont corrigées. 216/216 tests passent (0 échec). Les modèles discovery/ingestion sont synchronisés, la concurrence est Sync-safe, et l'architecture serde custom (Phase 1.4) est préservée. Les 7 commandes CRUD restent fonctionnelles, avec en plus les corrections structurelles pour préparer la Phase 1.3 (Service BLAKE3).
@@ -67,7 +67,7 @@ LuminaFast/
 ├── rust-toolchain.toml                # Configuration toolchain Rust
 ├── Docs/
 │   ├── archives/
-│   │   ├── Lightroomtechnique.md   # Analyse architecture Lightroom Classic
+│   │   ├── architecture-analysis.md   # Analyse architecture systèmes DAM
 │   │   └── recommendations.md      # Stack moderne recommandée
 │   ├── AI_INSTRUCTIONS.md          # Directives pour agents IA
 │   ├── CHANGELOG.md                # Suivi d'avancement par sous-phase

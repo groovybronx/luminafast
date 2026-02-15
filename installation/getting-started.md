@@ -132,7 +132,7 @@ mkdir -p ~/Pictures/LuminaFast-Catalog
 - **Taille des thumbnails** : Moyenne (200px)
 - **Qualité des previews** : Haute (JPEG q85)
 - **Auto-save** : Activé
-- **Raccourcis clavier** : Activer les raccourcis Lightroom
+- **Raccourcis clavier** : Activer les raccourcis clavier
 
 ---
 

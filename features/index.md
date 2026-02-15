@@ -66,7 +66,7 @@ Système d'import intelligent pour vos fichiers RAW.
 
 ### ✅ Disponibles Maintenant
 
-- **Interface moderne** - Design inspiré Lightroom
+- **Interface moderne** - Design professionnel et intuitif
 - **Navigation fluide** - Bibliothèque/Développement
 - **Sélection multiple** - Shift+clic, Cmd+clic
 - **Notation rapide** - 1-5 étoiles avec raccourcis

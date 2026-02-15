@@ -37,6 +37,7 @@ exclude:
   - rust-toolchain.toml
   - vitest.config.ts
   - README.md
+  - dist/
 
 # Include specific files
 include:

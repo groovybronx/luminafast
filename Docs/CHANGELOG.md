@@ -506,46 +506,10 @@ Implémentation complète des services Rust (DiscoveryService, IngestionService)
 
 ---
 
-### 2026-02-13 — Phase 2.1 : Discovery & Ingestion (BLOQUÉ)
-
-**Statut** : ⚠️ Bloqué
-**Agent** : Cascade
-**Durée** : ~2 sessions
-
-#### Résumé
-Implémentation complète des services Rust (DiscoveryService, IngestionService) et des commandes Tauri pour la découverte et ingestion de fichiers RAW. Création des types TypeScript et du service wrapper frontend. **25 tests échouent** sur 192 tests au total.
-
-#### Fichiers créés
-- `src-tauri/src/services/discovery.rs` — Service Rust de découverte (scanning, sessions)
-- `src-tauri/src/services/ingestion.rs` — Service Rust d'ingestion (hash, EXIF, DB)
-- `src-tauri/src/commands/discovery.rs` — Commandes Tauri pour discovery/ingestion
-- `src-tauri/src/models/discovery.rs` — Types Rust pour discovery/ingestion
-- `src/types/discovery.ts` — Types TypeScript miroir des modèles Rust
-- `src/services/discoveryService.ts` — Service wrapper TypeScript
-- `src-tauri/src/services/discovery/tests.rs` — Tests unitaires Rust discovery
-- `src-tauri/src/services/ingestion/tests.rs` — Tests unitaires Rust ingestion
-- `src/types/__tests__/discovery.test.ts` — Tests unitaires TypeScript types
-- `src/services/__tests__/discoveryService.test.ts` — Tests unitaires TypeScript service
-
-#### Fichiers modifiés
-- `src-tauri/Cargo.toml` — Ajout dépendances `chrono`, `walkdir`, `thiserror`, `tokio`
-- `src-tauri/src/lib.rs` — Intégration services et commandes dans Tauri
-- `src-tauri/src/models/mod.rs` — Export module discovery
-- `src-tauri/src/services/mod.rs` — Export services discovery/ingestion
-- `src/test/setup.ts` — Mocks Tauri API pour tests
-
-#### Problèmes résolus
-- **Mock Tauri non fonctionnel** : Correction complète du système de mocks pour les tests
-- **DiscoveryStatus non défini** : Correction de l'import enum (valeur vs type)
-- **Arguments de commandes** : Normalisation des appels Tauri avec tableaux vides
-- **Tests non déterministes** : Correction des tests de progression pour vérifier les bonnes données
-
----
-
 ## Statistiques du Projet
 
 - **Sous-phases totales** : 38
-- **Complétées** : 10 / 38 (26.3%)
+- **Complétées** : 11 / 38 (28.9%)
 - **En cours** : 0
 - **Bloquées** : 0
-- **Dernière mise à jour** : 2026-02-13
+- **Dernière mise à jour** : 2026-02-15

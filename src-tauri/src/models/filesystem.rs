@@ -1,7 +1,7 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::Duration;
-use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 // Modules de sérialisation personnalisés
@@ -28,8 +28,8 @@ mod path_buf_serde {
 }
 
 mod chrono_serde {
-    use serde::{Deserialize, Deserializer, Serializer};
     use chrono::{DateTime, Utc};
+    use serde::{Deserialize, Deserializer, Serializer};
 
     pub fn serialize<S>(dt: &DateTime<Utc>, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -73,8 +73,8 @@ mod option_duration_serde {
 }
 
 mod option_chrono_serde {
-    use serde::{Deserialize, Deserializer, Serializer};
     use chrono::{DateTime, Utc};
+    use serde::{Deserialize, Deserializer, Serializer};
 
     pub fn serialize<S>(dt: &Option<DateTime<Utc>>, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -94,9 +94,11 @@ mod option_chrono_serde {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        Ok(Some(DateTime::parse_from_rfc3339(&s)
-            .map(|dt| dt.with_timezone(&Utc))
-            .map_err(serde::de::Error::custom)?))
+        Ok(Some(
+            DateTime::parse_from_rfc3339(&s)
+                .map(|dt| dt.with_timezone(&Utc))
+                .map_err(serde::de::Error::custom)?,
+        ))
     }
 }
 

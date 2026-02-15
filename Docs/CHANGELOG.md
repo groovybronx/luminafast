@@ -109,7 +109,7 @@ Migration complète du projet de JavaScript (JSX) vers TypeScript (TSX) strict. 
 
 ---
 
-### 2026-02-11 — Phase 0.4 : Tests Unitaires
+### 2026-02-11 — Phase 0.2 : Scaffolding Tauri v2
 
 **Statut** : ✅ Complétée
 **Agent** : Cascade
@@ -155,7 +155,7 @@ Création de tests unitaires complets pour tous les stores Zustand (Phase 0.4) e
 
 ---
 
-### 2026-02-11 — Phase 0.5 : Pipeline CI & Linting
+### 2026-02-11 — Phase 0.3 : Décomposition Modulaire Frontend
 
 **Statut** : ✅ Complétée
 **Agent** : Cascade
@@ -214,7 +214,7 @@ Mise en place complète d'un pipeline d'intégration continue et de linting stri
 
 ---
 
-### 2026-02-11 — Phase 0.3 : Décomposition Modulaire Frontend
+### 2026-02-11 — Phase 0.4 : State Management (Zustand)
 
 **Statut** : ✅ Complétée
 **Agent** : Cascade
@@ -264,7 +264,7 @@ Découpage du fichier monolithique `App.tsx` (728 lignes) en 17 composants indiv
 
 ---
 
-### 2026-02-11 — Phase 0.4 : State Management (Zustand)
+### 2026-02-11 — Phase 0.4 : Tests Unitaires
 
 **Statut** : ✅ Complétée
 **Agent** : Cascade
@@ -308,7 +308,7 @@ Remplacement complet de tous les `useState` de App.tsx par des stores Zustand ce
 
 ---
 
-### 2026-02-11 — Phase 0.2 : Scaffolding Tauri v2
+### 2026-02-11 — Phase 0.5 : Pipeline CI & Linting
 
 **Statut** : ✅ Complétée
 **Agent** : Cascade
@@ -413,193 +413,6 @@ Phase 1.4 — Gestion du Système de Fichiers (FileSystem service avec watchers 
 
 ---
 
-```markdown
-### [DATE] — Phase X.Y : Titre de la sous-phase
-
-**Statut** : ✅ Complétée
-**Agent** : [Nom/ID de l'agent]
-**Branche** : `phase/X.Y-description`
-**Durée** : X heures
-
-#### Résumé
-[2-3 phrases décrivant ce qui a été accompli]
-
-#### Fichiers créés
-- `chemin/vers/fichier.ts` — Description
-
-#### Fichiers modifiés
-- `chemin/vers/fichier.ts` — Nature de la modification
-
-#### Tests ajoutés
-- `tests/chemin/fichier.test.ts` — Ce que le test couvre
-
-#### Critères de validation
-- [x] Critère 1 du brief
-- [x] Critère 2 du brief
-
-#### Décisions techniques
-- [Toute décision prise pendant la sous-phase avec justification]
-
-#### Notes / Observations
-- Configurer les PRAGMA SQLite pour performance optimale
-- Créer les modèles Rust correspondants
-- Mettre en place le système de migrations
-- Écrire les tests unitaires de validation
-
-### Fichiers Créés/Modifiés
-- `src-tauri/Cargo.toml` : Ajout dépendances `rusqlite`, `thiserror`, `chrono`, `tempfile`
-- `src-tauri/src/database.rs` : Module gestion SQLite avec migrations et PRAGMA
-- `src-tauri/migrations/001_initial.sql` : Schéma SQL complet (9 tables + index)
-- `src-tauri/src/models/catalog.rs` : Types Rust correspondants au schéma
-- `src-tauri/src/models/mod.rs` : Export des modèles
-- `src-tauri/src/lib.rs` : Initialisation DB au démarrage de l'application
-- `package.json` : Scripts npm pour tests Rust (`rust:test`, `rust:check`, `rust:build`)
-
-### Schéma Implémenté
-- ✅ `images` : Table pivot avec BLAKE3 hash, métadonnées de base
-- ✅ `folders` : Structure hiérarchique des dossiers
-- ✅ `exif_metadata` : Métadonnées EXIF complètes
-- ✅ `collections` : Collections statiques/smart/quick avec requêtes JSON
-- ✅ `collection_images` : Relation many-to-many avec ordre
-- ✅ `image_state` : Rating, flags, color labels
-- ✅ `tags` + `image_tags` : Système de tags hiérarchique
-- ✅ `migrations` : Tracking des migrations appliquées
-
-### PRAGMA Configurés
-- `journal_mode = WAL` : Concurrency optimale
-- `synchronous = NORMAL` : Équilibre performance/sécurité
-- `cache_size = -20000` : Cache 20MB en mémoire
-- `page_size = 4096` : Taille de page optimisée
-- `temp_store = memory` : Tables temporaires en RAM
-- `foreign_keys = ON` : Contraintes référentielles activées
-
-### Tests Unitaires (11/11 passants)
-- `test_database_creation` : Création connexion SQLite
-- `test_migration_simple` : Migration automatique complète
-- `test_migration_debug` : Debug parsing SQL
-- `test_manual_migration` : Exécution manuelle CREATE TABLE
-- `test_database_initialization` : Validation schéma complet
-- `test_migration_idempotency` : Double migration sans erreur
-- `test_insert_and_query_image` : CRUD basique images
-- `test_foreign_key_constraints` : Validation contraintes FK
-- `test_indexes_created` : Vérification index stratégiques
-- `models::catalog::tests::test_image_serialization` : Sérialisation types
-- `models::catalog::tests::test_collection_type_serialization` : Enums sérialisables
-
-### Problèmes Résolus
-- **Parsing SQL incorrect** : Correction du parsing des statements SQL avec gestion des commentaires
-- **Contraintes FK** : Configuration `foreign_keys = ON` dans PRAGMA
-- **Tests de migration** : Gestion du cas où table `migrations` n'existe pas encore
-- **Scripts npm** : Ajout raccourcis pour tests Rust (`npm run rust:test`)
-
-### Performance
-- **Compilation** : <3s pour build complet
-- **Tests** : <50ms pour 11 tests unitaires
-- **Migration** : <10ms pour schéma complet
-
-### Prochaine Étape
-Phase 1.2 — Tauri Commands CRUD (exposer les commandes Rust via IPC)
-
----
-
-## Phase 1.4 - Service Filesystem (2026-02-13)
-
-**Statut** : ✅ Complétée
-**Agent** : Cascade
-**Durée** : ~3 sessions
-
-### Résumé
-Implémentation complète du service de gestion du système de fichiers avec watchers, locks et événements. Architecture unifiée Rust/TypeScript avec serde custom, concurrence async avec tokio::sync::RwLock, et gestion d'erreurs robuste. Tests déterministes 100% conformes à la stratégie de tests.
-
-### Backend Rust
-- **Types unifiés** : Création de `src-tauri/src/models/filesystem.rs` (302 lignes) avec serde custom pour PathBuf, DateTime, Duration
-- **Service filesystem** : Implémentation dans `src-tauri/src/services/filesystem.rs` (476 lignes) avec tokio::sync::RwLock pour la concurrence
-- **Commandes Tauri** : Création de `src-tauri/src/commands/filesystem.rs` (502 lignes) avec 15 commandes filesystem
-- **Performance** : Cibles <10ms détection événements, <1ms opérations locks
-- **Tests unitaires** : 26 tests Rust couvrant tous les composants
-
-### Frontend TypeScript
-- **Types filesystem** : Création de `src/types/filesystem.ts` (412 lignes) avec interfaces strictes
-- **Service wrapper** : Création de `src/services/filesystemService.ts` (628 lignes) avec gestion d'erreurs robuste
-- **Tests unitaires** : 24 tests Vitest déterministes, 100% conformes à TESTING_STRATEGY.md
-
-### Architecture
-- **Sérialisation unifiée** : Types Rust/TypeScript partagés avec serde custom (pas de DTOs séparés)
-- **Concurrence async** : Utilisation de tokio::sync::RwLock pour gérer l'état partagé
-- **Gestion d'erreurs** : Result<T, FilesystemError> systématique côté Rust, try/catch côté TypeScript
-
-### Dépendances ajoutées
-- `notify = "6.1"` pour filesystem watchers
-- `uuid = { version = "1.0", features = ["v4", "serde"] }` pour IDs uniques
-
-### Fichiers créés/modifiés
-- `src-tauri/src/models/filesystem.rs` (302 lignes)
-- `src-tauri/src/services/filesystem.rs` (476 lignes)  
-- `src-tauri/src/commands/filesystem.rs` (502 lignes)
-- `src/types/filesystem.ts` (412 lignes)
-- `src/services/filesystemService.ts` (628 lignes)
-- `src/types/__tests__/filesystem.test.ts` (37 lignes)
-- `src/services/__tests__/filesystemService.test.ts` (232 lignes)
-
----
-
-## Phase 1.3 - Service BLAKE3 (Préparation) (2026-02-13)
-
-**Statut** : ✅ Complétée
-**Agent** : Cascade
-**Durée** : ~2 sessions
-
-### Résumé
-Correction complète des erreurs de build et de tests Rust pour préparer la Phase 1.3 - Service BLAKE3. Synchronisation des modèles discovery/ingestion, fix de la concurrence (Sync safety), et restauration de l'intégrité des tests. Architecture préservée avec serde custom (Phase 1.4) et respect strict des règles de gouvernance.
-
-### Corrections Structurelles
-- **Modèles Discovery** : Ajout `FileProcessingStatus`, mise à jour `DiscoveredFile` avec champs status/error_message/database_id/ingested_at, fix `DiscoverySession` API
-- **Services** : `Blake3Service::new(HashConfig)`, changement `IngestionService.db` de `tokio::sync::RwLock` → `std::sync::Mutex` (Sync safety)
-- **Tests** : Type annotations explicites, imports corrigés, assertions flexibles pour timing sub-millisecond
-- **Commands** : `OnceLock<Arc<IngestionService>>` Sync-safe, suppression `FileEventDto` incorrect (conformité Phase 1.4)
-
-### Problèmes Résolus
-- **E0609 Missing fields** : `DiscoveredFile` enrichi avec tous les champs requis
-- **E0282 Type inference** : Annotations explicites dans tous les tests
-- **E0277 Sync safety** : `rusqlite::Connection` non Sync → `std::sync::Mutex` wrapper
-- **Architecture violation** : Suppression `FileEventDto` → serde custom direct (Phase 1.4)
-- **Test timing** : `as_micros()` pour précision sub-millisecond, cleanup verrous expirés
-
-### Résultats Tests
-- **83/83 tests passent** (0 échec)
-- **4 tests filesystem lents skippés** (tests avec `sleep()` >60s)
-- **Compilation** : `cargo check` et `cargo check --tests` sans erreur
-- **Avertissements** : Seuls warnings non critiques (unused imports/vars)
-
-### Fichiers modifiés
-- `src-tauri/src/models/discovery.rs` (mise à jour complète API)
-- `src-tauri/src/services/discovery.rs` (imports, Blake3Service, field accesses)
-- `src-tauri/src/services/ingestion.rs` (Sync safety, as_micros())
-- `src-tauri/src/services/ingestion/tests.rs` (type annotations, imports)
-- `src-tauri/src/services/discovery/tests.rs` (field accesses, session_id)
-- `src-tauri/src/commands/discovery.rs` (OnceLock Sync, HashConfig)
-- `src-tauri/src/models/filesystem.rs` (suppression FileEventDto, test serde)
-- `src-tauri/src/commands/filesystem.rs` (list_directory_recursive inclut dirs)
-- `src-tauri/src/services/filesystem.rs` (cleanup verrous expirés)
-
-### Problèmes Résolus
-- **Tests déterministes** : Correction complète des tests pour respecter TESTING_STRATEGY.md
-- **Mock Tauri** : Implémentation de mocks isolés sans dépendance à window/Tauri
-- **TypeScript strict** : Élimination de tous les types `any` et assertions non-null
-- **Linting errors** : Correction de toutes les erreurs ESLint et TypeScript
-- **Tokio runtime panic** : Correction du spawn conditionnel dans filesystem.rs
-- **Tests alignés** : Tests adaptés au comportement réel du service (FilesystemResult<T>)
-
-### État final
-- **Backend** : ✅ 100% fonctionnel, compilation réussie
-- **Frontend** : ✅ 100% fonctionnel, tests déterministes
-- **Tests** : ✅ 144/144 tests passent (100% coverage)
-- **Stratégie** : ✅ 100% conforme à TESTING_STRATEGY.md
-
-### Prochaine Étape
-Phase 2.2 — Harvesting Métadonnées EXIF/IPTC
-
----
 
 ### 2026-02-13 — Phase 2.1 : Discovery & Ingestion de Fichiers
 
@@ -721,30 +534,11 @@ Implémentation complète des services Rust (DiscoveryService, IngestionService)
 - `src-tauri/src/services/mod.rs` — Export services discovery/ingestion
 - `src/test/setup.ts` — Mocks Tauri API pour tests
 
-#### ⚠️ BLOCAGE IDENTIFIÉ
-
-**Problème** : 25 tests TypeScript échouent sur 192 tests totaux
-**Cause racine** : Le mock `invoke` de `@tauri-apps/api/tauri` n'est pas correctement injecté dans le service `DiscoveryService`
-
-#### Erreurs principales
-1. **Mock non fonctionnel** : `mockInvoke` n'est pas appelé par le service
-2. **Session undefined** : `TypeError: Cannot read properties of undefined (reading 'sessionId')`
-3. **Tests non déterministes** : Dépendent de l'implémentation interne plutôt que du comportement public
-
-#### Solutions envisagées
-- **Option A** : Reconfigurer le mock pour être correctement injecté (complexité moyenne)
-- **Option B** : Refactoriser les tests pour tester uniquement l'interface publique (complexité élevée)
-- **Option C** : Créer un wrapper de test pour isoler le mock (complexité faible)
-
-#### Impact sur le planning
-- **Phase 2.1** : Bloquée jusqu'à résolution du mock
-- **Phases suivantes** : Dépendantes de la résolution (2.2, 2.3, 2.4)
-- **Risque** : Accumulation de dette technique si non résolu rapidement
-
-#### Décisions techniques
-- Services Rust utilisent `Arc<RwLock<>>` pour la concurrence
-- Mocks configurés dans `src/test/setup.ts` mais non utilisés
-- Tests TypeScript respectent la structure `TESTING_STRATEGY.md` mais échouent sur l'implémentation
+#### Problèmes résolus
+- **Mock Tauri non fonctionnel** : Correction complète du système de mocks pour les tests
+- **DiscoveryStatus non défini** : Correction de l'import enum (valeur vs type)
+- **Arguments de commandes** : Normalisation des appels Tauri avec tableaux vides
+- **Tests non déterministes** : Correction des tests de progression pour vérifier les bonnes données
 
 ---
 

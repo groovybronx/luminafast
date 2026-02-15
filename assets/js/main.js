@@ -178,21 +178,12 @@ function debounce(func, wait) {
 function animateProgressBars() {
   const progressBars = document.querySelectorAll('.progress-bar');
   
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const bar = entry.target;
-        const width = bar.style.width;
-        bar.style.width = '0%';
-        setTimeout(() => {
-          bar.style.width = width;
-        }, 100);
-        observer.unobserve(bar);
-      }
-    });
-  }, { threshold: 0.5 });
-  
-  progressBars.forEach(bar => observer.observe(bar));
+  progressBars.forEach(bar => {
+    const progress = bar.getAttribute('data-progress');
+    if (progress) {
+      bar.style.width = progress + '%';
+    }
+  });
 }
 
 // Table of contents

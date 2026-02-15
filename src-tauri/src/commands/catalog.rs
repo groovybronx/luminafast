@@ -429,7 +429,7 @@ pub async fn search_images(
     query: String,
     state: State<'_, AppState>,
 ) -> CommandResult<Vec<ImageDTO>> {
-    match search_images_impl(query.clone(), &state) {
+    match search_images_impl(&query, &state) {
         Ok(images) => Ok(images),
         Err(e) => {
             error!("Failed to search images with query '{}': {}", query, e);
@@ -439,7 +439,7 @@ pub async fn search_images(
 }
 
 fn search_images_impl(
-    query: String,
+    query: &str,
     state: &State<'_, AppState>,
 ) -> AppResult<Vec<ImageDTO>> {
     let db = state.db.lock()

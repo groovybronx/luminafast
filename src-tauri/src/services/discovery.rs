@@ -263,11 +263,10 @@ impl DiscoveryService {
             None => None,
         };
 
-        if format.is_none() {
-            return Ok(None);
-        }
-
-        let format = *format.unwrap();
+        let format = match format {
+            Some(f) => *f,
+            None => return Ok(None),
+        };
 
         // Get file modification time
         let modified_at = metadata

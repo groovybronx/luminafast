@@ -129,14 +129,16 @@ impl Blake3Service {
         for path in file_paths.iter() {
             // Mettre à jour la progression
             {
-                let mut current_file_guard = current_file.lock().unwrap();
+                let mut current_file_guard = current_file.lock()
+                    .map_err(|e| HashError::HashError(format!("Lock poisoned: {}", e)))?;
                 *current_file_guard = Some(path.clone());
             }
 
             let result = self.hash_file(path).await;
 
             {
-                let mut processed = processed_files.lock().unwrap();
+                let mut processed = processed_files.lock()
+                    .map_err(|e| HashError::HashError(format!("Lock poisoned: {}", e)))?;
                 *processed += 1;
 
                 // Envoyer la progression si callback fourni
@@ -144,7 +146,9 @@ impl Blake3Service {
                     let progress = HashProgress {
                         processed_files: *processed,
                         total_files,
-                        current_file: current_file.lock().unwrap().clone(),
+                        current_file: current_file.lock()
+                            .map_err(|e| HashError::HashError(format!("Lock poisoned: {}", e)))?
+                            .clone(),
                         progress: *processed as f64 / total_files as f64,
                     };
                     callback(progress);

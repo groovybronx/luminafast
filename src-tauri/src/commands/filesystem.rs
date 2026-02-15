@@ -28,8 +28,8 @@ fn get_service() -> AppResult<Arc<FilesystemService>> {
     FILESYSTEM_SERVICE
         .lock()
         .as_ref()
-        .ok_or_else(|| AppError::Internal("Filesystem service not initialized".to_string()))
         .cloned()
+        .ok_or_else(|| AppError::Internal("Filesystem service not initialized".to_string()))
 }
 
 /// Démarre un watcher sur un chemin

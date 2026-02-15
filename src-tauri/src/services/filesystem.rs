@@ -42,11 +42,6 @@ struct WatcherHandle {
 impl FilesystemService {
     /// Crée une nouvelle instance du service
     pub fn new() -> Self {
-        Self::new_with_cleanup(true)
-    }
-
-    /// Crée une nouvelle instance du service avec option pour le cleanup
-    pub fn new_with_cleanup(enable_cleanup: bool) -> Self {
         let service = Self {
             watchers: Arc::new(RwLock::new(HashMap::new())),
             locks: Arc::new(RwLock::new(HashMap::new())),
@@ -60,11 +55,8 @@ impl FilesystemService {
             })),
         };
 
-        // Nettoyage périodique des verrous expirés (seulement si pas en test)
-        if enable_cleanup {
-            service.start_lock_cleanup();
-        }
-
+        // Nettoyage périodique des verrous expirés
+        service.start_lock_cleanup();
         service
     }
 
@@ -548,7 +540,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Temporarily disabled - background task causing infinite loop
     async fn test_watcher_lifecycle() {
         let service = FilesystemService::new();
         let temp_dir = TempDir::new().unwrap();
@@ -575,7 +566,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Temporarily disabled - background task causing infinite loop
     async fn test_file_locking() {
         let service = FilesystemService::new();
         let temp_dir = TempDir::new().unwrap();
@@ -635,7 +625,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Temporarily disabled - background task causing issues
     async fn test_lock_timeout() {
         let service = FilesystemService::new();
         let temp_dir = TempDir::new().unwrap();
@@ -651,13 +640,13 @@ mod tests {
             .acquire_lock(
                 file_path.clone(),
                 FileLockType::Exclusive,
-                Some(Duration::from_millis(50)),
+                Some(Duration::from_millis(100)),
             )
             .await
             .unwrap();
 
         // Attente de l'expiration
-        sleep(Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(200)).await;
 
         // Le verrou devrait être expiré et nettoyé
         let state = service.get_state().await;

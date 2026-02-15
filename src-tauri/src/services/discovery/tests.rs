@@ -85,7 +85,7 @@ mod tests {
         assert_eq!(session.files_with_errors, 0);
         
         // Wait a bit for scanning to complete
-        sleep(Duration::from_millis(50)).await;
+        sleep(Duration::from_millis(100)).await;
         
         // Check session status
         let session = service.get_session_status(session_id).await.unwrap();
@@ -169,12 +169,12 @@ mod tests {
         let session_id = service.start_discovery(config).await.unwrap();
         
         // Wait for scanning to complete
-        for _ in 0..20 {
+        for _ in 0..50 {
             let session = service.get_session_status(session_id).await.unwrap();
             if session.status == DiscoveryStatus::Completed {
                 break;
             }
-            sleep(Duration::from_millis(5)).await;
+            sleep(Duration::from_millis(10)).await;
         }
         
         // Get discovered files
@@ -214,12 +214,12 @@ mod tests {
         let session_id = service.start_discovery(config).await.unwrap();
         
         // Wait for scanning to complete
-        for _ in 0..20 {
+        for _ in 0..50 {
             let session = service.get_session_status(session_id).await.unwrap();
             if session.status == DiscoveryStatus::Completed {
                 break;
             }
-            sleep(Duration::from_millis(5)).await;
+            sleep(Duration::from_millis(10)).await;
         }
         
         let files = service.get_session_files(session_id).await.unwrap();
@@ -255,12 +255,12 @@ mod tests {
         let session_id = service.start_discovery(config).await.unwrap();
         
         // Wait for scanning to complete
-        for _ in 0..20 {
+        for _ in 0..50 {
             let session = service.get_session_status(session_id).await.unwrap();
             if session.status == DiscoveryStatus::Completed {
                 break;
             }
-            sleep(Duration::from_millis(5)).await;
+            sleep(Duration::from_millis(10)).await;
         }
         
         let files = service.get_session_files(session_id).await.unwrap();
@@ -295,12 +295,12 @@ mod tests {
         let session_id = service.start_discovery(config).await.unwrap();
         
         // Wait for scanning to complete
-        for _ in 0..20 {
+        for _ in 0..50 {
             let session = service.get_session_status(session_id).await.unwrap();
             if session.status == DiscoveryStatus::Completed {
                 break;
             }
-            sleep(Duration::from_millis(5)).await;
+            sleep(Duration::from_millis(10)).await;
         }
         
         let files = service.get_session_files(session_id).await.unwrap();
@@ -335,12 +335,12 @@ mod tests {
         let session_id = service.start_discovery(config).await.unwrap();
         
         // Wait for scanning to complete
-        for _ in 0..20 {
+        for _ in 0..50 {
             let session = service.get_session_status(session_id).await.unwrap();
             if session.status == DiscoveryStatus::Completed {
                 break;
             }
-            sleep(Duration::from_millis(5)).await;
+            sleep(Duration::from_millis(10)).await;
         }
         
         let files = service.get_session_files(session_id).await.unwrap();
@@ -503,12 +503,12 @@ mod tests {
         let session_id = service.start_discovery(config).await.unwrap();
         
         // Wait for completion
-        for _ in 0..20 {
+        for _ in 0..50 {
             let session = service.get_session_status(session_id).await.unwrap();
             if session.status == DiscoveryStatus::Completed {
                 break;
             }
-            sleep(Duration::from_millis(5)).await;
+            sleep(Duration::from_millis(10)).await;
         }
         
         let session = service.get_session_status(session_id).await.unwrap();

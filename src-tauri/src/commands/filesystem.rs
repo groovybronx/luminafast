@@ -17,9 +17,7 @@ static FILESYSTEM_SERVICE: Mutex<Option<Arc<FilesystemService>>> = Mutex::new(No
 pub fn initialize_filesystem_service() {
     let mut service_guard = FILESYSTEM_SERVICE.lock();
     if service_guard.is_none() {
-        // En mode test, désactiver le cleanup pour éviter les background tasks
-        let is_test = std::env::var("CARGO_CFG_TEST").is_ok();
-        *service_guard = Some(Arc::new(FilesystemService::new_with_cleanup(!is_test)));
+        *service_guard = Some(Arc::new(FilesystemService::new()));
     }
 }
 
@@ -353,7 +351,7 @@ mod tests {
         assert!(FILESYSTEM_SERVICE.lock().is_some());
     }
 
-    /* #[tokio::test]
+    #[tokio::test]
     async fn test_watcher_commands() {
         initialize_filesystem_service();
 
@@ -375,14 +373,12 @@ mod tests {
 
         // Test arrêt watcher
         stop_watcher(watcher_id).await.unwrap();
-    } */
+    }
 
     #[tokio::test]
-    #[ignore] // Temporarily disabled - background task causing infinite loop
     async fn test_lock_commands() {
-        // Test simple sans timeout - juste vérifier que les commandes compilent
         initialize_filesystem_service();
-        
+
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join("test.txt");
 
@@ -391,23 +387,29 @@ mod tests {
             .write_all(b"test")
             .unwrap();
 
-        // Test acquisition verrou avec timeout très court
+        // Test acquisition verrou
         let lock_id = acquire_lock(
             file_path.to_string_lossy().to_string(),
             "exclusive".to_string(),
-            Some(50), // 50ms timeout
+            Some(1000),
         )
         .await
         .unwrap();
-        
-        // Vérifier que le lock_id est valide
-        assert_ne!(lock_id, "");
+        assert!(!lock_id.is_empty());
+
+        // Test vérification verrou
+        let is_locked = is_file_locked(file_path.to_string_lossy().to_string())
+            .await
+            .unwrap();
+        assert!(is_locked);
 
         // Test libération verrou
         release_lock(lock_id).await.unwrap();
 
-        // Petit délai pour s'assurer que tout est nettoyé
-        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+        let is_locked = is_file_locked(file_path.to_string_lossy().to_string())
+            .await
+            .unwrap();
+        assert!(!is_locked);
     }
 
     #[tokio::test]

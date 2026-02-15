@@ -1,0 +1,80 @@
+<section class="bg-gradient-to-br from-primary to-blue-600 text-white py-20">
+  <div class="container mx-auto px-4 max-w-6xl text-center">
+    <div class="mb-8">
+      <div class="inline-flex items-center justify-center w-20 h-20 bg-white/20 rounded-full mb-6 backdrop-blur-sm">
+        <i class="fas fa-camera text-4xl"></i>
+      </div>
+      <h1 class="text-5xl md:text-6xl font-bold mb-6">
+        LuminaFast
+      </h1>
+      <p class="text-xl md:text-2xl text-blue-100 max-w-3xl mx-auto mb-8">
+        Digital Asset Management moderne pour photographes<br>
+        Inspiré de Lightroom Classic, optimisé pour 2024
+      </p>
+    </div>
+    
+    <!-- Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
+      <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+        <div class="text-3xl font-bold mb-2">{{ site.test_count }}</div>
+        <div class="text-blue-100">Tests unitaires</div>
+      </div>
+      <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+        <div class="text-3xl font-bold mb-2">{{ site.test_coverage }}</div>
+        <div class="text-blue-100">Coverage</div>
+      </div>
+      <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+        <div class="text-3xl font-bold mb-2">{{ site.phases_completed }}/{{ site.total_phases }}</div>
+        <div class="text-blue-100">Phases</div>
+      </div>
+      <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+        <div class="text-3xl font-bold mb-2">{{ site.project_version }}</div>
+        <div class="text-blue-100">Version</div>
+      </div>
+    </div>
+    
+    <!-- Tech Stack -->
+    <div class="mb-12">
+      <h3 class="text-lg font-semibold mb-4 text-blue-100">Stack Technique</h3>
+      <div class="flex flex-wrap justify-center gap-3">
+        <span class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">React 19</span>
+        <span class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">TypeScript</span>
+        <span class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">Tauri v2</span>
+        <span class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">Rust</span>
+        <span class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">SQLite</span>
+        <span class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">BLAKE3</span>
+        <span class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">Zustand</span>
+      </div>
+    </div>
+    
+    <!-- CTA Buttons -->
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      <a href="{{ '/installation/getting-started.html' | relative_url }}" class="inline-flex items-center justify-center px-8 py-3 bg-white text-primary font-semibold rounded-lg hover:bg-gray-100 transition-colors">
+        <i class="fas fa-download mr-2"></i>
+        Installer LuminaFast
+      </a>
+      <a href="https://github.com/groovybronx/luminafast" target="_blank" class="inline-flex items-center justify-center px-8 py-3 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg hover:bg-white/30 transition-colors">
+        <i class="fab fa-github mr-2"></i>
+        Voir sur GitHub
+      </a>
+    </div>
+    
+    <!-- Quick Links -->
+    <div class="mt-12 pt-8 border-t border-white/20">
+      <div class="flex flex-wrap justify-center gap-8 text-blue-100">
+        <a href="{{ '/features/roadmap.html' | relative_url }}" class="hover:text-white transition-colors">
+          <i class="fas fa-road mr-2"></i>Roadmap
+        </a>
+        <a href="{{ '/documentation/' | relative_url }}" class="hover:text-white transition-colors">
+          <i class="fas fa-book mr-2"></i>Documentation
+        </a>
+        <a href="{{ '/stats/' | relative_url }}" class="hover:text-white transition-colors">
+          <i class="fas fa-chart-bar mr-2"></i>Statistiques
+        </a>
+        <a href="{{ '/installation/development-setup.html' | relative_url }}" class="hover:text-white transition-colors">
+          <i class="fas fa-code mr-2"></i>Contribuer
+        </a>
+      </div>
+    </div>
+  </div>
+</section>

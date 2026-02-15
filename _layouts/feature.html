@@ -1,0 +1,162 @@
+---
+layout: default
+---
+<div class="container mx-auto px-4 py-8 max-w-6xl">
+  <!-- Breadcrumb -->
+  <nav class="mb-8">
+    <ol class="flex items-center space-x-2 text-sm text-gray-600">
+      <li><a href="{{ '/' | relative_url }}" class="hover:text-primary">Accueil</a></li>
+      <li><i class="fas fa-chevron-right text-xs"></i></li>
+      <li><a href="{{ '/features/' | relative_url }}" class="hover:text-primary">Fonctionnalités</a></li>
+      {% if page.title %}
+      <li><i class="fas fa-chevron-right text-xs"></i></li>
+      <li class="text-gray-900 font-medium">{{ page.title }}</li>
+      {% endif %}
+    </ol>
+  </nav>
+  
+  <!-- Feature Header -->
+  <div class="text-center mb-12">
+    <div class="inline-flex items-center justify-center w-16 h-16 bg-primary text-white rounded-full mb-4">
+      <i class="{{ page.icon | default: 'fas fa-cog' }} text-2xl"></i>
+    </div>
+    <h1 class="text-4xl font-bold mb-4 text-gray-900">{{ page.title }}</h1>
+    <p class="text-xl text-gray-600 max-w-3xl mx-auto">{{ page.description }}</p>
+    
+    <!-- Phase Status -->
+    {% if page.status %}
+    <div class="mt-6 inline-flex items-center px-4 py-2 rounded-full text-sm font-medium
+      {% case page.status %}
+        {% when 'completed' %}
+          bg-green-100 text-green-800
+        {% when 'in-progress' %}
+          bg-yellow-100 text-yellow-800
+        {% when 'planned' %}
+          bg-gray-100 text-gray-800
+      {% endcase %}">
+      <i class="fas fa-circle text-xs mr-2"></i>
+      {% case page.status %}
+        {% when 'completed' %}
+          Complétée
+        {% when 'in-progress' %}
+          En cours
+        {% when 'planned' %}
+          Planifiée
+      {% endcase %}
+    </div>
+    {% endif %}
+  </div>
+  
+  <!-- Feature Content -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+    <!-- Main Content -->
+    <div class="lg:col-span-2">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+        {{ content }}
+        
+        <!-- Technical Details -->
+        {% if page.technical_details %}
+        <div class="mt-8 pt-8 border-t border-gray-200">
+          <h3 class="text-xl font-semibold mb-4 text-gray-900">Détails Techniques</h3>
+          <div class="bg-gray-50 rounded-lg p-6">
+            {{ page.technical_details }}
+          </div>
+        </div>
+        {% endif %}
+        
+        <!-- Implementation Notes -->
+        {% if page.implementation_notes %}
+        <div class="mt-8 pt-8 border-t border-gray-200">
+          <h3 class="text-xl font-semibold mb-4 text-gray-900">Notes d'Implémentation</h3>
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            {{ page.implementation_notes }}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="lg:col-span-1">
+      <div class="sticky top-8 space-y-6">
+        <!-- Progress -->
+        {% if page.progress %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 class="text-lg font-semibold mb-4 text-gray-900">Progression</h3>
+          <div class="space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-sm text-gray-600">Avancement</span>
+              <span class="text-sm font-semibold">{{ page.progress }}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div class="bg-primary h-2 rounded-full" style="width: {{ page.progress }}%"></div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        
+        <!-- Technologies -->
+        {% if page.technologies %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 class="text-lg font-semibold mb-4 text-gray-900">Technologies</h3>
+          <div class="flex flex-wrap gap-2">
+            {% for tech in page.technologies %}
+            <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">{{ tech }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        
+        <!-- Links -->
+        {% if page.links %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 class="text-lg font-semibold mb-4 text-gray-900">Liens</h3>
+          <div class="space-y-2">
+            {% for link in page.links %}
+            <a href="{{ link.url }}" class="block text-primary hover:underline" target="_blank">
+              <i class="{{ link.icon | default: 'fas fa-link' }} mr-2"></i>
+              {{ link.title }}
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        
+        <!-- Related Features -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 class="text-lg font-semibold mb-4 text-gray-900">Fonctionnalités Connexes</h3>
+          <nav class="space-y-2">
+            {% assign related_features = site.features | where: "phase", page.phase | sort: "order" %}
+            {% for feature in related_features %}
+              {% if feature.url != page.url %}
+              <a href="{{ feature.url | relative_url }}" class="block px-3 py-2 rounded-lg hover:bg-gray-100 text-sm">
+                {{ feature.title }}
+              </a>
+              {% endif %}
+            {% endfor %}
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Navigation -->
+  {% if page.next or page.previous %}
+  <nav class="mt-12 pt-8 border-t border-gray-200">
+    <div class="flex justify-between">
+      {% if page.previous %}
+      <a href="{{ page.previous.url | relative_url }}" class="flex items-center text-primary hover:underline">
+        <i class="fas fa-arrow-left mr-2"></i>
+        {{ page.previous.title }}
+      </a>
+      {% endif %}
+      {% if page.next %}
+      <a href="{{ page.next.url | relative_url }}" class="flex items-center text-primary hover:underline ml-auto">
+        {{ page.next.title }}
+        <i class="fas fa-arrow-right ml-2"></i>
+      </a>
+      {% endif %}
+    </div>
+  </nav>
+  {% endif %}
+</div>

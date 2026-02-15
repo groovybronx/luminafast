@@ -1,0 +1,82 @@
+# Site settings
+title: LuminaFast
+description: Digital Asset Management moderne pour photographes
+baseurl: "/luminafast"
+url: "https://groovybronx.github.io"
+author: "groovybronx"
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# Exclude from processing
+exclude:
+  - node_modules/
+  - src/
+  - src-tauri/
+  - .git/
+  - .gitignore
+  - package.json
+  - package-lock.json
+  - tsconfig.json
+  - vite.config.ts
+  - eslint.config.js
+  - .github/
+  - Docs/
+  - .windsurf/
+
+# Include specific files
+include:
+  - _pages/
+  - _posts/
+  - assets/
+
+# Collections
+collections:
+  docs:
+    output: true
+    permalink: /:collection/:name/
+  features:
+    output: true
+    permalink: /features/:name/
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "docs"
+    values:
+      layout: "documentation"
+  - scope:
+      path: ""
+      type: "features"
+    values:
+      layout: "feature"
+
+# Site metadata
+lang: fr
+timezone: Europe/Paris
+
+# SEO
+logo: "/assets/images/logo.png"
+twitter:
+  username: groovybronx
+  card: summary
+
+# Google Analytics (optional)
+google_analytics: # UA-XXXXXXXX-X
+
+# Social links
+github_username: groovybronx
+
+# Custom variables
+project_version: "0.1.0"
+test_count: "216"
+test_coverage: "98.93%"
+phases_completed: "10"
+total_phases: "38"

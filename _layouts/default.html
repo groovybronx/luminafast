@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if page.title %}{{ page.title }} | {% endif %}{{ site.title }}</title>
+  <meta name="description" content="{% if page.description %}{{ page.description }}{% else %}{{ site.description }}{% endif %}">
+  
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#1e40af',
+            secondary: '#374151',
+            accent: '#10b981',
+            dark: '#111827'
+          },
+          fontFamily: {
+            'sans': ['Inter', 'system-ui', 'sans-serif'],
+            'mono': ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ '/assets/css/main.css' | relative_url }}">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="{{ '/assets/images/favicon.ico' | relative_url }}">
+  
+  <!-- SEO Meta Tags -->
+  <meta property="og:title" content="{% if page.title %}{{ page.title }} | {% endif %}{{ site.title }}">
+  <meta property="og:description" content="{% if page.description %}{{ page.description }}{% else %}{{ site.description }}{% endif %}">
+  <meta property="og:image" content="{{ '/assets/images/og-image.png' | relative_url }}">
+  <meta property="og:url" content="{{ page.url | absolute_url }}">
+  <meta name="twitter:card" content="summary_large_image">
+  
+  {% seo %}
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <!-- Navigation -->
+  {% include navigation.html %}
+  
+  <!-- Hero Section (only on homepage) -->
+  {% if page.url == '/' %}
+    {% include hero.html %}
+  {% endif %}
+  
+  <!-- Main Content -->
+  <main class="min-h-screen">
+    {{ content }}
+  </main>
+  
+  <!-- Footer -->
+  {% include footer.html %}
+  
+  <!-- JavaScript -->
+  <script src="{{ '/assets/js/main.js' | relative_url }}"></script>
+  
+  <!-- Dark Mode Toggle -->
+  <script>
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  </script>
+</body>
+</html>

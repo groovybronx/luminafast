@@ -1,9 +1,11 @@
+use crate::error::{AppError, AppResult};
 use crate::models::discovery::{
     BatchIngestionRequest, BatchIngestionResult, DiscoveredFile, DiscoveryConfig, DiscoverySession,
     IngestionResult,
 };
 use crate::services::discovery::DiscoveryService;
 use crate::services::ingestion::IngestionService;
+use log::{debug, error};
 use std::path::PathBuf;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -55,93 +57,190 @@ fn get_ingestion_service() -> Arc<IngestionService> {
 /// Start a new discovery session
 #[tauri::command]
 pub fn start_discovery(config: DiscoveryConfig) -> Result<Uuid, String> {
+    match start_discovery_impl(config) {
+        Ok(session_id) => Ok(session_id),
+        Err(e) => {
+            error!("Failed to start discovery: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+fn start_discovery_impl(config: DiscoveryConfig) -> AppResult<Uuid> {
     // Use blocking runtime for async operations
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
+    let rt = tokio::runtime::Runtime::new()
+        .map_err(|e| AppError::Internal(format!("Failed to create runtime: {}", e)))?;
+    
+    let session_id = rt.block_on(async {
         get_discovery_service()
             .start_discovery(config)
             .await
-            .map_err(|e| e.to_string())
-    })
+            .map_err(|e| AppError::Discovery(e.to_string()))
+    })?;
+    
+    debug!("Started discovery session: {}", session_id);
+    Ok(session_id)
 }
 
 /// Stop an active discovery session
 #[tauri::command]
 pub fn stop_discovery(session_id: Uuid) -> Result<(), String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
+    match stop_discovery_impl(session_id) {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            error!("Failed to stop discovery session {}: {}", session_id, e);
+            Err(e.into())
+        }
+    }
+}
+
+fn stop_discovery_impl(session_id: Uuid) -> AppResult<()> {
+    let rt = tokio::runtime::Runtime::new()
+        .map_err(|e| AppError::Internal(format!("Failed to create runtime: {}", e)))?;
+    
     rt.block_on(async {
         get_discovery_service()
             .stop_discovery(session_id)
             .await
-            .map_err(|e| e.to_string())
-    })
+            .map_err(|e| AppError::Discovery(e.to_string()))
+    })?;
+    
+    debug!("Stopped discovery session: {}", session_id);
+    Ok(())
 }
 
 /// Get the status of a discovery session
 #[tauri::command]
 pub fn get_discovery_status(session_id: Uuid) -> Result<DiscoverySession, String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        let session = get_discovery_service()
+    match get_discovery_status_impl(session_id) {
+        Ok(session) => Ok(session),
+        Err(e) => {
+            error!("Failed to get discovery status for session {}: {}", session_id, e);
+            Err(e.into())
+        }
+    }
+}
+
+fn get_discovery_status_impl(session_id: Uuid) -> AppResult<DiscoverySession> {
+    let rt = tokio::runtime::Runtime::new()
+        .map_err(|e| AppError::Internal(format!("Failed to create runtime: {}", e)))?;
+    
+    let session = rt.block_on(async {
+        get_discovery_service()
             .get_session_status(session_id)
             .await
-            .map_err(|e| e.to_string())?;
-
-        Ok(session)
-    })
+            .map_err(|e| AppError::Discovery(e.to_string()))
+    })?;
+    
+    debug!("Retrieved discovery status for session: {}", session_id);
+    Ok(session)
 }
 
 /// Get all discovery sessions
 #[tauri::command]
 pub fn get_all_discovery_sessions() -> Result<Vec<DiscoverySession>, String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        let sessions = get_discovery_service().get_all_sessions().await;
+    match get_all_discovery_sessions_impl() {
+        Ok(sessions) => Ok(sessions),
+        Err(e) => {
+            error!("Failed to get all discovery sessions: {}", e);
+            Err(e.into())
+        }
+    }
+}
 
-        Ok(sessions)
-    })
+fn get_all_discovery_sessions_impl() -> AppResult<Vec<DiscoverySession>> {
+    let rt = tokio::runtime::Runtime::new()
+        .map_err(|e| AppError::Internal(format!("Failed to create runtime: {}", e)))?;
+    
+    let sessions = rt.block_on(async {
+        get_discovery_service().get_all_sessions().await
+    });
+    
+    debug!("Retrieved {} discovery sessions", sessions.len());
+    Ok(sessions)
 }
 
 /// Get discovered files for a session
 #[tauri::command]
 pub fn get_discovered_files(session_id: Uuid) -> Result<Vec<DiscoveredFile>, String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        let files = get_discovery_service()
+    match get_discovered_files_impl(session_id) {
+        Ok(files) => Ok(files),
+        Err(e) => {
+            error!("Failed to get discovered files for session {}: {}", session_id, e);
+            Err(e.into())
+        }
+    }
+}
+
+fn get_discovered_files_impl(session_id: Uuid) -> AppResult<Vec<DiscoveredFile>> {
+    let rt = tokio::runtime::Runtime::new()
+        .map_err(|e| AppError::Internal(format!("Failed to create runtime: {}", e)))?;
+    
+    let files = rt.block_on(async {
+        get_discovery_service()
             .get_session_files(session_id)
             .await
-            .map_err(|e| e.to_string())?;
-
-        Ok(files)
-    })
+            .map_err(|e| AppError::Discovery(e.to_string()))
+    })?;
+    
+    debug!("Retrieved {} discovered files for session: {}", files.len(), session_id);
+    Ok(files)
 }
 
 /// Ingest a single discovered file
 #[tauri::command]
 pub fn ingest_file(file: DiscoveredFile) -> Result<IngestionResult, String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        let result = get_ingestion_service()
+    match ingest_file_impl(file) {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to ingest file: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+fn ingest_file_impl(file: DiscoveredFile) -> AppResult<IngestionResult> {
+    let rt = tokio::runtime::Runtime::new()
+        .map_err(|e| AppError::Internal(format!("Failed to create runtime: {}", e)))?;
+    
+    let file_path = file.path.display().to_string();
+    let result = rt.block_on(async {
+        get_ingestion_service()
             .ingest_file(&file)
             .await
-            .map_err(|e| e.to_string())?;
-
-        Ok(result)
-    })
+            .map_err(|e| AppError::Discovery(e.to_string()))
+    })?;
+    
+    debug!("Ingested file: {}", file_path);
+    Ok(result)
 }
 
 /// Batch ingest multiple files
 #[tauri::command]
 pub fn batch_ingest(request: BatchIngestionRequest) -> Result<BatchIngestionResult, String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        let result = get_ingestion_service()
+    match batch_ingest_impl(request) {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to batch ingest files: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+fn batch_ingest_impl(request: BatchIngestionRequest) -> AppResult<BatchIngestionResult> {
+    let rt = tokio::runtime::Runtime::new()
+        .map_err(|e| AppError::Internal(format!("Failed to create runtime: {}", e)))?;
+    
+    let file_count = request.file_paths.len();
+    let result = rt.block_on(async {
+        get_ingestion_service()
             .batch_ingest(&request)
             .await
-            .map_err(|e| e.to_string())?;
-
-        Ok(result)
-    })
+            .map_err(|e| AppError::Discovery(e.to_string()))
+    })?;
+    
+    debug!("Batch ingested {} files", file_count);
+    Ok(result)
 }
 
 /// Create a discovery configuration from a directory path
@@ -152,10 +251,25 @@ pub async fn create_discovery_config(
     max_depth: Option<usize>,
     max_files: Option<usize>,
 ) -> Result<DiscoveryConfig, String> {
+    match create_discovery_config_impl(root_path, recursive, max_depth, max_files).await {
+        Ok(config) => Ok(config),
+        Err(e) => {
+            error!("Failed to create discovery config: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+async fn create_discovery_config_impl(
+    root_path: String,
+    recursive: Option<bool>,
+    max_depth: Option<usize>,
+    max_files: Option<usize>,
+) -> AppResult<DiscoveryConfig> {
     let path = PathBuf::from(&root_path);
 
     if !path.exists() {
-        return Err("Directory does not exist".to_string());
+        return Err(AppError::FileNotFound(format!("Directory does not exist: {}", root_path)));
     }
 
     let config = DiscoveryConfig {
@@ -167,77 +281,137 @@ pub async fn create_discovery_config(
         max_files,
     };
 
+    debug!("Created discovery config for path: {}", root_path);
     Ok(config)
 }
 
 /// Get available RAW formats
 #[tauri::command]
 pub async fn get_supported_formats() -> Result<Vec<String>, String> {
+    match get_supported_formats_impl().await {
+        Ok(formats) => Ok(formats),
+        Err(e) => {
+            error!("Failed to get supported formats: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+async fn get_supported_formats_impl() -> AppResult<Vec<String>> {
     let formats = vec![
         "cr3".to_string(), // Canon
         "raf".to_string(), // Fuji
         "arw".to_string(), // Sony
     ];
 
+    debug!("Retrieved {} supported formats", formats.len());
     Ok(formats)
 }
 
 /// Validate a directory path for discovery
 #[tauri::command]
 pub async fn validate_discovery_path(path: String) -> Result<bool, String> {
+    match validate_discovery_path_impl(path).await {
+        Ok(valid) => Ok(valid),
+        Err(e) => {
+            error!("Failed to validate discovery path: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+async fn validate_discovery_path_impl(path: String) -> AppResult<bool> {
     let path_buf = PathBuf::from(&path);
 
     if !path_buf.exists() {
-        return Err("Path does not exist".to_string());
+        return Err(AppError::FileNotFound(format!("Path does not exist: {}", path)));
     }
 
     if !path_buf.is_dir() {
-        return Err("Path is not a directory".to_string());
+        return Err(AppError::InvalidInput(format!("Path is not a directory: {}", path)));
     }
 
     // Check if we can read the directory
-    match std::fs::read_dir(&path_buf) {
-        Ok(_) => Ok(true),
-        Err(e) => Err(format!("Cannot read directory: {}", e)),
-    }
+    std::fs::read_dir(&path_buf)
+        .map_err(|e| AppError::FileSystem(format!("Cannot read directory: {}", e)))?;
+
+    debug!("Validated discovery path: {}", path);
+    Ok(true)
 }
 
 /// Get default discovery configuration
 #[tauri::command]
 pub async fn get_default_discovery_config() -> Result<DiscoveryConfig, String> {
-    Ok(DiscoveryConfig::default())
+    match get_default_discovery_config_impl().await {
+        Ok(config) => Ok(config),
+        Err(e) => {
+            error!("Failed to get default discovery config: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+async fn get_default_discovery_config_impl() -> AppResult<DiscoveryConfig> {
+    let config = DiscoveryConfig::default();
+    debug!("Retrieved default discovery config");
+    Ok(config)
 }
 
 /// Clean up old discovery sessions
 #[tauri::command]
 pub fn cleanup_discovery_sessions(max_age_hours: u64) -> Result<usize, String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        let cleaned = get_discovery_service()
+    match cleanup_discovery_sessions_impl(max_age_hours) {
+        Ok(cleaned) => Ok(cleaned),
+        Err(e) => {
+            error!("Failed to cleanup discovery sessions: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+fn cleanup_discovery_sessions_impl(max_age_hours: u64) -> AppResult<usize> {
+    let rt = tokio::runtime::Runtime::new()
+        .map_err(|e| AppError::Internal(format!("Failed to create runtime: {}", e)))?;
+    
+    let cleaned = rt.block_on(async {
+        get_discovery_service()
             .cleanup_old_sessions(max_age_hours)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| AppError::Discovery(e.to_string()))
+    })?;
 
-        Ok(cleaned)
-    })
+    debug!("Cleaned up {} old discovery sessions", cleaned);
+    Ok(cleaned)
 }
 
 /// Get discovery statistics
 #[tauri::command]
 pub fn get_discovery_stats(session_id: Uuid) -> Result<DiscoveryStats, String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
+    match get_discovery_stats_impl(session_id) {
+        Ok(stats) => Ok(stats),
+        Err(e) => {
+            error!("Failed to get discovery stats for session {}: {}", session_id, e);
+            Err(e.into())
+        }
+    }
+}
+
+fn get_discovery_stats_impl(session_id: Uuid) -> AppResult<DiscoveryStats> {
+    let rt = tokio::runtime::Runtime::new()
+        .map_err(|e| AppError::Internal(format!("Failed to create runtime: {}", e)))?;
+    
+    let stats = rt.block_on(async {
         // Get session status
         let session = get_discovery_service()
             .get_session_status(session_id)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| AppError::Discovery(e.to_string()))?;
 
         // Get ingestion stats
         let ingestion_stats = get_ingestion_service()
             .get_session_stats(session_id)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| AppError::Discovery(e.to_string()))?;
 
         let stats = DiscoveryStats {
             session_id,
@@ -253,8 +427,11 @@ pub fn get_discovery_stats(session_id: Uuid) -> Result<DiscoveryStats, String> {
             ingestion_stats,
         };
 
-        Ok(stats)
-    })
+        Ok::<DiscoveryStats, AppError>(stats)
+    })?;
+
+    debug!("Retrieved discovery stats for session: {}", session_id);
+    Ok(stats)
 }
 
 /// Combined discovery statistics

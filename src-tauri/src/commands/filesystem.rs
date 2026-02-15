@@ -1,8 +1,10 @@
+use crate::error::{AppError, AppResult};
 use crate::models::filesystem::{
     FileEvent, FileEventMetadata, FileLock, FileLockType, FilesystemError, FilesystemState,
     WatcherConfig, WatcherStats,
 };
 use crate::services::filesystem::FilesystemService;
+use log::{debug, error};
 use parking_lot::Mutex;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -22,35 +24,61 @@ pub fn initialize_filesystem_service() {
 }
 
 /// Récupère le service filesystem
-fn get_service() -> Arc<FilesystemService> {
-    FILESYSTEM_SERVICE.lock().as_ref().unwrap().clone()
+fn get_service() -> AppResult<Arc<FilesystemService>> {
+    FILESYSTEM_SERVICE
+        .lock()
+        .as_ref()
+        .cloned()
+        .ok_or_else(|| AppError::Internal("Filesystem service not initialized".to_string()))
 }
-
-/// Convertit une erreur filesystem vers une chaîne pour Tauri
-fn error_to_string(error: FilesystemError) -> String {
-    error.to_string()
-}
-
-/// Commandes Tauri pour le filesystem
 
 /// Démarre un watcher sur un chemin
 #[command]
 pub async fn start_watcher(config: WatcherConfig) -> Result<String, String> {
-    let service = get_service();
-    service
+    match start_watcher_impl(config).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to start watcher: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+async fn start_watcher_impl(config: WatcherConfig) -> AppResult<String> {
+    let service = get_service()?;
+    let watcher_id = service
         .start_watcher(config)
         .await
-        .map(|id: uuid::Uuid| id.to_string())
-        .map_err(error_to_string)
+        .map_err(|e| AppError::FileSystem(e.to_string()))?;
+    
+    debug!("Started watcher with ID: {}", watcher_id);
+    Ok(watcher_id.to_string())
 }
 
 /// Arrête un watcher
 #[command]
 pub async fn stop_watcher(watcher_id: String) -> Result<(), String> {
-    let service = get_service();
-    let id = Uuid::parse_str(&watcher_id).map_err(|e| format!("Invalid watcher ID: {}", e))?;
+    match stop_watcher_impl(watcher_id).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to stop watcher: {}", e);
+            Err(e.into())
+        }
+    }
+}
 
-    service.stop_watcher(id).await.map_err(error_to_string)
+async fn stop_watcher_impl(watcher_id: String) -> AppResult<()> {
+    let service = get_service()?;
+    let id = Uuid::parse_str(&watcher_id)
+        .map_err(|e| AppError::InvalidInput(format!("Invalid watcher ID: {}", e)))?;
+
+    service
+        .stop_watcher(id)
+        .await
+        .map_err(|e| AppError::FileSystem(e.to_string()))?;
+    
+    debug!("Stopped watcher with ID: {}", watcher_id);
+    Ok(())
 }
 
 /// Acquiert un verrou sur un fichier
@@ -60,109 +88,244 @@ pub async fn acquire_lock(
     lock_type: String,
     timeout_ms: Option<u64>,
 ) -> Result<String, String> {
-    let service = get_service();
-    let path_buf = PathBuf::from(path);
+    match acquire_lock_impl(path, lock_type, timeout_ms).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to acquire lock: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+async fn acquire_lock_impl(
+    path: String,
+    lock_type: String,
+    timeout_ms: Option<u64>,
+) -> AppResult<String> {
+    let service = get_service()?;
+    let path_buf = PathBuf::from(&path);
 
     let lock_type_enum = match lock_type.as_str() {
         "shared" => FileLockType::Shared,
         "exclusive" => FileLockType::Exclusive,
         "write" => FileLockType::Write,
-        _ => return Err("Invalid lock type. Use 'shared', 'exclusive', or 'write'".to_string()),
+        _ => {
+            return Err(AppError::InvalidInput(
+                "Invalid lock type. Use 'shared', 'exclusive', or 'write'".to_string(),
+            ))
+        }
     };
 
     let timeout = timeout_ms.map(Duration::from_millis);
 
-    service
+    let lock_id = service
         .acquire_lock(path_buf, lock_type_enum, timeout)
         .await
-        .map(|id: uuid::Uuid| id.to_string())
-        .map_err(error_to_string)
+        .map_err(|e| AppError::FileSystem(e.to_string()))?;
+    
+    debug!("Acquired {} lock on {}: {}", lock_type, path, lock_id);
+    Ok(lock_id.to_string())
 }
 
 /// Libère un verrou
 #[command]
 pub async fn release_lock(lock_id: String) -> Result<(), String> {
-    let service = get_service();
-    let id = Uuid::parse_str(&lock_id).map_err(|e| format!("Invalid lock ID: {}", e))?;
+    match release_lock_impl(lock_id).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to release lock: {}", e);
+            Err(e.into())
+        }
+    }
+}
 
-    service.release_lock(id).await.map_err(error_to_string)
+async fn release_lock_impl(lock_id: String) -> AppResult<()> {
+    let service = get_service()?;
+    let id = Uuid::parse_str(&lock_id)
+        .map_err(|e| AppError::InvalidInput(format!("Invalid lock ID: {}", e)))?;
+
+    service
+        .release_lock(id)
+        .await
+        .map_err(|e| AppError::FileSystem(e.to_string()))?;
+    
+    debug!("Released lock with ID: {}", lock_id);
+    Ok(())
 }
 
 /// Récupère les événements en attente
 #[command]
 pub async fn get_pending_events(limit: Option<usize>) -> Result<Vec<FileEvent>, String> {
-    let service = get_service();
-    let events = service.get_pending_events(limit).await;
+    match get_pending_events_impl(limit).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to get pending events: {}", e);
+            Err(e.into())
+        }
+    }
+}
 
+async fn get_pending_events_impl(limit: Option<usize>) -> AppResult<Vec<FileEvent>> {
+    let service = get_service()?;
+    let events = service.get_pending_events(limit).await;
+    
+    debug!("Retrieved {} pending events", events.len());
     Ok(events)
 }
 
 /// Récupère l'état actuel du service
 #[command]
 pub async fn get_filesystem_state() -> Result<FilesystemState, String> {
-    let service = get_service();
+    match get_filesystem_state_impl().await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to get filesystem state: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+async fn get_filesystem_state_impl() -> AppResult<FilesystemState> {
+    let service = get_service()?;
     let state = service.get_state().await;
+    
+    debug!("Retrieved filesystem state with {} active watchers", state.active_watchers.len());
     Ok(state)
 }
 
 /// Récupère la liste des verrous actifs
 #[command]
 pub async fn get_active_locks() -> Result<Vec<FileLock>, String> {
-    let service = get_service();
+    match get_active_locks_impl().await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to get active locks: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+async fn get_active_locks_impl() -> AppResult<Vec<FileLock>> {
+    let service = get_service()?;
     let state = service.get_state().await;
+    
+    debug!("Retrieved {} active locks", state.active_locks.len());
     Ok(state.active_locks)
 }
 
 /// Vérifie si un fichier est verrouillé
 #[command]
 pub async fn is_file_locked(path: String) -> Result<bool, String> {
-    let service = get_service();
-    let state = service.get_state().await;
-    let path_buf = PathBuf::from(path);
+    match is_file_locked_impl(path).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to check if file is locked: {}", e);
+            Err(e.into())
+        }
+    }
+}
 
-    Ok(state.active_locks.iter().any(|lock| lock.path == path_buf))
+async fn is_file_locked_impl(path: String) -> AppResult<bool> {
+    let service = get_service()?;
+    let state = service.get_state().await;
+    let path_buf = PathBuf::from(&path);
+
+    let is_locked = state.active_locks.iter().any(|lock| lock.path == path_buf);
+    debug!("File {} is locked: {}", path, is_locked);
+    Ok(is_locked)
 }
 
 /// Récupère les statistiques d'un watcher
 #[command]
 pub async fn get_watcher_stats(watcher_id: String) -> Result<Option<WatcherStats>, String> {
-    let service = get_service();
-    let id = Uuid::parse_str(&watcher_id).map_err(|e| format!("Invalid watcher ID: {}", e))?;
+    match get_watcher_stats_impl(watcher_id).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to get watcher stats: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+async fn get_watcher_stats_impl(watcher_id: String) -> AppResult<Option<WatcherStats>> {
+    let service = get_service()?;
+    let id = Uuid::parse_str(&watcher_id)
+        .map_err(|e| AppError::InvalidInput(format!("Invalid watcher ID: {}", e)))?;
 
     let state = service.get_state().await;
-    Ok(state
+    let stats = state
         .active_watchers
         .into_iter()
-        .find(|stats| stats.watcher_id == id))
+        .find(|stats| stats.watcher_id == id);
+    
+    debug!("Retrieved watcher stats for ID {}: {:?}", watcher_id, stats.is_some());
+    Ok(stats)
 }
 
 /// Liste tous les watchers actifs
 #[command]
 pub async fn list_active_watchers() -> Result<Vec<WatcherStats>, String> {
-    let service = get_service();
+    match list_active_watchers_impl().await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to list active watchers: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+async fn list_active_watchers_impl() -> AppResult<Vec<WatcherStats>> {
+    let service = get_service()?;
     let state = service.get_state().await;
+    
+    debug!("Listed {} active watchers", state.active_watchers.len());
     Ok(state.active_watchers)
 }
 
 /// Test de permission sur un chemin
 #[command]
 pub async fn test_permissions(path: String) -> Result<bool, String> {
-    let path_buf = PathBuf::from(path);
+    match test_permissions_impl(path).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to test permissions: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+async fn test_permissions_impl(path: String) -> AppResult<bool> {
+    let path_buf = PathBuf::from(&path);
 
     // Test simple de lecture
     match std::fs::metadata(&path_buf) {
-        Ok(_) => Ok(true),
-        Err(_) => Ok(false),
+        Ok(_) => {
+            debug!("Path {} is accessible", path);
+            Ok(true)
+        }
+        Err(_) => {
+            debug!("Path {} is not accessible", path);
+            Ok(false)
+        }
     }
 }
 
 /// Récupère les métadonnées d'un fichier
 #[command]
 pub async fn get_file_metadata(path: String) -> Result<FileEventMetadata, String> {
-    let path_buf = PathBuf::from(path);
+    match get_file_metadata_impl(path).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to get file metadata: {}", e);
+            Err(e.into())
+        }
+    }
+}
 
-    let metadata =
-        std::fs::metadata(&path_buf).map_err(|e| FilesystemError::IoError(e.to_string()))?;
+async fn get_file_metadata_impl(path: String) -> AppResult<FileEventMetadata> {
+    let path_buf = PathBuf::from(&path);
+
+    let metadata = std::fs::metadata(&path_buf)?;
 
     let permissions = {
         #[cfg(unix)]
@@ -199,13 +362,16 @@ pub async fn get_file_metadata(path: String) -> Result<FileEventMetadata, String
 
     let _mime_type = detect_mime_type(&path_buf);
 
-    Ok(FileEventMetadata {
+    let result = FileEventMetadata {
         permissions,
         is_directory: metadata.is_dir(),
         is_hidden,
         extension,
         blake3_hash: None,
-    })
+    };
+    
+    debug!("Retrieved metadata for path: {}", path);
+    Ok(result)
 }
 
 /// Détecte le type MIME d'un fichier
@@ -230,69 +396,124 @@ fn detect_mime_type(path: &PathBuf) -> Option<String> {
 /// Crée un dossier
 #[command]
 pub async fn create_directory(path: String) -> Result<(), String> {
-    let path_buf = PathBuf::from(path);
+    match create_directory_impl(path).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to create directory: {}", e);
+            Err(e.into())
+        }
+    }
+}
 
-    std::fs::create_dir_all(&path_buf).map_err(|e| FilesystemError::IoError(e.to_string()))?;
+async fn create_directory_impl(path: String) -> AppResult<()> {
+    let path_buf = PathBuf::from(&path);
 
+    std::fs::create_dir_all(&path_buf)?;
+    
+    debug!("Created directory: {}", path);
     Ok(())
 }
 
 /// Supprime un fichier ou dossier
 #[command]
 pub async fn delete_path(path: String) -> Result<(), String> {
-    let path_buf = PathBuf::from(path);
+    match delete_path_impl(path).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to delete path: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+async fn delete_path_impl(path: String) -> AppResult<()> {
+    let path_buf = PathBuf::from(&path);
 
     if path_buf.is_dir() {
-        std::fs::remove_dir_all(&path_buf).map_err(|e| FilesystemError::IoError(e.to_string()))?;
+        std::fs::remove_dir_all(&path_buf)?;
     } else {
-        std::fs::remove_file(&path_buf).map_err(|e| FilesystemError::IoError(e.to_string()))?;
+        std::fs::remove_file(&path_buf)?;
     }
-
+    
+    debug!("Deleted path: {}", path);
     Ok(())
 }
 
 /// Déplace un fichier ou dossier
 #[command]
 pub async fn move_path(from: String, to: String) -> Result<(), String> {
-    let from_buf = PathBuf::from(from);
-    let to_buf = PathBuf::from(to);
+    match move_path_impl(from, to).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to move path: {}", e);
+            Err(e.into())
+        }
+    }
+}
 
-    std::fs::rename(&from_buf, &to_buf).map_err(|e| FilesystemError::IoError(e.to_string()))?;
+async fn move_path_impl(from: String, to: String) -> AppResult<()> {
+    let from_buf = PathBuf::from(&from);
+    let to_buf = PathBuf::from(&to);
 
+    std::fs::rename(&from_buf, &to_buf)?;
+    
+    debug!("Moved path from {} to {}", from, to);
     Ok(())
 }
 
 /// Copie un fichier
 #[command]
 pub async fn copy_file(from: String, to: String) -> Result<(), String> {
-    let from_buf = PathBuf::from(from);
-    let to_buf = PathBuf::from(to);
+    match copy_file_impl(from, to).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to copy file: {}", e);
+            Err(e.into())
+        }
+    }
+}
 
-    std::fs::copy(&from_buf, &to_buf).map_err(|e| FilesystemError::IoError(e.to_string()))?;
+async fn copy_file_impl(from: String, to: String) -> AppResult<()> {
+    let from_buf = PathBuf::from(&from);
+    let to_buf = PathBuf::from(&to);
 
+    std::fs::copy(&from_buf, &to_buf)?;
+    
+    debug!("Copied file from {} to {}", from, to);
     Ok(())
 }
 
 /// Liste le contenu d'un dossier
 #[command]
 pub async fn list_directory(path: String, recursive: Option<bool>) -> Result<Vec<String>, String> {
-    let path_buf = PathBuf::from(path);
+    match list_directory_impl(path, recursive).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to list directory: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+async fn list_directory_impl(path: String, recursive: Option<bool>) -> AppResult<Vec<String>> {
+    let path_buf = PathBuf::from(&path);
     let recursive = recursive.unwrap_or(false);
 
     let mut entries = Vec::new();
 
     if recursive {
-        list_directory_recursive(&path_buf, &mut entries)?;
+        list_directory_recursive(&path_buf, &mut entries)
+            .map_err(|e| AppError::FileSystem(e.to_string()))?;
     } else {
-        let dir_entries =
-            std::fs::read_dir(&path_buf).map_err(|e| FilesystemError::IoError(e.to_string()))?;
+        let dir_entries = std::fs::read_dir(&path_buf)?;
 
         for entry in dir_entries {
-            let entry = entry.map_err(|e| FilesystemError::IoError(e.to_string()))?;
+            let entry = entry?;
             entries.push(entry.path().to_string_lossy().to_string());
         }
     }
-
+    
+    debug!("Listed directory {} with {} entries", path, entries.len());
     Ok(entries)
 }
 
@@ -323,18 +544,42 @@ fn list_directory_recursive(
 /// Vérifie l'existence d'un chemin
 #[command]
 pub async fn path_exists(path: String) -> Result<bool, String> {
-    let path_buf = PathBuf::from(path);
-    Ok(path_buf.exists())
+    match path_exists_impl(path).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to check if path exists: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+async fn path_exists_impl(path: String) -> AppResult<bool> {
+    let path_buf = PathBuf::from(&path);
+    let exists = path_buf.exists();
+    
+    debug!("Path {} exists: {}", path, exists);
+    Ok(exists)
 }
 /// Récupère la taille d'un fichier
 #[command]
 pub async fn get_file_size(path: String) -> Result<u64, String> {
-    let path_buf = PathBuf::from(path);
+    match get_file_size_impl(path).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            error!("Failed to get file size: {}", e);
+            Err(e.into())
+        }
+    }
+}
 
-    let metadata =
-        std::fs::metadata(&path_buf).map_err(|e| FilesystemError::IoError(e.to_string()))?;
+async fn get_file_size_impl(path: String) -> AppResult<u64> {
+    let path_buf = PathBuf::from(&path);
 
-    Ok(metadata.len())
+    let metadata = std::fs::metadata(&path_buf)?;
+    let size = metadata.len();
+    
+    debug!("Retrieved file size for {}: {} bytes", path, size);
+    Ok(size)
 }
 
 /// Tests unitaires pour les commandes

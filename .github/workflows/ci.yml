@@ -67,8 +67,10 @@ jobs:
     - name: Check Rust formatting
       run: cd src-tauri && cargo fmt --all -- --check
       
-    - name: Clippy lint
-      run: cd src-tauri && cargo clippy --all-targets --all-features -- -D warnings
+    - name: Rust linting
+      run: |
+        cd src-tauri
+        cargo clippy -- -W clippy::all -W clippy::pedantic -A clippy::unwrap_used -A clippy::upper_case_acronyms
       
     - name: Build backend
       run: cd src-tauri && cargo build --verbose

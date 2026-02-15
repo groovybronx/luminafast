@@ -126,7 +126,7 @@ impl Blake3Service {
         // Pour le moment, implémentation séquentielle (async dans map est complexe)
         let mut results = Vec::new();
 
-        for (_i, path) in file_paths.iter().enumerate() {
+        for path in file_paths.iter() {
             // Mettre à jour la progression
             {
                 let mut current_file_guard = current_file.lock().unwrap();
@@ -175,7 +175,7 @@ impl Blake3Service {
         for (path, file_hash) in hash_results {
             hash_groups
                 .entry(file_hash.hash.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(path);
             file_sizes.insert(file_hash.hash, file_hash.file_size);
         }

@@ -5,9 +5,11 @@ use uuid::Uuid;
 
 /// File processing status for tracking ingestion pipeline
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum FileProcessingStatus {
     /// File has been discovered but not yet processed
     #[serde(rename = "discovered")]
+    #[default]
     Discovered,
     /// File is currently being processed
     #[serde(rename = "processing")]
@@ -20,11 +22,6 @@ pub enum FileProcessingStatus {
     Error,
 }
 
-impl Default for FileProcessingStatus {
-    fn default() -> Self {
-        FileProcessingStatus::Discovered
-    }
-}
 
 /// Supported RAW file formats
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Copy)]
@@ -205,8 +202,10 @@ impl Default for DiscoveryConfig {
 
 /// Discovery session status
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub enum DiscoveryStatus {
     #[serde(rename = "idle")]
+    #[default]
     Idle,
     #[serde(rename = "scanning")]
     Scanning,
@@ -218,11 +217,6 @@ pub enum DiscoveryStatus {
     Error(String),
 }
 
-impl Default for DiscoveryStatus {
-    fn default() -> Self {
-        DiscoveryStatus::Idle
-    }
-}
 
 /// Discovery session information
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -23,7 +23,7 @@ mod path_buf_serde {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        Ok(PathBuf::from_str(&s).map_err(serde::de::Error::custom)?)
+        PathBuf::from_str(&s).map_err(serde::de::Error::custom)
     }
 }
 

@@ -88,7 +88,7 @@ impl FilesystemService {
                     Ok(event) => {
                         // Conversion vers notre format
                         if let Some(fs_event) = Self::convert_notify_event(&event, &config_clone) {
-                            if let Err(_) = event_tx_clone.send(fs_event) {
+                            if event_tx_clone.send(fs_event).is_err() {
                                 eprintln!("Failed to send filesystem event");
                             }
                         }

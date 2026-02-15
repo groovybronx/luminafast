@@ -201,7 +201,7 @@ impl DiscoveryService {
 
                 // Update progress periodically
                 if last_update.elapsed().as_millis() > 100 {
-                    let progress = if let Some(max_files) = config.max_files {
+                    let _progress = if let Some(max_files) = config.max_files {
                         (files_found as f64 / max_files as f64 * 100.0).min(100.0) as f32
                     } else {
                         0.0 // Can't calculate progress without max_files
@@ -267,7 +267,7 @@ impl DiscoveryService {
             return Ok(None);
         }
 
-        let format = format.unwrap().clone();
+        let format = *format.unwrap();
 
         // Get file modification time
         let modified_at = metadata

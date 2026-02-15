@@ -1,6 +1,8 @@
 use crate::database::Database;
 use crate::database::DatabaseError;
+use crate::error::{AppError, AppResult};
 use crate::models::dto::*;
+use log::{error, debug};
 use std::sync::{Arc, Mutex};
 use tauri::State;
 
@@ -15,7 +17,21 @@ pub async fn get_all_images(
     filter: Option<ImageFilter>,
     state: State<'_, AppState>,
 ) -> CommandResult<Vec<ImageDTO>> {
-    let db = state.db.lock().unwrap();
+    match get_all_images_impl(filter, &state) {
+        Ok(images) => Ok(images),
+        Err(e) => {
+            error!("Failed to get all images: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+fn get_all_images_impl(
+    filter: Option<ImageFilter>,
+    state: &State<'_, AppState>,
+) -> AppResult<Vec<ImageDTO>> {
+    let db = state.db.lock()
+        .map_err(|e| AppError::Internal(format!("Database lock poisoned: {}", e)))?;
 
     let mut query = String::from(
         "SELECT i.id, i.blake3_hash, i.filename, i.extension, 
@@ -70,7 +86,7 @@ pub async fn get_all_images(
     let mut stmt = db
         .connection()
         .prepare(&query)
-        .map_err(|e| format!("Database error: {}", e))?;
+        .map_err(|e| AppError::Database(format!("Failed to prepare query: {}", e)))?;
 
     let images_iter = stmt
         .query_map(rusqlite::params_from_iter(params), |row| {
@@ -87,13 +103,14 @@ pub async fn get_all_images(
                 imported_at: row.get(9)?,
             })
         })
-        .map_err(|e| format!("Query error: {}", e))?;
+        .map_err(|e| AppError::Database(format!("Query failed: {}", e)))?;
 
     let mut images = Vec::new();
     for image in images_iter {
-        images.push(image.map_err(|e| format!("Row error: {}", e))?);
+        images.push(image.map_err(|e| AppError::Database(format!("Row error: {}", e)))?);
     }
 
+    debug!("Retrieved {} images", images.len());
     Ok(images)
 }
 
@@ -103,7 +120,21 @@ pub async fn get_image_detail(
     id: u32,
     state: State<'_, AppState>,
 ) -> CommandResult<ImageDetailDTO> {
-    let db = state.db.lock().unwrap();
+    match get_image_detail_impl(id, &state) {
+        Ok(detail) => Ok(detail),
+        Err(e) => {
+            error!("Failed to get image detail for id {}: {}", id, e);
+            Err(e.into())
+        }
+    }
+}
+
+fn get_image_detail_impl(
+    id: u32,
+    state: &State<'_, AppState>,
+) -> AppResult<ImageDetailDTO> {
+    let db = state.db.lock()
+        .map_err(|e| AppError::Internal(format!("Database lock poisoned: {}", e)))?;
 
     let mut stmt = db.connection().prepare(
         "SELECT i.id, i.blake3_hash, i.filename, i.extension, 
@@ -118,7 +149,7 @@ pub async fn get_image_detail(
          LEFT JOIN exif_metadata exif_metadata ON i.id = exif_metadata.image_id
          WHERE i.id = ?"
     )
-    .map_err(|e| format!("Database error: {}", e))?;
+    .map_err(|e| AppError::Database(format!("Failed to prepare query: {}", e)))?;
 
     let result = stmt
         .query_row([id], |row| {
@@ -154,8 +185,9 @@ pub async fn get_image_detail(
                 folder_id: row.get(11)?,
             })
         })
-        .map_err(|e| format!("Query error: {}", e))?;
+        .map_err(|e| AppError::Database(format!("Query failed: {}", e)))?;
 
+    debug!("Retrieved image detail for id {}", id);
     Ok(result)
 }
 
@@ -167,7 +199,23 @@ pub async fn update_image_state(
     flag: Option<String>,
     state: State<'_, AppState>,
 ) -> CommandResult<()> {
-    let db = state.db.lock().unwrap();
+    match update_image_state_impl(id, rating, flag, &state) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            error!("Failed to update image state for id {}: {}", id, e);
+            Err(e.into())
+        }
+    }
+}
+
+fn update_image_state_impl(
+    id: u32,
+    rating: Option<u8>,
+    flag: Option<String>,
+    state: &State<'_, AppState>,
+) -> AppResult<()> {
+    let db = state.db.lock()
+        .map_err(|e| AppError::Internal(format!("Database lock poisoned: {}", e)))?;
 
     // Check if image exists
     let exists: Result<i32, _> =
@@ -175,11 +223,11 @@ pub async fn update_image_state(
             .query_row("SELECT 1 FROM images WHERE id = ?", [id], |row| row.get(0));
 
     if exists.is_err() {
-        return Err("Image not found".to_string());
+        return Err(AppError::Database(format!("Image with id {} not found", id)));
     }
 
     // Update or insert image_state
-    let result = db.connection().execute(
+    db.connection().execute(
         "INSERT OR REPLACE INTO image_state (image_id, rating, flag)
          VALUES (?, COALESCE(?, (SELECT rating FROM image_state WHERE image_id = ?)), 
                  COALESCE(?, (SELECT flag FROM image_state WHERE image_id = ?)))",
@@ -190,12 +238,11 @@ pub async fn update_image_state(
             flag.as_deref().unwrap_or("NULL"),
             id
         ],
-    );
+    )
+    .map_err(|e| AppError::Database(format!("Failed to update image state: {}", e)))?;
 
-    match result {
-        Ok(_) => Ok(()),
-        Err(e) => Err(format!("Failed to update image state: {}", e)),
-    }
+    debug!("Updated image state for id {}", id);
+    Ok(())
 }
 
 /// Create a new collection
@@ -206,48 +253,66 @@ pub async fn create_collection(
     parent_id: Option<u32>,
     state: State<'_, AppState>,
 ) -> CommandResult<CollectionDTO> {
-    let db = state.db.lock().unwrap();
+    match create_collection_impl(name, collectionType, parent_id, &state) {
+        Ok(collection) => Ok(collection),
+        Err(e) => {
+            error!("Failed to create collection: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+fn create_collection_impl(
+    name: String,
+    collectionType: String,
+    parent_id: Option<u32>,
+    state: &State<'_, AppState>,
+) -> AppResult<CollectionDTO> {
+    let db = state.db.lock()
+        .map_err(|e| AppError::Internal(format!("Database lock poisoned: {}", e)))?;
 
     // Validate collection type
     if !["static", "smart", "quick"].contains(&collectionType.as_str()) {
-        return Err("Invalid collection type. Must be 'static', 'smart', or 'quick'".to_string());
+        return Err(AppError::InvalidInput(
+            "Invalid collection type. Must be 'static', 'smart', or 'quick'".to_string()
+        ));
     }
 
     let result = if let Some(parent_id) = parent_id {
         db.connection().execute(
             "INSERT INTO collections (name, type, parent_id) VALUES (?, ?, ?)",
-            [name, collectionType, parent_id.to_string()],
+            [name.clone(), collectionType.clone(), parent_id.to_string()],
         )
     } else {
         db.connection().execute(
             "INSERT INTO collections (name, type) VALUES (?, ?)",
-            [name, collectionType],
+            [name.clone(), collectionType.clone()],
         )
     };
 
-    match result {
-        Ok(_) => {
-            let id = db.connection().last_insert_rowid() as u32;
-            Ok(CollectionDTO {
-                id,
-                name: db
-                    .connection()
-                    .query_row("SELECT name FROM collections WHERE id = ?", [id], |row| {
-                        row.get(0)
-                    })
-                    .map_err(|e| format!("Failed to retrieve collection name: {}", e))?,
-                collection_type: db
-                    .connection()
-                    .query_row("SELECT type FROM collections WHERE id = ?", [id], |row| {
-                        row.get(0)
-                    })
-                    .map_err(|e| format!("Failed to retrieve collection type: {}", e))?,
-                parent_id,
-                image_count: 0, // New collection starts empty
+    result.map_err(|e| AppError::Database(format!("Failed to create collection: {}", e)))?;
+
+    let id = db.connection().last_insert_rowid() as u32;
+    let collection = CollectionDTO {
+        id,
+        name: db
+            .connection()
+            .query_row("SELECT name FROM collections WHERE id = ?", [id], |row| {
+                row.get(0)
             })
-        }
-        Err(e) => Err(format!("Failed to create collection: {}", e)),
-    }
+            .map_err(|e| AppError::Database(format!("Failed to retrieve collection name: {}", e)))?,
+        collection_type: db
+            .connection()
+            .query_row("SELECT type FROM collections WHERE id = ?", [id], |row| {
+                row.get(0)
+            })
+            .map_err(|e| AppError::Database(format!("Failed to retrieve collection type: {}", e)))?,
+        parent_id,
+        image_count: 0, // New collection starts empty
+    };
+
+    debug!("Created collection with id {}", id);
+    Ok(collection)
 }
 
 /// Add images to a collection
@@ -257,7 +322,22 @@ pub async fn add_images_to_collection(
     imageIds: Vec<u32>,
     state: State<'_, AppState>,
 ) -> CommandResult<()> {
-    let mut db = state.db.lock().unwrap();
+    match add_images_to_collection_impl(collectionId, imageIds, &state) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            error!("Failed to add images to collection {}: {}", collectionId, e);
+            Err(e.into())
+        }
+    }
+}
+
+fn add_images_to_collection_impl(
+    collectionId: u32,
+    imageIds: Vec<u32>,
+    state: &State<'_, AppState>,
+) -> AppResult<()> {
+    let mut db = state.db.lock()
+        .map_err(|e| AppError::Internal(format!("Database lock poisoned: {}", e)))?;
 
     // Verify collection exists first
     let collection_exists: Result<i32, _> = db.connection().query_row(
@@ -267,7 +347,7 @@ pub async fn add_images_to_collection(
     );
 
     if collection_exists.is_err() {
-        return Err("Collection not found".to_string());
+        return Err(AppError::Database(format!("Collection with id {} not found", collectionId)));
     }
 
     // Execute transaction
@@ -287,15 +367,29 @@ pub async fn add_images_to_collection(
             )?;
         }
         Ok(())
-    }).map_err(|e| format!("Transaction failed: {}", e))?;
+    }).map_err(|e| AppError::Database(format!("Transaction failed: {}", e)))?;
 
+    debug!("Added {} images to collection {}", imageIds.len(), collectionId);
     Ok(())
 }
 
 /// Get all collections
 #[tauri::command]
 pub async fn get_collections(state: State<'_, AppState>) -> CommandResult<Vec<CollectionDTO>> {
-    let db = state.db.lock().unwrap();
+    match get_collections_impl(&state) {
+        Ok(collections) => Ok(collections),
+        Err(e) => {
+            error!("Failed to get collections: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+fn get_collections_impl(
+    state: &State<'_, AppState>,
+) -> AppResult<Vec<CollectionDTO>> {
+    let db = state.db.lock()
+        .map_err(|e| AppError::Internal(format!("Database lock poisoned: {}", e)))?;
 
     let mut stmt = db
         .connection()
@@ -306,7 +400,7 @@ pub async fn get_collections(state: State<'_, AppState>) -> CommandResult<Vec<Co
          GROUP BY c.id, c.name, c.type, c.parent_id
          ORDER BY c.name",
         )
-        .map_err(|e| format!("Database error: {}", e))?;
+        .map_err(|e| AppError::Database(format!("Failed to prepare query: {}", e)))?;
 
     let collections_iter = stmt
         .query_map([], |row| {
@@ -318,13 +412,14 @@ pub async fn get_collections(state: State<'_, AppState>) -> CommandResult<Vec<Co
                 image_count: row.get::<_, i64>(4)? as u32,
             })
         })
-        .map_err(|e| format!("Query error: {}", e))?;
+        .map_err(|e| AppError::Database(format!("Query failed: {}", e)))?;
 
     let mut collections = Vec::new();
     for collection in collections_iter {
-        collections.push(collection.map_err(|e| format!("Row error: {}", e))?);
+        collections.push(collection.map_err(|e| AppError::Database(format!("Row error: {}", e)))?);
     }
 
+    debug!("Retrieved {} collections", collections.len());
     Ok(collections)
 }
 
@@ -334,7 +429,21 @@ pub async fn search_images(
     query: String,
     state: State<'_, AppState>,
 ) -> CommandResult<Vec<ImageDTO>> {
-    let db = state.db.lock().unwrap();
+    match search_images_impl(query.clone(), &state) {
+        Ok(images) => Ok(images),
+        Err(e) => {
+            error!("Failed to search images with query '{}': {}", query, e);
+            Err(e.into())
+        }
+    }
+}
+
+fn search_images_impl(
+    query: String,
+    state: &State<'_, AppState>,
+) -> AppResult<Vec<ImageDTO>> {
+    let db = state.db.lock()
+        .map_err(|e| AppError::Internal(format!("Database lock poisoned: {}", e)))?;
 
     let search_pattern = format!("%{}%", query);
 
@@ -350,7 +459,7 @@ pub async fn search_images(
          WHERE i.filename LIKE ? OR i.blake3_hash LIKE ?
          ORDER BY i.imported_at DESC",
         )
-        .map_err(|e| format!("Database error: {}", e))?;
+        .map_err(|e| AppError::Database(format!("Failed to prepare query: {}", e)))?;
 
     let images_iter = stmt
         .query_map([&search_pattern, &search_pattern], |row| {
@@ -367,13 +476,14 @@ pub async fn search_images(
                 imported_at: row.get(9)?,
             })
         })
-        .map_err(|e| format!("Query error: {}", e))?;
+        .map_err(|e| AppError::Database(format!("Query failed: {}", e)))?;
 
     let mut images = Vec::new();
     for image in images_iter {
-        images.push(image.map_err(|e| format!("Row error: {}", e))?);
+        images.push(image.map_err(|e| AppError::Database(format!("Row error: {}", e)))?);
     }
 
+    debug!("Found {} images matching query '{}'", images.len(), query);
     Ok(images)
 }
 

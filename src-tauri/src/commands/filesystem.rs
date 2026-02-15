@@ -32,8 +32,6 @@ fn get_service() -> AppResult<Arc<FilesystemService>> {
         .cloned()
 }
 
-/// Commandes Tauri pour le filesystem
-
 /// Démarre un watcher sur un chemin
 #[command]
 pub async fn start_watcher(config: WatcherConfig) -> Result<String, String> {

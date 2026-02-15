@@ -187,7 +187,9 @@ export class DiscoveryService {
       this.log(`Executing command: ${command}`, { args, retries });
       
       const invoke = DiscoveryService.getInvoke();
-      const result = await invoke(command, args || [] as Record<string, unknown>) as T;
+      // Convert args to proper format for Tauri invoke
+      const invokeArgs = Array.isArray(args) ? {} : (args || {});
+      const result = await invoke(command, invokeArgs) as T;
       
       this.log(`Command succeeded: ${command}`, { result });
       return result;

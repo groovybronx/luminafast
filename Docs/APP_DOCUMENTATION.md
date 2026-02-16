@@ -3,7 +3,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-13 (Phase 1.3 Préparation) — État : Application Tauri avec Build Errors Corrigés, Tests 83/83 passant
+> **Dernière mise à jour** : 2026-02-16 (Phase 2.2 Harvesting Métadonnées EXIF/IPTC) — État : Services EXIF/IPTC complets, 131 tests passants, TypeScript strict
 >
 > ### Décisions Projet (validées par le propriétaire)
 > - **Phase 8 (Cloud/Sync)** : Reportée post-lancement
@@ -16,8 +16,8 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : Application Tauri avec Build Errors Corrigés
-Toutes les erreurs de build et de tests Rust sont corrigées. 83/83 tests passent (0 échec). Les modèles discovery/ingestion sont synchronisés, la concurrence est Sync-safe, et l'architecture serde custom (Phase 1.4) est préservée. Les 7 commandes CRUD restent fonctionnelles, avec en plus les corrections structurelles pour préparer la Phase 1.3 (Service BLAKE3).
+### État actuel : Services EXIF/IPTC complets avec TypeScript strict
+Phase 2.2 complétée avec extraction complète des métadonnées EXIF/IPTC pour fichiers RAW. 131 tests passants (0 échec), services Rust avec tokio::sync::Mutex, modèles TypeScript enrichis (466 lignes), et commandes Tauri modernisées. Architecture préservée avec zéro any TypeScript et Result<T,E> en Rust.
 
 ### Objectif : Application Tauri autonome commercialisable
 Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructive, catalogue SQLite, et gestion de bibliothèques photographiques massives.
@@ -41,7 +41,8 @@ Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructiv
 | CI/CD | GitHub Actions | — | ✅ Complété (Phase 0.5) |
 | DB transactionnelle | SQLite | rusqlite 0.31.0 | ✅ Complété (Phase 1.1) |
 | DB analytique | DuckDB | — | ⬜ Non installé (Phase 6.2) |
-| Hashing | BLAKE3 | — | 🔄 Préparation terminée (Phase 1.3) |
+| Hashing | BLAKE3 | — | ✅ Complété (Phase 1.3) |
+| EXIF/IPTC | kamadak-exif | 0.5.0 | ✅ Complété (Phase 2.2) |
 
 ---
 
@@ -80,15 +81,22 @@ LuminaFast/
 │   ├── lib/                        # Utilitaires et données mock
 │   │   ├── helpers.ts              # safeID()
 │   │   └── mockData.ts             # generateImages, INITIAL_IMAGES, MockEvent
-│   ├── services/                   # Services TypeScript (Phase 1.2)
-│   │   └── catalogService.ts       # Wrapper Tauri avec gestion d'erreurs
+│   ├── services/                   # Services TypeScript (Phase 1.2 + 2.2)
+│   │   ├── catalogService.ts       # Wrapper Tauri avec gestion d'erreurs
+│   │   ├── exifService.ts           # Service EXIF/IPTC avec invoke direct
+│   │   ├── discoveryService.ts     # Service discovery/ingestion
+│   │   ├── filesystemService.ts     # Service système de fichiers
+│   │   └── hashingService.ts        # Service BLAKE3 hashing
 │   ├── types/                      # Types TypeScript du domaine
 │   │   ├── index.ts                # Re-export central
 │   │   ├── image.ts                # CatalogImage, ExifData, EditState
 │   │   ├── collection.ts           # Collection, SmartQuery
 │   │   ├── events.ts               # CatalogEvent, EventType
 │   │   ├── ui.ts                   # ActiveView, LogEntry
-│   │   └── dto.ts                  # DTOs Tauri (Phase 1.2)
+│   │   ├── dto.ts                  # DTOs Tauri (Phase 1.2)
+│   │   ├── exif.ts                 # Types EXIF/IPTC complets (Phase 2.2)
+│   │   ├── discovery.ts            # Types discovery/ingestion (Phase 2.1)
+│   │   └── filesystem.ts           # Types système de fichiers
 │   ├── components/
 │   │   ├── layout/                 # Structure de la page
 │   │   │   ├── TopNav.tsx          # Navigation supérieure
@@ -123,11 +131,17 @@ LuminaFast/
 │   │   ├── main.rs                 # Point d'entrée Rust
 │   │   ├── lib.rs                  # Module library + plugins + init DB + commandes
 │   │   ├── database.rs               # Gestion SQLite, migrations, PRAGMA
-│   │   ├── commands/                 # Commandes Tauri CRUD (Phase 1.2)
+│   │   ├── commands/                 # Commandes Tauri CRUD (Phase 1.2 + 2.2)
 │   │   │   ├── catalog.rs           # 7 commandes CRUD avec validation
+│   │   │   ├── exif.rs              # Commandes EXIF/IPTC (Phase 2.2)
+│   │   │   ├── filesystem.rs        # Commandes système de fichiers
 │   │   │   └── mod.rs               # Export des commandes
 │   │   ├── models/                   # Types Rust du domaine
 │   │   │   ├── catalog.rs           # Image, Collection, Folder, etc.
+│   │   │   ├── exif.rs              # Modèles EXIF/IPTC complets (Phase 2.2)
+│   │   │   ├── discovery.rs         # Modèles discovery/ingestion (Phase 2.1)
+│   │   │   ├── filesystem.rs        # Modèles système de fichiers
+│   │   │   ├── hashing.rs           # Modèles BLAKE3
 │   │   │   ├── dto.rs                # DTOs Tauri avec serde (Phase 1.2)
 │   │   │   └── mod.rs               # Export des modèles
 │   │   └── migrations/               # Scripts de migration SQL
@@ -496,6 +510,7 @@ npm run build:tauri    # Build Tauri production
 - `images` : Table pivot avec BLAKE3 hash, métadonnées de base
 - `folders` : Structure hiérarchique des dossiers importés
 - `exif_metadata` : Métadonnées EXIF complètes (ISO, ouverture, objectif, GPS)
+- `iptc_metadata` : Métadonnées IPTC (copyright, keywords, description) - Phase 2.2
 - `collections` : Collections statiques/smart/quick avec requêtes JSON
 - `collection_images` : Relation many-to-many avec ordre de tri
 - `image_state` : Rating (0-5), flags (pick/reject), color labels
@@ -527,10 +542,13 @@ npm run build:tauri    # Build Tauri production
 
 ### 12.4 — Types Rust
 
-**Modèles sérialisables** (`src-tauri/src/models/catalog.rs`) :
-- `Image`, `Folder`, `ExifMetadata`, `Collection`
-- `CollectionType`, `ImageFlag`, `ColorLabel`
-- `NewImage`, `NewFolder`, `NewExifMetadata` (pour insertion)
+**Modèles sérialisables** (`src-tauri/src/models/`) :
+- `catalog.rs` : `Image`, `Folder`, `Collection`, `CollectionType`
+- `exif.rs` : `ExifMetadata`, `IptcMetadata`, `ExtractionConfig` (Phase 2.2)
+- `discovery.rs` : `DiscoveredFile`, `DiscoverySession` (Phase 2.1)
+- `filesystem.rs` : `FileEvent`, `FileLock`, `WatcherConfig`
+- `hashing.rs` : `HashResult`, `BatchHashResult`
+- DTOs pour insertion : `NewImage`, `NewExifMetadata`, `NewIptcMetadata`
 - Support complet `serde::Serialize/Deserialize`
 
 ### 12.5 — Tests Unitaires
@@ -545,11 +563,63 @@ npm run build:tauri    # Build Tauri production
 
 ---
 
-## 13. Service Filesystem
+## 14. Services EXIF/IPTC
+
+> ✅ **Implémenté en Phase 2.2** - Services complets d'extraction de métadonnées avec kamadak-exif
+
+### 14.1 — Architecture des Services
+
+**Services principaux** :
+- `ExifService` : Extraction EXIF complète avec tokio::sync::Mutex
+- `IptcService` : Extraction IPTC avec validation et normalisation
+- `ExtractionConfig` : Configuration configurable par utilisateur
+
+**Formats supportés** :
+- Canon : `.CR3`, `.CR2`
+- Fuji : `.RAF`
+- Sony : `.ARW`, `.SR2`
+- Nikon : `.NEF`
+- Olympus : `.ORF`
+- Pentax : `.PEF`
+- Panasonic : `.RW2`
+- Adobe : `.DNG`
+
+### 14.2 — Métadonnées EXIF
+
+**Données techniques** :
+- Camera : make, model, serial_number
+- Objectif : lens_make, lens_model, focal_length
+- Exposition : iso, aperture, shutter_speed, flash_mode
+- Temporelles : datetime_original, datetime_digitized
+- GPS : latitude, longitude, altitude (si disponible)
+
+### 14.3 — Métadonnées IPTC
+
+**Données créatives** :
+- Copyright : copyright_notice, creator
+- Description : caption, headline, description
+- Keywords : keywords, category, supplemental_categories
+- Usage : usage_terms, rights, credit_line
+
+### 14.4 — Performance et Validation
+
+**Extraction** :
+- <50ms par fichier (sans I/O)
+- Batch processing avec progression
+- Cache des métadonnées pour réutilisation
+
+**Validation** :
+- Normalisation des textes (trim, maxlength)
+- Validation des dates et formats
+- Gestion des erreurs avec Result<T,E>
+
+---
+
+## 15. Service Filesystem
 
 > ✅ **Implémenté en Phase 1.4** - Service complet de gestion du système de fichiers avec watchers et locks
 
-### 13.1 — Architecture du Service
+### 15.1 — Architecture du Service
 
 **Composants principaux** :
 - `FilesystemService` : Service singleton avec gestion d'état async
@@ -562,7 +632,7 @@ npm run build:tauri    # Build Tauri production
 - <1ms acquisition/libération de verrous
 - Support de milliers de watchers simultanés
 
-### 13.2 — Types Unifiés
+### 15.2 — Types Unifiés
 
 **Sérialisation serde custom** :
 - `PathBuf` ↔ `String` : Chemins de fichiers cross-platform

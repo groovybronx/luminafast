@@ -407,9 +407,9 @@ impl FilesystemService {
     }
 
     /// Met à jour les statistiques globales
+    /// Filtre les verrous expirés pour garantir un état cohérent
     async fn update_global_stats(&self) {
         let watchers = self.watchers.read().await;
-        let locks = self.locks.read().await;
         let queue = self.event_queue.read().await;
 
         let active_watchers: Vec<WatcherStats> = watchers
@@ -417,6 +417,31 @@ impl FilesystemService {
             .map(|h| h.stats.clone())
             .collect();
 
+        // Clean expired locks before reporting
+        let now = Utc::now();
+        let mut expired_paths = Vec::new();
+        {
+            let locks = self.locks.read().await;
+            for (path, lock) in locks.iter() {
+                if let Some(timeout) = lock.timeout {
+                    let elapsed = now.signed_duration_since(lock.created_at);
+                    if elapsed.to_std().unwrap_or(std::time::Duration::MAX) > timeout {
+                        expired_paths.push(path.clone());
+                    }
+                }
+            }
+        }
+
+        // Remove expired locks
+        if !expired_paths.is_empty() {
+            let mut locks = self.locks.write().await;
+            for path in &expired_paths {
+                locks.remove(path);
+            }
+        }
+
+        // Build active locks list (post-cleanup)
+        let locks = self.locks.read().await;
         let active_locks: Vec<FileLock> = locks
             .values()
             .cloned()

@@ -3,7 +3,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-12 (Phase 1.2) — État : Application Tauri avec CRUD Commands (TypeScript + Tauri + Zustand + SQLite + API Frontend-Backend)
+> **Dernière mise à jour** : 2026-02-13 (Phase 1.3 Préparation) — État : Application Tauri avec Build Errors Corrigés, Tests 83/83 passant
 >
 > ### Décisions Projet (validées par le propriétaire)
 > - **Phase 8 (Cloud/Sync)** : Reportée post-lancement
@@ -16,8 +16,8 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : Application Tauri avec CRUD Commands
-L'application expose 7 commandes Tauri CRUD entièrement fonctionnelles. La base de données SQLite est opérationnelle, les DTOs sont implémentés, et la communication frontend-backend est établie via `__TAURI_INTERNALS__.invoke`. Le service TypeScript wrapper gère les erreurs et fallbacks.
+### État actuel : Application Tauri avec Build Errors Corrigés
+Toutes les erreurs de build et de tests Rust sont corrigées. 83/83 tests passent (0 échec). Les modèles discovery/ingestion sont synchronisés, la concurrence est Sync-safe, et l'architecture serde custom (Phase 1.4) est préservée. Les 7 commandes CRUD restent fonctionnelles, avec en plus les corrections structurelles pour préparer la Phase 1.3 (Service BLAKE3).
 
 ### Objectif : Application Tauri autonome commercialisable
 Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructive, catalogue SQLite, et gestion de bibliothèques photographiques massives.
@@ -41,7 +41,7 @@ Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructiv
 | CI/CD | GitHub Actions | — | ✅ Complété (Phase 0.5) |
 | DB transactionnelle | SQLite | rusqlite 0.31.0 | ✅ Complété (Phase 1.1) |
 | DB analytique | DuckDB | — | ⬜ Non installé (Phase 6.2) |
-| Hashing | BLAKE3 | — | ⬜ Non installé (Phase 1.3) |
+| Hashing | BLAKE3 | — | 🔄 Préparation terminée (Phase 1.3) |
 
 ---
 

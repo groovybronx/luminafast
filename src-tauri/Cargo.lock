@@ -2019,6 +2019,7 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "uuid",
+ "walkdir",
 ]
 
 [[package]]
@@ -3183,6 +3184,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b838eba278d213a8beaf485bd313fd580ca4505a00d5871caeb1457c55322cae"
 dependencies = [
  "bitflags 2.10.0",
+ "chrono",
  "fallible-iterator",
  "fallible-streaming-iterator",
  "hashlink",

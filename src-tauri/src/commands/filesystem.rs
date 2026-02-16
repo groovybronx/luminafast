@@ -319,12 +319,10 @@ fn list_directory_recursive(path: &PathBuf, entries: &mut Vec<String>) -> Result
         let metadata = entry.metadata()
             .map_err(|e: std::io::Error| FilesystemError::IoError(e.to_string()))?;
 
+        entries.push(entry.path().to_string_lossy().to_string());
         if metadata.is_dir() {
-            // Récursion si configuré
-            // Note: implémentation simplifiée pour Phase 1.4
+            // Récursion dans les sous-dossiers
             list_directory_recursive(&entry.path(), entries)?;
-        } else {
-            entries.push(entry.path().to_string_lossy().to_string());
         }
     }
     

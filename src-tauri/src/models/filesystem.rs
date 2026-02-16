@@ -370,7 +370,7 @@ mod tests {
     }
 
     #[test]
-    fn test_event_dto_conversion() {
+    fn test_event_serde_serialization() {
         let event = FileEvent {
             id: Uuid::new_v4(),
             event_type: FileEventType::Created,
@@ -387,9 +387,19 @@ mod tests {
             },
         };
 
-        let dto: FileEventDto = event.into();
-        assert_eq!(dto.event_type, "created");
-        assert_eq!(dto.path, "/test/image.jpg");
-        assert_eq!(dto.size, Some(1024));
+        // Verify serde custom serialization directly (no separate DTO per Phase 1.4 architecture)
+        let json = serde_json::to_value(&event).unwrap();
+        assert_eq!(json["event_type"], "created");
+        assert_eq!(json["path"], "/test/image.jpg");
+        assert_eq!(json["size"], 1024);
+        assert_eq!(json["mime_type"], "image/jpeg");
+        assert!(json["metadata"]["is_directory"].is_boolean());
+        assert_eq!(json["metadata"]["extension"], "jpg");
+
+        // Verify roundtrip deserialization
+        let deserialized: FileEvent = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized.event_type, FileEventType::Created);
+        assert_eq!(deserialized.path, PathBuf::from("/test/image.jpg"));
+        assert_eq!(deserialized.size, Some(1024));
     }
 }

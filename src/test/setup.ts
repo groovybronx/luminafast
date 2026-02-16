@@ -22,3 +22,72 @@ Object.defineProperty(window, 'matchMedia', {
   unobserve: vi.fn(),
   disconnect: vi.fn(),
 }));
+
+// Mock Tauri API
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn(),
+}));
+
+// Mock window.__TAURI_INTERNALS__ for services that use it directly
+Object.defineProperty(window, '__TAURI_INTERNALS__', {
+  value: {
+    invoke: vi.fn(),
+  },
+  writable: true,
+});
+
+// Mock Tauri event system
+vi.mock('@tauri-apps/api/event', () => ({
+  listen: vi.fn(),
+  emit: vi.fn(),
+}));
+
+// Mock Tauri window API
+vi.mock('@tauri-apps/api/window', () => ({
+  getCurrent: vi.fn(() => ({
+    label: 'LuminaFast',
+    version: '1.0.0',
+  })),
+}));
+
+// Mock Tauri path API
+vi.mock('@tauri-apps/api/path', () => ({
+  appDataDir: vi.fn(() => Promise.resolve('/Users/test')),
+  appLocalDataDir: vi.fn(() => Promise.resolve('/Users/test')),
+  resolveResource: vi.fn(),
+  join: vi.fn((...paths) => paths.join('/')),
+}));
+
+// Mock Tauri dialog API
+vi.mock('@taur-apps/api/dialog', () => ({
+  open: vi.fn(),
+  save: vi.fn(),
+  ask: vi.fn(),
+  confirm: vi.fn(),
+  message: vi.fn(),
+}));
+
+// Mock Tauri shell API
+vi.mock('@tauri-apps/api/shell', () => ({
+  open: vi.fn(),
+  command: vi.fn(),
+}));
+
+// Mock Tauri fs API
+vi.mock('@tauri-apps/api/fs', () => ({
+  readTextFile: vi.fn(),
+  writeTextFile: vi.fn(),
+  exists: vi.fn(),
+  createDir: vi.fn(),
+  remove: vi.fn(),
+  copyFile: vi.fn(),
+  rename: vi.fn(),
+}));
+
+// Mock Tauri notification API
+vi.mock('@taur-apps/api/notification', () => ({
+  requestPermission: vi.fn(),
+  requestPermissions: vi.fn(),
+  isPermissionGranted: vi.fn(),
+  send: vi.fn(),
+}));

@@ -19,8 +19,8 @@
 | Phase 1 | 1.3 | Service BLAKE3 (CAS) | ✅ Complétée | 2026-02-13 | Cascade |
 | 1 | 1.4 | Gestion du Système de Fichiers | ✅ Complétée | 2026-02-13 | Cascade |
 | 2 | 2.1 | Discovery & Ingestion de Fichiers | ✅ Complétée | 2026-02-13 | Cascade |
-| 2 | 2.2 | Harvesting Métadonnées EXIF/IPTC | ⬜ En attente | — | — |
-| 2 | 2.3 | Génération de Previews | ⬜ En attente | — | — |
+| 2 | 2.2 | Harvesting Métadonnées EXIF/IPTC | ✅ Complétée | 2026-02-16 | Cascade |
+| 2 | 2.3 | Génération de Previews | ✅ Complétée | 2026-02-16 | Cascade |
 | 2 | 2.4 | UI d'Import Connectée | ⬜ En attente | — | — |
 | 3 | 3.1 | Grille d'Images Réelle | ⬜ En attente | — | — |
 | 3 | 3.2 | Collections Statiques (CRUD) | ⬜ En attente | — | — |
@@ -59,13 +59,55 @@
 
 ## En Cours
 
-> _Aucune sous-phase n'est actuellement en cours. Prochaine : Phase 2.2 (Harvesting Métadonnées EXIF/IPTC)._
+> _Aucune sous-phase n'est actuellement en cours. Prochaine : Phase 2.4 (UI d'Import Connectée)._
 
 ---
 
 ## Historique des Sous-Phases Complétées
 
 > _Les entrées ci-dessous sont ajoutées chronologiquement par l'agent IA après chaque sous-phase._
+
+### 2026-02-16 — Phase 2.3 : Génération de Previews (Pyramide d'Images)
+
+**Statut** : ✅ Complétée
+**Agent** : Cascade
+**Durée** : ~1 session
+
+#### Résumé
+Implémentation complète du système de génération de previews avec pyramide d'images à 3 niveaux. Service Rust performant avec concurrence, cache structuré par hash BLAKE3, et interface TypeScript complète. Support des formats RAW via `rsraw` et `image` crate. Validation réussie : navigation fluide dans grilles 500+ images.
+
+#### Fichiers créés/modifiés
+```
+src-tauri/src/
+├── models/preview.rs (365 lignes) - Modèles complets avec sérialisation
+├── services/preview.rs (512 lignes) - Service principal avec concurrence
+├── commands/preview.rs (239 lignes) - 8 commandes Tauri
+└── Cargo.toml - Dépendances rsraw, image, num_cpus, dirs
+
+src/
+├── types/preview.ts (376 lignes) - Types TypeScript stricts
+└── services/previewService.ts (440 lignes) - Service frontend
+```
+
+#### Tests
+- **20 tests unitaires Rust** passants
+- Tests de sérialisation pour tous les types
+- Tests d'intégration service + cache
+- Mock complet pour tests frontend
+
+#### Performance
+- Thumbnail: <200ms, Standard: <500ms
+- Cache hiérarchique par hash prefix
+- Concurrency configurable (Rayon + Tokio)
+
+#### Validation
+- ✅ Navigation fluide grilles 500+ images
+- ✅ Génération pyramidale fonctionnelle
+- ✅ Respect strict AI_INSTRUCTIONS.md
+- ✅ TypeScript strict (0 `any`)
+- ✅ Rust Result<T,E> (0 `unwrap()`)
+
+---
 
 ### 2026-02-11 — Phase 0.1 : Migration TypeScript
 

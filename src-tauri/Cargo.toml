@@ -43,6 +43,12 @@ notify = "7.0"
 parking_lot = "0.12"
 walkdir = "2.5"
 
+# Preview/RAW processing dependencies
+rsraw = "0.1"
+image = { version = "0.25", features = ["jpeg", "png"] }
+num_cpus = "1.16"
+dirs = "5.0"
+
 [dev-dependencies]
 tempfile = "3.0"
 tauri = { version = "2.9.1", features = ["rustls-tls", "devtools", "test"] }

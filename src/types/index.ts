@@ -7,6 +7,7 @@ export * from './ui';
 export * from './dto';
 export * from './hashing';
 export * from './filesystem';
+export * from './preview';
 
 export type {
   EventType,

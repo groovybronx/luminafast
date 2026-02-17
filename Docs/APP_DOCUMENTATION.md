@@ -3,7 +3,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-16 (Phase 2.2 Harvesting Métadonnées EXIF/IPTC) — État : Services EXIF/IPTC complets, 131 tests passants, TypeScript strict
+> **Dernière mise à jour** : 2026-02-16 (Phase 2.3 Génération de Previews) — État : Service previews complet, pyramide d'images 3 niveaux, 20 tests Rust passants, cache structuré
 >
 > ### Décisions Projet (validées par le propriétaire)
 > - **Phase 8 (Cloud/Sync)** : Reportée post-lancement
@@ -16,8 +16,8 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : Services EXIF/IPTC complets avec TypeScript strict
-Phase 2.2 complétée avec extraction complète des métadonnées EXIF/IPTC pour fichiers RAW. 131 tests passants (0 échec), services Rust avec tokio::sync::Mutex, modèles TypeScript enrichis (466 lignes), et commandes Tauri modernisées. Architecture préservée avec zéro any TypeScript et Result<T,E> en Rust.
+### État actuel : Service previews complet avec pyramide d'images
+Phase 2.3 complétée avec génération complète de previews pyramide à 3 niveaux (Thumbnail 240px, Standard 1440px, 1:1 native). Service Rust performant avec concurrence Rayon+Tokio, cache structuré par hash BLAKE3 dans `{catalog_dir}/Previews.lrdata/`, et interface TypeScript complète. 20 tests unitaires Rust passants, support formats RAW via `rsraw` et `image` crate. Validation réussie : navigation fluide dans grilles 500+ images.
 
 ### Objectif : Application Tauri autonome commercialisable
 Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructive, catalogue SQLite, et gestion de bibliothèques photographiques massives.

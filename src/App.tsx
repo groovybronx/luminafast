@@ -175,7 +175,7 @@ export default function App() {
       </div>
 
       <ArchitectureMonitor logs={logs} />
-      {showImport && <ImportModal onClose={() => setShowImport(false)} onImport={handleImport} />}
+      {showImport && <ImportModal onClose={() => setShowImport(false)} onImportComplete={handleImport} />}
       <KeyboardOverlay />
     </div>
   );

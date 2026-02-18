@@ -11,6 +11,11 @@ describe('systemStore', () => {
         isImporting: false,
         progress: 0,
         currentFile: '',
+        sessionId: null,
+        totalFiles: 0,
+        processedFiles: 0,
+        stage: 'idle',
+        error: null,
       },
       appReady: false,
     });
@@ -31,6 +36,11 @@ describe('systemStore', () => {
       isImporting: false,
       progress: 0,
       currentFile: '',
+      sessionId: null,
+      totalFiles: 0,
+      processedFiles: 0,
+      stage: 'idle',
+      error: null,
     });
     expect(store.appReady).toBe(false);
   });
@@ -109,13 +119,21 @@ describe('systemStore', () => {
       isImporting: true,
       progress: 0,
       currentFile: '',
+      sessionId: null,
+      totalFiles: 0,
+      processedFiles: 0,
+      stage: 'idle',
+      error: null,
     });
     
     // Update progress and current file
     act(() => {
       useSystemStore.getState().setImportState({ 
         progress: 45, 
-        currentFile: 'IMG_1234.CR3' 
+        currentFile: 'IMG_1234.CR3',
+        stage: 'ingesting',
+        processedFiles: 45,
+        totalFiles: 100
       });
     });
     
@@ -123,17 +141,27 @@ describe('systemStore', () => {
       isImporting: true,
       progress: 45,
       currentFile: 'IMG_1234.CR3',
+      sessionId: null,
+      totalFiles: 100,
+      processedFiles: 45,
+      stage: 'ingesting',
+      error: null,
     });
     
     // Reset importing flag
     act(() => {
-      useSystemStore.getState().setImportState({ isImporting: false });
+      useSystemStore.getState().setImportState({ isImporting: false, stage: 'completed' });
     });
     
     expect(useSystemStore.getState().importState).toEqual({
       isImporting: false,
       progress: 45,
       currentFile: 'IMG_1234.CR3',
+      sessionId: null,
+      totalFiles: 100,
+      processedFiles: 45,
+      stage: 'completed',
+      error: null,
     });
   });
 
@@ -156,7 +184,10 @@ describe('systemStore', () => {
     act(() => {
       useSystemStore.getState().setImportState({ 
         isImporting: true, 
-        currentFile: 'IMG_0001.CR3' 
+        currentFile: 'IMG_0001.CR3',
+        sessionId: 'sess_123',
+        stage: 'scanning',
+        totalFiles: 0
       });
       
       // Add progress logs
@@ -164,11 +195,17 @@ describe('systemStore', () => {
       useSystemStore.getState().addLog('Processing IMG_0001.CR3', 'duckdb');
       
       // Update progress
-      useSystemStore.getState().setImportState({ progress: 25 });
+      useSystemStore.getState().setImportState({ 
+        progress: 25,
+        stage: 'ingesting',
+        totalFiles: 10,
+        processedFiles: 2
+      });
       
       // Continue with more files
       useSystemStore.getState().setImportState({ 
-        currentFile: 'IMG_0002.CR3' 
+        currentFile: 'IMG_0002.CR3',
+        processedFiles: 5
       });
       useSystemStore.getState().addLog('Processing IMG_0002.CR3', 'duckdb');
       
@@ -178,7 +215,9 @@ describe('systemStore', () => {
       useSystemStore.getState().setImportState({ 
         isImporting: false, 
         progress: 100, 
-        currentFile: '' 
+        currentFile: '',
+        stage: 'completed',
+        processedFiles: 10
       });
       useSystemStore.getState().addLog('Import completed successfully', 'sync');
     });
@@ -188,6 +227,11 @@ describe('systemStore', () => {
       isImporting: false,
       progress: 100,
       currentFile: '',
+      sessionId: 'sess_123',
+      totalFiles: 10,
+      processedFiles: 10,
+      stage: 'completed',
+      error: null
     });
     const logs = useSystemStore.getState().logs;
     expect(logs).toHaveLength(4);

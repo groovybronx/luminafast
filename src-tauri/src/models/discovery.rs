@@ -163,6 +163,7 @@ impl DiscoveredFile {
 
 /// Discovery session configuration
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DiscoveryConfig {
     /// Root directory to scan
     pub root_path: PathBuf,

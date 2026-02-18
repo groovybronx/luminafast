@@ -129,7 +129,7 @@ describe('DiscoveryService', () => {
  
       await service.stopDiscovery(sessionId);
  
-      expect(mockInvoke).toHaveBeenCalledWith('stop_discovery', { session_id: sessionId });
+      expect(mockInvoke).toHaveBeenCalledWith('stop_discovery', { sessionId });
     });
  
     it('should get discovery status successfully', async () => {
@@ -159,7 +159,7 @@ describe('DiscoveryService', () => {
       const result = await service.getDiscoveryStatus('test-session-id');
  
       expect(result).toEqual(mockSession);
-      expect(mockInvoke).toHaveBeenCalledWith('get_discovery_status', { session_id: 'test-session-id' });
+      expect(mockInvoke).toHaveBeenCalledWith('get_discovery_status', { sessionId: 'test-session-id' });
     });
  
     it('should get all discovery sessions successfully', async () => {
@@ -254,7 +254,7 @@ describe('DiscoveryService', () => {
       const result = await service.getDiscoveredFiles('test-session-id');
  
       expect(result).toEqual(mockFiles);
-      expect(mockInvoke).toHaveBeenCalledWith('get_discovered_files', { session_id: 'test-session-id' });
+      expect(mockInvoke).toHaveBeenCalledWith('get_discovered_files', { sessionId: 'test-session-id' });
     });
   });
  
@@ -395,10 +395,10 @@ describe('DiscoveryService', () => {
  
       expect(result).toEqual(mockConfig);
       expect(mockInvoke).toHaveBeenCalledWith('create_discovery_config', {
-        root_path: '/test/path',
+        rootPath: '/test/path',
         recursive: true,
-        max_depth: 5,
-        max_files: 1000,
+        maxDepth: 5,
+        maxFiles: 1000,
       });
     });
  
@@ -502,7 +502,7 @@ describe('DiscoveryService', () => {
       const result = await service.getDiscoveryStats('test-session-id');
  
       expect(result).toEqual(mockStats);
-      expect(mockInvoke).toHaveBeenCalledWith('get_discovery_stats', { session_id: 'test-session-id' });
+      expect(mockInvoke).toHaveBeenCalledWith('get_discovery_stats', { sessionId: 'test-session-id' });
     });
   });
  

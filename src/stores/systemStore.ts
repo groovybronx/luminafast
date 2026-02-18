@@ -8,6 +8,11 @@ interface SystemStore {
     isImporting: boolean;
     progress: number;
     currentFile: string;
+    sessionId: string | null;
+    totalFiles: number;
+    processedFiles: number;
+    stage: 'idle' | 'scanning' | 'ingesting' | 'completed' | 'error';
+    error: string | null;
   };
   appReady: boolean;
   
@@ -24,7 +29,12 @@ export const useSystemStore = create<SystemStore>((set) => ({
   importState: {
     isImporting: false,
     progress: 0,
-    currentFile: ''
+    currentFile: '',
+    sessionId: null,
+    totalFiles: 0,
+    processedFiles: 0,
+    stage: 'idle',
+    error: null
   },
   appReady: false,
   

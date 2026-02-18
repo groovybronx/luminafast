@@ -119,8 +119,8 @@ impl IngestionService {
         let mut stmt = db.prepare("SELECT id FROM images WHERE filename = ? AND blake3_hash = ?")?;
         let result: Option<i64> = stmt
             .query_row((&filename, &blake3_hash), |row| row.get(0))
-    .optional()
-    .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
+            .optional()
+            .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
 
         Ok(result)
     }

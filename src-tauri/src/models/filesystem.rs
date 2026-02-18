@@ -94,11 +94,11 @@ mod option_chrono_serde {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-Ok(Some(
-    DateTime::parse_from_rfc3339(&s)
-        .map(|dt| dt.with_timezone(&Utc))
-        .map_err(serde::de::Error::custom)?
-))
+        Ok(Some(
+            DateTime::parse_from_rfc3339(&s)
+                .map(|dt| dt.with_timezone(&Utc))
+                .map_err(serde::de::Error::custom)?,
+        ))
     }
 }
 

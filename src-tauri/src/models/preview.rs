@@ -193,8 +193,8 @@ pub enum PreviewError {
     #[error("Fichier corrompu ou illisible: {path}")]
     CorruptedFile { path: String },
     
-    #[error("Erreur de traitement RAW: {message}")]
-    ProcessingError { message: String },
+#[error("Erreur de traitement RAW: {message}")]
+ProcessingError { message: String },
     
     #[error("Erreur d'écriture preview: {path}")]
     WriteError { path: String },
@@ -348,7 +348,9 @@ mod tests {
 
     #[test]
     fn test_preview_error_display() {
-        let error = PreviewError::UnsupportedFormat { format: "cr3".to_string() };
+        let error = PreviewError::UnsupportedFormat {
+            format: "cr3".to_string(),
+        }; 
         assert!(error.to_string().contains("cr3"));
         
         let error = PreviewError::GenerationTimeout { timeout: 30 };

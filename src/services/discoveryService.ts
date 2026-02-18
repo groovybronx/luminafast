@@ -163,7 +163,7 @@ export class DiscoveryService {
   /** Log debug messages */
   private log(message: string, data?: unknown): void {
     if (this.config.debug) {
-      console.log(`[DiscoveryService] ${message}`, data);
+      console.warn(`[DiscoveryService] ${message}`, data);
     }
   }
 
@@ -180,14 +180,16 @@ export class DiscoveryService {
   /** Execute command with retry logic */
   private async executeCommand<T>(
     command: string,
-    args?: unknown[] | Record<string, unknown>,
-    retries: number = 0
+    args?: Record<string, unknown>,
+    retries = 0
   ): Promise<T> {
     try {
       this.log(`Executing command: ${command}`, { args, retries });
       
       const invoke = DiscoveryService.getInvoke();
-      const result = await invoke(command, args || [] as any) as T;
+      
+      // Pass args directly as object for Tauri named arguments
+      const result = await invoke(command, args) as T;
       
       this.log(`Command succeeded: ${command}`, { result });
       return result;
@@ -310,7 +312,7 @@ export class DiscoveryService {
 
       const session = await this.executeCommand<DiscoverySession>(
         'start_discovery',
-        [config]
+        { config }
       );
 
       this.updateSession(session);
@@ -331,7 +333,7 @@ export class DiscoveryService {
     try {
       this.log('Stopping discovery', { sessionId });
       
-      await this.executeCommand<void>('stop_discovery', [sessionId]);
+      await this.executeCommand<void>('stop_discovery', { session_id: sessionId });
       
       // Update local cache
       const session = this.activeSessions.get(sessionId);
@@ -358,7 +360,7 @@ export class DiscoveryService {
       
       const session = await this.executeCommand<DiscoverySession>(
         'get_discovery_status',
-        [sessionId]
+        { session_id: sessionId }
       );
 
       this.updateSession(session);
@@ -401,7 +403,7 @@ export class DiscoveryService {
       
       const files = await this.executeCommand<DiscoveredFile[]>(
         'get_discovered_files',
-        [sessionId]
+        { session_id: sessionId }
       );
 
       this.log('Retrieved discovered files', { sessionId, count: files.length });
@@ -426,7 +428,7 @@ export class DiscoveryService {
       
       const result = await this.executeCommand<IngestionResult>(
         'ingest_file',
-        [file]
+        { file }
       );
 
       this.log('File ingested', { 
@@ -455,7 +457,7 @@ export class DiscoveryService {
       
       const result = await this.executeCommand<BatchIngestionResult>(
         'batch_ingest',
-        [request]
+        { request }
       );
 
       this.log('Batch ingestion completed', {
@@ -490,7 +492,12 @@ export class DiscoveryService {
       
       const config = await this.executeCommand<DiscoveryConfig>(
         'create_discovery_config',
-        [rootPath, recursive, maxDepth, maxFiles]
+        { 
+          root_path: rootPath, 
+          recursive, 
+          max_depth: maxDepth, 
+          max_files: maxFiles 
+        }
       );
 
       return config;
@@ -526,7 +533,7 @@ export class DiscoveryService {
     try {
       this.log('Validating discovery path', { path });
       
-      const valid = await this.executeCommand<boolean>('validate_discovery_path', [path]);
+      const valid = await this.executeCommand<boolean>('validate_discovery_path', { path });
       
       const result: PathValidationResult = {
         valid,
@@ -573,7 +580,7 @@ export class DiscoveryService {
       
       const cleaned = await this.executeCommand<number>(
         'cleanup_discovery_sessions',
-        [maxAgeHours]
+        { max_age_hours: maxAgeHours }
       );
 
       this.log('Sessions cleaned up', { cleaned });
@@ -594,7 +601,7 @@ export class DiscoveryService {
       
       const stats = await this.executeCommand<DiscoveryStats>(
         'get_discovery_stats',
-        [sessionId]
+        { session_id: sessionId }
       );
 
       this.log('Retrieved discovery stats', { sessionId });
@@ -668,7 +675,15 @@ export class DiscoveryService {
       this.eventListeners.set(sessionId, new Set());
     }
 
-    const listeners = this.eventListeners.get(sessionId)!;
+    const listeners = this.eventListeners.get(sessionId);
+    if (!listeners) {
+      throw new ServiceError(
+        ServiceErrorType.UNKNOWN_ERROR,
+        'Session listeners not found',
+        undefined,
+        { sessionId }
+      );
+    }
     listeners.add(listener);
 
     // Return unsubscribe function

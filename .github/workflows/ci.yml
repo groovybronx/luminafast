@@ -63,6 +63,13 @@ jobs:
       uses: Swatinem/rust-cache@v2
       with:
         workspaces: src-tauri
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+          librsvg2-dev patchelf libssl-dev pkg-config build-essential
         
     - name: Check Rust formatting
       run: cd src-tauri && cargo fmt --all -- --check
@@ -119,7 +126,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev \
+          libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
           librsvg2-dev patchelf libssl-dev pkg-config build-essential
         
     - name: Install frontend dependencies
@@ -147,14 +154,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Rust security audit
-      uses: actions-rs/audit-check@v1
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        toolchain: stable
+
+    - name: Install cargo-audit
+      run: cargo install cargo-audit
+
+    - name: Rust security audit
+      run: cd src-tauri && cargo audit
         
     # NOTE: L'audit de sécurité peut échouer sur des vulnérabilités connues
     # Problème: certaines dépendances peuvent avoir des vulnérabilités modérées
     # --audit-level moderate: ignore les vulnérabilités low (trop nombreuses)
     # Alternative: --audit-level high pour ignorer moderate si nécessaire
     - name: Node.js security audit
-      run: npm audit --audit-level moderate
+      run: npm audit --audit-level high

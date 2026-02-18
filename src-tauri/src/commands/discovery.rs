@@ -1,6 +1,6 @@
 use crate::models::discovery::{
-    DiscoveryConfig, DiscoverySession, DiscoveredFile, BatchIngestionRequest,
-    BatchIngestionResult, IngestionResult,
+    BatchIngestionRequest, BatchIngestionResult, DiscoveredFile, DiscoveryConfig, DiscoverySession,
+    IngestionResult,
 };
 use crate::services::discovery::DiscoveryService;
 use crate::services::ingestion::IngestionService;
@@ -23,36 +23,38 @@ pub fn initialize_discovery_services() {
 
 /// Get the global discovery service
 fn get_discovery_service() -> Arc<DiscoveryService> {
-    DISCOVERY_SERVICE.get_or_init(|| {
-        // Create BLAKE3 service for discovery
-        let blake3_service = Arc::new(crate::services::blake3::Blake3Service::new(
-            crate::models::hashing::HashConfig::default()
-        ));
-        Arc::new(DiscoveryService::new(blake3_service))
-    }).clone()
+    DISCOVERY_SERVICE
+        .get_or_init(|| {
+            // Create BLAKE3 service for discovery
+            let blake3_service = Arc::new(crate::services::blake3::Blake3Service::new(
+                crate::models::hashing::HashConfig::default(),
+            ));
+            Arc::new(DiscoveryService::new(blake3_service))
+        })
+        .clone()
 }
 
 /// Get the global ingestion service
 fn get_ingestion_service() -> Arc<IngestionService> {
-    INGESTION_SERVICE.get_or_init(|| {
-        // Create database connection (std::sync::Mutex for Sync safety)
-        let conn = rusqlite::Connection::open_in_memory()
-            .expect("Failed to create in-memory database for ingestion");
-        let db = Arc::new(std::sync::Mutex::new(conn));
-        
-        // Create BLAKE3 service for ingestion
-        let blake3_service = Arc::new(crate::services::blake3::Blake3Service::new(
-            crate::models::hashing::HashConfig::default()
-        ));
-        Arc::new(IngestionService::new(blake3_service, db))
-    }).clone()
+    INGESTION_SERVICE
+        .get_or_init(|| {
+            // Create database connection (std::sync::Mutex for Sync safety)
+            let conn = rusqlite::Connection::open_in_memory()
+                .expect("Failed to create in-memory database for ingestion");
+            let db = Arc::new(std::sync::Mutex::new(conn));
+
+            // Create BLAKE3 service for ingestion
+            let blake3_service = Arc::new(crate::services::blake3::Blake3Service::new(
+                crate::models::hashing::HashConfig::default(),
+            ));
+            Arc::new(IngestionService::new(blake3_service, db))
+        })
+        .clone()
 }
 
 /// Start a new discovery session
 #[tauri::command]
-pub fn start_discovery(
-    config: DiscoveryConfig,
-) -> Result<Uuid, String> {
+pub fn start_discovery(config: DiscoveryConfig) -> Result<Uuid, String> {
     // Use blocking runtime for async operations
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
@@ -65,9 +67,7 @@ pub fn start_discovery(
 
 /// Stop an active discovery session
 #[tauri::command]
-pub fn stop_discovery(
-    session_id: Uuid,
-) -> Result<(), String> {
+pub fn stop_discovery(session_id: Uuid) -> Result<(), String> {
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
         get_discovery_service()
@@ -79,78 +79,67 @@ pub fn stop_discovery(
 
 /// Get the status of a discovery session
 #[tauri::command]
-pub fn get_discovery_status(
-    session_id: Uuid,
-) -> Result<DiscoverySession, String> {
+pub fn get_discovery_status(session_id: Uuid) -> Result<DiscoverySession, String> {
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
         let session = get_discovery_service()
             .get_session_status(session_id)
             .await
             .map_err(|e| e.to_string())?;
-        
+
         Ok(session)
     })
 }
 
 /// Get all discovery sessions
 #[tauri::command]
-pub fn get_all_discovery_sessions(
-) -> Result<Vec<DiscoverySession>, String> {
+pub fn get_all_discovery_sessions() -> Result<Vec<DiscoverySession>, String> {
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
-        let sessions = get_discovery_service()
-            .get_all_sessions()
-            .await;
-        
+        let sessions = get_discovery_service().get_all_sessions().await;
+
         Ok(sessions)
     })
 }
 
 /// Get discovered files for a session
 #[tauri::command]
-pub fn get_discovered_files(
-    session_id: Uuid,
-) -> Result<Vec<DiscoveredFile>, String> {
+pub fn get_discovered_files(session_id: Uuid) -> Result<Vec<DiscoveredFile>, String> {
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
         let files = get_discovery_service()
             .get_session_files(session_id)
             .await
             .map_err(|e| e.to_string())?;
-        
+
         Ok(files)
     })
 }
 
 /// Ingest a single discovered file
 #[tauri::command]
-pub fn ingest_file(
-    file: DiscoveredFile,
-) -> Result<IngestionResult, String> {
+pub fn ingest_file(file: DiscoveredFile) -> Result<IngestionResult, String> {
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
         let result = get_ingestion_service()
             .ingest_file(&file)
             .await
             .map_err(|e| e.to_string())?;
-        
+
         Ok(result)
     })
 }
 
 /// Batch ingest multiple files
 #[tauri::command]
-pub fn batch_ingest(
-    request: BatchIngestionRequest,
-) -> Result<BatchIngestionResult, String> {
+pub fn batch_ingest(request: BatchIngestionRequest) -> Result<BatchIngestionResult, String> {
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
         let result = get_ingestion_service()
             .batch_ingest(&request)
             .await
             .map_err(|e| e.to_string())?;
-        
+
         Ok(result)
     })
 }
@@ -164,20 +153,20 @@ pub async fn create_discovery_config(
     max_files: Option<usize>,
 ) -> Result<DiscoveryConfig, String> {
     let path = PathBuf::from(&root_path);
-    
+
     if !path.exists() {
         return Err("Directory does not exist".to_string());
     }
-    
+
     let config = DiscoveryConfig {
         root_path: path,
         recursive: recursive.unwrap_or(true),
-        formats: vec![], // Will use default formats
+        formats: vec![],      // Will use default formats
         exclude_dirs: vec![], // Will use default exclusions
         max_depth,
         max_files,
     };
-    
+
     Ok(config)
 }
 
@@ -185,29 +174,27 @@ pub async fn create_discovery_config(
 #[tauri::command]
 pub async fn get_supported_formats() -> Result<Vec<String>, String> {
     let formats = vec![
-        "cr3".to_string(),  // Canon
-        "raf".to_string(),  // Fuji
-        "arw".to_string(),  // Sony
+        "cr3".to_string(), // Canon
+        "raf".to_string(), // Fuji
+        "arw".to_string(), // Sony
     ];
-    
+
     Ok(formats)
 }
 
 /// Validate a directory path for discovery
 #[tauri::command]
-pub async fn validate_discovery_path(
-    path: String,
-) -> Result<bool, String> {
+pub async fn validate_discovery_path(path: String) -> Result<bool, String> {
     let path_buf = PathBuf::from(&path);
-    
+
     if !path_buf.exists() {
         return Err("Path does not exist".to_string());
     }
-    
+
     if !path_buf.is_dir() {
         return Err("Path is not a directory".to_string());
     }
-    
+
     // Check if we can read the directory
     match std::fs::read_dir(&path_buf) {
         Ok(_) => Ok(true),
@@ -223,25 +210,21 @@ pub async fn get_default_discovery_config() -> Result<DiscoveryConfig, String> {
 
 /// Clean up old discovery sessions
 #[tauri::command]
-pub fn cleanup_discovery_sessions(
-    max_age_hours: u64,
-) -> Result<usize, String> {
+pub fn cleanup_discovery_sessions(max_age_hours: u64) -> Result<usize, String> {
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
         let cleaned = get_discovery_service()
             .cleanup_old_sessions(max_age_hours)
             .await
             .map_err(|e| e.to_string())?;
-        
+
         Ok(cleaned)
     })
 }
 
 /// Get discovery statistics
 #[tauri::command]
-pub fn get_discovery_stats(
-    session_id: Uuid,
-) -> Result<DiscoveryStats, String> {
+pub fn get_discovery_stats(session_id: Uuid) -> Result<DiscoveryStats, String> {
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
         // Get session status
@@ -249,13 +232,13 @@ pub fn get_discovery_stats(
             .get_session_status(session_id)
             .await
             .map_err(|e| e.to_string())?;
-        
+
         // Get ingestion stats
         let ingestion_stats = get_ingestion_service()
             .get_session_stats(session_id)
             .await
             .map_err(|e| e.to_string())?;
-        
+
         let stats = DiscoveryStats {
             session_id,
             status: session.status.clone(),
@@ -269,7 +252,7 @@ pub fn get_discovery_stats(
             duration: session.duration(),
             ingestion_stats,
         };
-        
+
         Ok(stats)
     })
 }
@@ -301,10 +284,10 @@ mod tests {
 
     fn create_test_state() -> (Arc<DiscoveryService>, Arc<IngestionService>) {
         let blake3_service = Arc::new(Blake3Service::new(
-            crate::models::hashing::HashConfig::default()
+            crate::models::hashing::HashConfig::default(),
         ));
         let discovery_service = Arc::new(DiscoveryService::new(blake3_service.clone()));
-        
+
         // Create test database
         let conn = rusqlite::Connection::open_in_memory().unwrap();
         conn.execute_batch(
@@ -334,12 +317,13 @@ mod tests {
                 gps_lon REAL,
                 color_space TEXT,
                 FOREIGN KEY (image_id) REFERENCES images (id)
-            );"
-        ).unwrap();
-        
+            );",
+        )
+        .unwrap();
+
         let db = Arc::new(std::sync::Mutex::new(conn));
         let ingestion_service = Arc::new(IngestionService::new(blake3_service, db));
-        
+
         (discovery_service, ingestion_service)
     }
 
@@ -351,8 +335,10 @@ mod tests {
             Some(true),
             Some(5),
             Some(100),
-        ).await.unwrap();
-        
+        )
+        .await
+        .unwrap();
+
         assert_eq!(config.root_path, temp_dir.path());
         assert!(config.recursive);
         assert_eq!(config.max_depth, Some(5));
@@ -362,14 +348,12 @@ mod tests {
     #[tokio::test]
     async fn test_validate_discovery_path() {
         let temp_dir = TempDir::new().unwrap();
-        
+
         // Valid directory
-        let result = validate_discovery_path(
-            temp_dir.path().to_string_lossy().to_string(),
-        ).await;
+        let result = validate_discovery_path(temp_dir.path().to_string_lossy().to_string()).await;
         assert!(result.is_ok());
         assert!(result.unwrap());
-        
+
         // Invalid path
         let result = validate_discovery_path("/non/existent/path".to_string()).await;
         assert!(result.is_err());

@@ -1,7 +1,8 @@
 use crate::models::filesystem::{
-    FileEvent, FileEventType, FileLock, FileLockType, WatcherConfig, WatcherStats,
-    FilesystemState, FilesystemError, FilesystemResult, FileEventMetadata,
+    FileEvent, FileEventMetadata, FileEventType, FileLock, FileLockType, FilesystemError,
+    FilesystemResult, FilesystemState, WatcherConfig, WatcherStats,
 };
+use chrono::Utc;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -9,7 +10,6 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, RwLock};
 use uuid::Uuid;
-use chrono::Utc;
 
 /// Service de gestion du système de fichiers avec watchers et locks
 pub struct FilesystemService {
@@ -54,7 +54,7 @@ impl FilesystemService {
                 last_updated: Utc::now(),
             })),
         };
-        
+
         // Nettoyage périodique des verrous expirés
         service.start_lock_cleanup();
         service
@@ -67,12 +67,14 @@ impl FilesystemService {
 
         // Validation du chemin
         if !path.exists() {
-            return Err(FilesystemError::FileNotFound(path.to_string_lossy().to_string()));
+            return Err(FilesystemError::FileNotFound(
+                path.to_string_lossy().to_string(),
+            ));
         }
 
         // Création du channel pour les événements
         let (event_tx, mut event_rx) = mpsc::unbounded_channel();
-        
+
         // Clonage des données pour le watcher
         let config_clone = config.clone();
         let event_tx_clone = event_tx.clone();
@@ -86,7 +88,7 @@ impl FilesystemService {
                     Ok(event) => {
                         // Conversion vers notre format
                         if let Some(fs_event) = Self::convert_notify_event(&event, &config_clone) {
-                            if let Err(_) = event_tx_clone.send(fs_event) {
+                            if event_tx_clone.send(fs_event).is_err() {
                                 eprintln!("Failed to send filesystem event");
                             }
                         }
@@ -97,7 +99,8 @@ impl FilesystemService {
                 }
             },
             Config::default(),
-        ).map_err(|e| FilesystemError::WatcherError(e.to_string()))?;
+        )
+        .map_err(|e| FilesystemError::WatcherError(e.to_string()))?;
 
         // Démarrage de la surveillance
         let recursive_mode = if config.recursive {
@@ -105,8 +108,9 @@ impl FilesystemService {
         } else {
             RecursiveMode::NonRecursive
         };
-        
-        watcher.watch(&path, recursive_mode)
+
+        watcher
+            .watch(&path, recursive_mode)
             .map_err(|e| FilesystemError::WatcherError(e.to_string()))?;
 
         // Création du handle
@@ -173,15 +177,24 @@ impl FilesystemService {
 
     /// Arrête un watcher
     pub async fn stop_watcher(&self, watcher_id: Uuid) -> FilesystemResult<()> {
-        let mut watchers = self.watchers.write().await;
-        
-        if let Some(handle) = watchers.remove(&watcher_id) {
-            // Le watcher sera automatiquement arrêté quand il est drop
-            drop(handle.watcher);
+        let removed = {
+            let mut watchers = self.watchers.write().await;
+            if let Some(handle) = watchers.remove(&watcher_id) {
+                // Le watcher sera automatiquement arrêté quand il est drop
+                drop(handle.watcher);
+                true
+            } else {
+                false
+            }
+        };
+
+        if removed {
             self.update_global_stats().await;
             Ok(())
         } else {
-            Err(FilesystemError::WatcherError("Watcher not found".to_string()))
+            Err(FilesystemError::WatcherError(
+                "Watcher not found".to_string(),
+            ))
         }
     }
 
@@ -196,13 +209,17 @@ impl FilesystemService {
         {
             let locks = self.locks.read().await;
             if locks.contains_key(&path) {
-                return Err(FilesystemError::LockAlreadyAcquired(path.to_string_lossy().to_string()));
+                return Err(FilesystemError::LockAlreadyAcquired(
+                    path.to_string_lossy().to_string(),
+                ));
             }
         }
 
         // Validation du chemin
         if !path.exists() {
-            return Err(FilesystemError::FileNotFound(path.to_string_lossy().to_string()));
+            return Err(FilesystemError::FileNotFound(
+                path.to_string_lossy().to_string(),
+            ));
         }
 
         // Création du verrou
@@ -230,16 +247,24 @@ impl FilesystemService {
 
     /// Libère un verrou
     pub async fn release_lock(&self, lock_id: Uuid) -> FilesystemResult<()> {
-        let mut locks = self.locks.write().await;
-        
-        // Recherche du verrou par ID
-        let lock_path = locks
-            .iter()
-            .find(|(_, lock)| lock.id == lock_id)
-            .map(|(path, _)| path.clone());
+        let removed = {
+            let mut locks = self.locks.write().await;
 
-        if let Some(path) = lock_path {
-            locks.remove(&path);
+            // Recherche du verrou par ID
+            let lock_path = locks
+                .iter()
+                .find(|(_, lock)| lock.id == lock_id)
+                .map(|(path, _)| path.clone());
+
+            if let Some(path) = lock_path {
+                locks.remove(&path);
+                true
+            } else {
+                false
+            }
+        };
+
+        if removed {
             self.update_global_stats().await;
             Ok(())
         } else {
@@ -252,7 +277,7 @@ impl FilesystemService {
         let mut queue = self.event_queue.write().await;
         let limit = limit.unwrap_or(queue.len());
         let actual_limit = limit.min(queue.len());
-        
+
         queue.drain(..actual_limit).collect()
     }
 
@@ -267,13 +292,18 @@ impl FilesystemService {
         let mut files = 0u64;
         let mut dirs = 0u64;
 
-        let mut entries = tokio::fs::read_dir(path).await
+        let mut entries = tokio::fs::read_dir(path)
+            .await
             .map_err(|e| FilesystemError::IoError(e.to_string()))?;
 
-        while let Some(entry) = entries.next_entry().await
-            .map_err(|e| FilesystemError::IoError(e.to_string()))? {
-            
-            let metadata = entry.metadata().await
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .map_err(|e| FilesystemError::IoError(e.to_string()))?
+        {
+            let metadata = entry
+                .metadata()
+                .await
                 .map_err(|e| FilesystemError::IoError(e.to_string()))?;
 
             if metadata.is_dir() {
@@ -363,7 +393,10 @@ impl FilesystemService {
                 }),
                 is_directory: metadata.as_ref().map(|m| m.is_dir()).unwrap_or(false),
                 is_hidden: Self::is_hidden(&path),
-                extension: path.extension().and_then(|e| e.to_str()).map(|s| s.to_lowercase()),
+                extension: path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .map(|s| s.to_lowercase()),
                 blake3_hash: None, // Sera rempli par le service BLAKE3
             },
         })
@@ -372,7 +405,7 @@ impl FilesystemService {
     /// Détecte le type MIME d'un fichier
     fn detect_mime_type(path: &Path) -> Option<String> {
         let extension = path.extension()?.to_str()?.to_lowercase();
-        
+
         match extension.as_str() {
             "jpg" | "jpeg" => Some("image/jpeg".to_string()),
             "png" => Some("image/png".to_string()),
@@ -412,10 +445,8 @@ impl FilesystemService {
         let watchers = self.watchers.read().await;
         let queue = self.event_queue.read().await;
 
-        let active_watchers: Vec<WatcherStats> = watchers
-            .values()
-            .map(|h| h.stats.clone())
-            .collect();
+        let active_watchers: Vec<WatcherStats> =
+            watchers.values().map(|h| h.stats.clone()).collect();
 
         // Clean expired locks before reporting
         let now = Utc::now();
@@ -442,10 +473,7 @@ impl FilesystemService {
 
         // Build active locks list (post-cleanup)
         let locks = self.locks.read().await;
-        let active_locks: Vec<FileLock> = locks
-            .values()
-            .cloned()
-            .collect();
+        let active_locks: Vec<FileLock> = locks.values().cloned().collect();
 
         let mut stats = self.stats.write().await;
         stats.active_watchers = active_watchers;
@@ -463,38 +491,38 @@ impl FilesystemService {
         if let Ok(handle) = tokio::runtime::Handle::try_current() {
             handle.spawn(async move {
                 let mut interval = tokio::time::interval(Duration::from_secs(30));
-            
-            loop {
-                interval.tick().await;
-                
-                let now = Utc::now();
-                let mut expired_locks = Vec::new();
-                
-                // Recherche des verrous expirés
-                {
-                    let locks = locks_clone.read().await;
-                    for (path, lock) in locks.iter() {
-                        if let Some(timeout) = lock.timeout {
-                            let elapsed = now.signed_duration_since(lock.created_at);
-                            if elapsed.to_std().unwrap_or(Duration::MAX) > timeout {
-                                expired_locks.push(path.clone());
+
+                loop {
+                    interval.tick().await;
+
+                    let now = Utc::now();
+                    let mut expired_locks = Vec::new();
+
+                    // Recherche des verrous expirés
+                    {
+                        let locks = locks_clone.read().await;
+                        for (path, lock) in locks.iter() {
+                            if let Some(timeout) = lock.timeout {
+                                let elapsed = now.signed_duration_since(lock.created_at);
+                                if elapsed.to_std().unwrap_or(Duration::MAX) > timeout {
+                                    expired_locks.push(path.clone());
+                                }
                             }
                         }
                     }
-                }
-                
-                // Suppression des verrous expirés
-                if !expired_locks.is_empty() {
-                    let mut locks = locks_clone.write().await;
-                    for path in expired_locks {
-                        locks.remove(&path);
+
+                    // Suppression des verrous expirés
+                    if !expired_locks.is_empty() {
+                        let mut locks = locks_clone.write().await;
+                        for path in expired_locks {
+                            locks.remove(&path);
+                        }
+
+                        // Mise à jour des statistiques
+                        let mut stats = stats_clone.write().await;
+                        stats.last_updated = Utc::now();
                     }
-                    
-                    // Mise à jour des statistiques
-                    let mut stats = stats_clone.write().await;
-                    stats.last_updated = Utc::now();
                 }
-            }
             });
         }
         // Si pas de runtime Tokio disponible, on ne démarre pas le cleanup
@@ -511,23 +539,23 @@ impl Default for FilesystemService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
     use std::fs::File;
     use std::io::Write;
+    use tempfile::TempDir;
     use tokio::time::sleep;
 
     #[tokio::test]
     async fn test_service_creation() {
         let service = FilesystemService::new();
         let state = service.get_state().await;
-        
+
         assert_eq!(state.active_watchers.len(), 0);
         assert_eq!(state.active_locks.len(), 0);
         assert_eq!(state.pending_events, 0);
     }
 
     #[tokio::test]
-    #[ignore] // Temporairement désactivé - hanging test (>60s)
+    // #[ignore] // Temporairement désactivé - hanging test (>60s)
     async fn test_watcher_lifecycle() {
         let service = FilesystemService::new();
         let temp_dir = TempDir::new().unwrap();
@@ -554,31 +582,35 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Temporairement désactivé - hanging test (>60s)
+    // #[ignore] // Temporairement désactivé - hanging test (>60s)
     async fn test_file_locking() {
         let service = FilesystemService::new();
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join("test.txt");
-        
+
         // Création du fichier
-        File::create(&file_path).unwrap().write_all(b"test").unwrap();
+        File::create(&file_path)
+            .unwrap()
+            .write_all(b"test")
+            .unwrap();
 
         // Acquisition du verrou
-        let lock_id = service.acquire_lock(
-            file_path.clone(),
-            FileLockType::Exclusive,
-            Some(Duration::from_secs(1)),
-        ).await.unwrap();
+        let lock_id = service
+            .acquire_lock(
+                file_path.clone(),
+                FileLockType::Exclusive,
+                Some(Duration::from_secs(1)),
+            )
+            .await
+            .unwrap();
 
         let state = service.get_state().await;
         assert_eq!(state.active_locks.len(), 1);
 
         // Tentative de double verrou (doit échouer)
-        let result = service.acquire_lock(
-            file_path.clone(),
-            FileLockType::Shared,
-            None,
-        ).await;
+        let result = service
+            .acquire_lock(file_path.clone(), FileLockType::Shared, None)
+            .await;
         assert!(result.is_err());
 
         // Libération du verrou
@@ -614,15 +646,22 @@ mod tests {
         let service = FilesystemService::new();
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join("test.txt");
-        
-        File::create(&file_path).unwrap().write_all(b"test").unwrap();
+
+        // Création du fichier
+        File::create(&file_path)
+            .unwrap()
+            .write_all(b"test")
+            .unwrap();
 
         // Verrou avec timeout court
-        let lock_id = service.acquire_lock(
-            file_path.clone(),
-            FileLockType::Exclusive,
-            Some(Duration::from_millis(100)),
-        ).await.unwrap();
+        let lock_id = service
+            .acquire_lock(
+                file_path.clone(),
+                FileLockType::Exclusive,
+                Some(Duration::from_millis(100)),
+            )
+            .await
+            .unwrap();
 
         // Attente de l'expiration
         sleep(Duration::from_millis(200)).await;

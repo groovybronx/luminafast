@@ -154,10 +154,16 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Rust security audit
-      uses: actions-rs/audit-check@v1
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        toolchain: stable
+
+    - name: Install cargo-audit
+      run: cargo install cargo-audit
+
+    - name: Rust security audit
+      run: cd src-tauri && cargo audit
         
     # NOTE: L'audit de sécurité peut échouer sur des vulnérabilités connues
     # Problème: certaines dépendances peuvent avoir des vulnérabilités modérées

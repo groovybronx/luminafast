@@ -374,15 +374,8 @@ mod tests {
 
         // Si le test passe, c'est que les permissions sont permissives (acceptable)
         // Si le test échoue avec PermissionDenied, c'est le comportement attendu
-        if result.is_err() {
-            match result.unwrap_err() {
-                HashError::PermissionDenied(_) => {
-                    // Comportement attendu
-                }
-                _ => {
-                    // Autre erreur non attendue
-                }
-            }
+        if let Err(HashError::PermissionDenied(_)) = result {
+            // Comportement attendu
         }
     }
 }

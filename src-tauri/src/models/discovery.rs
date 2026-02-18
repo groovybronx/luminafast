@@ -4,10 +4,11 @@ use std::path::PathBuf;
 use uuid::Uuid;
 
 /// File processing status for tracking ingestion pipeline
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum FileProcessingStatus {
     /// File has been discovered but not yet processed
     #[serde(rename = "discovered")]
+    #[default]
     Discovered,
     /// File is currently being processed
     #[serde(rename = "processing")]
@@ -20,14 +21,9 @@ pub enum FileProcessingStatus {
     Error,
 }
 
-impl Default for FileProcessingStatus {
-    fn default() -> Self {
-        FileProcessingStatus::Discovered
-    }
-}
-
 /// Supported RAW file formats
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Copy)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum RawFormat {
     /// Canon RAW 3
     #[serde(rename = "cr3")]
@@ -204,9 +200,10 @@ impl Default for DiscoveryConfig {
 }
 
 /// Discovery session status
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub enum DiscoveryStatus {
     #[serde(rename = "idle")]
+    #[default]
     Idle,
     #[serde(rename = "scanning")]
     Scanning,
@@ -216,12 +213,6 @@ pub enum DiscoveryStatus {
     Stopped,
     #[serde(rename = "error")]
     Error(String),
-}
-
-impl Default for DiscoveryStatus {
-    fn default() -> Self {
-        DiscoveryStatus::Idle
-    }
 }
 
 /// Discovery session information
@@ -563,9 +554,9 @@ mod tests {
         let modified = Utc::now();
 
         let file = DiscoveredFile::new(
-            session_id.clone(),
+            session_id,
             path.clone(),
-            format.clone(),
+            format,
             size,
             modified,
         );
@@ -661,7 +652,8 @@ mod tests {
 
         // Should be Some for completed session
         assert!(session.duration().is_some());
-        assert!(session.duration().unwrap().as_millis() >= 0);
+        // Duration is always >= 0 for u128
+        let _duration = session.duration().expect("Duration should be present").as_millis();
     }
 
     #[test]

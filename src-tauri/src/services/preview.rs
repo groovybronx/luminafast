@@ -597,7 +597,7 @@ mod tests {
             .await;
         assert!(path.is_some());
 
-        let path = path.unwrap();
+        let path = path.expect("Path should be some");
         assert!(path.to_string_lossy().contains("thumbnails"));
         assert!(path.to_string_lossy().contains("b3"));
         assert!(path.to_string_lossy().ends_with("b3a1c2d3e4f5.jpg"));
@@ -637,7 +637,7 @@ mod tests {
     async fn test_preview_config_default() {
         let config = PreviewConfig::default();
         assert_eq!(config.generation_timeout, 30);
-        assert_eq!(config.use_libvips, false);
+        assert!(!config.use_libvips);
         assert!(config.parallel_threads > 0);
         assert!(config.catalog_dir.ends_with("Pictures/LuminaFast"));
         assert!(config.previews_dir().ends_with("Previews.lrdata"));

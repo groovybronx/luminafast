@@ -73,7 +73,7 @@ pub enum HashError {
     /// Fichier trop gros pour le traitement
     FileTooLarge(PathBuf, u64),
     /// Erreur interne de hachage
-    HashError(String),
+    Internal(String),
 }
 
 impl std::fmt::Display for HashError {
@@ -85,7 +85,7 @@ impl std::fmt::Display for HashError {
             HashError::FileTooLarge(path, size) => {
                 write!(f, "Fichier trop gros {:?}: {} octets", path, size)
             }
-            HashError::HashError(msg) => write!(f, "Erreur de hachage: {}", msg),
+            HashError::Internal(msg) => write!(f, "Erreur de hachage: {}", msg),
         }
     }
 }

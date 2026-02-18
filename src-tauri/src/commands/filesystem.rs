@@ -4,7 +4,7 @@ use crate::models::filesystem::{
 };
 use crate::services::filesystem::FilesystemService;
 use parking_lot::Mutex;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::command;
@@ -23,7 +23,11 @@ pub fn initialize_filesystem_service() {
 
 /// Récupère le service filesystem
 fn get_service() -> Arc<FilesystemService> {
-    FILESYSTEM_SERVICE.lock().as_ref().unwrap().clone()
+    FILESYSTEM_SERVICE
+        .lock()
+        .as_ref()
+        .expect("Filesystem service not initialized")
+        .clone()
 }
 
 /// Convertit une erreur filesystem vers une chaîne pour Tauri
@@ -32,8 +36,6 @@ fn error_to_string(error: FilesystemError) -> String {
 }
 
 /// Commandes Tauri pour le filesystem
-
-/// Démarre un watcher sur un chemin
 #[command]
 pub async fn start_watcher(config: WatcherConfig) -> Result<String, String> {
     let service = get_service();
@@ -209,7 +211,7 @@ pub async fn get_file_metadata(path: String) -> Result<FileEventMetadata, String
 }
 
 /// Détecte le type MIME d'un fichier
-fn detect_mime_type(path: &PathBuf) -> Option<String> {
+fn detect_mime_type(path: &Path) -> Option<String> {
     let extension = path.extension()?.to_str()?.to_lowercase();
 
     match extension.as_str() {
@@ -258,17 +260,6 @@ pub async fn move_path(from: String, to: String) -> Result<(), String> {
     let to_buf = PathBuf::from(to);
 
     std::fs::rename(&from_buf, &to_buf).map_err(|e| FilesystemError::IoError(e.to_string()))?;
-
-    Ok(())
-}
-
-/// Copie un fichier
-#[command]
-pub async fn copy_file(from: String, to: String) -> Result<(), String> {
-    let from_buf = PathBuf::from(from);
-    let to_buf = PathBuf::from(to);
-
-    std::fs::copy(&from_buf, &to_buf).map_err(|e| FilesystemError::IoError(e.to_string()))?;
 
     Ok(())
 }

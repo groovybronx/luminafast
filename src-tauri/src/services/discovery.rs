@@ -267,7 +267,7 @@ impl DiscoveryService {
             return Ok(None);
         }
 
-        let format = format.unwrap().clone();
+        let format = *format.expect("Format should be present");
 
         // Get file modification time
         let modified_at = metadata
@@ -439,31 +439,31 @@ mod tests {
         let cr3_path = temp_dir.path().join("test.cr3");
         let result = DiscoveryService::check_raw_file(&cr3_path, &formats, session_id)
             .await
-            .unwrap();
+            .expect("Result should be Ok");
         assert!(result.is_some());
-        assert_eq!(result.unwrap().format, RawFormat::CR3);
+        assert_eq!(result.expect("Result should be some").format, RawFormat::CR3);
 
         // Test RAF file
         let raf_path = temp_dir.path().join("test.raf");
         let result = DiscoveryService::check_raw_file(&raf_path, &formats, session_id)
             .await
-            .unwrap();
+            .expect("Result should be Ok");
         assert!(result.is_some());
-        assert_eq!(result.unwrap().format, RawFormat::RAF);
+        assert_eq!(result.expect("Result should be some").format, RawFormat::RAF);
 
         // Test ARW file
         let arw_path = temp_dir.path().join("test.arw");
         let result = DiscoveryService::check_raw_file(&arw_path, &formats, session_id)
             .await
-            .unwrap();
+            .expect("Result should be Ok");
         assert!(result.is_some());
-        assert_eq!(result.unwrap().format, RawFormat::ARW);
+        assert_eq!(result.expect("Result should be some").format, RawFormat::ARW);
 
         // Test non-RAW file
         let jpg_path = temp_dir.path().join("test.jpg");
         let result = DiscoveryService::check_raw_file(&jpg_path, &formats, session_id)
             .await
-            .unwrap();
+            .expect("Result should be Ok");
         assert!(result.is_none());
     }
 
@@ -489,9 +489,6 @@ mod tests {
 
         // Cleanup with 0 hours (should remove non-scanning sessions)
         // Note: This test might be flaky depending on timing
-        let cleaned = service.cleanup_old_sessions(0).await.unwrap();
-
-        // Session might still be scanning, so cleanup count could be 0
-        assert!(cleaned >= 0);
+        let _cleaned = service.cleanup_old_sessions(0).await.unwrap();
     }
 }

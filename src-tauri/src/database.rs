@@ -189,7 +189,7 @@ mod tests {
         let temp_dir = tempdir()?;
         let db_path = temp_dir.path().join("test_debug.db");
 
-        let mut db = Database::new(&db_path)?;
+        let db = Database::new(&db_path)?;
 
         // Load migration content directly
         let migration_sql = include_str!("../migrations/001_initial.sql");
@@ -229,7 +229,7 @@ mod tests {
         let temp_dir = tempdir()?;
         let db_path = temp_dir.path().join("test_manual.db");
 
-        let mut db = Database::new(&db_path)?;
+        let db = Database::new(&db_path)?;
 
         // Manually execute the first CREATE TABLE
         db.connection.execute(
@@ -269,7 +269,7 @@ mod tests {
         let temp_dir = tempdir()?;
         let db_path = temp_dir.path().join("test_migration.db");
 
-        let mut db = Database::new(&db_path)?;
+        let db = Database::new(&db_path)?;
 
         // Check that no tables exist initially
         let tables_before: Vec<String> = db
@@ -282,6 +282,7 @@ mod tests {
         assert!(!tables_before.contains(&"migrations".to_string()));
 
         // Run initialization
+        let mut db = db; // Rebinding as mutable
         db.initialize()?;
 
         // Check that tables exist after migration

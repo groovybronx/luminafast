@@ -202,26 +202,26 @@ pub async fn update_image_state(
 #[tauri::command]
 pub async fn create_collection(
     name: String,
-    collectionType: String,
+    collection_type: String,
     parent_id: Option<u32>,
     state: State<'_, AppState>,
 ) -> CommandResult<CollectionDTO> {
     let db = state.db.lock().unwrap();
 
     // Validate collection type
-    if !["static", "smart", "quick"].contains(&collectionType.as_str()) {
+    if !["static", "smart", "quick"].contains(&collection_type.as_str()) {
         return Err("Invalid collection type. Must be 'static', 'smart', or 'quick'".to_string());
     }
 
     let result = if let Some(parent_id) = parent_id {
         db.connection().execute(
             "INSERT INTO collections (name, type, parent_id) VALUES (?, ?, ?)",
-            [name, collectionType, parent_id.to_string()],
+            [name, collection_type, parent_id.to_string()],
         )
     } else {
         db.connection().execute(
             "INSERT INTO collections (name, type) VALUES (?, ?)",
-            [name, collectionType],
+            [name, collection_type],
         )
     };
 
@@ -253,8 +253,8 @@ pub async fn create_collection(
 /// Add images to a collection
 #[tauri::command]
 pub async fn add_images_to_collection(
-    collectionId: u32,
-    imageIds: Vec<u32>,
+    collection_id: u32,
+    image_ids: Vec<u32>,
     state: State<'_, AppState>,
 ) -> CommandResult<()> {
     let mut db = state.db.lock().unwrap();
@@ -262,7 +262,7 @@ pub async fn add_images_to_collection(
     // Verify collection exists first
     let collection_exists: Result<i32, _> = db.connection().query_row(
         "SELECT 1 FROM collections WHERE id = ?",
-        [collectionId],
+        [collection_id],
         |row| row.get(0),
     );
 
@@ -272,7 +272,7 @@ pub async fn add_images_to_collection(
 
     // Execute transaction
     db.execute_transaction(|tx| {
-        for (index, image_id) in imageIds.iter().enumerate() {
+        for (index, image_id) in image_ids.iter().enumerate() {
             let image_exists = tx.query_row(
                 "SELECT 1 FROM images WHERE id = ?",
                 [image_id],
@@ -283,7 +283,7 @@ pub async fn add_images_to_collection(
             }
             tx.execute(
                 "INSERT OR IGNORE INTO collection_images (collection_id, image_id, sort_order) VALUES (?, ?, ?)",
-                [collectionId, *image_id, index as u32],
+                [collection_id, *image_id, index as u32],
             )?;
         }
         Ok(())
@@ -379,7 +379,7 @@ pub async fn search_images(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // use super::*;
     use crate::database::Database;
     use tempfile::tempdir;
 
@@ -393,7 +393,7 @@ mod tests {
 
     #[test]
     fn test_get_all_images_empty_database() {
-        let mut db = setup_test_db();
+        let db = setup_test_db();
 
         // Test internal logic by calling the database directly
         let mut stmt = db
@@ -407,7 +407,7 @@ mod tests {
 
     #[test]
     fn test_create_collection_database() {
-        let mut db = setup_test_db();
+        let db = setup_test_db();
 
         // Test collection creation directly in database
         let result = db.connection().execute(
@@ -444,7 +444,7 @@ mod tests {
 
     #[test]
     fn test_image_state_operations() {
-        let mut db = setup_test_db();
+        let db = setup_test_db();
 
         // First create an image
         let image_result = db.connection().execute(

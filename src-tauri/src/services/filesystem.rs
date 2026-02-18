@@ -88,7 +88,7 @@ impl FilesystemService {
                     Ok(event) => {
                         // Conversion vers notre format
                         if let Some(fs_event) = Self::convert_notify_event(&event, &config_clone) {
-                            if let Err(_) = event_tx_clone.send(fs_event) {
+                            if event_tx_clone.send(fs_event).is_err() {
                                 eprintln!("Failed to send filesystem event");
                             }
                         }
@@ -647,6 +647,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join("test.txt");
 
+        // Création du fichier
         File::create(&file_path)
             .unwrap()
             .write_all(b"test")
@@ -664,7 +665,7 @@ mod tests {
 
         // Attente de l'expiration
         sleep(Duration::from_millis(200)).await;
-
+ 
         // Le verrou devrait être expiré et nettoyé
         let state = service.get_state().await;
         assert_eq!(state.active_locks.len(), 0);

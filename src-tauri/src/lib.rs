@@ -78,7 +78,6 @@ pub fn run() {
             commands::filesystem::create_directory,
             commands::filesystem::delete_path,
             commands::filesystem::move_path,
-            commands::filesystem::copy_file,
             commands::filesystem::list_directory,
             commands::filesystem::path_exists,
             commands::filesystem::get_file_size,

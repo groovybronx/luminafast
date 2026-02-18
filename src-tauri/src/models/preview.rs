@@ -319,7 +319,7 @@ mod tests {
     fn test_preview_config_default() {
         let config = PreviewConfig::default();
         assert_eq!(config.generation_timeout, 30);
-        assert_eq!(config.use_libvips, false);
+        assert!(!config.use_libvips);
         assert!(config.parallel_threads > 0);
         assert!(config.catalog_dir.ends_with("Pictures/LuminaFast"));
         assert!(config.previews_dir().ends_with("Previews.lrdata"));

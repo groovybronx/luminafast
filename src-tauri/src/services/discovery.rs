@@ -441,7 +441,10 @@ mod tests {
             .await
             .expect("Result should be Ok");
         assert!(result.is_some());
-        assert_eq!(result.expect("Result should be some").format, RawFormat::CR3);
+        assert_eq!(
+            result.expect("Result should be some").format,
+            RawFormat::CR3
+        );
 
         // Test RAF file
         let raf_path = temp_dir.path().join("test.raf");
@@ -449,7 +452,10 @@ mod tests {
             .await
             .expect("Result should be Ok");
         assert!(result.is_some());
-        assert_eq!(result.expect("Result should be some").format, RawFormat::RAF);
+        assert_eq!(
+            result.expect("Result should be some").format,
+            RawFormat::RAF
+        );
 
         // Test ARW file
         let arw_path = temp_dir.path().join("test.arw");
@@ -457,7 +463,10 @@ mod tests {
             .await
             .expect("Result should be Ok");
         assert!(result.is_some());
-        assert_eq!(result.expect("Result should be some").format, RawFormat::ARW);
+        assert_eq!(
+            result.expect("Result should be some").format,
+            RawFormat::ARW
+        );
 
         // Test non-RAW file
         let jpg_path = temp_dir.path().join("test.jpg");

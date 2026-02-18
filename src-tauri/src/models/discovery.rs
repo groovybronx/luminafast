@@ -553,13 +553,7 @@ mod tests {
         let size = 1024u64;
         let modified = Utc::now();
 
-        let file = DiscoveredFile::new(
-            session_id,
-            path.clone(),
-            format,
-            size,
-            modified,
-        );
+        let file = DiscoveredFile::new(session_id, path.clone(), format, size, modified);
 
         assert_eq!(file.session_id, session_id);
         assert_eq!(file.path, path);
@@ -653,7 +647,10 @@ mod tests {
         // Should be Some for completed session
         assert!(session.duration().is_some());
         // Duration is always >= 0 for u128
-        let _duration = session.duration().expect("Duration should be present").as_millis();
+        let _duration = session
+            .duration()
+            .expect("Duration should be present")
+            .as_millis();
     }
 
     #[test]

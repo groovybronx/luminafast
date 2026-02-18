@@ -665,7 +665,7 @@ mod tests {
 
         // Attente de l'expiration
         sleep(Duration::from_millis(200)).await;
- 
+
         // Le verrou devrait être expiré et nettoyé
         let state = service.get_state().await;
         assert_eq!(state.active_locks.len(), 0);

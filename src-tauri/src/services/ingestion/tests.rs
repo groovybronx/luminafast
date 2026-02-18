@@ -69,13 +69,12 @@ fn create_test_raw_file(dir: &TempDir, filename: &str, format: RawFormat) -> Pat
 }
 
 /// Helper to create a discovered file using the model constructor
-fn create_discovered_file(
-    session_id: Uuid,
-    file_path: &Path,
-    format: RawFormat,
-) -> DiscoveredFile {
+fn create_discovered_file(session_id: Uuid, file_path: &Path, format: RawFormat) -> DiscoveredFile {
     let metadata = std::fs::metadata(file_path).expect("Failed to get metadata");
-    let modified_at: chrono::DateTime<Utc> = metadata.modified().expect("Failed to get modified time").into();
+    let modified_at: chrono::DateTime<Utc> = metadata
+        .modified()
+        .expect("Failed to get modified time")
+        .into();
 
     DiscoveredFile::new(
         session_id,
@@ -113,7 +112,10 @@ async fn test_ingest_single_file() {
     let discovered_file = create_discovered_file(session_id, &file_path, RawFormat::CR3);
 
     // Ingest the file
-    let result: IngestionResult = service.ingest_file(&discovered_file).await.expect("Ingestion failed");
+    let result: IngestionResult = service
+        .ingest_file(&discovered_file)
+        .await
+        .expect("Ingestion failed");
 
     // Verify ingestion result
     assert!(result.success);
@@ -168,7 +170,13 @@ async fn test_ingest_multiple_formats() {
     // Verify different formats were detected
     let formats: std::collections::HashSet<_> = results
         .iter()
-        .map(|r| r.metadata.as_ref().expect("Metadata should be present").format_details.format)
+        .map(|r| {
+            r.metadata
+                .as_ref()
+                .expect("Metadata should be present")
+                .format_details
+                .format
+        })
         .collect();
     assert_eq!(formats.len(), 3);
     assert!(formats.contains(&RawFormat::CR3));
@@ -187,14 +195,23 @@ async fn test_duplicate_file_detection() {
     let discovered_file = create_discovered_file(session_id, &file_path, RawFormat::CR3);
 
     // Ingest the file first time
-    let result1: IngestionResult = service.ingest_file(&discovered_file).await.expect("Ingestion failed");
+    let result1: IngestionResult = service
+        .ingest_file(&discovered_file)
+        .await
+        .expect("Ingestion failed");
     assert!(result1.success);
 
     // Try to ingest the same file again
-    let result2: IngestionResult = service.ingest_file(&discovered_file).await.expect("Ingestion failed");
+    let result2: IngestionResult = service
+        .ingest_file(&discovered_file)
+        .await
+        .expect("Ingestion failed");
     assert!(!result2.success);
     assert!(result2.error.is_some());
-    assert!(result2.error.expect("Error should be present").contains("already exists"));
+    assert!(result2
+        .error
+        .expect("Error should be present")
+        .contains("already exists"));
 }
 
 #[tokio::test]
@@ -221,7 +238,10 @@ async fn test_batch_ingestion() {
     };
 
     // Execute batch ingestion (placeholder returns empty result)
-    let result = service.batch_ingest(&request).await.expect("Batch ingestion failed");
+    let result = service
+        .batch_ingest(&request)
+        .await
+        .expect("Batch ingestion failed");
 
     // Verify batch result structure
     assert_eq!(result.session_id, session_id);
@@ -240,7 +260,10 @@ async fn test_basic_exif_extraction() {
     let file_path = create_test_raw_file(&temp_dir, "exif_test.CR3", RawFormat::CR3);
 
     // Extract EXIF metadata
-    let exif = service.extract_basic_exif(&file_path).await.expect("EXIF extraction failed");
+    let exif = service
+        .extract_basic_exif(&file_path)
+        .await
+        .expect("EXIF extraction failed");
 
     // Verify EXIF data
     assert!(exif.make.is_some());
@@ -257,8 +280,14 @@ async fn test_basic_exif_extraction() {
     assert_eq!(exif.model.expect("Model should be present"), "Unknown");
     assert_eq!(exif.iso.expect("ISO should be present"), 100);
     assert_eq!(exif.aperture.expect("Aperture should be present"), 2.8);
-    assert_eq!(exif.shutter_speed.expect("Shutter speed should be present"), "1/125");
-    assert_eq!(exif.focal_length.expect("Focal length should be present"), 50.0);
+    assert_eq!(
+        exif.shutter_speed.expect("Shutter speed should be present"),
+        "1/125"
+    );
+    assert_eq!(
+        exif.focal_length.expect("Focal length should be present"),
+        50.0
+    );
     assert_eq!(exif.lens.expect("Lens should be present"), "Unknown");
 }
 
@@ -276,8 +305,14 @@ async fn test_file_hashing() {
     std::fs::write(&file2_path, content).expect("Failed to write file2");
 
     // Check if files exist in database
-    let exists1 = service.check_file_exists(&file1_path).await.expect("Check exists failed");
-    let exists2 = service.check_file_exists(&file2_path).await.expect("Check exists failed");
+    let exists1 = service
+        .check_file_exists(&file1_path)
+        .await
+        .expect("Check exists failed");
+    let exists2 = service
+        .check_file_exists(&file2_path)
+        .await
+        .expect("Check exists failed");
 
     // Files should not exist in database yet
     assert!(exists1.is_none());
@@ -288,15 +323,24 @@ async fn test_file_hashing() {
     let discovered_file1 = create_discovered_file(session_id, &file1_path, RawFormat::CR3);
 
     // Ingest first file
-    let result1: IngestionResult = service.ingest_file(&discovered_file1).await.expect("Ingestion failed");
+    let result1: IngestionResult = service
+        .ingest_file(&discovered_file1)
+        .await
+        .expect("Ingestion failed");
     assert!(result1.success);
 
     // Check if first file exists now
-    let exists1 = service.check_file_exists(&file1_path).await.expect("Check exists failed");
+    let exists1 = service
+        .check_file_exists(&file1_path)
+        .await
+        .expect("Check exists failed");
     assert!(exists1.is_some());
 
     // Second file should still not exist (different filename in query)
-    let exists2 = service.check_file_exists(&file2_path).await.expect("Check exists failed");
+    let exists2 = service
+        .check_file_exists(&file2_path)
+        .await
+        .expect("Check exists failed");
     assert!(exists2.is_none());
 }
 
@@ -311,20 +355,18 @@ async fn test_database_record_creation() {
     let discovered_file = create_discovered_file(session_id, &file_path, RawFormat::CR3);
 
     // Ingest the file
-    let result: IngestionResult = service.ingest_file(&discovered_file).await.expect("Ingestion failed");
+    let result: IngestionResult = service
+        .ingest_file(&discovered_file)
+        .await
+        .expect("Ingestion failed");
     assert!(result.success);
 
     let db = service.db.lock().expect("Failed to lock DB");
     let database_id = result.database_id.expect("Database ID should be present");
 
     // Verify image record was created (query only columns that exist in test schema)
-    let (img_id, img_filename, img_extension, img_file_size): (
-        i64,
-        String,
-        String,
-        Option<i64>,
-    ) = db
-        .query_row(
+    let (img_id, img_filename, img_extension, img_file_size): (i64, String, String, Option<i64>) =
+        db.query_row(
             "SELECT id, filename, extension, file_size_bytes FROM images WHERE id = ?",
             [database_id],
             |row: &rusqlite::Row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
@@ -377,7 +419,10 @@ async fn test_update_discovered_file_status() {
     let mut discovered_file = create_discovered_file(session_id, &file_path, RawFormat::CR3);
 
     // Ingest the file
-    let result: IngestionResult = service.ingest_file(&discovered_file).await.expect("Ingestion failed");
+    let result: IngestionResult = service
+        .ingest_file(&discovered_file)
+        .await
+        .expect("Ingestion failed");
     assert!(result.success);
 
     // Update discovered file status
@@ -400,7 +445,10 @@ async fn test_session_stats() {
     let session_id = Uuid::new_v4();
 
     // Get stats for empty session
-    let stats = service.get_session_stats(session_id).await.expect("Get stats failed");
+    let stats = service
+        .get_session_stats(session_id)
+        .await
+        .expect("Get stats failed");
     assert_eq!(stats.session_id, session_id);
     assert_eq!(stats.total_files, 0);
     assert_eq!(stats.ingested_files, 0);
@@ -421,7 +469,10 @@ async fn test_processing_time_tracking() {
     let discovered_file = create_discovered_file(session_id, &file_path, RawFormat::CR3);
 
     // Ingest the file
-    let result: IngestionResult = service.ingest_file(&discovered_file).await.expect("Ingestion failed");
+    let result: IngestionResult = service
+        .ingest_file(&discovered_file)
+        .await
+        .expect("Ingestion failed");
 
     // Verify processing time was tracked
     assert!(result.processing_time_ms > 0);
@@ -442,7 +493,10 @@ async fn test_format_details_validation() {
 
     for (format, filename) in formats {
         let file_path = create_test_raw_file(&temp_dir, filename, format);
-        let exif = service.extract_basic_exif(&file_path).await.expect("EXIF extraction failed");
+        let exif = service
+            .extract_basic_exif(&file_path)
+            .await
+            .expect("EXIF extraction failed");
 
         // EXIF extraction should work for all formats
         assert!(exif.make.is_some());

@@ -203,10 +203,10 @@ pub enum PreviewError {
     CacheError { message: String },
 
     #[error("Timeout génération: {timeout}s")]
-    GenerationTimeout { timeout: u64 }
+    GenerationTimeout { timeout: u64 },
     
-    #[error("Mémoire insuffisante pour traitement")]
-    OutOfMemory,
+/*     #[error("Mémoire insuffisante pour traitement")]
+    OutOfMemory, */
     
     #[error("Erreur I/O: {message}")]
     IoError { message: String },
@@ -350,7 +350,7 @@ mod tests {
     fn test_preview_error_display() {
         let error = PreviewError::UnsupportedFormat { format: "cr3".to_string() };
         assert!(error.to_string().contains("cr3"));
-                
+
         let error = PreviewError::GenerationTimeout { timeout: 30 };
         assert!(error.to_string().contains("30s"));
     }

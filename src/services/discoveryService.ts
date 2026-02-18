@@ -180,7 +180,7 @@ export class DiscoveryService {
   /** Execute command with retry logic */
   private async executeCommand<T>(
     command: string,
-    args?: unknown[] | Record<string, unknown>,
+    args?: Record<string, unknown>,
     retries = 0
   ): Promise<T> {
     try {
@@ -188,12 +188,8 @@ export class DiscoveryService {
       
       const invoke = DiscoveryService.getInvoke();
       
-      // Convert array args to object format for Tauri invoke
-      const invokeArgs = Array.isArray(args) 
-        ? { args } 
-        : args || undefined;
-      
-      const result = await invoke(command, invokeArgs) as T;
+      // Pass args directly as object for Tauri named arguments
+      const result = await invoke(command, args) as T;
       
       this.log(`Command succeeded: ${command}`, { result });
       return result;
@@ -316,7 +312,7 @@ export class DiscoveryService {
 
       const session = await this.executeCommand<DiscoverySession>(
         'start_discovery',
-        [config]
+        { config }
       );
 
       this.updateSession(session);
@@ -337,7 +333,7 @@ export class DiscoveryService {
     try {
       this.log('Stopping discovery', { sessionId });
       
-      await this.executeCommand<void>('stop_discovery', [sessionId]);
+      await this.executeCommand<void>('stop_discovery', { session_id: sessionId });
       
       // Update local cache
       const session = this.activeSessions.get(sessionId);
@@ -364,7 +360,7 @@ export class DiscoveryService {
       
       const session = await this.executeCommand<DiscoverySession>(
         'get_discovery_status',
-        [sessionId]
+        { session_id: sessionId }
       );
 
       this.updateSession(session);
@@ -407,7 +403,7 @@ export class DiscoveryService {
       
       const files = await this.executeCommand<DiscoveredFile[]>(
         'get_discovered_files',
-        [sessionId]
+        { session_id: sessionId }
       );
 
       this.log('Retrieved discovered files', { sessionId, count: files.length });
@@ -432,7 +428,7 @@ export class DiscoveryService {
       
       const result = await this.executeCommand<IngestionResult>(
         'ingest_file',
-        [file]
+        { file }
       );
 
       this.log('File ingested', { 
@@ -461,7 +457,7 @@ export class DiscoveryService {
       
       const result = await this.executeCommand<BatchIngestionResult>(
         'batch_ingest',
-        [request]
+        { request }
       );
 
       this.log('Batch ingestion completed', {
@@ -496,7 +492,12 @@ export class DiscoveryService {
       
       const config = await this.executeCommand<DiscoveryConfig>(
         'create_discovery_config',
-        [rootPath, recursive, maxDepth, maxFiles]
+        { 
+          root_path: rootPath, 
+          recursive, 
+          max_depth: maxDepth, 
+          max_files: maxFiles 
+        }
       );
 
       return config;
@@ -532,7 +533,7 @@ export class DiscoveryService {
     try {
       this.log('Validating discovery path', { path });
       
-      const valid = await this.executeCommand<boolean>('validate_discovery_path', [path]);
+      const valid = await this.executeCommand<boolean>('validate_discovery_path', { path });
       
       const result: PathValidationResult = {
         valid,
@@ -579,7 +580,7 @@ export class DiscoveryService {
       
       const cleaned = await this.executeCommand<number>(
         'cleanup_discovery_sessions',
-        [maxAgeHours]
+        { max_age_hours: maxAgeHours }
       );
 
       this.log('Sessions cleaned up', { cleaned });
@@ -600,7 +601,7 @@ export class DiscoveryService {
       
       const stats = await this.executeCommand<DiscoveryStats>(
         'get_discovery_stats',
-        [sessionId]
+        { session_id: sessionId }
       );
 
       this.log('Retrieved discovery stats', { sessionId });

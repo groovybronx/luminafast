@@ -3,7 +3,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-16 (Phase 2.3 Génération de Previews) — État : Service previews complet, pyramide d'images 3 niveaux, 20 tests Rust passants, cache structuré
+> **Dernière mise à jour** : 2026-02-18 (Maintenance Testing) — État : Tests conformes (108 Rust, 5 React), infrastructure d'intégration en place.
 >
 > ### Décisions Projet (validées par le propriétaire)
 > - **Phase 8 (Cloud/Sync)** : Reportée post-lancement
@@ -458,13 +458,15 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 ### 12.2 — Tests et Coverage
 
 **Framework de tests** : Vitest avec jsdom
-- **115 tests unitaires** au total (stores + types + services)
+- **120 tests unitaires** au total (stores + types + services + composants)
 - **Coverage** : 98.93% (bien au-dessus des 80% requis)
 - **Types de tests** :
   - Tests stores (4) : catalogStore, uiStore, editStore, systemStore
   - Tests types (2) : validation des interfaces TypeScript et hashing
   - Tests services (2) : hashingService avec Tauri commands et fallbacks
-  - Tests Rust (11) : base de données, modèles, et hashing service
+  - Tests composants (1) : GridView (render, interactions, a11y)
+  - Tests Rust (108) : base de données, modèles, services, hashing, filesystem
+  - Tests Intégration Rust (1) : app_integration (contexte Tauri)
 - **Commandes** : `npm test`, `npm run test:ci`, `npm run rust:test`
 
 ### 12.3 — Pipeline CI/CD

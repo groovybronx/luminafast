@@ -22,6 +22,7 @@
 | 2 | 2.2 | Harvesting Métadonnées EXIF/IPTC | ✅ Complétée | 2026-02-16 | Cascade |
 | 2 | 2.3 | Génération de Previews | ✅ Complétée | 2026-02-16 | Cascade |
 | 2 | 2.4 | UI d'Import Connectée | ⬜ En attente | — | — |
+| Maintenance | — | Conformité Testing (Fix Deadlocks + Integration) | ✅ Complétée | 2026-02-18 | Cascade |
 | 3 | 3.1 | Grille d'Images Réelle | ⬜ En attente | — | — |
 | 3 | 3.2 | Collections Statiques (CRUD) | ⬜ En attente | — | — |
 | 3 | 3.3 | Smart Collections | ⬜ En attente | — | — |
@@ -66,6 +67,30 @@
 ## Historique des Sous-Phases Complétées
 
 > _Les entrées ci-dessous sont ajoutées chronologiquement par l'agent IA après chaque sous-phase._
+
+### 2026-02-18 — Maintenance : Conformité Testing
+
+**Statut** : ✅ Complétée
+**Agent** : Cascade
+**Durée** : ~1 session
+
+#### Résumé
+Travaux de maintenance pour assurer la conformité avec `Docs/TESTING_STRATEGY.md`. Correction de deadlocks critiques dans le service `Filesystem`, réactivation de tests ignorés, et création de l'infrastructure de tests d'intégration Rust. Initialisation des tests de composants React.
+
+#### Fichiers créés/modifiés
+- `src-tauri/tests/app_integration.rs` — Infrastructure tests intégration
+- `src-tauri/src/services/filesystem.rs` — **Fix deadlock** (release lock before update stats)
+- `src-tauri/src/commands/filesystem.rs` — Réactivation tests
+- `src/components/library/__tests__/GridView.test.tsx` — Test composant React
+- `src/components/library/GridView.tsx` — Ajout `alt` text pour accessibilité/tests
+- `Docs/TESTING_COMPLIANCE_REPORT.md` — Rapport de conformité
+
+#### Résultats
+- **Rust** : 108 tests passants, 0 ignorés
+- **Frontend** : 5 tests composants passants
+- **Conformité** : ✅ Rétablissement complet
+
+---
 
 ### 2026-02-16 — Phase 2.3 : Génération de Previews (Pyramide d'Images)
 

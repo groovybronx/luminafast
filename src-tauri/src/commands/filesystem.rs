@@ -361,7 +361,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Temporairement désactivé - hanging test (>60s)
+    // #[ignore] // Temporairement désactivé - hanging test (>60s)
     async fn test_watcher_commands() {
         initialize_filesystem_service();
         
@@ -386,7 +386,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Temporairement désactivé - hanging test (>60s)
+    // #[ignore] // Temporairement désactivé - hanging test (>60s)
     async fn test_lock_commands() {
         initialize_filesystem_service();
         

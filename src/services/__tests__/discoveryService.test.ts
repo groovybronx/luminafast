@@ -4,15 +4,15 @@
  * These tests ensure the TypeScript discovery service wrapper works correctly
  * for all discovery and ingestion operations with proper error handling.
  */
-
+ 
 // Mock Tauri API before any imports
 import { vi } from 'vitest';
-
+ 
 // Mock @tauri-apps/api/core with factory function to avoid hoisting issues
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(),
 }));
-
+ 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   DiscoveryConfig,
@@ -26,34 +26,34 @@ import {
   DiscoveryStatus,
   FileProcessingStatus,
 } from '../../types/discovery';
-
+ 
 import { DiscoveryService, ServiceError, ServiceErrorType } from '../discoveryService';
-
+ 
 // Get the mocked invoke function from window.__TAURI_INTERNALS__
 const mockInvoke = (globalThis as any).__TAURI_INTERNALS__?.invoke as ReturnType<typeof vi.fn>;
-
+ 
 describe('DiscoveryService', () => {
   let service: DiscoveryService;
-
+ 
   beforeEach(() => {
     vi.clearAllMocks();
     service = new DiscoveryService({ debug: true });
-    
+ 
     // Reset mock behavior
     mockInvoke.mockClear();
     mockInvoke.mockResolvedValue(undefined);
   });
-
+ 
   afterEach(() => {
     service.clearSessionCache();
   });
-
+ 
   describe('Service Configuration', () => {
     it('should create service with default configuration', () => {
       const defaultService = new DiscoveryService();
       expect(defaultService).toBeDefined();
     });
-
+ 
     it('should create service with custom configuration', () => {
       const customService = new DiscoveryService({
         debug: false,
@@ -64,7 +64,7 @@ describe('DiscoveryService', () => {
       expect(customService).toBeDefined();
     });
   });
-
+ 
   describe('Discovery Operations', () => {
     it('should start discovery session successfully', async () => {
       const mockSession: DiscoverySession = {
@@ -87,9 +87,9 @@ describe('DiscoveryService', () => {
         completedAt: null,
         errorMessage: null,
       };
-
+ 
       mockInvoke.mockResolvedValue(mockSession);
-
+ 
       const config: DiscoveryConfig = {
         rootPath: '/test/path',
         recursive: true,
@@ -98,14 +98,14 @@ describe('DiscoveryService', () => {
         maxDepth: null,
         maxFiles: null,
       };
-
+ 
       const result = await service.startDiscovery(config);
-
+ 
       expect(result).toEqual(mockSession);
-      expect(mockInvoke).toHaveBeenCalledWith('start_discovery', [config]);
+      expect(mockInvoke).toHaveBeenCalledWith('start_discovery', { config });
       expect(service.getSession('test-session-id')).toEqual(mockSession);
     });
-
+ 
     it('should validate configuration before starting discovery', async () => {
       const invalidConfig = {
         rootPath: '', // Invalid empty path
@@ -115,23 +115,23 @@ describe('DiscoveryService', () => {
         maxDepth: -1, // Invalid negative depth
         maxFiles: null,
       };
-
+ 
       await expect(service.startDiscovery(invalidConfig)).rejects.toThrow(ServiceError);
-      
+ 
       const error = await service.startDiscovery(invalidConfig).catch(e => e);
       expect(error).toBeInstanceOf(ServiceError);
       expect((error as ServiceError).type).toBe(ServiceErrorType.INVALID_PARAMS);
     });
-
+ 
     it('should stop discovery session successfully', async () => {
       const sessionId = 'test-session-id';
       mockInvoke.mockResolvedValue(undefined);
-
+ 
       await service.stopDiscovery(sessionId);
-
-      expect(mockInvoke).toHaveBeenCalledWith('stop_discovery', [sessionId]);
+ 
+      expect(mockInvoke).toHaveBeenCalledWith('stop_discovery', { session_id: sessionId });
     });
-
+ 
     it('should get discovery status successfully', async () => {
       const mockSession: DiscoverySession = {
         sessionId: 'test-session-id',
@@ -153,15 +153,15 @@ describe('DiscoveryService', () => {
         completedAt: new Date().toISOString(),
         errorMessage: null,
       };
-
+ 
       mockInvoke.mockResolvedValue(mockSession);
-
+ 
       const result = await service.getDiscoveryStatus('test-session-id');
-
+ 
       expect(result).toEqual(mockSession);
-      expect(mockInvoke).toHaveBeenCalledWith('get_discovery_status', ['test-session-id']);
+      expect(mockInvoke).toHaveBeenCalledWith('get_discovery_status', { session_id: 'test-session-id' });
     });
-
+ 
     it('should get all discovery sessions successfully', async () => {
       const mockSessions: DiscoverySession[] = [
         {
@@ -205,16 +205,16 @@ describe('DiscoveryService', () => {
           errorMessage: null,
         },
       ];
-
+ 
       mockInvoke.mockResolvedValue(mockSessions);
-
+ 
       const result = await service.getAllDiscoverySessions();
-
+ 
       expect(result).toEqual(mockSessions);
-      expect(mockInvoke).toHaveBeenCalledWith('get_all_discovery_sessions', []);
+      expect(mockInvoke).toHaveBeenCalledWith('get_all_discovery_sessions', undefined);
       expect(service.getAllSessions()).toEqual(mockSessions);
     });
-
+ 
     it('should get discovered files successfully', async () => {
       const mockFiles: DiscoveredFile[] = [
         {
@@ -248,16 +248,16 @@ describe('DiscoveryService', () => {
           databaseId: null,
         },
       ];
-
+ 
       mockInvoke.mockResolvedValue(mockFiles);
-
+ 
       const result = await service.getDiscoveredFiles('test-session-id');
-
+ 
       expect(result).toEqual(mockFiles);
-      expect(mockInvoke).toHaveBeenCalledWith('get_discovered_files', ['test-session-id']);
+      expect(mockInvoke).toHaveBeenCalledWith('get_discovered_files', { session_id: 'test-session-id' });
     });
   });
-
+ 
   describe('Ingestion Operations', () => {
     it('should ingest single file successfully', async () => {
       const mockFile: DiscoveredFile = {
@@ -275,7 +275,7 @@ describe('DiscoveryService', () => {
         ingestedAt: null,
         databaseId: null,
       };
-
+ 
       const mockResult: IngestionResult = {
         file: mockFile,
         success: true,
@@ -301,15 +301,15 @@ describe('DiscoveryService', () => {
           },
         },
       };
-
+ 
       mockInvoke.mockResolvedValue(mockResult);
-
+ 
       const result = await service.ingestFile(mockFile);
-
+ 
       expect(result).toEqual(mockResult);
-      expect(mockInvoke).toHaveBeenCalledWith('ingest_file', [mockFile]);
+      expect(mockInvoke).toHaveBeenCalledWith('ingest_file', { file: mockFile });
     });
-
+ 
     it('should handle ingestion failure', async () => {
       const mockFile: DiscoveredFile = {
         id: 'file-1',
@@ -326,7 +326,7 @@ describe('DiscoveryService', () => {
         ingestedAt: null,
         databaseId: null,
       };
-
+ 
       const mockResult: IngestionResult = {
         file: mockFile,
         success: false,
@@ -335,16 +335,16 @@ describe('DiscoveryService', () => {
         error: 'Failed to compute file hash',
         metadata: null,
       };
-
+ 
       mockInvoke.mockResolvedValue(mockResult);
-
+ 
       const result = await service.ingestFile(mockFile);
-
+ 
       expect(result).toEqual(mockResult);
       expect(result.success).toBe(false);
       expect(result.error).toBe('Failed to compute file hash');
     });
-
+ 
     it('should batch ingest files successfully', async () => {
       const mockRequest: BatchIngestionRequest = {
         sessionId: 'test-session-id',
@@ -352,7 +352,7 @@ describe('DiscoveryService', () => {
         skipExisting: true,
         maxFiles: 10,
       };
-
+ 
       const mockResult: BatchIngestionResult = {
         sessionId: 'test-session-id',
         totalRequested: 2,
@@ -363,16 +363,16 @@ describe('DiscoveryService', () => {
         avgProcessingTimeMs: 150,
         successRate: 1.0,
       };
-
+ 
       mockInvoke.mockResolvedValue(mockResult);
-
+ 
       const result = await service.batchIngest(mockRequest);
-
+ 
       expect(result).toEqual(mockResult);
-      expect(mockInvoke).toHaveBeenCalledWith('batch_ingest', [mockRequest]);
+      expect(mockInvoke).toHaveBeenCalledWith('batch_ingest', { request: mockRequest });
     });
   });
-
+ 
   describe('Utility Operations', () => {
     it('should create discovery config from path', async () => {
       const mockConfig: DiscoveryConfig = {
@@ -383,40 +383,40 @@ describe('DiscoveryService', () => {
         maxDepth: 5,
         maxFiles: 1000,
       };
-
+ 
       mockInvoke.mockResolvedValue(mockConfig);
-
+ 
       const result = await service.createDiscoveryConfig(
         '/test/path',
         true,
         5,
         1000
       );
-
+ 
       expect(result).toEqual(mockConfig);
-      expect(mockInvoke).toHaveBeenCalledWith('create_discovery_config', [
-        '/test/path',
-        true,
-        5,
-        1000,
-      ]);
+      expect(mockInvoke).toHaveBeenCalledWith('create_discovery_config', {
+        root_path: '/test/path',
+        recursive: true,
+        max_depth: 5,
+        max_files: 1000,
+      });
     });
-
+ 
     it('should get supported formats', async () => {
       const mockFormats = ['cr3', 'raf', 'arw'];
       mockInvoke.mockResolvedValue(mockFormats);
-
+ 
       const result = await service.getSupportedFormats();
-
+ 
       expect(result).toEqual(mockFormats);
-      expect(mockInvoke).toHaveBeenCalledWith('get_supported_formats', []);
+      expect(mockInvoke).toHaveBeenCalledWith('get_supported_formats', undefined);
     });
-
+ 
     it('should validate discovery path', async () => {
       mockInvoke.mockResolvedValue(true);
-
+ 
       const result = await service.validateDiscoveryPath('/test/path');
-
+ 
       expect(result).toEqual({
         valid: true,
         type: 'directory',
@@ -424,14 +424,14 @@ describe('DiscoveryService', () => {
         writable: false,
         error: null,
       });
-      expect(mockInvoke).toHaveBeenCalledWith('validate_discovery_path', ['/test/path']);
+      expect(mockInvoke).toHaveBeenCalledWith('validate_discovery_path', { path: '/test/path' });
     });
-
+ 
     it('should handle invalid path validation', async () => {
       mockInvoke.mockResolvedValue(false);
-
+ 
       const result = await service.validateDiscoveryPath('/invalid/path');
-
+ 
       expect(result).toEqual({
         valid: false,
         type: 'nonexistent',
@@ -440,7 +440,7 @@ describe('DiscoveryService', () => {
         error: 'Path does not exist or is not accessible',
       });
     });
-
+ 
     it('should get default discovery config', async () => {
       const mockConfig: DiscoveryConfig = {
         rootPath: '',
@@ -450,24 +450,24 @@ describe('DiscoveryService', () => {
         maxDepth: null,
         maxFiles: null,
       };
-
+ 
       mockInvoke.mockResolvedValue(mockConfig);
-
+ 
       const result = await service.getDefaultDiscoveryConfig();
-
+ 
       expect(result).toEqual(mockConfig);
-      expect(mockInvoke).toHaveBeenCalledWith('get_default_discovery_config', []);
+      expect(mockInvoke).toHaveBeenCalledWith('get_default_discovery_config', undefined);
     });
-
+ 
     it('should cleanup old sessions', async () => {
       mockInvoke.mockResolvedValue(3);
-
+ 
       const result = await service.cleanupDiscoverySessions(24);
-
+ 
       expect(result).toBe(3);
-      expect(mockInvoke).toHaveBeenCalledWith('cleanup_discovery_sessions', [24]);
+      expect(mockInvoke).toHaveBeenCalledWith('cleanup_discovery_sessions', { max_age_hours: 24 });
     });
-
+ 
     it('should get discovery statistics', async () => {
       const mockStats: DiscoveryStats = {
         sessionId: 'test-session-id',
@@ -496,20 +496,20 @@ describe('DiscoveryService', () => {
           avgProcessingTimeMs: 150.5,
         },
       };
-
+ 
       mockInvoke.mockResolvedValue(mockStats);
-
+ 
       const result = await service.getDiscoveryStats('test-session-id');
-
+ 
       expect(result).toEqual(mockStats);
-      expect(mockInvoke).toHaveBeenCalledWith('get_discovery_stats', ['test-session-id']);
+      expect(mockInvoke).toHaveBeenCalledWith('get_discovery_stats', { session_id: 'test-session-id' });
     });
   });
-
+ 
   describe('Error Handling', () => {
     it('should handle network errors with retry', async () => {
       mockInvoke.mockRejectedValue(new Error('Network error'));
-
+ 
       const config: DiscoveryConfig = {
         rootPath: '/test/path',
         recursive: true,
@@ -518,37 +518,37 @@ describe('DiscoveryService', () => {
         maxDepth: null,
         maxFiles: null,
       };
-
+ 
       await expect(service.startDiscovery(config)).rejects.toThrow(ServiceError);
-      
+ 
       // Should retry the call multiple times
       expect(mockInvoke).toHaveBeenCalledTimes(4); // 1 initial + 3 retries
     });
-
+ 
     it('should create ServiceError from unknown error', () => {
       const unknownError = { message: 'Unknown error' };
       const serviceError = ServiceError.fromUnknown(unknownError);
-
+ 
       expect(serviceError).toBeInstanceOf(ServiceError);
       expect(serviceError.type).toBe(ServiceErrorType.UNKNOWN_ERROR);
       expect(serviceError.message).toBe('Unknown error');
     });
-
+ 
     it('should preserve ServiceError instance', () => {
       const originalError = new ServiceError(
         ServiceErrorType.NETWORK_ERROR,
         'Network error',
         new Error('Connection failed')
       );
-
+ 
       const serviceError = ServiceError.fromUnknown(originalError);
-
+ 
       expect(serviceError).toBe(originalError);
     });
-
+ 
     it('should handle timeout errors', async () => {
       mockInvoke.mockRejectedValue(new Error('Request timeout'));
-
+ 
       const config: DiscoveryConfig = {
         rootPath: '/test/path',
         recursive: true,
@@ -557,17 +557,17 @@ describe('DiscoveryService', () => {
         maxDepth: null,
         maxFiles: null,
       };
-
+ 
       await expect(service.startDiscovery(config)).rejects.toThrow(ServiceError);
     });
-
+ 
     it('should handle permission errors', async () => {
       mockInvoke.mockRejectedValue(new Error('Permission denied'));
-
+ 
       await expect(service.stopDiscovery('test-session')).rejects.toThrow(ServiceError);
     });
   });
-
+ 
   describe('Session Management', () => {
     it('should cache session after retrieval', async () => {
       const mockSession: DiscoverySession = {
@@ -590,16 +590,16 @@ describe('DiscoveryService', () => {
         completedAt: null,
         errorMessage: null,
       };
-
+ 
       mockInvoke.mockResolvedValue(mockSession);
-
+ 
       const listener = vi.fn();
       const unsubscribe = service.addProgressListener('test-session-id', listener);
-
+ 
       await service.getDiscoveryStatus('test-session-id');
-
+ 
       expect(listener).toHaveBeenCalledTimes(1);
-      
+ 
       // Vérifier que le listener reçoit un DiscoveryProgress (pas la session complète)
       expect(listener).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -610,23 +610,23 @@ describe('DiscoveryService', () => {
           currentDirectory: '/test/path/subdir',
         })
       );
-
+ 
       unsubscribe();
     });
-
+ 
     it('should remove progress listeners', () => {
       const listener = vi.fn();
       const unsubscribe = service.addProgressListener('test-session-id', listener);
-
+ 
       service.removeProgressListeners('test-session-id');
-
+ 
       service['emitProgress']('test-session-id');
-
+ 
       expect(listener).not.toHaveBeenCalled();
-
+ 
       unsubscribe();
     });
-
+ 
     it('should get session status', async () => {
       const mockSession: DiscoverySession = {
         sessionId: 'test-session-id',
@@ -648,15 +648,15 @@ describe('DiscoveryService', () => {
         completedAt: null,
         errorMessage: null,
       };
-
+ 
       mockInvoke.mockResolvedValue(mockSession);
-
+ 
       const result = await service.getDiscoveryStatus('test-session-id');
-
+ 
       expect(result).toEqual(mockSession);
       expect(service.getSession('test-session-id')).toEqual(mockSession);
     });
-
+ 
     it('should refresh session from backend', async () => {
       const mockSession: DiscoverySession = {
         sessionId: 'test-session-id',
@@ -678,45 +678,45 @@ describe('DiscoveryService', () => {
         completedAt: '2023-01-01T12:05:00Z',
         errorMessage: null,
       };
-
+ 
       mockInvoke.mockResolvedValue(mockSession);
-
+ 
       const result = await service.refreshSession('test-session-id');
-
+ 
       expect(result).toEqual(mockSession);
       expect(service.getSession('test-session-id')).toEqual(mockSession);
     });
-
+ 
     it('should clear session cache', () => {
       service.clearSessionCache();
-      
+ 
       expect(service.getSession('any-session-id')).toBeNull();
     });
   });
-
+ 
   describe('Service Status', () => {
     it('should check service availability', async () => {
       mockInvoke.mockResolvedValue(['cr3', 'raf', 'arw']);
-      
+ 
       const available = await service.isAvailable();
-      
+ 
       expect(available).toBe(true);
-      expect(mockInvoke).toHaveBeenCalledWith('get_supported_formats', []);
+      expect(mockInvoke).toHaveBeenCalledWith('get_supported_formats', undefined);
     });
-
+ 
     it('should handle service unavailability', async () => {
       mockInvoke.mockRejectedValue(new Error('Command not available'));
-      
+ 
       const available = await service.isAvailable();
-      
+ 
       expect(available).toBe(false);
     });
-
+ 
     it('should get service status', async () => {
       mockInvoke.mockResolvedValue(['cr3', 'raf', 'arw']);
-      
+ 
       const status = await service.getServiceStatus();
-      
+ 
       expect(status).toEqual({
         available: true,
         activeSessions: 0,
@@ -724,7 +724,7 @@ describe('DiscoveryService', () => {
       });
     });
   });
-
+ 
   describe('Configuration Validation', () => {
     it('should validate valid configuration', () => {
       const validConfig: DiscoveryConfig = {
@@ -735,13 +735,13 @@ describe('DiscoveryService', () => {
         maxDepth: 10,
         maxFiles: 1000,
       };
-
+ 
       const result = service.validateConfig(validConfig);
-
+ 
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
-
+ 
     it('should detect invalid configuration', () => {
       const invalidConfig: DiscoveryConfig = {
         rootPath: '', // Invalid
@@ -751,16 +751,16 @@ describe('DiscoveryService', () => {
         maxDepth: -1, // Invalid
         maxFiles: 0, // Invalid
       };
-
+ 
       const result = service.validateConfig(invalidConfig);
-
+ 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain('Root path is required');
       expect(result.errors).toContain('At least one format must be specified');
       expect(result.errors).toContain('Max depth must be greater than 0');
       expect(result.errors).toContain('Max files must be greater than 0');
     });
-
+ 
     it('should generate warnings for concerning configuration', () => {
       const concerningConfig: DiscoveryConfig = {
         rootPath: '/test/path',
@@ -770,12 +770,13 @@ describe('DiscoveryService', () => {
         maxDepth: 100, // Very deep
         maxFiles: 200000, // Very large
       };
-
+ 
       const result = service.validateConfig(concerningConfig);
-
+ 
       expect(result.valid).toBe(true);
       expect(result.warnings).toContain('Large maxFiles limit may impact performance');
       expect(result.warnings).toContain('Deep recursion may impact performance');
     });
   });
 });
+ 

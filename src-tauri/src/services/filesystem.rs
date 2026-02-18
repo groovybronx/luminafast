@@ -173,11 +173,18 @@ impl FilesystemService {
 
     /// Arrête un watcher
     pub async fn stop_watcher(&self, watcher_id: Uuid) -> FilesystemResult<()> {
-        let mut watchers = self.watchers.write().await;
-        
-        if let Some(handle) = watchers.remove(&watcher_id) {
-            // Le watcher sera automatiquement arrêté quand il est drop
-            drop(handle.watcher);
+        let removed = {
+            let mut watchers = self.watchers.write().await;
+            if let Some(handle) = watchers.remove(&watcher_id) {
+                // Le watcher sera automatiquement arrêté quand il est drop
+                drop(handle.watcher);
+                true
+            } else {
+                false
+            }
+        };
+
+        if removed {
             self.update_global_stats().await;
             Ok(())
         } else {
@@ -230,16 +237,24 @@ impl FilesystemService {
 
     /// Libère un verrou
     pub async fn release_lock(&self, lock_id: Uuid) -> FilesystemResult<()> {
-        let mut locks = self.locks.write().await;
-        
-        // Recherche du verrou par ID
-        let lock_path = locks
-            .iter()
-            .find(|(_, lock)| lock.id == lock_id)
-            .map(|(path, _)| path.clone());
+        let removed = {
+            let mut locks = self.locks.write().await;
+            
+            // Recherche du verrou par ID
+            let lock_path = locks
+                .iter()
+                .find(|(_, lock)| lock.id == lock_id)
+                .map(|(path, _)| path.clone());
 
-        if let Some(path) = lock_path {
-            locks.remove(&path);
+            if let Some(path) = lock_path {
+                locks.remove(&path);
+                true
+            } else {
+                false
+            }
+        };
+
+        if removed {
             self.update_global_stats().await;
             Ok(())
         } else {
@@ -527,7 +542,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Temporairement désactivé - hanging test (>60s)
+    // #[ignore] // Temporairement désactivé - hanging test (>60s)
     async fn test_watcher_lifecycle() {
         let service = FilesystemService::new();
         let temp_dir = TempDir::new().unwrap();
@@ -554,7 +569,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Temporairement désactivé - hanging test (>60s)
+    // #[ignore] // Temporairement désactivé - hanging test (>60s)
     async fn test_file_locking() {
         let service = FilesystemService::new();
         let temp_dir = TempDir::new().unwrap();

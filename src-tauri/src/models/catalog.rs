@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 /// Image model matching the database schema
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -141,7 +141,7 @@ pub struct NewExifMetadata {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_image_serialization() {
         let image = Image {
@@ -157,21 +157,21 @@ mod tests {
             imported_at: Utc::now(),
             folder_id: Some(1),
         };
-        
+
         let json = serde_json::to_string(&image).unwrap();
         let deserialized: Image = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(image.id, deserialized.id);
         assert_eq!(image.filename, deserialized.filename);
         assert_eq!(image.extension, deserialized.extension);
     }
-    
+
     #[test]
     fn test_collection_type_serialization() {
         let collection_type = CollectionType::Smart;
         let json = serde_json::to_string(&collection_type).unwrap();
         let deserialized: CollectionType = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(collection_type, deserialized);
     }
 }

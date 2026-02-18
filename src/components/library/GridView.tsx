@@ -23,7 +23,7 @@ export const GridView = ({ images, selection, thumbnailSize, onToggleSelection, 
              onDoubleClick={() => onSetActiveView('develop')}
              className={`aspect-[3/2] bg-zinc-900 border transition-all relative group rounded-lg overflow-hidden ${isSelected ? 'border-blue-500 ring-4 ring-blue-500/20 z-10 scale-[0.97]' : 'border-zinc-800 hover:border-zinc-700 shadow-md'}`}>
             
-            <img src={img.url} alt="" className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity" loading="lazy" />
+            <img src={img.url} alt={img.filename} className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity" loading="lazy" />
             
             <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm rounded-full p-1 shadow-lg">
                 {img.state.isSynced ? <Cloud size={10} className="text-blue-400"/> : <RefreshCw size={10} className="text-amber-500 animate-spin"/>}

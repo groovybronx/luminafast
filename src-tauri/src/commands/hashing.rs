@@ -20,16 +20,12 @@ impl HashingState {
 
 /// Calcule le hash BLAKE3 d'un fichier
 #[tauri::command]
-pub async fn hash_file(
-    app: AppHandle,
-    file_path: String,
-) -> Result<FileHash, String> {
+pub async fn hash_file(app: AppHandle, file_path: String) -> Result<FileHash, String> {
     let hashing_state = app.state::<HashingState>();
     let service = hashing_state.service.clone();
-    
+
     let path = PathBuf::from(file_path);
-    service.hash_file(&path).await
-        .map_err(|e| e.to_string())
+    service.hash_file(&path).await.map_err(|e| e.to_string())
 }
 
 /// Calcule les hashes de plusieurs fichiers en parallèle
@@ -40,17 +36,19 @@ pub async fn hash_files_batch(
 ) -> Result<Vec<(String, FileHash)>, String> {
     let hashing_state = app.state::<HashingState>();
     let service = hashing_state.service.clone();
-    
+
     let paths: Vec<PathBuf> = file_paths.into_iter().map(PathBuf::from).collect();
-    let results = service.hash_files_batch(&paths, None).await
+    let results = service
+        .hash_files_batch(&paths, None)
+        .await
         .map_err(|e| e.to_string())?;
-    
+
     // Convertir PathBuf en String pour la sérialisation
     let serialized_results: Vec<(String, FileHash)> = results
         .into_iter()
         .map(|(path, hash)| (path.to_string_lossy().to_string(), hash))
         .collect();
-    
+
     Ok(serialized_results)
 }
 
@@ -62,9 +60,11 @@ pub async fn detect_duplicates(
 ) -> Result<DuplicateAnalysis, String> {
     let hashing_state = app.state::<HashingState>();
     let service = hashing_state.service.clone();
-    
+
     let paths: Vec<PathBuf> = file_paths.into_iter().map(PathBuf::from).collect();
-    service.detect_duplicates(&paths, None).await
+    service
+        .detect_duplicates(&paths, None)
+        .await
         .map_err(|e| e.to_string())
 }
 
@@ -77,9 +77,11 @@ pub async fn verify_file_integrity(
 ) -> Result<bool, String> {
     let hashing_state = app.state::<HashingState>();
     let service = hashing_state.service.clone();
-    
+
     let path = PathBuf::from(file_path);
-    service.verify_integrity(&path, &expected_hash).await
+    service
+        .verify_integrity(&path, &expected_hash)
+        .await
         .map_err(|e| e.to_string())
 }
 
@@ -88,7 +90,7 @@ pub async fn verify_file_integrity(
 pub fn clear_hash_cache(app: AppHandle) -> Result<(), String> {
     let hashing_state = app.state::<HashingState>();
     let service = hashing_state.service.clone();
-    
+
     service.clear_cache();
     Ok(())
 }
@@ -98,7 +100,7 @@ pub fn clear_hash_cache(app: AppHandle) -> Result<(), String> {
 pub fn get_hash_cache_stats(app: AppHandle) -> Result<(usize, usize), String> {
     let hashing_state = app.state::<HashingState>();
     let service = hashing_state.service.clone();
-    
+
     Ok(service.cache_stats())
 }
 
@@ -111,32 +113,32 @@ pub async fn benchmark_hashing(
 ) -> Result<HashBenchmarkResult, String> {
     let hashing_state = app.state::<HashingState>();
     let service = hashing_state.service.clone();
-    
+
     let path = PathBuf::from(test_file_path);
-    
+
     // Mesurer la taille du fichier
-    let file_size = tokio::fs::metadata(&path).await
+    let file_size = tokio::fs::metadata(&path)
+        .await
         .map_err(|e| e.to_string())?
         .len();
-    
+
     // Exécuter plusieurs itérations pour mesurer la performance
     let start_time = std::time::Instant::now();
     let mut hashes = Vec::new();
-    
+
     for _ in 0..iterations {
-        let hash_result = service.hash_file(&path).await
-            .map_err(|e| e.to_string())?;
+        let hash_result = service.hash_file(&path).await.map_err(|e| e.to_string())?;
         hashes.push(hash_result);
     }
-    
+
     let total_time = start_time.elapsed();
     let avg_time_per_hash = total_time / iterations;
     let throughput_mbps = (file_size as f64 / avg_time_per_hash.as_secs_f64()) / (1024.0 * 1024.0);
-    
+
     // Vérifier que tous les hashes sont identiques
     let first_hash = &hashes[0].hash;
     let all_hashes_identical = hashes.iter().all(|h| h.hash == *first_hash);
-    
+
     Ok(HashBenchmarkResult {
         file_path: path.to_string_lossy().to_string(),
         file_size,
@@ -166,7 +168,7 @@ pub struct HashBenchmarkResult {
 mod tests {
     use super::*;
     use std::io::Write;
-    use tempfile::{NamedTempFile, Builder};
+    use tempfile::{Builder, NamedTempFile};
 
     #[tokio::test]
     async fn test_blake3_service_creation() {
@@ -181,14 +183,14 @@ mod tests {
     async fn test_blake3_hash_deterministic() {
         let service = Blake3Service::new(HashConfig::default());
         let mut temp_file = NamedTempFile::new().unwrap();
-        
+
         // Écrire des données de test
         temp_file.write_all(b"test data for hashing").unwrap();
         temp_file.flush().unwrap();
-        
+
         let hash1 = service.hash_file(temp_file.path()).await.unwrap();
         let hash2 = service.hash_file(temp_file.path()).await.unwrap();
-        
+
         assert_eq!(hash1.hash, hash2.hash);
         assert_eq!(hash1.hash_type, HashType::Blake3);
         assert_eq!(hash1.file_size, 21); // "test data for hashing" = 21 bytes
@@ -197,18 +199,18 @@ mod tests {
     #[tokio::test]
     async fn test_blake3_hash_different_for_different_input() {
         let service = Blake3Service::new(HashConfig::default());
-        
+
         let mut temp_file1 = NamedTempFile::new().unwrap();
         temp_file1.write_all(b"data1").unwrap();
         temp_file1.flush().unwrap();
-        
+
         let mut temp_file2 = NamedTempFile::new().unwrap();
         temp_file2.write_all(b"data2").unwrap();
         temp_file2.flush().unwrap();
-        
+
         let hash1 = service.hash_file(temp_file1.path()).await.unwrap();
         let hash2 = service.hash_file(temp_file2.path()).await.unwrap();
-        
+
         assert_ne!(hash1.hash, hash2.hash);
     }
 
@@ -216,9 +218,9 @@ mod tests {
     async fn test_empty_file_hash() {
         let service = Blake3Service::new(HashConfig::default());
         let temp_file = NamedTempFile::new().unwrap(); // fichier vide
-        
+
         let hash = service.hash_file(temp_file.path()).await.unwrap();
-        
+
         assert!(!hash.hash.is_empty());
         assert_eq!(hash.file_size, 0);
         assert_eq!(hash.hash_type, HashType::Blake3);
@@ -227,22 +229,24 @@ mod tests {
     #[tokio::test]
     async fn test_batch_hashing() {
         let service = Blake3Service::new(HashConfig::default());
-        
+
         // Créer plusieurs fichiers temporaires
         let mut temp_files = Vec::new();
         let mut temp_file_handles = Vec::new();
         for i in 0..3 {
             let mut temp_file = NamedTempFile::new().unwrap();
-            temp_file.write_all(format!("test data {}", i).as_bytes()).unwrap();
+            temp_file
+                .write_all(format!("test data {}", i).as_bytes())
+                .unwrap();
             temp_file.flush().unwrap();
             temp_files.push(temp_file.path().to_path_buf());
             temp_file_handles.push(temp_file); // Garder le handle pour éviter la suppression
         }
-        
+
         let results = service.hash_files_batch(&temp_files, None).await.unwrap();
-        
+
         assert_eq!(results.len(), 3);
-        
+
         // Vérifier que chaque fichier a un hash unique
         let hashes: Vec<String> = results.iter().map(|(_, hash)| hash.hash.clone()).collect();
         let mut unique_hashes = hashes.clone();
@@ -254,11 +258,11 @@ mod tests {
     #[tokio::test]
     async fn test_duplicate_detection() {
         let service = Blake3Service::new(HashConfig::default());
-        
+
         // Créer des fichiers avec contenus identiques
         let mut temp_files = Vec::new();
         let mut temp_file_handles = Vec::new();
-        
+
         // Deux fichiers identiques
         for _ in 0..2 {
             let mut temp_file = NamedTempFile::new().unwrap();
@@ -267,16 +271,16 @@ mod tests {
             temp_files.push(temp_file.path().to_path_buf());
             temp_file_handles.push(temp_file); // Garder le handle
         }
-        
+
         // Un fichier différent
         let mut temp_file = NamedTempFile::new().unwrap();
         temp_file.write_all(b"unique content").unwrap();
         temp_file.flush().unwrap();
         temp_files.push(temp_file.path().to_path_buf());
         temp_file_handles.push(temp_file); // Garder le handle
-        
+
         let analysis = service.detect_duplicates(&temp_files, None).await.unwrap();
-        
+
         assert_eq!(analysis.total_files, 3);
         assert_eq!(analysis.duplicate_groups, 1);
         assert_eq!(analysis.duplicate_files, 2);
@@ -290,15 +294,21 @@ mod tests {
         let mut temp_file = NamedTempFile::new().unwrap();
         temp_file.write_all(b"integrity test").unwrap();
         temp_file.flush().unwrap();
-        
+
         let original_hash = service.hash_file(temp_file.path()).await.unwrap();
-        
+
         // Vérifier l'intégrité (devrait être true)
-        let is_valid = service.verify_integrity(temp_file.path(), &original_hash.hash).await.unwrap();
+        let is_valid = service
+            .verify_integrity(temp_file.path(), &original_hash.hash)
+            .await
+            .unwrap();
         assert!(is_valid);
-        
+
         // Vérifier avec un mauvais hash (devrait être false)
-        let is_invalid = service.verify_integrity(temp_file.path(), "wrong_hash").await.unwrap();
+        let is_invalid = service
+            .verify_integrity(temp_file.path(), "wrong_hash")
+            .await
+            .unwrap();
         assert!(!is_invalid);
     }
 
@@ -308,25 +318,25 @@ mod tests {
         let mut temp_file = NamedTempFile::new().unwrap();
         temp_file.write_all(b"cache test").unwrap();
         temp_file.flush().unwrap();
-        
+
         // Premier appel (calcule le hash)
         let start1 = std::time::Instant::now();
         let hash1 = service.hash_file(temp_file.path()).await.unwrap();
         let elapsed1 = start1.elapsed();
-        
+
         // Deuxième appel (utilise le cache)
         let start2 = std::time::Instant::now();
         let hash2 = service.hash_file(temp_file.path()).await.unwrap();
         let elapsed2 = start2.elapsed();
-        
+
         assert_eq!(hash1.hash, hash2.hash);
         assert!(elapsed2 < elapsed1); // Le cache devrait être plus rapide
-        
+
         // Vérifier les stats du cache
         let (count, size) = service.cache_stats();
         assert!(count > 0);
         assert!(size > 0);
-        
+
         // Vider le cache
         service.clear_cache();
         let (count_after, _) = service.cache_stats();
@@ -338,9 +348,9 @@ mod tests {
         let service = Blake3Service::new(HashConfig::default());
         let temp_dir = Builder::new().tempdir().unwrap();
         let non_existent_path = temp_dir.path().join("non_existent_file.txt");
-        
+
         let result = service.hash_file(&non_existent_path).await;
-        
+
         assert!(result.is_err());
         match result.unwrap_err() {
             HashError::FileNotFound(path) => assert_eq!(path, non_existent_path),
@@ -355,24 +365,17 @@ mod tests {
         // On teste juste que l'erreur est gérée
         let temp_dir = Builder::new().tempdir().unwrap();
         let restricted_path = temp_dir.path().join("restricted_file.txt");
-        
+
         // Créer le fichier
         std::fs::write(&restricted_path, b"test").unwrap();
-        
+
         // Sur certains systèmes, ce test peut passer si les permissions sont permissives
         let result = service.hash_file(&restricted_path).await;
-        
+
         // Si le test passe, c'est que les permissions sont permissives (acceptable)
         // Si le test échoue avec PermissionDenied, c'est le comportement attendu
-        if result.is_err() {
-            match result.unwrap_err() {
-                HashError::PermissionDenied(_) => {
-                    // Comportement attendu
-                }
-                _ => {
-                    // Autre erreur non attendue
-                }
-            }
+        if let Err(HashError::PermissionDenied(_)) = result {
+            // Comportement attendu
         }
     }
 }

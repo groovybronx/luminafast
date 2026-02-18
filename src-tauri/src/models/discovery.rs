@@ -1,13 +1,14 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 /// File processing status for tracking ingestion pipeline
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum FileProcessingStatus {
     /// File has been discovered but not yet processed
     #[serde(rename = "discovered")]
+    #[default]
     Discovered,
     /// File is currently being processed
     #[serde(rename = "processing")]
@@ -20,14 +21,9 @@ pub enum FileProcessingStatus {
     Error,
 }
 
-impl Default for FileProcessingStatus {
-    fn default() -> Self {
-        FileProcessingStatus::Discovered
-    }
-}
-
 /// Supported RAW file formats
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Copy)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum RawFormat {
     /// Canon RAW 3
     #[serde(rename = "cr3")]
@@ -204,9 +200,10 @@ impl Default for DiscoveryConfig {
 }
 
 /// Discovery session status
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub enum DiscoveryStatus {
     #[serde(rename = "idle")]
+    #[default]
     Idle,
     #[serde(rename = "scanning")]
     Scanning,
@@ -216,12 +213,6 @@ pub enum DiscoveryStatus {
     Stopped,
     #[serde(rename = "error")]
     Error(String),
-}
-
-impl Default for DiscoveryStatus {
-    fn default() -> Self {
-        DiscoveryStatus::Idle
-    }
 }
 
 /// Discovery session information
@@ -457,7 +448,8 @@ impl BatchIngestionResult {
     pub fn finalize(&mut self) {
         let total_processed = self.successful.len() + self.failed.len() + self.skipped.len();
         if total_processed > 0 {
-            self.avg_processing_time_ms = self.total_processing_time_ms as f64 / total_processed as f64;
+            self.avg_processing_time_ms =
+                self.total_processing_time_ms as f64 / total_processed as f64;
         }
     }
 
@@ -482,25 +474,25 @@ impl BatchIngestionResult {
 pub enum DiscoveryError {
     #[error("IO error: {0}")]
     IoError(String),
-    
+
     #[error("Invalid path: {0}")]
     InvalidPath(String),
-    
+
     #[error("Access denied: {0}")]
     AccessDenied(String),
-    
+
     #[error("File format not supported: {0}")]
     UnsupportedFormat(String),
-    
+
     #[error("File signature validation failed: {0}")]
     InvalidSignature(String),
-    
+
     #[error("Discovery session not found: {0}")]
     SessionNotFound(Uuid),
-    
+
     #[error("Discovery already in progress")]
     AlreadyInProgress,
-    
+
     #[error("Configuration error: {0}")]
     ConfigError(String),
 }
@@ -561,7 +553,7 @@ mod tests {
         let size = 1024u64;
         let modified = Utc::now();
 
-        let file = DiscoveredFile::new(session_id.clone(), path.clone(), format.clone(), size, modified);
+        let file = DiscoveredFile::new(session_id, path.clone(), format, size, modified);
 
         assert_eq!(file.session_id, session_id);
         assert_eq!(file.path, path);
@@ -626,7 +618,7 @@ mod tests {
     #[test]
     fn test_discovery_session_progress() {
         let mut session = DiscoverySession::new(DiscoveryConfig::default());
-        
+
         session.update_progress(50, 45, 5);
         assert_eq!(session.files_found, 50);
         assert_eq!(session.files_processed, 45);
@@ -637,7 +629,7 @@ mod tests {
     #[test]
     fn test_discovery_session_completion() {
         let mut session = DiscoverySession::new(DiscoveryConfig::default());
-        
+
         session.complete();
         assert!(matches!(session.status, DiscoveryStatus::Completed));
         assert!(session.completed_at.is_some());
@@ -646,15 +638,19 @@ mod tests {
     #[test]
     fn test_discovery_session_duration() {
         let mut session = DiscoverySession::new(DiscoveryConfig::default());
-        
+
         // Should be None for incomplete session
         assert!(session.duration().is_none());
-        
+
         session.complete();
-        
+
         // Should be Some for completed session
         assert!(session.duration().is_some());
-        assert!(session.duration().unwrap().as_millis() >= 0);
+        // Duration is always >= 0 for u128
+        let _duration = session
+            .duration()
+            .expect("Duration should be present")
+            .as_millis();
     }
 
     #[test]

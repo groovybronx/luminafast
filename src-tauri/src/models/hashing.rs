@@ -73,7 +73,7 @@ pub enum HashError {
     /// Fichier trop gros pour le traitement
     FileTooLarge(PathBuf, u64),
     /// Erreur interne de hachage
-    HashError(String),
+    Internal(String),
 }
 
 impl std::fmt::Display for HashError {
@@ -82,8 +82,10 @@ impl std::fmt::Display for HashError {
             HashError::FileNotFound(path) => write!(f, "Fichier non trouvé: {:?}", path),
             HashError::PermissionDenied(path) => write!(f, "Permission refusée: {:?}", path),
             HashError::ReadError(path, msg) => write!(f, "Erreur lecture {:?}: {}", path, msg),
-            HashError::FileTooLarge(path, size) => write!(f, "Fichier trop gros {:?}: {} octets", path, size),
-            HashError::HashError(msg) => write!(f, "Erreur de hachage: {}", msg),
+            HashError::FileTooLarge(path, size) => {
+                write!(f, "Fichier trop gros {:?}: {} octets", path, size)
+            }
+            HashError::Internal(msg) => write!(f, "Erreur de hachage: {}", msg),
         }
     }
 }
@@ -110,8 +112,8 @@ impl Default for HashConfig {
     fn default() -> Self {
         Self {
             max_file_size: Some(10 * 1024 * 1024 * 1024), // 10GB
-            thread_count: None, // Auto-détecter
-            chunk_size: 64 * 1024, // 64KB
+            thread_count: None,                           // Auto-détecter
+            chunk_size: 64 * 1024,                        // 64KB
             enable_cache: true,
         }
     }

@@ -1,16 +1,16 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::Duration;
-use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 // Modules de sérialisation personnalisés
 mod path_buf_serde {
     use serde::{Deserialize, Deserializer, Serializer};
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
     use std::str::FromStr;
 
-    pub fn serialize<S>(path: &PathBuf, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(path: &Path, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -23,13 +23,13 @@ mod path_buf_serde {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        Ok(PathBuf::from_str(&s).map_err(serde::de::Error::custom)?)
+        PathBuf::from_str(&s).map_err(serde::de::Error::custom)
     }
 }
 
 mod chrono_serde {
-    use serde::{Deserialize, Deserializer, Serializer};
     use chrono::{DateTime, Utc};
+    use serde::{Deserialize, Deserializer, Serializer};
 
     pub fn serialize<S>(dt: &DateTime<Utc>, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -73,8 +73,8 @@ mod option_duration_serde {
 }
 
 mod option_chrono_serde {
-    use serde::{Deserialize, Deserializer, Serializer};
     use chrono::{DateTime, Utc};
+    use serde::{Deserialize, Deserializer, Serializer};
 
     pub fn serialize<S>(dt: &Option<DateTime<Utc>>, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -94,9 +94,11 @@ mod option_chrono_serde {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        Ok(Some(DateTime::parse_from_rfc3339(&s)
-            .map(|dt| dt.with_timezone(&Utc))
-            .map_err(serde::de::Error::custom)?))
+        Ok(Some(
+            DateTime::parse_from_rfc3339(&s)
+                .map(|dt| dt.with_timezone(&Utc))
+                .map_err(serde::de::Error::custom)?,
+        ))
     }
 }
 
@@ -298,7 +300,6 @@ pub type FilesystemResult<T> = Result<T, FilesystemError>;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::Path;
 
     #[test]
     fn test_file_event_creation() {

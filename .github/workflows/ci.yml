@@ -170,4 +170,4 @@ jobs:
     # --audit-level moderate: ignore les vulnérabilités low (trop nombreuses)
     # Alternative: --audit-level high pour ignorer moderate si nécessaire
     - name: Node.js security audit
-      run: npm audit --audit-level moderate
+      run: npm audit --audit-level high

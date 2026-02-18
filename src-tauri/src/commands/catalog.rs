@@ -1,8 +1,8 @@
 use crate::database::Database;
 use crate::database::DatabaseError;
 use crate::models::dto::*;
-use tauri::State;
 use std::sync::{Arc, Mutex};
+use tauri::State;
 
 /// Application state containing the database connection
 pub struct AppState {
@@ -23,7 +23,7 @@ pub async fn get_all_images(
                 i.captured_at, i.imported_at, i.folder_id,
                 image_state.rating, image_state.flag, image_state.color_label
          FROM images i
-         LEFT JOIN image_state image_state ON i.id = image_state.image_id"
+         LEFT JOIN image_state image_state ON i.id = image_state.image_id",
     );
 
     let mut params = Vec::new();
@@ -67,24 +67,27 @@ pub async fn get_all_images(
 
     query.push_str(" ORDER BY i.imported_at DESC");
 
-    let mut stmt = db.connection().prepare(&query)
+    let mut stmt = db
+        .connection()
+        .prepare(&query)
         .map_err(|e| format!("Database error: {}", e))?;
 
-    let images_iter = stmt.query_map(rusqlite::params_from_iter(params), |row| {
-        Ok(ImageDTO {
-            id: row.get(0)?,
-            blake3_hash: row.get(1)?,
-            filename: row.get(2)?,
-            extension: row.get(3)?,
-            width: row.get(4)?,
-            height: row.get(5)?,
-            rating: row.get(9)?,
-            flag: row.get(10)?,
-            captured_at: row.get(8)?,
-            imported_at: row.get(9)?,
+    let images_iter = stmt
+        .query_map(rusqlite::params_from_iter(params), |row| {
+            Ok(ImageDTO {
+                id: row.get(0)?,
+                blake3_hash: row.get(1)?,
+                filename: row.get(2)?,
+                extension: row.get(3)?,
+                width: row.get(4)?,
+                height: row.get(5)?,
+                rating: row.get(9)?,
+                flag: row.get(10)?,
+                captured_at: row.get(8)?,
+                imported_at: row.get(9)?,
+            })
         })
-    })
-    .map_err(|e| format!("Query error: {}", e))?;
+        .map_err(|e| format!("Query error: {}", e))?;
 
     let mut images = Vec::new();
     for image in images_iter {
@@ -117,40 +120,41 @@ pub async fn get_image_detail(
     )
     .map_err(|e| format!("Database error: {}", e))?;
 
-    let result = stmt.query_row([id], |row| {
-        let exif_metadata = if row.get::<_, Option<i32>>(14)?.is_some() {
-            Some(ExifMetadataDTO {
-                iso: row.get(14)?,
-                aperture: row.get(15)?,
-                shutter_speed: row.get(16)?,
-                focal_length: row.get(17)?,
-                lens: row.get(18)?,
-                camera_make: row.get(19)?,
-                camera_model: row.get(20)?,
-                gps_lat: row.get(21)?,
-                gps_lon: row.get(22)?,
-                color_space: row.get(23)?,
-            })
-        } else {
-            None
-        };
+    let result = stmt
+        .query_row([id], |row| {
+            let exif_metadata = if row.get::<_, Option<i32>>(14)?.is_some() {
+                Some(ExifMetadataDTO {
+                    iso: row.get(14)?,
+                    aperture: row.get(15)?,
+                    shutter_speed: row.get(16)?,
+                    focal_length: row.get(17)?,
+                    lens: row.get(18)?,
+                    camera_make: row.get(19)?,
+                    camera_model: row.get(20)?,
+                    gps_lat: row.get(21)?,
+                    gps_lon: row.get(22)?,
+                    color_space: row.get(23)?,
+                })
+            } else {
+                None
+            };
 
-        Ok(ImageDetailDTO {
-            id: row.get(0)?,
-            blake3_hash: row.get(1)?,
-            filename: row.get(2)?,
-            extension: row.get(3)?,
-            width: row.get(4)?,
-            height: row.get(5)?,
-            rating: row.get(12)?,
-            flag: row.get(13)?,
-            captured_at: row.get(8)?,
-            imported_at: row.get(9)?,
-            exif_metadata,
-            folder_id: row.get(11)?,
+            Ok(ImageDetailDTO {
+                id: row.get(0)?,
+                blake3_hash: row.get(1)?,
+                filename: row.get(2)?,
+                extension: row.get(3)?,
+                width: row.get(4)?,
+                height: row.get(5)?,
+                rating: row.get(12)?,
+                flag: row.get(13)?,
+                captured_at: row.get(8)?,
+                imported_at: row.get(9)?,
+                exif_metadata,
+                folder_id: row.get(11)?,
+            })
         })
-    })
-    .map_err(|e| format!("Query error: {}", e))?;
+        .map_err(|e| format!("Query error: {}", e))?;
 
     Ok(result)
 }
@@ -166,11 +170,9 @@ pub async fn update_image_state(
     let db = state.db.lock().unwrap();
 
     // Check if image exists
-    let exists: Result<i32, _> = db.connection().query_row(
-        "SELECT 1 FROM images WHERE id = ?",
-        [id],
-        |row| row.get(0)
-    );
+    let exists: Result<i32, _> =
+        db.connection()
+            .query_row("SELECT 1 FROM images WHERE id = ?", [id], |row| row.get(0));
 
     if exists.is_err() {
         return Err("Image not found".to_string());
@@ -228,18 +230,18 @@ pub async fn create_collection(
             let id = db.connection().last_insert_rowid() as u32;
             Ok(CollectionDTO {
                 id,
-                name: db.connection().query_row(
-                    "SELECT name FROM collections WHERE id = ?",
-                    [id],
-                    |row| row.get(0)
-                )
-                .map_err(|e| format!("Failed to retrieve collection name: {}", e))?,
-                collection_type: db.connection().query_row(
-                    "SELECT type FROM collections WHERE id = ?",
-                    [id],
-                    |row| row.get(0)
-                )
-                .map_err(|e| format!("Failed to retrieve collection type: {}", e))?,
+                name: db
+                    .connection()
+                    .query_row("SELECT name FROM collections WHERE id = ?", [id], |row| {
+                        row.get(0)
+                    })
+                    .map_err(|e| format!("Failed to retrieve collection name: {}", e))?,
+                collection_type: db
+                    .connection()
+                    .query_row("SELECT type FROM collections WHERE id = ?", [id], |row| {
+                        row.get(0)
+                    })
+                    .map_err(|e| format!("Failed to retrieve collection type: {}", e))?,
                 parent_id,
                 image_count: 0, // New collection starts empty
             })
@@ -261,7 +263,7 @@ pub async fn add_images_to_collection(
     let collection_exists: Result<i32, _> = db.connection().query_row(
         "SELECT 1 FROM collections WHERE id = ?",
         [collectionId],
-        |row| row.get(0)
+        |row| row.get(0),
     );
 
     if collection_exists.is_err() {
@@ -295,25 +297,28 @@ pub async fn add_images_to_collection(
 pub async fn get_collections(state: State<'_, AppState>) -> CommandResult<Vec<CollectionDTO>> {
     let db = state.db.lock().unwrap();
 
-    let mut stmt = db.connection().prepare(
-        "SELECT c.id, c.name, c.type, c.parent_id, COUNT(ci.image_id) as image_count
+    let mut stmt = db
+        .connection()
+        .prepare(
+            "SELECT c.id, c.name, c.type, c.parent_id, COUNT(ci.image_id) as image_count
          FROM collections c
          LEFT JOIN collection_images ci ON c.id = ci.collection_id
          GROUP BY c.id, c.name, c.type, c.parent_id
-         ORDER BY c.name"
-    )
-    .map_err(|e| format!("Database error: {}", e))?;
+         ORDER BY c.name",
+        )
+        .map_err(|e| format!("Database error: {}", e))?;
 
-    let collections_iter = stmt.query_map([], |row| {
-        Ok(CollectionDTO {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            collection_type: row.get(2)?,
-            parent_id: row.get(3)?,
-            image_count: row.get::<_, i64>(4)? as u32,
+    let collections_iter = stmt
+        .query_map([], |row| {
+            Ok(CollectionDTO {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                collection_type: row.get(2)?,
+                parent_id: row.get(3)?,
+                image_count: row.get::<_, i64>(4)? as u32,
+            })
         })
-    })
-    .map_err(|e| format!("Query error: {}", e))?;
+        .map_err(|e| format!("Query error: {}", e))?;
 
     let mut collections = Vec::new();
     for collection in collections_iter {
@@ -333,33 +338,36 @@ pub async fn search_images(
 
     let search_pattern = format!("%{}%", query);
 
-    let mut stmt = db.connection().prepare(
-        "SELECT i.id, i.blake3_hash, i.filename, i.extension, 
+    let mut stmt = db
+        .connection()
+        .prepare(
+            "SELECT i.id, i.blake3_hash, i.filename, i.extension, 
                 i.width, i.height, i.file_size_bytes, i.orientation,
                 i.captured_at, i.imported_at, i.folder_id,
                 image_state.rating, image_state.flag, image_state.color_label
          FROM images i
          LEFT JOIN image_state image_state ON i.id = image_state.image_id
          WHERE i.filename LIKE ? OR i.blake3_hash LIKE ?
-         ORDER BY i.imported_at DESC"
-    )
-    .map_err(|e| format!("Database error: {}", e))?;
+         ORDER BY i.imported_at DESC",
+        )
+        .map_err(|e| format!("Database error: {}", e))?;
 
-    let images_iter = stmt.query_map([&search_pattern, &search_pattern], |row| {
-        Ok(ImageDTO {
-            id: row.get(0)?,
-            blake3_hash: row.get(1)?,
-            filename: row.get(2)?,
-            extension: row.get(3)?,
-            width: row.get(4)?,
-            height: row.get(5)?,
-            rating: row.get(9)?,
-            flag: row.get(10)?,
-            captured_at: row.get(8)?,
-            imported_at: row.get(9)?,
+    let images_iter = stmt
+        .query_map([&search_pattern, &search_pattern], |row| {
+            Ok(ImageDTO {
+                id: row.get(0)?,
+                blake3_hash: row.get(1)?,
+                filename: row.get(2)?,
+                extension: row.get(3)?,
+                width: row.get(4)?,
+                height: row.get(5)?,
+                rating: row.get(9)?,
+                flag: row.get(10)?,
+                captured_at: row.get(8)?,
+                imported_at: row.get(9)?,
+            })
         })
-    })
-    .map_err(|e| format!("Query error: {}", e))?;
+        .map_err(|e| format!("Query error: {}", e))?;
 
     let mut images = Vec::new();
     for image in images_iter {
@@ -388,9 +396,10 @@ mod tests {
         let mut db = setup_test_db();
 
         // Test internal logic by calling the database directly
-        let mut stmt = db.connection().prepare(
-            "SELECT COUNT(*) FROM images"
-        ).unwrap();
+        let mut stmt = db
+            .connection()
+            .prepare("SELECT COUNT(*) FROM images")
+            .unwrap();
 
         let count: i64 = stmt.query_row([], |row| row.get(0)).unwrap();
         assert_eq!(count, 0);
@@ -403,28 +412,34 @@ mod tests {
         // Test collection creation directly in database
         let result = db.connection().execute(
             "INSERT INTO collections (name, type) VALUES (?, ?)",
-            ["Test Collection", "static"]
+            ["Test Collection", "static"],
         );
 
         assert!(result.is_ok());
 
         // Verify collection exists
-        let name: String = db.connection().query_row(
-            "SELECT name FROM collections WHERE name = ?",
-            ["Test Collection"],
-            |row| row.get(0)
-        ).unwrap();
+        let name: String = db
+            .connection()
+            .query_row(
+                "SELECT name FROM collections WHERE name = ?",
+                ["Test Collection"],
+                |row| row.get(0),
+            )
+            .unwrap();
 
         assert_eq!(name, "Test Collection");
 
         // Test collection type validation (database enforces the constraint)
         let invalid_result = db.connection().execute(
             "INSERT INTO collections (name, type) VALUES (?, ?)",
-            ["Invalid Collection", "invalid_type"]
+            ["Invalid Collection", "invalid_type"],
         );
 
         // This should fail due to CHECK constraint in the database schema
-        assert!(invalid_result.is_err(), "Database should reject invalid collection types due to CHECK constraint");
+        assert!(
+            invalid_result.is_err(),
+            "Database should reject invalid collection types due to CHECK constraint"
+        );
     }
 
     #[test]
@@ -443,17 +458,20 @@ mod tests {
         // Test image state update
         let result = db.connection().execute(
             "INSERT OR REPLACE INTO image_state (image_id, rating, flag) VALUES (?, ?, ?)",
-            rusqlite::params![image_id, 5i64, "pick"]
+            rusqlite::params![image_id, 5i64, "pick"],
         );
 
         assert!(result.is_ok());
 
         // Verify image state
-        let rating: i32 = db.connection().query_row(
-            "SELECT rating FROM image_state WHERE image_id = ?",
-            [image_id],
-            |row| row.get(0)
-        ).unwrap();
+        let rating: i32 = db
+            .connection()
+            .query_row(
+                "SELECT rating FROM image_state WHERE image_id = ?",
+                [image_id],
+                |row| row.get(0),
+            )
+            .unwrap();
 
         assert_eq!(rating, 5);
     }
@@ -483,11 +501,10 @@ mod tests {
         assert!(result.is_err());
 
         // Verify no data was inserted (transaction rolled back)
-        let count: i64 = db.connection().query_row(
-            "SELECT COUNT(*) FROM collections",
-            [],
-            |row| row.get(0)
-        ).unwrap();
+        let count: i64 = db
+            .connection()
+            .query_row("SELECT COUNT(*) FROM collections", [], |row| row.get(0))
+            .unwrap();
         assert_eq!(count, 0);
     }
 }

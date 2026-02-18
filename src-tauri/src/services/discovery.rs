@@ -1,12 +1,11 @@
 use crate::models::discovery::{
-    DiscoveryConfig, DiscoverySession, DiscoveredFile, DiscoveryStatus,
-    DiscoveryError, RawFormat,
+    DiscoveredFile, DiscoveryConfig, DiscoveryError, DiscoverySession, DiscoveryStatus, RawFormat,
 };
 use crate::services::blake3::Blake3Service;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tokio::sync::{RwLock, Mutex};
+use tokio::sync::{Mutex, RwLock};
 use uuid::Uuid;
 use walkdir::WalkDir;
 
@@ -18,7 +17,6 @@ pub struct DiscoveryService {
     blake3_service: Arc<Blake3Service>,
     /// Currently running discovery task
     current_task: Arc<Mutex<Option<Uuid>>>,
-
 }
 
 impl DiscoveryService {
@@ -61,16 +59,13 @@ impl DiscoveryService {
         let blake3_service_clone = Arc::clone(&self.blake3_service);
         let current_task_clone = Arc::clone(&self.current_task);
         let sessions_error_clone = Arc::clone(&self.sessions);
-        
+
         *current_task = Some(session_id);
 
         tokio::spawn(async move {
-            let result = Self::perform_discovery(
-                sessions_clone,
-                blake3_service_clone,
-                session_id,
-                config,
-            ).await;
+            let result =
+                Self::perform_discovery(sessions_clone, blake3_service_clone, session_id, config)
+                    .await;
 
             // Clear the current task when done
             let mut task_guard = current_task_clone.lock().await;
@@ -96,12 +91,15 @@ impl DiscoveryService {
             session.mark_stopped();
             return Ok(());
         }
-        
+
         Err(DiscoveryError::SessionNotFound(session_id))
     }
 
     /// Get the status of a discovery session
-    pub async fn get_session_status(&self, session_id: Uuid) -> Result<DiscoverySession, DiscoveryError> {
+    pub async fn get_session_status(
+        &self,
+        session_id: Uuid,
+    ) -> Result<DiscoverySession, DiscoveryError> {
         let sessions = self.sessions.read().await;
         sessions
             .get(&session_id)
@@ -116,7 +114,10 @@ impl DiscoveryService {
     }
 
     /// Get discovered files for a session
-    pub async fn get_session_files(&self, session_id: Uuid) -> Result<Vec<DiscoveredFile>, DiscoveryError> {
+    pub async fn get_session_files(
+        &self,
+        session_id: Uuid,
+    ) -> Result<Vec<DiscoveredFile>, DiscoveryError> {
         // For now, we'll return an empty vector
         // In a full implementation, we would store discovered files in the session or database
         let _session = self.get_session_status(session_id).await?;
@@ -137,7 +138,7 @@ impl DiscoveryService {
 
         // Build the walker
         let mut walkdir = WalkDir::new(&config.root_path);
-        
+
         if !config.recursive {
             walkdir = walkdir.max_depth(1);
         } else if let Some(max_depth) = config.max_depth {
@@ -170,7 +171,8 @@ impl DiscoveryService {
                         files_processed,
                         files_with_errors,
                         Some(path.to_path_buf()),
-                    ).await;
+                    )
+                    .await;
                     last_update = std::time::Instant::now();
                 }
                 continue;
@@ -186,9 +188,11 @@ impl DiscoveryService {
             }
 
             // Check if file matches supported formats
-            if let Some(file_result) = Self::check_raw_file(path, &config.formats, session_id).await? {
+            if let Some(file_result) =
+                Self::check_raw_file(path, &config.formats, session_id).await?
+            {
                 files_found += 1;
-                
+
                 if file_result.error_message.is_some() {
                     files_with_errors += 1;
                 } else {
@@ -210,7 +214,8 @@ impl DiscoveryService {
                         files_processed,
                         files_with_errors,
                         Some(path.parent().unwrap_or(path).to_path_buf()),
-                    ).await;
+                    )
+                    .await;
                     last_update = std::time::Instant::now();
                 }
 
@@ -227,11 +232,7 @@ impl DiscoveryService {
         {
             let mut sessions = sessions.write().await;
             if let Some(session) = sessions.get_mut(&session_id) {
-                session.update_progress(
-                    files_found,
-                    files_processed,
-                    files_with_errors,
-                );
+                session.update_progress(files_found, files_processed, files_with_errors);
                 session.set_current_directory(None);
                 session.mark_completed();
             }
@@ -247,8 +248,9 @@ impl DiscoveryService {
         session_id: Uuid,
     ) -> Result<Option<DiscoveredFile>, DiscoveryError> {
         // Get file metadata
-        let metadata = std::fs::metadata(path).map_err(|e| DiscoveryError::IoError(e.to_string()))?;
-        
+        let metadata =
+            std::fs::metadata(path).map_err(|e| DiscoveryError::IoError(e.to_string()))?;
+
         // Get file extension
         let extension = path
             .extension()
@@ -300,11 +302,7 @@ impl DiscoveryService {
     ) {
         let mut sessions = sessions.write().await;
         if let Some(session) = sessions.get_mut(&session_id) {
-            session.update_progress(
-                files_found,
-                files_processed,
-                files_with_errors,
-            );
+            session.update_progress(files_found, files_processed, files_with_errors);
             session.set_current_directory(current_directory);
         }
     }
@@ -313,12 +311,12 @@ impl DiscoveryService {
     pub async fn cleanup_old_sessions(&self, max_age_hours: u64) -> Result<usize, DiscoveryError> {
         let mut sessions = self.sessions.write().await;
         let cutoff = chrono::Utc::now() - chrono::Duration::hours(max_age_hours as i64);
-        
+
         let initial_count = sessions.len();
         sessions.retain(|_, session| {
             session.started_at > cutoff || matches!(session.status, DiscoveryStatus::Scanning)
         });
-        
+
         Ok(initial_count - sessions.len())
     }
 }
@@ -326,9 +324,9 @@ impl DiscoveryService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
     use std::fs::File;
     use std::io::Write;
+    use tempfile::TempDir;
 
     fn create_test_file(dir: &TempDir, filename: &str, content: &[u8]) -> PathBuf {
         let file_path = dir.path().join(filename);
@@ -339,68 +337,82 @@ mod tests {
 
     #[tokio::test]
     async fn test_discovery_service_creation() {
-        let blake3_service = Arc::new(Blake3Service::new(crate::models::hashing::HashConfig::default()));
+        let blake3_service = Arc::new(Blake3Service::new(
+            crate::models::hashing::HashConfig::default(),
+        ));
         let service = DiscoveryService::new(blake3_service);
-        
+
         let sessions = service.get_all_sessions().await;
         assert!(sessions.is_empty());
     }
 
     #[tokio::test]
     async fn test_discovery_config_validation() {
-        let blake3_service = Arc::new(Blake3Service::new(crate::models::hashing::HashConfig::default()));
+        let blake3_service = Arc::new(Blake3Service::new(
+            crate::models::hashing::HashConfig::default(),
+        ));
         let service = DiscoveryService::new(blake3_service);
-        
+
         // Test with non-existent path
         let config = DiscoveryConfig {
             root_path: PathBuf::from("/non/existent/path"),
             ..Default::default()
         };
-        
+
         let result = service.start_discovery(config).await;
         assert!(matches!(result, Err(DiscoveryError::InvalidPath(_))));
     }
 
     #[tokio::test]
     async fn test_discovery_session_management() {
-        let blake3_service = Arc::new(Blake3Service::new(crate::models::hashing::HashConfig::default()));
+        let blake3_service = Arc::new(Blake3Service::new(
+            crate::models::hashing::HashConfig::default(),
+        ));
         let service = DiscoveryService::new(blake3_service);
-        
+
         let temp_dir = TempDir::new().unwrap();
         let config = DiscoveryConfig {
             root_path: temp_dir.path().to_path_buf(),
             ..Default::default()
         };
-        
+
         // Start discovery
         let session_id = service.start_discovery(config).await.unwrap();
-        
+
         // Check session exists
         let session = service.get_session_status(session_id).await.unwrap();
-        assert!(matches!(session.status, DiscoveryStatus::Scanning | DiscoveryStatus::Completed));
-        
+        assert!(matches!(
+            session.status,
+            DiscoveryStatus::Scanning | DiscoveryStatus::Completed
+        ));
+
         // Stop discovery
         service.stop_discovery(session_id).await.unwrap();
-        
+
         // Check session was stopped
         let session = service.get_session_status(session_id).await.unwrap();
-        assert!(matches!(session.status, DiscoveryStatus::Stopped | DiscoveryStatus::Completed));
+        assert!(matches!(
+            session.status,
+            DiscoveryStatus::Stopped | DiscoveryStatus::Completed
+        ));
     }
 
     #[tokio::test]
     async fn test_already_in_progress() {
-        let blake3_service = Arc::new(Blake3Service::new(crate::models::hashing::HashConfig::default()));
+        let blake3_service = Arc::new(Blake3Service::new(
+            crate::models::hashing::HashConfig::default(),
+        ));
         let service = DiscoveryService::new(blake3_service);
-        
+
         let temp_dir = TempDir::new().unwrap();
         let config = DiscoveryConfig {
             root_path: temp_dir.path().to_path_buf(),
             ..Default::default()
         };
-        
+
         // Start first discovery
         let _session_id1 = service.start_discovery(config.clone()).await.unwrap();
-        
+
         // Try to start second discovery (should fail)
         let result = service.start_discovery(config).await;
         assert!(matches!(result, Err(DiscoveryError::AlreadyInProgress)));
@@ -409,62 +421,76 @@ mod tests {
     #[tokio::test]
     async fn test_raw_file_detection() {
         let temp_dir = TempDir::new().unwrap();
-        
+
         // Create test files
         create_test_file(&temp_dir, "test.cr3", b"ftypcr3 test content");
         create_test_file(&temp_dir, "test.raf", b"FUJIFILMCCD-RAW test content");
-        create_test_file(&temp_dir, "test.arw", b"\x00\x00\x00\x18ftyparw test content");
+        create_test_file(
+            &temp_dir,
+            "test.arw",
+            b"\x00\x00\x00\x18ftyparw test content",
+        );
         create_test_file(&temp_dir, "test.jpg", b"not a raw file");
-        
+
         let session_id = Uuid::new_v4();
         let formats = vec![RawFormat::CR3, RawFormat::RAF, RawFormat::ARW];
-        
+
         // Test CR3 file
         let cr3_path = temp_dir.path().join("test.cr3");
-        let result = DiscoveryService::check_raw_file(&cr3_path, &formats, session_id).await.unwrap();
+        let result = DiscoveryService::check_raw_file(&cr3_path, &formats, session_id)
+            .await
+            .unwrap();
         assert!(result.is_some());
         assert_eq!(result.unwrap().format, RawFormat::CR3);
-        
+
         // Test RAF file
         let raf_path = temp_dir.path().join("test.raf");
-        let result = DiscoveryService::check_raw_file(&raf_path, &formats, session_id).await.unwrap();
+        let result = DiscoveryService::check_raw_file(&raf_path, &formats, session_id)
+            .await
+            .unwrap();
         assert!(result.is_some());
         assert_eq!(result.unwrap().format, RawFormat::RAF);
-        
+
         // Test ARW file
         let arw_path = temp_dir.path().join("test.arw");
-        let result = DiscoveryService::check_raw_file(&arw_path, &formats, session_id).await.unwrap();
+        let result = DiscoveryService::check_raw_file(&arw_path, &formats, session_id)
+            .await
+            .unwrap();
         assert!(result.is_some());
         assert_eq!(result.unwrap().format, RawFormat::ARW);
-        
+
         // Test non-RAW file
         let jpg_path = temp_dir.path().join("test.jpg");
-        let result = DiscoveryService::check_raw_file(&jpg_path, &formats, session_id).await.unwrap();
+        let result = DiscoveryService::check_raw_file(&jpg_path, &formats, session_id)
+            .await
+            .unwrap();
         assert!(result.is_none());
     }
 
     #[tokio::test]
     async fn test_cleanup_old_sessions() {
-        let blake3_service = Arc::new(Blake3Service::new(crate::models::hashing::HashConfig::default()));
+        let blake3_service = Arc::new(Blake3Service::new(
+            crate::models::hashing::HashConfig::default(),
+        ));
         let service = DiscoveryService::new(blake3_service);
-        
+
         let temp_dir = TempDir::new().unwrap();
         let config = DiscoveryConfig {
             root_path: temp_dir.path().to_path_buf(),
             ..Default::default()
         };
-        
+
         // Start a session
         let session_id = service.start_discovery(config).await.unwrap();
-        
+
         // Should have one session
         let sessions = service.get_all_sessions().await;
         assert_eq!(sessions.len(), 1);
-        
+
         // Cleanup with 0 hours (should remove non-scanning sessions)
         // Note: This test might be flaky depending on timing
         let cleaned = service.cleanup_old_sessions(0).await.unwrap();
-        
+
         // Session might still be scanning, so cleanup count could be 0
         assert!(cleaned >= 0);
     }

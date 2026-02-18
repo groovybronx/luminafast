@@ -1,6 +1,6 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 /// Types de previews disponibles (pyramide d'images)
@@ -34,8 +34,8 @@ impl PreviewType {
 
     pub fn max_file_size(&self) -> u64 {
         match self {
-            PreviewType::Thumbnail => 50 * 1024,  // 50KB
-            PreviewType::Standard => 500 * 1024,  // 500KB
+            PreviewType::Thumbnail => 50 * 1024,      // 50KB
+            PreviewType::Standard => 500 * 1024,      // 500KB
             PreviewType::OneToOne => 2 * 1024 * 1024, // 2MB
         }
     }
@@ -82,7 +82,7 @@ impl PreviewConfig {
     pub fn previews_dir(&self) -> PathBuf {
         self.catalog_dir.join("Previews.lrdata")
     }
-    
+
     /// Récupère le répertoire pour un type de preview
     pub fn preview_type_dir(&self, preview_type: PreviewType) -> PathBuf {
         self.previews_dir().join(preview_type.subdir_name())
@@ -194,7 +194,7 @@ pub enum PreviewError {
     CorruptedFile { path: String },
 
     #[error("Erreur de traitement RAW: {message}")]
-    ProcessingError { message: String }, 
+    ProcessingError { message: String },
 
     #[error("Erreur d'écriture preview: {path}")]
     WriteError { path: String },
@@ -204,10 +204,9 @@ pub enum PreviewError {
 
     #[error("Timeout génération: {timeout}s")]
     GenerationTimeout { timeout: u64 },
-    
-/*     #[error("Mémoire insuffisante pour traitement")]
+
+    /*     #[error("Mémoire insuffisante pour traitement")]
     OutOfMemory, */
-    
     #[error("Erreur I/O: {message}")]
     IoError { message: String },
 }
@@ -284,7 +283,7 @@ pub struct CacheCleanupConfig {
 impl Default for CacheCleanupConfig {
     fn default() -> Self {
         Self {
-            max_cache_size: 2 * 1024 * 1024 * 1024,  // 2GB
+            max_cache_size: 2 * 1024 * 1024 * 1024, // 2GB
             max_age_days: 30,
             max_previews_per_type: 10000,
             cleanup_interval_hours: 24,
@@ -302,15 +301,15 @@ mod tests {
         assert_eq!(PreviewType::Thumbnail.default_size(), (240, 240));
         assert_eq!(PreviewType::Standard.default_size(), (1440, 1080));
         assert_eq!(PreviewType::OneToOne.default_size(), (0, 0)); // Résolution native
-        
+
         assert_eq!(PreviewType::Thumbnail.jpeg_quality(), 75);
         assert_eq!(PreviewType::Standard.jpeg_quality(), 85);
         assert_eq!(PreviewType::OneToOne.jpeg_quality(), 90);
-        
+
         assert_eq!(PreviewType::Thumbnail.max_file_size(), 50 * 1024);
         assert_eq!(PreviewType::Standard.max_file_size(), 500 * 1024);
         assert_eq!(PreviewType::OneToOne.max_file_size(), 2 * 1024 * 1024);
-        
+
         assert_eq!(PreviewType::Thumbnail.subdir_name(), "thumbnails");
         assert_eq!(PreviewType::Standard.subdir_name(), "standard");
         assert_eq!(PreviewType::OneToOne.subdir_name(), "native");
@@ -340,7 +339,7 @@ mod tests {
 
         let serialized = serde_json::to_string(&result).unwrap();
         let deserialized: PreviewResult = serde_json::from_str(&serialized).unwrap();
-        
+
         assert_eq!(result.preview_type, deserialized.preview_type);
         assert_eq!(result.size, deserialized.size);
         assert_eq!(result.file_size, deserialized.file_size);
@@ -348,10 +347,12 @@ mod tests {
 
     #[test]
     fn test_preview_error_display() {
-        let error = PreviewError::UnsupportedFormat { format: "cr3".to_string() };
+        let error = PreviewError::UnsupportedFormat {
+            format: "cr3".to_string(),
+        };
         assert!(error.to_string().contains("cr3"));
 
-        let error = PreviewError::GenerationTimeout { timeout: 30 };
+        let error = PreviewError::GenerationTimeout { timeout: 30u64 };
         assert!(error.to_string().contains("30s"));
     }
 

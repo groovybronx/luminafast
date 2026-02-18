@@ -1,12 +1,12 @@
 use crate::models::preview::*;
+use chrono::Utc;
+use rayon::prelude::*;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::{RwLock, mpsc};
-use chrono::Utc;
+use tokio::sync::{mpsc, RwLock};
 use uuid::Uuid;
-use rayon::prelude::*;
-use std::collections::HashMap;
 
 /// Service de génération de previews pour fichiers RAW
 pub struct PreviewService {
@@ -25,19 +25,24 @@ impl PreviewService {
     pub fn new(config: PreviewConfig) -> Result<Self, PreviewError> {
         // Créer les répertoires de previews Previews.lrdata/
         let previews_dir = config.previews_dir();
-        std::fs::create_dir_all(&previews_dir)
-            .map_err(|e| PreviewError::CacheError { 
-                message: format!("Impossible de créer le répertoire Previews.lrdata: {}", e) 
-            })?;
+        std::fs::create_dir_all(&previews_dir).map_err(|e| PreviewError::CacheError {
+            message: format!("Impossible de créer le répertoire Previews.lrdata: {}", e),
+        })?;
 
         // Créer les sous-répertoires pour chaque type de preview
-        for preview_type in [PreviewType::Thumbnail, PreviewType::Standard, PreviewType::OneToOne] {
+        for preview_type in [
+            PreviewType::Thumbnail,
+            PreviewType::Standard,
+            PreviewType::OneToOne,
+        ] {
             let type_dir = config.preview_type_dir(preview_type);
-            std::fs::create_dir_all(&type_dir)
-                .map_err(|e| PreviewError::CacheError { 
-                    message: format!("Impossible de créer le répertoire {}: {}", 
-                                   preview_type.subdir_name(), e) 
-                })?;
+            std::fs::create_dir_all(&type_dir).map_err(|e| PreviewError::CacheError {
+                message: format!(
+                    "Impossible de créer le répertoire {}: {}",
+                    preview_type.subdir_name(),
+                    e
+                ),
+            })?;
         }
 
         Ok(Self {
@@ -62,17 +67,20 @@ impl PreviewService {
         source_hash: &str,
     ) -> Result<PreviewResult, PreviewError> {
         let _start_time = Instant::now();
-        
+
         // Vérifier si la preview existe déjà en cache
-        if let Some(cached_path) = self.get_cached_preview_path(source_hash, &preview_type).await {
+        if let Some(cached_path) = self
+            .get_cached_preview_path(source_hash, &preview_type)
+            .await
+        {
             if cached_path.exists() {
-                let metadata = std::fs::metadata(&cached_path)
-                    .map_err(|e| PreviewError::IoError { 
-                        message: format!("Impossible de lire les métadonnées du cache: {}", e) 
+                let metadata =
+                    std::fs::metadata(&cached_path).map_err(|e| PreviewError::IoError {
+                        message: format!("Impossible de lire les métadonnées du cache: {}", e),
                     })?;
-                
+
                 let dimensions = self.get_image_dimensions(&cached_path)?;
-                
+
                 return Ok(PreviewResult {
                     path: cached_path.clone(),
                     preview_type,
@@ -86,13 +94,19 @@ impl PreviewService {
         }
 
         // Générer la preview
-        let result = self.generate_preview_internal(file_path, &preview_type, source_hash).await?;
-        
+        let result = self
+            .generate_preview_internal(file_path, &preview_type, source_hash)
+            .await?;
+
         // Mettre à jour le cache
         self.update_cache_metadata(&result).await?;
-        
-        log::info!("Preview générée: {:?} en {:?}", result.path, result.generation_time);
-        
+
+        log::info!(
+            "Preview générée: {:?} en {:?}",
+            result.path,
+            result.generation_time
+        );
+
         Ok(result)
     }
 
@@ -105,7 +119,7 @@ impl PreviewService {
         let batch_id = Uuid::new_v4();
         let start_time = Instant::now();
         let started_at = Utc::now();
-        
+
         let mut stats = BatchPreviewStats {
             batch_id,
             total_files: files.len(),
@@ -123,9 +137,7 @@ impl PreviewService {
             .par_iter()
             .map(|(path, hash)| {
                 let rt = tokio::runtime::Handle::current();
-                rt.block_on(async {
-                    self.generate_preview(path, preview_type, hash).await
-                })
+                rt.block_on(async { self.generate_preview(path, preview_type, hash).await })
             })
             .collect();
 
@@ -143,24 +155,34 @@ impl PreviewService {
         }
         stats.completed_at = Some(Utc::now());
 
-        log::info!("Batch preview terminé: {}/{} succès en {:?}", 
-                  stats.successful_count, stats.total_files, stats.total_duration);
+        log::info!(
+            "Batch preview terminé: {}/{} succès en {:?}",
+            stats.successful_count,
+            stats.total_files,
+            stats.total_duration
+        );
 
         Ok(stats)
     }
 
     /// Vérifie si une preview existe en cache
     pub async fn is_preview_cached(&self, source_hash: &str, preview_type: &PreviewType) -> bool {
-        let cached_path = match self.get_cached_preview_path(source_hash, preview_type).await {
+        let cached_path = match self
+            .get_cached_preview_path(source_hash, preview_type)
+            .await
+        {
             Some(path) => path,
             None => return false,
         };
-        
+
         cached_path.exists()
     }
 
     /// Nettoie le cache des previews
-    pub async fn cleanup_cache(&self, cleanup_config: &CacheCleanupConfig) -> Result<(), PreviewError> {
+    pub async fn cleanup_cache(
+        &self,
+        cleanup_config: &CacheCleanupConfig,
+    ) -> Result<(), PreviewError> {
         let mut metadata = self.cache_metadata.write().await;
         let mut removed_count = 0;
         let mut removed_size = 0u64;
@@ -180,7 +202,11 @@ impl PreviewService {
         for hash in to_remove {
             if let Some(meta) = metadata.remove(&hash) {
                 if let Err(e) = std::fs::remove_file(&meta.path) {
-                    log::warn!("Impossible de supprimer le fichier preview {:?}: {}", meta.path, e);
+                    log::warn!(
+                        "Impossible de supprimer le fichier preview {:?}: {}",
+                        meta.path,
+                        e
+                    );
                 } else {
                     removed_count += 1;
                     removed_size += meta.file_size;
@@ -194,7 +220,11 @@ impl PreviewService {
         stats.total_size -= removed_size;
         stats.last_cleanup = Some(now);
 
-        log::info!("Cache cleanup: {} previews supprimées ({} octets)", removed_count, removed_size);
+        log::info!(
+            "Cache cleanup: {} previews supprimées ({} octets)",
+            removed_count,
+            removed_size
+        );
 
         Ok(())
     }
@@ -205,18 +235,22 @@ impl PreviewService {
     }
 
     /// Supprime une preview spécifique du cache
-    pub async fn remove_preview(&self, source_hash: &str, preview_type: &PreviewType) -> Result<(), PreviewError> {
-        let cached_path = self.get_cached_preview_path(source_hash, preview_type)
+    pub async fn remove_preview(
+        &self,
+        source_hash: &str,
+        preview_type: &PreviewType,
+    ) -> Result<(), PreviewError> {
+        let cached_path = self
+            .get_cached_preview_path(source_hash, preview_type)
             .await
-            .ok_or_else(|| PreviewError::CacheError { 
-                message: "Preview non trouvée en cache".to_string() 
+            .ok_or_else(|| PreviewError::CacheError {
+                message: "Preview non trouvée en cache".to_string(),
             })?;
 
         if cached_path.exists() {
-            std::fs::remove_file(&cached_path)
-                .map_err(|e| PreviewError::IoError { 
-                    message: format!("Impossible de supprimer la preview: {}", e) 
-                })?;
+            std::fs::remove_file(&cached_path).map_err(|e| PreviewError::IoError {
+                message: format!("Impossible de supprimer la preview: {}", e),
+            })?;
         }
 
         // Supprimer des métadonnées
@@ -236,11 +270,11 @@ impl PreviewService {
         source_hash: &str,
     ) -> Result<PreviewResult, PreviewError> {
         let start_time = Instant::now();
-        
+
         // Vérifier que le fichier existe
         if !file_path.exists() {
-            return Err(PreviewError::CorruptedFile { 
-                path: file_path.to_string_lossy().to_string() 
+            return Err(PreviewError::CorruptedFile {
+                path: file_path.to_string_lossy().to_string(),
             });
         }
 
@@ -248,39 +282,48 @@ impl PreviewService {
         let _extension = file_path
             .extension()
             .and_then(|ext| ext.to_str())
-            .ok_or_else(|| PreviewError::UnsupportedFormat { 
-                format: "inconnu".to_string() 
+            .ok_or_else(|| PreviewError::UnsupportedFormat {
+                format: "inconnu".to_string(),
             })?;
 
         // Générer la preview selon le type
         let (output_path, dimensions) = match preview_type {
             PreviewType::Thumbnail => {
                 let size = PreviewType::Thumbnail.default_size();
-                let output_path = self.get_cached_preview_path(source_hash, preview_type).await
-                    .ok_or_else(|| PreviewError::CacheError { 
-                        message: "Impossible de déterminer le chemin de cache".to_string() 
+                let output_path = self
+                    .get_cached_preview_path(source_hash, preview_type)
+                    .await
+                    .ok_or_else(|| PreviewError::CacheError {
+                        message: "Impossible de déterminer le chemin de cache".to_string(),
                     })?;
-                
-                self.generate_thumbnail(file_path, &output_path, size).await?;
+
+                self.generate_thumbnail(file_path, &output_path, size)
+                    .await?;
                 (output_path, size)
             }
             PreviewType::Standard => {
                 let size = PreviewType::Standard.default_size();
-                let output_path = self.get_cached_preview_path(source_hash, preview_type).await
-                    .ok_or_else(|| PreviewError::CacheError { 
-                        message: "Impossible de déterminer le chemin de cache".to_string() 
+                let output_path = self
+                    .get_cached_preview_path(source_hash, preview_type)
+                    .await
+                    .ok_or_else(|| PreviewError::CacheError {
+                        message: "Impossible de déterminer le chemin de cache".to_string(),
                     })?;
-                
-                self.generate_preview_image(file_path, &output_path, size).await?;
+
+                self.generate_preview_image(file_path, &output_path, size)
+                    .await?;
                 (output_path, size)
             }
             PreviewType::OneToOne => {
-                let output_path = self.get_cached_preview_path(source_hash, preview_type).await
-                    .ok_or_else(|| PreviewError::CacheError { 
-                        message: "Impossible de déterminer le chemin de cache".to_string() 
+                let output_path = self
+                    .get_cached_preview_path(source_hash, preview_type)
+                    .await
+                    .ok_or_else(|| PreviewError::CacheError {
+                        message: "Impossible de déterminer le chemin de cache".to_string(),
                     })?;
-                
-                self.generate_native_preview(file_path, &output_path).await?;
+
+                self.generate_native_preview(file_path, &output_path)
+                    .await?;
                 // Pour 1:1, les dimensions sont celles de l'image originale
                 let dimensions = self.get_image_dimensions(file_path)?;
                 (output_path, dimensions)
@@ -288,10 +331,9 @@ impl PreviewService {
         };
 
         // Récupérer les métadonnées du fichier généré
-        let metadata = std::fs::metadata(&output_path)
-            .map_err(|e| PreviewError::IoError { 
-                message: format!("Impossible de lire les métadonnées de la preview: {}", e) 
-            })?;
+        let metadata = std::fs::metadata(&output_path).map_err(|e| PreviewError::IoError {
+            message: format!("Impossible de lire les métadonnées de la preview: {}", e),
+        })?;
 
         Ok(PreviewResult {
             path: output_path,
@@ -313,10 +355,12 @@ impl PreviewService {
     ) -> Result<(), PreviewError> {
         // Utiliser rsraw pour les fichiers RAW
         if self.is_raw_file(input_path).await {
-            self.generate_raw_thumbnail(input_path, output_path, size).await
+            self.generate_raw_thumbnail(input_path, output_path, size)
+                .await
         } else {
             // Utiliser image crate pour les fichiers standards
-            self.generate_standard_thumbnail(input_path, output_path, size).await
+            self.generate_standard_thumbnail(input_path, output_path, size)
+                .await
         }
     }
 
@@ -328,9 +372,11 @@ impl PreviewService {
         size: (u32, u32),
     ) -> Result<(), PreviewError> {
         if self.is_raw_file(input_path).await {
-            self.generate_raw_preview(input_path, output_path, size).await
+            self.generate_raw_preview(input_path, output_path, size)
+                .await
         } else {
-            self.generate_standard_preview(input_path, output_path, size).await
+            self.generate_standard_preview(input_path, output_path, size)
+                .await
         }
     }
 
@@ -339,7 +385,8 @@ impl PreviewService {
         if let Some(extension) = path.extension() {
             if let Some(ext_str) = extension.to_str() {
                 let ext_lower = ext_str.to_lowercase();
-                matches!(ext_lower.as_str(), 
+                matches!(
+                    ext_lower.as_str(),
                     "cr3" | "cr2" | "raf" | "arw" | "nef" | "orf" | "pef" | "rw2" | "dng"
                 )
             } else {
@@ -359,7 +406,8 @@ impl PreviewService {
     ) -> Result<(), PreviewError> {
         // TODO: Implémenter avec rsraw
         // Pour l'instant, utiliser une implémentation placeholder
-        self.generate_standard_thumbnail(input_path, output_path, size).await
+        self.generate_standard_thumbnail(input_path, output_path, size)
+            .await
     }
 
     /// Génère une preview pour fichier RAW avec rsraw
@@ -371,7 +419,8 @@ impl PreviewService {
     ) -> Result<(), PreviewError> {
         // TODO: Implémenter avec rsraw
         // Pour l'instant, utiliser une implémentation placeholder
-        self.generate_standard_preview(input_path, output_path, size).await
+        self.generate_standard_preview(input_path, output_path, size)
+            .await
     }
 
     /// Génère un thumbnail pour fichier standard avec image crate
@@ -381,10 +430,9 @@ impl PreviewService {
         output_path: &Path,
         size: (u32, u32),
     ) -> Result<(), PreviewError> {
-        let img = image::open(input_path)
-            .map_err(|e| PreviewError::ProcessingError { 
-                message: format!("Impossible d'ouvrir l'image: {}", e) 
-            })?;
+        let img = image::open(input_path).map_err(|e| PreviewError::ProcessingError {
+            message: format!("Impossible d'ouvrir l'image: {}", e),
+        })?;
 
         // Redimensionner en gardant le ratio et en utilisant 240px comme bord long
         let (original_width, original_height) = (img.width(), img.height());
@@ -393,12 +441,13 @@ impl PreviewService {
         let new_height = (original_height as f32 * scale_factor) as u32;
 
         let resized = img.resize(new_width, new_height, image::imageops::FilterType::Lanczos3);
-        
+
         // Sauvegarder avec la qualité appropriée pour thumbnail
         // Pour l'instant, utiliser save() simple - la qualité JPEG sera gérée plus tard
-        resized.save(output_path)
-            .map_err(|e| PreviewError::WriteError { 
-                path: output_path.to_string_lossy().to_string()
+        resized
+            .save(output_path)
+            .map_err(|e| PreviewError::WriteError {
+                path: output_path.to_string_lossy().to_string(),
             })?;
 
         Ok(())
@@ -411,10 +460,9 @@ impl PreviewService {
         output_path: &Path,
         size: (u32, u32),
     ) -> Result<(), PreviewError> {
-        let img = image::open(input_path)
-            .map_err(|e| PreviewError::ProcessingError { 
-                message: format!("Impossible d'ouvrir l'image: {}", e) 
-            })?;
+        let img = image::open(input_path).map_err(|e| PreviewError::ProcessingError {
+            message: format!("Impossible d'ouvrir l'image: {}", e),
+        })?;
 
         // Pour preview standard: 1440px bord long
         let (original_width, original_height) = (img.width(), img.height());
@@ -423,12 +471,13 @@ impl PreviewService {
         let new_height = (original_height as f32 * scale_factor) as u32;
 
         let resized = img.resize(new_width, new_height, image::imageops::FilterType::Lanczos3);
-        
+
         // Sauvegarder avec la qualité appropriée pour preview standard
         // Pour l'instant, utiliser save() simple - la qualité JPEG sera gérée plus tard
-        resized.save(output_path)
-            .map_err(|e| PreviewError::WriteError { 
-                path: output_path.to_string_lossy().to_string()
+        resized
+            .save(output_path)
+            .map_err(|e| PreviewError::WriteError {
+                path: output_path.to_string_lossy().to_string(),
             })?;
 
         Ok(())
@@ -440,23 +489,26 @@ impl PreviewService {
         input_path: &Path,
         output_path: &Path,
     ) -> Result<(), PreviewError> {
-        let img = image::open(input_path)
-            .map_err(|e| PreviewError::ProcessingError { 
-                message: format!("Impossible d'ouvrir l'image: {}", e) 
-            })?;
+        let img = image::open(input_path).map_err(|e| PreviewError::ProcessingError {
+            message: format!("Impossible d'ouvrir l'image: {}", e),
+        })?;
 
         // Pour preview 1:1: résolution native, pas de redimensionnement
         // Sauvegarder avec la qualité maximale pour zoom pixel
         img.save(output_path)
-            .map_err(|e| PreviewError::WriteError { 
-                path: output_path.to_string_lossy().to_string()
+            .map_err(|e| PreviewError::WriteError {
+                path: output_path.to_string_lossy().to_string(),
             })?;
 
         Ok(())
     }
 
     /// Récupère le chemin de cache pour une preview
-    pub async fn get_cached_preview_path(&self, source_hash: &str, preview_type: &PreviewType) -> Option<PathBuf> {
+    pub async fn get_cached_preview_path(
+        &self,
+        source_hash: &str,
+        preview_type: &PreviewType,
+    ) -> Option<PathBuf> {
         if source_hash.len() < 2 {
             return None;
         }
@@ -464,7 +516,7 @@ impl PreviewService {
         let type_dir = self.config.preview_type_dir(*preview_type);
         let hash_prefix = &source_hash[..2];
         let filename = format!("{}.jpg", source_hash);
-        
+
         Some(type_dir.join(hash_prefix).join(filename))
     }
 
@@ -490,7 +542,7 @@ impl PreviewService {
         // Mettre à jour les statistiques
         stats.total_previews = metadata.len();
         stats.total_size += result.file_size;
-        
+
         match result.preview_type {
             PreviewType::Thumbnail => stats.thumbnail_count += 1,
             PreviewType::Standard => stats.preview_count += 1,
@@ -502,11 +554,10 @@ impl PreviewService {
 
     /// Récupère les dimensions d'une image
     fn get_image_dimensions(&self, image_path: &Path) -> Result<(u32, u32), PreviewError> {
-        let img = image::open(image_path)
-            .map_err(|e| PreviewError::ProcessingError { 
-                message: format!("Impossible d'ouvrir l'image pour dimensions: {}", e) 
-            })?;
-        
+        let img = image::open(image_path).map_err(|e| PreviewError::ProcessingError {
+            message: format!("Impossible d'ouvrir l'image pour dimensions: {}", e),
+        })?;
+
         Ok((img.width(), img.height()))
     }
 }
@@ -514,8 +565,8 @@ impl PreviewService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
     use std::path::PathBuf;
+    use tempfile::TempDir;
 
     fn create_test_service() -> (PreviewService, TempDir) {
         let temp_dir = TempDir::new().unwrap();
@@ -523,7 +574,7 @@ mod tests {
             catalog_dir: temp_dir.path().to_path_buf(),
             ..Default::default()
         };
-        
+
         let service = PreviewService::new(config).unwrap();
         (service, temp_dir)
     }
@@ -532,7 +583,7 @@ mod tests {
     async fn test_preview_service_creation() {
         let (service, _temp_dir) = create_test_service();
         let cache_info = service.get_cache_info().await;
-        
+
         assert_eq!(cache_info.total_previews, 0);
         assert_eq!(cache_info.total_size, 0);
     }
@@ -540,10 +591,12 @@ mod tests {
     #[tokio::test]
     async fn test_cached_preview_path() {
         let (service, _temp_dir) = create_test_service();
-        
-        let path = service.get_cached_preview_path("b3a1c2d3e4f5", &PreviewType::Thumbnail).await;
+
+        let path = service
+            .get_cached_preview_path("b3a1c2d3e4f5", &PreviewType::Thumbnail)
+            .await;
         assert!(path.is_some());
-        
+
         let path = path.unwrap();
         assert!(path.to_string_lossy().contains("thumbnails"));
         assert!(path.to_string_lossy().contains("b3"));
@@ -553,7 +606,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_raw_file() {
         let (service, _temp_dir) = create_test_service();
-        
+
         assert!(service.is_raw_file(&PathBuf::from("test.cr3")).await);
         assert!(service.is_raw_file(&PathBuf::from("test.RAF")).await);
         assert!(service.is_raw_file(&PathBuf::from("test.arw")).await);
@@ -566,15 +619,15 @@ mod tests {
         assert_eq!(PreviewType::Thumbnail.default_size(), (240, 240));
         assert_eq!(PreviewType::Standard.default_size(), (1440, 1080));
         assert_eq!(PreviewType::OneToOne.default_size(), (0, 0)); // Résolution native
-        
+
         assert_eq!(PreviewType::Thumbnail.jpeg_quality(), 75);
         assert_eq!(PreviewType::Standard.jpeg_quality(), 85);
         assert_eq!(PreviewType::OneToOne.jpeg_quality(), 90);
-        
+
         assert_eq!(PreviewType::Thumbnail.max_file_size(), 50 * 1024);
         assert_eq!(PreviewType::Standard.max_file_size(), 500 * 1024);
         assert_eq!(PreviewType::OneToOne.max_file_size(), 2 * 1024 * 1024);
-        
+
         assert_eq!(PreviewType::Thumbnail.subdir_name(), "thumbnails");
         assert_eq!(PreviewType::Standard.subdir_name(), "standard");
         assert_eq!(PreviewType::OneToOne.subdir_name(), "native");
@@ -604,7 +657,7 @@ mod tests {
 
         let serialized = serde_json::to_string(&result).unwrap();
         let deserialized: PreviewResult = serde_json::from_str(&serialized).unwrap();
-        
+
         assert_eq!(result.preview_type, deserialized.preview_type);
         assert_eq!(result.size, deserialized.size);
         assert_eq!(result.file_size, deserialized.file_size);
@@ -612,10 +665,12 @@ mod tests {
 
     #[test]
     fn test_preview_error_display() {
-        let error = PreviewError::UnsupportedFormat { format: "cr3".to_string() };
+        let error = PreviewError::UnsupportedFormat {
+            format: "cr3".to_string(),
+        };
         assert!(error.to_string().contains("cr3"));
-        
-        let error = PreviewError::GenerationTimeout { timeout: 30 };
+
+        let error = PreviewError::GenerationTimeout { timeout: 30u64 };
         assert!(error.to_string().contains("30s"));
     }
 
@@ -644,7 +699,7 @@ mod tests {
 
         let serialized = serde_json::to_string(&stats).unwrap();
         let deserialized: BatchPreviewStats = serde_json::from_str(&serialized).unwrap();
-        
+
         assert_eq!(stats.total_files, deserialized.total_files);
         assert_eq!(stats.successful_count, deserialized.successful_count);
         assert_eq!(stats.failed_count, deserialized.failed_count);
@@ -666,7 +721,7 @@ mod tests {
 
         let serialized = serde_json::to_string(&metadata).unwrap();
         let deserialized: PreviewMetadata = serde_json::from_str(&serialized).unwrap();
-        
+
         assert_eq!(metadata.preview_type, deserialized.preview_type);
         assert_eq!(metadata.status, deserialized.status);
         assert_eq!(metadata.access_count, deserialized.access_count);
@@ -686,7 +741,7 @@ mod tests {
 
         let serialized = serde_json::to_string(&event).unwrap();
         let deserialized: PreviewProgressEvent = serde_json::from_str(&serialized).unwrap();
-        
+
         assert_eq!(deserialized.preview_type, PreviewType::Thumbnail);
         assert_eq!(deserialized.progress, 0.5);
         assert_eq!(deserialized.message, "Generating preview");
@@ -705,7 +760,7 @@ mod tests {
 
         let serialized = serde_json::to_string(&info).unwrap();
         let deserialized: PreviewCacheInfo = serde_json::from_str(&serialized).unwrap();
-        
+
         assert_eq!(info.total_previews, deserialized.total_previews);
         assert_eq!(info.thumbnail_count, deserialized.thumbnail_count);
         assert_eq!(info.preview_count, deserialized.preview_count);
@@ -722,7 +777,7 @@ mod tests {
 
         let serialized = serde_json::to_string(&config).unwrap();
         let deserialized: PreviewConfig = serde_json::from_str(&serialized).unwrap();
-        
+
         assert_eq!(config.catalog_dir, deserialized.catalog_dir);
         assert_eq!(config.parallel_threads, deserialized.parallel_threads);
         assert_eq!(config.generation_timeout, deserialized.generation_timeout);

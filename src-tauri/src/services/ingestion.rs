@@ -1,15 +1,15 @@
+use crate::models::catalog::{NewExifMetadata, NewImage};
 use crate::models::discovery::{
-    DiscoveredFile, IngestionResult, IngestionMetadata, BasicExif, FormatDetails,
-    BatchIngestionRequest, BatchIngestionResult, DiscoveryError,
+    BasicExif, BatchIngestionRequest, BatchIngestionResult, DiscoveredFile, DiscoveryError,
+    FormatDetails, IngestionMetadata, IngestionResult,
 };
-use crate::models::catalog::{NewImage, NewExifMetadata};
 use crate::services::blake3::Blake3Service;
+use chrono::Utc;
+use rusqlite::OptionalExtension;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 use uuid::Uuid;
-use chrono::Utc;
-use rusqlite::OptionalExtension;
 
 /// Service for ingesting discovered RAW files into the catalog
 pub struct IngestionService {
@@ -21,17 +21,20 @@ pub struct IngestionService {
 
 impl IngestionService {
     /// Create a new ingestion service
-    pub fn new(blake3_service: Arc<Blake3Service>, db: Arc<std::sync::Mutex<rusqlite::Connection>>) -> Self {
-        Self {
-            blake3_service,
-            db,
-        }
+    pub fn new(
+        blake3_service: Arc<Blake3Service>,
+        db: Arc<std::sync::Mutex<rusqlite::Connection>>,
+    ) -> Self {
+        Self { blake3_service, db }
     }
 
     /// Ingest a single discovered file
-    pub async fn ingest_file(&self, file: &DiscoveredFile) -> Result<IngestionResult, DiscoveryError> {
+    pub async fn ingest_file(
+        &self,
+        file: &DiscoveredFile,
+    ) -> Result<IngestionResult, DiscoveryError> {
         let start_time = Instant::now();
-        
+
         let mut result = IngestionResult {
             file: file.clone(),
             success: false,
@@ -49,16 +52,21 @@ impl IngestionService {
         }
 
         // Compute BLAKE3 hash
-        let hash_result = self.blake3_service.hash_file(&file.path).await
+        let hash_result = self
+            .blake3_service
+            .hash_file(&file.path)
+            .await
             .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
 
         let blake3_hash = hash_result.hash;
 
         // Extract basic EXIF metadata
         let exif_metadata = self.extract_basic_exif(&file.path).await?;
-        
+
         // Create database records
-        let database_id = self.create_image_record(file, &blake3_hash, &exif_metadata).await?;
+        let database_id = self
+            .create_image_record(file, &blake3_hash, &exif_metadata)
+            .await?;
 
         // Create ingestion metadata
         let metadata = IngestionMetadata {
@@ -80,7 +88,10 @@ impl IngestionService {
     }
 
     /// Ingest multiple files in batch
-    pub async fn batch_ingest(&self, request: &BatchIngestionRequest) -> Result<BatchIngestionResult, DiscoveryError> {
+    pub async fn batch_ingest(
+        &self,
+        request: &BatchIngestionRequest,
+    ) -> Result<BatchIngestionResult, DiscoveryError> {
         let _start_time = Instant::now();
         let mut result = BatchIngestionResult::new(request.session_id, request.file_paths.len());
 
@@ -100,14 +111,21 @@ impl IngestionService {
     }
 
     /// Check if a file already exists in the database
-    pub(crate) async fn check_file_exists(&self, file_path: &Path) -> Result<Option<i64>, DiscoveryError> {
-        let filename = file_path.file_name()
+    pub(crate) async fn check_file_exists(
+        &self,
+        file_path: &Path,
+    ) -> Result<Option<i64>, DiscoveryError> {
+        let filename = file_path
+            .file_name()
             .and_then(|name| name.to_str())
             .ok_or_else(|| DiscoveryError::InvalidPath(file_path.to_string_lossy().to_string()))?
             .to_string();
 
         // Compute BLAKE3 hash BEFORE acquiring the lock (async operation)
-        let hash_result = self.blake3_service.hash_file(file_path).await
+        let hash_result = self
+            .blake3_service
+            .hash_file(file_path)
+            .await
             .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
         let blake3_hash = hash_result.hash;
 
@@ -116,7 +134,9 @@ impl IngestionService {
             .db
             .lock()
             .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
-        let mut stmt = db.prepare("SELECT id FROM images WHERE filename = ? AND blake3_hash = ?")?;
+        let mut stmt = db
+            .prepare("SELECT id FROM images WHERE filename = ? AND blake3_hash = ?")
+            .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
         let result: Option<i64> = stmt
             .query_row((&filename, &blake3_hash), |row| row.get(0))
             .optional()
@@ -126,11 +146,14 @@ impl IngestionService {
     }
 
     /// Extract basic EXIF metadata from a RAW file
-    pub(crate) async fn extract_basic_exif(&self, file_path: &Path) -> Result<BasicExif, DiscoveryError> {
+    pub(crate) async fn extract_basic_exif(
+        &self,
+        file_path: &Path,
+    ) -> Result<BasicExif, DiscoveryError> {
         // For now, we'll implement a basic placeholder
         // In a full implementation, we would use a library like `kamadak-exif`
         // to extract real EXIF data from RAW files
-        
+
         let _file_size = std::fs::metadata(file_path)
             .map_err(|e| DiscoveryError::IoError(e.to_string()))?
             .len();
@@ -157,11 +180,14 @@ impl IngestionService {
         blake3_hash: &str,
         exif: &BasicExif,
     ) -> Result<i64, DiscoveryError> {
-        let mut db = self.db.lock()
+        let mut db = self
+            .db
+            .lock()
             .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
 
         // Start transaction
-        let transaction = db.transaction()
+        let transaction = db
+            .transaction()
             .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
 
         // Create image record
@@ -177,23 +203,25 @@ impl IngestionService {
             folder_id: None,
         };
 
-        let _rows = transaction.execute(
-            "INSERT INTO images (
+        let _rows = transaction
+            .execute(
+                "INSERT INTO images (
                 blake3_hash, filename, extension, width, height, orientation,
                 file_size_bytes, captured_at, folder_id
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                &new_image.blake3_hash,
-                &new_image.filename,
-                &new_image.extension,
-                new_image.width,
-                new_image.height,
-                new_image.orientation,
-                new_image.file_size_bytes,
-                new_image.captured_at,
-                new_image.folder_id,
-            ),
-        ).map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
+                rusqlite::params![
+                    &new_image.blake3_hash,
+                    &new_image.filename,
+                    &new_image.extension,
+                    new_image.width,
+                    new_image.height,
+                    new_image.orientation,
+                    new_image.file_size_bytes,
+                    new_image.captured_at,
+                    new_image.folder_id,
+                ],
+            )
+            .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
 
         let image_id = transaction.last_insert_rowid();
 
@@ -212,28 +240,31 @@ impl IngestionService {
             color_space: None,
         };
 
-        transaction.execute(
-            "INSERT INTO exif_metadata (
+        transaction
+            .execute(
+                "INSERT INTO exif_metadata (
                 image_id, iso, aperture, shutter_speed, focal_length,
                 lens, camera_make, camera_model, gps_lat, gps_lon, color_space
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                new_exif.image_id,
-                new_exif.iso,
-                new_exif.aperture,
-                new_exif.shutter_speed,
-                new_exif.focal_length,
-                new_exif.lens,
-                new_exif.camera_make,
-                new_exif.camera_model,
-                new_exif.gps_lat,
-                new_exif.gps_lon,
-                new_exif.color_space,
-            ),
-        ).map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
+                rusqlite::params![
+                    new_exif.image_id,
+                    new_exif.iso,
+                    new_exif.aperture,
+                    new_exif.shutter_speed,
+                    new_exif.focal_length,
+                    new_exif.lens,
+                    new_exif.camera_make,
+                    new_exif.camera_model,
+                    new_exif.gps_lat,
+                    new_exif.gps_lon,
+                    new_exif.color_space,
+                ],
+            )
+            .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
 
         // Commit transaction
-        transaction.commit()
+        transaction
+            .commit()
             .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
 
         Ok(image_id)
@@ -250,7 +281,9 @@ impl IngestionService {
                 file.mark_processed(metadata.blake3_hash.clone(), result.database_id);
             }
         } else {
-            let error_msg = result.error.as_ref()
+            let error_msg = result
+                .error
+                .as_ref()
                 .cloned()
                 .unwrap_or_else(|| "Unknown error".to_string());
             file.mark_error(error_msg);
@@ -260,7 +293,10 @@ impl IngestionService {
     }
 
     /// Get ingestion statistics for a session
-    pub async fn get_session_stats(&self, session_id: Uuid) -> Result<IngestionStats, DiscoveryError> {
+    pub async fn get_session_stats(
+        &self,
+        session_id: Uuid,
+    ) -> Result<IngestionStats, DiscoveryError> {
         // Placeholder implementation
         // In a full implementation, this would query the database for actual stats
         Ok(IngestionStats {

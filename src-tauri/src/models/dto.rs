@@ -90,7 +90,9 @@ impl From<crate::models::catalog::Image> for ImageDTO {
             height: image.height.map(|h| h as u32),
             rating: None, // Will be populated from image_state join
             flag: None,   // Will be populated from image_state join
-            captured_at: image.captured_at.map(|dt: chrono::DateTime<chrono::Utc>| dt.to_rfc3339()),
+            captured_at: image
+                .captured_at
+                .map(|dt: chrono::DateTime<chrono::Utc>| dt.to_rfc3339()),
             imported_at: image.imported_at.to_rfc3339(),
         }
     }

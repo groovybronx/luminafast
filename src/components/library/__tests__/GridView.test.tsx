@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { GridView } from '../GridView';
-import type { CatalogImage, ActiveView } from '../../../types';
+import type { CatalogImage} from '../../../types';
 import { DEFAULT_EDIT_STATE } from '../../../types';
 
 // Mock Lucide icons to avoid rendering issues

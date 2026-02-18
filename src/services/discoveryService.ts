@@ -163,7 +163,7 @@ export class DiscoveryService {
   /** Log debug messages */
   private log(message: string, data?: unknown): void {
     if (this.config.debug) {
-      console.log(`[DiscoveryService] ${message}`, data);
+      console.warn(`[DiscoveryService] ${message}`, data);
     }
   }
 
@@ -181,13 +181,19 @@ export class DiscoveryService {
   private async executeCommand<T>(
     command: string,
     args?: unknown[] | Record<string, unknown>,
-    retries: number = 0
+    retries = 0
   ): Promise<T> {
     try {
       this.log(`Executing command: ${command}`, { args, retries });
       
       const invoke = DiscoveryService.getInvoke();
-      const result = await invoke(command, args || [] as any) as T;
+      
+      // Convert array args to object format for Tauri invoke
+      const invokeArgs = Array.isArray(args) 
+        ? { args } 
+        : args || undefined;
+      
+      const result = await invoke(command, invokeArgs) as T;
       
       this.log(`Command succeeded: ${command}`, { result });
       return result;
@@ -668,7 +674,15 @@ export class DiscoveryService {
       this.eventListeners.set(sessionId, new Set());
     }
 
-    const listeners = this.eventListeners.get(sessionId)!;
+    const listeners = this.eventListeners.get(sessionId);
+    if (!listeners) {
+      throw new ServiceError(
+        ServiceErrorType.UNKNOWN_ERROR,
+        'Session listeners not found',
+        undefined,
+        { sessionId }
+      );
+    }
     listeners.add(listener);
 
     // Return unsubscribe function

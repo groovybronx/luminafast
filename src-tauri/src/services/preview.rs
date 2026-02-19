@@ -404,10 +404,118 @@ impl PreviewService {
         output_path: &Path,
         size: (u32, u32),
     ) -> Result<(), PreviewError> {
-        // TODO: Implémenter avec rsraw
-        // Pour l'instant, utiliser une implémentation placeholder
-        self.generate_standard_thumbnail(input_path, output_path, size)
-            .await
+        // Créer les répertoires parents si nécessaire
+        if let Some(parent) = output_path.parent() {
+            tokio::fs::create_dir_all(parent)
+                .await
+                .map_err(|e| PreviewError::IoError {
+                    message: format!("Impossible de créer le répertoire de sortie: {}", e),
+                })?;
+        }
+
+        // Lire le fichier RAW
+        let data = tokio::fs::read(input_path).await.map_err(|e| {
+            PreviewError::IoError {
+                message: format!("Impossible de lire le fichier RAW: {}", e),
+            }
+        })?;
+
+        // Ouvrir le fichier RAW avec rsraw
+        let mut raw_image = rsraw::RawImage::open(&data).map_err(|e| {
+            PreviewError::ProcessingError {
+                message: format!("Erreur ouverture fichier RAW: {:?}", e),
+            }
+        })?;
+
+        // Essayer d'extraire les thumbnails embarqués
+        match raw_image.extract_thumbs() {
+            Ok(thumbs) if !thumbs.is_empty() => {
+                // Utiliser le plus grand thumbnail disponible
+                let thumb = thumbs.iter().max_by_key(|t| t.width * t.height).unwrap();
+
+                // Si le thumbnail est déjà assez petit, l'utiliser directement
+                if thumb.width <= size.0 && thumb.height <= size.0 {
+                    // Écrire le thumbnail directement
+                    tokio::fs::write(output_path, &thumb.data)
+                        .await
+                        .map_err(|e| PreviewError::WriteError {
+                            path: output_path.to_string_lossy().to_string(),
+                        })?;
+                } else {
+                    // Sinon, redimensionner le thumbnail
+                    let img = image::load_from_memory(&thumb.data).map_err(|e| {
+                        PreviewError::ProcessingError {
+                            message: format!("Impossible de charger le thumbnail: {}", e),
+                        }
+                    })?;
+
+                    let (original_width, original_height) = (img.width(), img.height());
+                    let scale_factor = size.0 as f32 / original_width.max(original_height) as f32;
+                    let new_width = (original_width as f32 * scale_factor) as u32;
+                    let new_height = (original_height as f32 * scale_factor) as u32;
+
+                    let resized = img.resize(
+                        new_width,
+                        new_height,
+                        image::imageops::FilterType::Lanczos3,
+                    );
+
+                    resized
+                        .save(output_path)
+                        .map_err(|e| PreviewError::WriteError {
+                            path: output_path.to_string_lossy().to_string(),
+                        })?;
+                }
+                Ok(())
+            }
+            _ => {
+                // Pas de thumbnail embarqué, traiter le RAW complet
+                raw_image.unpack().map_err(|e| PreviewError::ProcessingError {
+                    message: format!("Erreur décompression RAW: {:?}", e),
+                })?;
+
+                let processed = raw_image
+                    .process::<{ rsraw::BIT_DEPTH_8 }>()
+                    .map_err(|e| PreviewError::ProcessingError {
+                        message: format!("Erreur traitement RAW: {:?}", e),
+                    })?;
+
+                // Convertir les données RAW en image
+                let width = processed.width();
+                let height = processed.height();
+                let colors = processed.colors() as u32;
+
+                if colors != 3 {
+                    return Err(PreviewError::ProcessingError {
+                        message: format!("Format couleur non supporté: {} canaux", colors),
+                    });
+                }
+
+                let img = image::RgbImage::from_raw(width, height, processed.to_vec())
+                    .ok_or_else(|| PreviewError::ProcessingError {
+                        message: "Impossible de créer l'image depuis les données RAW".to_string(),
+                    })?;
+
+                // Redimensionner
+                let scale_factor = size.0 as f32 / width.max(height) as f32;
+                let new_width = (width as f32 * scale_factor) as u32;
+                let new_height = (height as f32 * scale_factor) as u32;
+
+                let resized = image::DynamicImage::ImageRgb8(img).resize(
+                    new_width,
+                    new_height,
+                    image::imageops::FilterType::Lanczos3,
+                );
+
+                resized
+                    .save(output_path)
+                    .map_err(|e| PreviewError::WriteError {
+                        path: output_path.to_string_lossy().to_string(),
+                    })?;
+
+                Ok(())
+            }
+        }
     }
 
     /// Génère une preview pour fichier RAW avec rsraw
@@ -417,10 +525,75 @@ impl PreviewService {
         output_path: &Path,
         size: (u32, u32),
     ) -> Result<(), PreviewError> {
-        // TODO: Implémenter avec rsraw
-        // Pour l'instant, utiliser une implémentation placeholder
-        self.generate_standard_preview(input_path, output_path, size)
-            .await
+        // Créer les répertoires parents si nécessaire
+        if let Some(parent) = output_path.parent() {
+            tokio::fs::create_dir_all(parent)
+                .await
+                .map_err(|e| PreviewError::IoError {
+                    message: format!("Impossible de créer le répertoire de sortie: {}", e),
+                })?;
+        }
+
+        // Lire le fichier RAW
+        let data = tokio::fs::read(input_path).await.map_err(|e| {
+            PreviewError::IoError {
+                message: format!("Impossible de lire le fichier RAW: {}", e),
+            }
+        })?;
+
+        // Ouvrir et traiter le fichier RAW avec rsraw
+        let mut raw_image = rsraw::RawImage::open(&data).map_err(|e| {
+            PreviewError::ProcessingError {
+                message: format!("Erreur ouverture fichier RAW: {:?}", e),
+            }
+        })?;
+
+        // Décompresser le RAW
+        raw_image.unpack().map_err(|e| PreviewError::ProcessingError {
+            message: format!("Erreur décompression RAW: {:?}", e),
+        })?;
+
+        // Traiter en 8-bit pour les previews standard (meilleur compromis taille/qualité)
+        let processed = raw_image
+            .process::<{ rsraw::BIT_DEPTH_8 }>()
+            .map_err(|e| PreviewError::ProcessingError {
+                message: format!("Erreur traitement RAW: {:?}", e),
+            })?;
+
+        // Convertir les données RAW en image
+        let width = processed.width();
+        let height = processed.height();
+        let colors = processed.colors() as u32;
+
+        if colors != 3 {
+            return Err(PreviewError::ProcessingError {
+                message: format!("Format couleur non supporté: {} canaux", colors),
+            });
+        }
+
+        let img = image::RgbImage::from_raw(width, height, processed.to_vec())
+            .ok_or_else(|| PreviewError::ProcessingError {
+                message: "Impossible de créer l'image depuis les données RAW".to_string(),
+            })?;
+
+        // Redimensionner pour la preview standard
+        let scale_factor = size.0 as f32 / width.max(height) as f32;
+        let new_width = (width as f32 * scale_factor) as u32;
+        let new_height = (height as f32 * scale_factor) as u32;
+
+        let resized = image::DynamicImage::ImageRgb8(img).resize(
+            new_width,
+            new_height,
+            image::imageops::FilterType::Lanczos3,
+        );
+
+        resized
+            .save(output_path)
+            .map_err(|e| PreviewError::WriteError {
+                path: output_path.to_string_lossy().to_string(),
+            })?;
+
+        Ok(())
     }
 
     /// Génère un thumbnail pour fichier standard avec image crate
@@ -489,18 +662,83 @@ impl PreviewService {
         input_path: &Path,
         output_path: &Path,
     ) -> Result<(), PreviewError> {
-        let img = image::open(input_path).map_err(|e| PreviewError::ProcessingError {
-            message: format!("Impossible d'ouvrir l'image: {}", e),
-        })?;
+        // Vérifier si c'est un fichier RAW
+        if self.is_raw_file(input_path).await {
+            // Créer les répertoires parents si nécessaire
+            if let Some(parent) = output_path.parent() {
+                tokio::fs::create_dir_all(parent)
+                    .await
+                    .map_err(|e| PreviewError::IoError {
+                        message: format!("Impossible de créer le répertoire de sortie: {}", e),
+                    })?;
+            }
 
-        // Pour preview 1:1: résolution native, pas de redimensionnement
-        // Sauvegarder avec la qualité maximale pour zoom pixel
-        img.save(output_path)
-            .map_err(|e| PreviewError::WriteError {
-                path: output_path.to_string_lossy().to_string(),
+            // Lire le fichier RAW
+            let data = tokio::fs::read(input_path).await.map_err(|e| {
+                PreviewError::IoError {
+                    message: format!("Impossible de lire le fichier RAW: {}", e),
+                }
             })?;
 
-        Ok(())
+            // Ouvrir et traiter le fichier RAW avec rsraw
+            let mut raw_image = rsraw::RawImage::open(&data).map_err(|e| {
+                PreviewError::ProcessingError {
+                    message: format!("Erreur ouverture fichier RAW: {:?}", e),
+                }
+            })?;
+
+            // Décompresser le RAW
+            raw_image.unpack().map_err(|e| PreviewError::ProcessingError {
+                message: format!("Erreur décompression RAW: {:?}", e),
+            })?;
+
+            // Traiter en 16-bit pour la qualité maximale en 1:1
+            let processed = raw_image
+                .process::<{ rsraw::BIT_DEPTH_16 }>()
+                .map_err(|e| PreviewError::ProcessingError {
+                    message: format!("Erreur traitement RAW: {:?}", e),
+                })?;
+
+            // Convertir les données RAW en image
+            let width = processed.width();
+            let height = processed.height();
+            let colors = processed.colors() as u32;
+
+            if colors != 3 {
+                return Err(PreviewError::ProcessingError {
+                    message: format!("Format couleur non supporté: {} canaux", colors),
+                });
+            }
+
+            // Pour 16-bit, les données sont en u16
+            let img = image::Rgb16Image::from_raw(width, height, processed.to_vec())
+                .ok_or_else(|| PreviewError::ProcessingError {
+                    message: "Impossible de créer l'image depuis les données RAW".to_string(),
+                })?;
+
+            // Sauvegarder sans redimensionnement pour 1:1
+            image::DynamicImage::ImageRgb16(img)
+                .save(output_path)
+                .map_err(|e| PreviewError::WriteError {
+                    path: output_path.to_string_lossy().to_string(),
+                })?;
+
+            Ok(())
+        } else {
+            // Fichier standard (JPEG, PNG, etc.)
+            let img = image::open(input_path).map_err(|e| PreviewError::ProcessingError {
+                message: format!("Impossible d'ouvrir l'image: {}", e),
+            })?;
+
+            // Pour preview 1:1: résolution native, pas de redimensionnement
+            // Sauvegarder avec la qualité maximale pour zoom pixel
+            img.save(output_path)
+                .map_err(|e| PreviewError::WriteError {
+                    path: output_path.to_string_lossy().to_string(),
+                })?;
+
+            Ok(())
+        }
     }
 
     /// Récupère le chemin de cache pour une preview

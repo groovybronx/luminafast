@@ -1,20 +1,24 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PreviewService } from '@/services/previewService';
-import { PreviewType } from '@/types';
+import { PreviewType, PreviewProgressEvent } from '@/types';
 
 // Mock Tauri internals
 const mockTauriInvoke = vi.fn();
-const mockListen = vi.fn();
+const mockUnlisten = vi.fn();
+const mockListen = vi.fn(() => Promise.resolve(mockUnlisten));
 
-// Setup global mock
+// Setup global mock with event system
 Object.defineProperty(window, '__TAURI_INTERNALS__', {
   value: {
     invoke: mockTauriInvoke,
+    event: {
+      listen: mockListen,
+    },
   },
   writable: true,
 });
 
-// Mock Tauri event system
+// Mock Tauri event system (for compatibility)
 vi.mock('@tauri-apps/api/event', () => ({
   listen: mockListen,
 }));
@@ -631,45 +635,118 @@ describe('PreviewService', () => {
   describe('Event Listeners', () => {
     beforeEach(async () => {
       mockTauriInvoke.mockResolvedValue(undefined);
-      await service.initialize();
+      vi.clearAllMocks();
+      // Reset singleton to test event listener setup
+      (PreviewService as any).instance = null;
     });
 
-    it('should setup event listeners on construction', () => {
-      // Event listeners are currently disabled in bridge architecture pattern
-      // This test will be updated when event listeners are implemented
-      expect(true).toBe(true); // Placeholder test
+    it('should setup event listeners on construction', async () => {
+      // Create new service instance
+      const newService = PreviewService.getInstance();
+      
+      // Wait for async event listener setup
+      await vi.waitFor(() => {
+        expect(mockListen).toHaveBeenCalledWith('preview_progress', expect.any(Function));
+      });
+      
+      // Verify unlisten function is stored
+      expect(newService['unlistenFunctions'].length).toBeGreaterThan(0);
     });
 
     it('should handle progress events and call all callbacks', async () => {
-      // Event listeners are currently disabled in bridge architecture pattern
-      // This test will be updated when event listeners are implemented
+      const newService = PreviewService.getInstance();
       const callback1 = vi.fn();
       const callback2 = vi.fn();
 
-      const unsubscribe1 = service.onProgress(callback1);
-      const unsubscribe2 = service.onProgress(callback2);
+      // Register callbacks
+      newService.onProgress(callback1);
+      newService.onProgress(callback2);
 
-      expect(service['progressListeners'].size).toBe(2);
+      // Wait for event listener to be set up
+      await vi.waitFor(() => {
+        expect(mockListen).toHaveBeenCalled();
+      });
 
-      unsubscribe1();
-      expect(service['progressListeners'].size).toBe(1);
+      // Get the event handler that was registered (using any to handle mock typing)
+      const mockCalls = mockListen.mock.calls as unknown[];
+      const eventHandler = mockCalls[0]?.[1] as ((event: { payload: PreviewProgressEvent }) => void) | undefined;
+      expect(eventHandler).toBeDefined();
 
-      unsubscribe2();
-      expect(service['progressListeners'].size).toBe(0);
+      // Simulate event from Tauri
+      const mockEvent = {
+        payload: {
+          type: 'preview_type_started' as const,
+          preview_type: PreviewType.Thumbnail,
+          current: 1,
+          total: 10,
+        },
+      };
+
+      eventHandler!(mockEvent);
+
+      // Both callbacks should be called
+      expect(callback1).toHaveBeenCalledWith(mockEvent.payload);
+      expect(callback2).toHaveBeenCalledWith(mockEvent.payload);
     });
 
     it('should handle callback errors gracefully', async () => {
-      // Event listeners are currently disabled in bridge architecture pattern
-      // This test will be updated when event listeners are implemented
+      const newService = PreviewService.getInstance();
       const errorCallback = vi.fn(() => {
         throw new Error('Callback error');
       });
       const normalCallback = vi.fn();
 
-      service.onProgress(errorCallback);
-      service.onProgress(normalCallback);
+      newService.onProgress(errorCallback);
+      newService.onProgress(normalCallback);
 
-      expect(service['progressListeners'].size).toBe(2);
+      // Wait for event listener to be set up
+      await vi.waitFor(() => {
+        expect(mockListen).toHaveBeenCalled();
+      });
+
+      // Get the event handler (using any to handle mock typing)
+      const mockCalls = mockListen.mock.calls as unknown[];
+      const eventHandler = mockCalls[0]?.[1] as ((event: { payload: PreviewProgressEvent }) => void) | undefined;
+      expect(eventHandler).toBeDefined();
+
+      // Simulate event - should not throw even if callback errors
+      const mockEvent = {
+        payload: {
+          type: 'batch_completed' as const,
+        },
+      };
+
+      // Should not throw
+      expect(() => eventHandler!(mockEvent)).not.toThrow();
+
+      // Error callback should have been called (and errored)
+      expect(errorCallback).toHaveBeenCalled();
+      // Normal callback should still be called despite error in first callback
+      expect(normalCallback).toHaveBeenCalledWith(mockEvent.payload);
+    });
+
+    it('should cleanup event listeners on dispose', async () => {
+      const newService = PreviewService.getInstance();
+
+      // Wait for event listener to be set up
+      await vi.waitFor(() => {
+        expect(mockListen).toHaveBeenCalled();
+      });
+
+      const callback = vi.fn();
+      newService.onProgress(callback);
+
+      expect(newService['progressListeners'].size).toBe(1);
+
+      // Dispose service
+      newService.dispose();
+
+      // Should call unlisten
+      expect(mockUnlisten).toHaveBeenCalled();
+      // Should clear progress listeners
+      expect(newService['progressListeners'].size).toBe(0);
+      // Should clear unlisten functions
+      expect(newService['unlistenFunctions'].length).toBe(0);
     });
   });
 

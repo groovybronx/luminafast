@@ -9,10 +9,13 @@ import { useCallback, useEffect, useRef } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useSystemStore } from '@/stores/systemStore';
 import { discoveryService } from '@/services/discoveryService';
+import { useCatalog } from '@/hooks/useCatalog';
+import { previewService } from '@/services/previewService';
 import type { 
   DiscoveryProgress, 
   BatchIngestionRequest 
 } from '@/types/discovery';
+import { PreviewType } from '@/types';
 
 /**
  * Hook return type
@@ -44,8 +47,48 @@ export interface UseDiscoveryReturn {
  */
 export function useDiscovery(): UseDiscoveryReturn {
   const { importState, setImportState, addLog } = useSystemStore();
+  const { syncAfterImport } = useCatalog();
   const progressListenerRef = useRef<(() => void) | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+
+  // Generate previews for a list of successfully ingested images
+  const generatePreviewsForImages = useCallback(async (successfulIngestions: any[]) => {
+    const previewPromises = successfulIngestions.map(async (ingestion) => {
+      try {
+        // Generate thumbnail preview
+        await previewService.generatePreview(
+          ingestion.file.path,
+          PreviewType.Thumbnail,
+          ingestion.file.hash
+        );
+        
+        // Generate standard preview
+        await previewService.generatePreview(
+          ingestion.file.path,
+          PreviewType.Standard,
+          ingestion.file.hash
+        );
+        
+        // Generate 1:1 preview
+        await previewService.generatePreview(
+          ingestion.file.path,
+          PreviewType.OneToOne,
+          ingestion.file.hash
+        );
+        
+        return { success: true, file: ingestion.file };
+      } catch (error) {
+        console.error(`Failed to generate preview for ${ingestion.file.filename}:`, error);
+        return { success: false, file: ingestion.file, error };
+      }
+    });
+
+    const results = await Promise.allSettled(previewPromises);
+    const successCount = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+    const failureCount = results.length - successCount;
+    
+    addLog(`Preview generation completed: ${successCount} success, ${failureCount} failed`, 'sync');
+  }, [addLog]);
 
   // Cleanup progress listener
   const cleanupProgressListener = useCallback(() => {
@@ -230,6 +273,17 @@ export function useDiscovery(): UseDiscoveryReturn {
       const files = await discoveryService.getDiscoveredFiles(sessionId);
       addLog(`Retrieved ${files.length} files for ingestion`, 'sqlite');
 
+      if (files.length === 0) {
+        addLog('No files found to ingest', 'warning');
+        setImportState({
+          stage: 'completed',
+          progress: 100,
+          processedFiles: 0,
+          isImporting: false,
+        });
+        return;
+      }
+
       // Create batch ingestion request
       const request: BatchIngestionRequest = {
         sessionId,
@@ -241,18 +295,25 @@ export function useDiscovery(): UseDiscoveryReturn {
       // Start batch ingestion
       const result = await discoveryService.batchIngest(request);
       
-      addLog(`Ingestion completed: ${result.successful.length} successful, ${result.failed.length} failed`, 'sync');
+      addLog(`Ingestion completed: ${result.successful.length} successful, ${result.failed.length} failed, ${result.skipped.length} skipped`, 'sync');
 
-      // Update final state
-      setImportState({
-        stage: 'completed',
-        progress: 100,
-        processedFiles: result.successful.length + result.failed.length + result.skipped.length,
-        isImporting: false,
-      });
+      // Log failed files if any
+      if (result.failed.length > 0) {
+        addLog(`Failed files: ${result.failed.map(f => f.file.filename).join(', ')}`, 'error');
+      }
 
-      addLog('Import process completed successfully', 'sync');
+      // Sync catalog with new images
+      addLog('Syncing catalog with newly imported images...', 'sync');
+      await syncAfterImport();
 
+      // Generate previews for newly imported images
+      addLog('Generating previews for imported images...', 'sync');
+      try {
+        await generatePreviewsForImages(result.successful);
+        addLog(`Previews generated for ${result.successful.length} images`, 'sync');
+      } catch (error) {
+        addLog(`Preview generation failed: ${error}`, 'error');
+      }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Ingestion failed';
       setImportState({
@@ -261,8 +322,13 @@ export function useDiscovery(): UseDiscoveryReturn {
         isImporting: false,
       });
       addLog(`Ingestion failed: ${errorMsg}`, 'error');
+      
+      // Offer retry option
+      setTimeout(() => {
+        addLog('You can retry the import by starting again', 'info');
+      }, 3000);
     }
-  }, [setImportState, addLog]);
+  }, [setImportState, addLog, syncAfterImport, generatePreviewsForImages]);
 
   // Cancel current operation
   const cancel = useCallback(async (): Promise<void> => {

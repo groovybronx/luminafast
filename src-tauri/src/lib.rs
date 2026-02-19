@@ -55,6 +55,16 @@ pub fn run() {
 
             Ok(())
         })
+        .setup(|app| {
+            // Initialize preview service for Phase 2.3
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = commands::preview::init_preview_service(&handle).await {
+                    eprintln!("Failed to initialize preview service: {}", e);
+                }
+            });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // Catalog commands
             commands::catalog::get_all_images,
@@ -95,6 +105,14 @@ pub fn run() {
             commands::discovery::get_default_discovery_config,
             commands::discovery::cleanup_discovery_sessions,
             commands::discovery::get_discovery_stats,
+            // Preview commands
+            commands::preview::generate_preview,
+            commands::preview::generate_preview_pyramid,
+            commands::preview::generate_batch_previews,
+            commands::preview::generate_previews_with_progress,
+            commands::preview::get_preview_cache_info,
+            commands::preview::cleanup_preview_cache,
+            commands::preview::remove_preview,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

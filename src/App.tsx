@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useMemo } from 'react';
 import type { FlagType, EditState, CatalogEvent } from './types';
 import { safeID } from './lib/helpers';
-import { generateImages, INITIAL_IMAGES, type MockEvent } from './lib/mockData';
+import { type MockEvent } from './lib/mockData';
 import { useCatalogStore, useUiStore, useEditStore, useSystemStore } from './stores';
 import { GlobalStyles } from './components/shared/GlobalStyles';
 import { ArchitectureMonitor } from './components/shared/ArchitectureMonitor';
@@ -62,10 +62,14 @@ export default function App() {
   const setThumbnailSize = useUiStore((state) => state.setThumbnailSize);
   const sidebarOpen = useUiStore((state) => state.leftSidebarOpen);
   
-  // Initialisation des images au montage
+  // Initialisation des images au montage - utilise le catalogue réel
   useEffect(() => {
-    setImages(INITIAL_IMAGES);
-  }, [setImages]);
+    // Si le catalogue est vide, on pourrait charger des images par défaut
+    // mais pour l'instant on laisse le catalogue vide jusqu'au premier import
+    if (images.length === 0) {
+      addLog('Catalog empty - ready for first import', 'info');
+    }
+  }, [images.length, addLog]);
 
 
   const dispatchEvent = useCallback((eventType: string, payload: number | string | 'pick' | 'reject' | null | Partial<EditState>) => {
@@ -100,12 +104,11 @@ export default function App() {
   };
 
   const handleImport = useCallback(() => {
-    const newBatch = generateImages(15, images.length);
-    setImages([...newBatch, ...images]);
+    // Import is now handled automatically by useDiscovery hook
+    // This callback is just for closing the modal and any additional UI updates
     setShowImport(false);
-    addLog(`DUCKDB: Indexed ${newBatch.length} new binary references`, 'duckdb');
-    addLog(`IO: File descriptors closed.`, 'io');
-  }, [images, setImages, setShowImport, addLog]);
+    addLog(`Import workflow completed successfully`, 'sync');
+  }, [setShowImport, addLog]);
 
 
   useEffect(() => {

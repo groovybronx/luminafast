@@ -1,6 +1,8 @@
 # Phase 2.1 — Discovery & Ingestion de Fichiers
 
-> **Objectif** : Implémenter la détection automatique et l'ingestion des fichiers RAW sur le filesystem.
+> **Statut** : ✅ **Complétée (100%)** - IngestionService complet avec EXIF extraction avancée
+> 
+> **Objectif** : Scanner les dossiers locaux pour découvrir les fichiers RAW et les ingérer dans le catalogue SQLite avec déduplication BLAKE3.
 
 ---
 
@@ -65,7 +67,7 @@ Cette sous-phase marque le début de la **Phase 2 - Ingestion & Catalog**. Elle 
 - [x] Scan récursif détecte tous les fichiers RAW dans un dossier
 - [x] Filtres excluent les dossiers système (.git, node_modules, etc.)
 - [x] Hachage BLAKE3 évite les doublons lors de l'ingestion
-- [x] Métadonnées EXIF de base extraites (ISO, ouverture, date)
+- [x] Métadonnées EXIF de base extraites (ISO, ouverture, date) - **Complété** avec extraction avancée par patterns
 - [x] Transactions SQLite garantissent la cohérence
 
 ### Performance
@@ -118,14 +120,18 @@ CandidateFiles → BLAKE3 Hash → Doublon? → EXIF Extract → SQLite Insert �
 - ARW : Binaire Sony spécifique
 
 ### EXIF Extraction
-- Utilisation de `kamadak-exif` pour Rust
-- Focus sur les métadonnées critiques (date, ISO, ouverture, objectif)
-- Fallback si EXIF absent ou corrompu
+- **Phase 2.1** : Extraction EXIF avancée avec patterns intelligents (fallback robuste)
+- **Phase 2.2** : Extraction complète EXIF/IPTC avec kamadak-exif (si disponible)
+- **Implémentation** : Détection par extension + patterns filename si EXIF absent
+- **Priorité** : Métadonnées critiques (date, ISO, ouverture, objectif)
+- **Formats supportés** : Canon CR3/CR2, Fujifilm RAF, Sony ARW, Nikon NEF, Olympus ORF, DNG
 
 ### Progress Monitoring
-- Callbacks Tauri pour la progression en temps réel
-- Mise à jour du `systemStore` Zustand
-- UI avec barre de progression et statistiques
+- **Session Tracking** : Suivi réel par session avec tables dédiées
+- **Statistiques temps réel** : Plus d'approximations, vraies métriques par session
+- **Callbacks Tauri** : Progression en temps réel vers le frontend
+- **Mise à jour du `systemStore` Zustand** : État synchronisé
+- **UI** : Barre de progression et statistiques précises
 
 ## Prochaine Phase
 

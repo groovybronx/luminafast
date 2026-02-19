@@ -31,6 +31,7 @@ fn create_test_database() -> Arc<std::sync::Mutex<rusqlite::Connection>> {
             orientation INTEGER DEFAULT 0,
             file_size_bytes INTEGER,
             captured_at DATETIME,
+            imported_at DATETIME,
             folder_id INTEGER
         );
         CREATE TABLE exif_metadata (
@@ -47,6 +48,19 @@ fn create_test_database() -> Arc<std::sync::Mutex<rusqlite::Connection>> {
             gps_lon REAL,
             color_space TEXT,
             FOREIGN KEY (image_id) REFERENCES images (id)
+        );
+        CREATE TABLE ingestion_sessions (
+            id TEXT PRIMARY KEY,
+            started_at TEXT,
+            completed_at TEXT,
+            status TEXT CHECK(status IN ('scanning','ingesting','completed','error','stopped')) DEFAULT 'scanning',
+            total_files INTEGER DEFAULT 0,
+            ingested_files INTEGER DEFAULT 0,
+            failed_files INTEGER DEFAULT 0,
+            skipped_files INTEGER DEFAULT 0,
+            total_size_bytes INTEGER DEFAULT 0,
+            avg_processing_time_ms REAL DEFAULT 0.0,
+            error_message TEXT
         );",
     )
     .expect("Failed to create schema");
@@ -220,24 +234,23 @@ async fn test_batch_ingestion() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let session_id = Uuid::new_v4();
 
-    // Create multiple test files
-    let files: Vec<_> = (0..5)
+    // Create multiple test files and collect their paths
+    let file_paths: Vec<PathBuf> = (0..5)
         .map(|i| {
             let filename = format!("test{}.CR3", i);
-            let path = create_test_raw_file(&temp_dir, &filename, RawFormat::CR3);
-            create_discovered_file(session_id, &path, RawFormat::CR3)
+            create_test_raw_file(&temp_dir, &filename, RawFormat::CR3)
         })
         .collect();
 
     // Create batch request
     let request = BatchIngestionRequest {
         session_id,
-        file_paths: files.iter().map(|f| f.path.clone()).collect(),
-        skip_existing: true,
+        file_paths,
+        skip_existing: false,
         max_files: Some(3),
     };
 
-    // Execute batch ingestion (placeholder returns empty result)
+    // Execute batch ingestion
     let result = service
         .batch_ingest(&request)
         .await
@@ -246,9 +259,11 @@ async fn test_batch_ingestion() {
     // Verify batch result structure
     assert_eq!(result.session_id, session_id);
     assert_eq!(result.total_requested, 5);
-    assert_eq!(result.total_processed(), 0); // Placeholder returns 0
-    assert_eq!(result.success_rate(), 0.0);
-    assert_eq!(result.avg_processing_time_ms, 0.0);
+    assert_eq!(result.successful.len(), 3); // Limited by max_files
+    assert_eq!(result.failed.len(), 0);
+    assert_eq!(result.skipped.len(), 0);
+    assert!(result.total_processing_time_ms > 0);
+    assert!(result.avg_processing_time_ms > 0.0);
 }
 
 #[tokio::test]
@@ -276,7 +291,7 @@ async fn test_basic_exif_extraction() {
     assert!(exif.lens.is_some());
 
     // Verify specific values (placeholder implementation)
-    assert_eq!(exif.make.expect("Make should be present"), "Unknown");
+    assert_eq!(exif.make.expect("Make should be present"), "Canon");
     assert_eq!(exif.model.expect("Model should be present"), "Unknown");
     assert_eq!(exif.iso.expect("ISO should be present"), 100);
     assert_eq!(exif.aperture.expect("Aperture should be present"), 2.8);
@@ -289,6 +304,42 @@ async fn test_basic_exif_extraction() {
         50.0
     );
     assert_eq!(exif.lens.expect("Lens should be present"), "Unknown");
+}
+
+#[tokio::test]
+async fn test_exif_format_detection() {
+    let service = create_ingestion_service();
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+
+    // Test different format detection by filename
+    let test_cases = vec![
+        ("DSC1234.CR3", "Canon"), // Extension detection takes precedence
+        ("IMG_5678.RAF", "Fujifilm"),
+        ("ARW9876.ARW", "Sony"),
+        ("unknown_file.CR3", "Canon"),
+        ("test.RAF", "Fujifilm"),
+        ("sample.ARW", "Sony"),
+    ];
+
+    for (filename, expected_make) in test_cases {
+        let file_path = temp_dir.path().join(filename);
+        std::fs::write(&file_path, b"test content").expect("Failed to write test file");
+
+        let exif = service
+            .extract_basic_exif(&file_path)
+            .await
+            .expect("EXIF extraction failed");
+
+        let actual_make = exif.make.expect("Make should be present");
+        println!("DEBUG: filename={}, actual_make={}, expected_make={}", filename, actual_make, expected_make);
+
+        assert_eq!(
+            actual_make,
+            expected_make,
+            "Failed for filename: {}",
+            filename
+        );
+    }
 }
 
 #[tokio::test]
@@ -444,18 +495,30 @@ async fn test_session_stats() {
     let service = create_ingestion_service();
     let session_id = Uuid::new_v4();
 
-    // Get stats for empty session
+    // Create a session first so it exists
+    service
+        .create_ingestion_session(session_id)
+        .await
+        .expect("Create session failed");
+
+    // Update session with some stats to ensure it exists
+    service
+        .update_session_stats(session_id, 10, 8, 1, 1, 1024000, 125.5)
+        .await
+        .expect("Update session stats failed");
+
+    // Get stats for session (should return real values now)
     let stats = service
         .get_session_stats(session_id)
         .await
         .expect("Get stats failed");
     assert_eq!(stats.session_id, session_id);
-    assert_eq!(stats.total_files, 0);
-    assert_eq!(stats.ingested_files, 0);
-    assert_eq!(stats.failed_files, 0);
-    assert_eq!(stats.skipped_files, 0);
-    assert_eq!(stats.total_size_bytes, 0);
-    assert_eq!(stats.avg_processing_time_ms, 0.0);
+    assert_eq!(stats.total_files, 10);
+    assert_eq!(stats.ingested_files, 8);
+    assert_eq!(stats.failed_files, 1);
+    assert_eq!(stats.skipped_files, 1);
+    assert_eq!(stats.total_size_bytes, 1024000);
+    assert_eq!(stats.avg_processing_time_ms, 125.5);
 }
 
 #[tokio::test]

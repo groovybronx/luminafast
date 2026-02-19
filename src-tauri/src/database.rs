@@ -76,6 +76,9 @@ impl Database {
 
         // Run initial migration
         self.run_migration("001_initial")?;
+        
+        // Run ingestion sessions migration
+        self.run_migration("002_ingestion_sessions")?;
 
         Ok(())
     }
@@ -116,6 +119,7 @@ impl Database {
 
         let migration_sql = match version {
             "001_initial" => include_str!("../migrations/001_initial.sql"),
+            "002_ingestion_sessions" => include_str!("../migrations/002_ingestion_sessions.sql"),
             _ => {
                 return Err(DatabaseError::MigrationFailed(format!(
                     "Unknown migration version: {}",

@@ -3,7 +3,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-18 (Maintenance Testing) — État : Tests conformes (108 Rust, 5 React), infrastructure d'intégration en place.
+> **Dernière mise à jour** : 2026-02-19 (Phase 2.1 Partielle) — État : IngestionService ~85% complet, EXIF réel en attente.
 >
 > ### Décisions Projet (validées par le propriétaire)
 > - **Phase 8 (Cloud/Sync)** : Reportée post-lancement
@@ -16,8 +16,8 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : Service previews complet avec pyramide d'images
-Phase 2.3 complétée avec génération complète de previews pyramide à 3 niveaux (Thumbnail 240px, Standard 1440px, 1:1 native). Service Rust performant avec concurrence Rayon+Tokio, cache structuré par hash BLAKE3 dans `{catalog_dir}/Previews.lrdata/`, et interface TypeScript complète. 20 tests unitaires Rust passants, support formats RAW via `rsraw` et `image` crate. Validation réussie : navigation fluide dans grilles 500+ images.
+### État actuel : Phase 2.1 partiellement complétée (~85%)
+IngestionService implémenté avec `batch_ingest()`, `extract_basic_exif()` (fallback), et `get_session_stats()`. 18 tests unitaires ingestion passants. **L'extraction EXIF réelle avec kamadak-exif reste en attente** due à des problèmes de dépendances. Phases 2.2, 2.3, et 2.4 sont complétées (UI d'import connectée, previews pyramide, harvesting EXIF).
 
 ### Objectif : Application Tauri autonome commercialisable
 Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructive, catalogue SQLite, et gestion de bibliothèques photographiques massives.
@@ -42,7 +42,7 @@ Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructiv
 | DB transactionnelle | SQLite | rusqlite 0.31.0 | ✅ Complété (Phase 1.1) |
 | DB analytique | DuckDB | — | ⬜ Non installé (Phase 6.2) |
 | Hashing | BLAKE3 | — | ✅ Complété (Phase 1.3) |
-| EXIF/IPTC | kamadak-exif | 0.5.0 | ✅ Complété (Phase 2.2) |
+| EXIF/IPTC | kamadak-exif | 0.6.1 | ⚠️ En attente (Phase 2.1 - dépendances) |
 
 ---
 

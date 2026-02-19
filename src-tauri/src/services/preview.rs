@@ -404,10 +404,104 @@ impl PreviewService {
         output_path: &Path,
         size: (u32, u32),
     ) -> Result<(), PreviewError> {
-        // TODO: Implémenter avec rsraw
-        // Pour l'instant, utiliser une implémentation placeholder
-        self.generate_standard_thumbnail(input_path, output_path, size)
-            .await
+        use rsraw::{RawImage, BIT_DEPTH_8};
+
+        // Créer le répertoire parent si nécessaire
+        if let Some(parent) = output_path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| PreviewError::IoError {
+                message: format!("Impossible de créer le répertoire parent: {}", e),
+            })?;
+        }
+
+        // Lire le fichier RAW en mémoire
+        let file_data = std::fs::read(input_path).map_err(|e| PreviewError::IoError {
+            message: format!("Impossible de lire le fichier RAW: {}", e),
+        })?;
+
+        // Ouvrir le fichier RAW
+        let mut raw_image = RawImage::open(&file_data).map_err(|e| PreviewError::ProcessingError {
+            message: format!("Impossible d'ouvrir le fichier RAW: {}", e),
+        })?;
+
+        // Essayer d'extraire le thumbnail embarqué (plus rapide)
+        if let Ok(thumbnails) = raw_image.extract_thumbs() {
+            if !thumbnails.is_empty() {
+                // Utiliser le plus grand thumbnail disponible
+                let thumbnail = &thumbnails[thumbnails.len() - 1];
+                
+                // Convertir le thumbnail en image
+                let img = image::load_from_memory(&thumbnail.data)
+                    .map_err(|e| PreviewError::ProcessingError {
+                        message: format!("Impossible de décoder le thumbnail embarqué: {}", e),
+                    })?;
+
+                // Redimensionner au ratio approprié
+                let (original_width, original_height) = (img.width(), img.height());
+                let scale_factor = size.0 as f32 / original_width.max(original_height) as f32;
+                let new_width = (original_width as f32 * scale_factor) as u32;
+                let new_height = (original_height as f32 * scale_factor) as u32;
+
+                let resized = img.resize(new_width, new_height, image::imageops::FilterType::Lanczos3);
+
+                // Sauvegarder en JPEG avec qualité appropriée
+                resized.save(output_path).map_err(|e| PreviewError::WriteError {
+                    path: output_path.to_string_lossy().to_string(),
+                })?;
+
+                return Ok(());
+            }
+        }
+
+        // Si pas de thumbnail embarqué, décoder l'image complète (plus lent)
+        // Décompresser les données RAW
+        raw_image.unpack().map_err(|e| PreviewError::ProcessingError {
+            message: format!("Impossible de décompresser le fichier RAW: {}", e),
+        })?;
+
+        // Traiter l'image (demosaicing, correction couleur, etc.)
+        let processed = raw_image.process::<BIT_DEPTH_8>().map_err(|e| PreviewError::ProcessingError {
+            message: format!("Impossible de traiter le fichier RAW: {}", e),
+        })?;
+
+        // Obtenir les dimensions de l'image traitée
+        let width = processed.width();
+        let height = processed.height();
+        let colors = processed.colors() as u32;
+        
+        // Créer une image à partir des données traitées
+        let dynamic_img = if colors == 3 {
+            // Image RGB
+            let img = image::RgbImage::from_raw(width, height, processed.to_vec())
+                .ok_or_else(|| PreviewError::ProcessingError {
+                    message: "Impossible de créer l'image RGB à partir des données traitées".to_string(),
+                })?;
+            image::DynamicImage::ImageRgb8(img)
+        } else if colors == 1 {
+            // Image en niveaux de gris
+            let img = image::GrayImage::from_raw(width, height, processed.to_vec())
+                .ok_or_else(|| PreviewError::ProcessingError {
+                    message: "Impossible de créer l'image en niveaux de gris à partir des données traitées".to_string(),
+                })?;
+            image::DynamicImage::ImageLuma8(img)
+        } else {
+            return Err(PreviewError::ProcessingError {
+                message: format!("Nombre de canaux couleur non supporté: {}", colors),
+            });
+        };
+
+        // Redimensionner au ratio approprié
+        let scale_factor = size.0 as f32 / width.max(height) as f32;
+        let new_width = (width as f32 * scale_factor) as u32;
+        let new_height = (height as f32 * scale_factor) as u32;
+
+        let resized = dynamic_img.resize(new_width, new_height, image::imageops::FilterType::Lanczos3);
+
+        // Sauvegarder en JPEG
+        resized.save(output_path).map_err(|e| PreviewError::WriteError {
+            path: output_path.to_string_lossy().to_string(),
+        })?;
+
+        Ok(())
     }
 
     /// Génère une preview pour fichier RAW avec rsraw
@@ -417,10 +511,74 @@ impl PreviewService {
         output_path: &Path,
         size: (u32, u32),
     ) -> Result<(), PreviewError> {
-        // TODO: Implémenter avec rsraw
-        // Pour l'instant, utiliser une implémentation placeholder
-        self.generate_standard_preview(input_path, output_path, size)
-            .await
+        use rsraw::{RawImage, BIT_DEPTH_8};
+
+        // Créer le répertoire parent si nécessaire
+        if let Some(parent) = output_path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| PreviewError::IoError {
+                message: format!("Impossible de créer le répertoire parent: {}", e),
+            })?;
+        }
+
+        // Lire le fichier RAW en mémoire
+        let file_data = std::fs::read(input_path).map_err(|e| PreviewError::IoError {
+            message: format!("Impossible de lire le fichier RAW: {}", e),
+        })?;
+
+        // Ouvrir le fichier RAW
+        let mut raw_image = RawImage::open(&file_data).map_err(|e| PreviewError::ProcessingError {
+            message: format!("Impossible d'ouvrir le fichier RAW: {}", e),
+        })?;
+
+        // Décompresser les données RAW
+        raw_image.unpack().map_err(|e| PreviewError::ProcessingError {
+            message: format!("Impossible de décompresser le fichier RAW: {}", e),
+        })?;
+
+        // Traiter l'image (demosaicing, correction couleur, etc.)
+        let processed = raw_image.process::<BIT_DEPTH_8>().map_err(|e| PreviewError::ProcessingError {
+            message: format!("Impossible de traiter le fichier RAW: {}", e),
+        })?;
+
+        // Obtenir les dimensions de l'image traitée
+        let width = processed.width();
+        let height = processed.height();
+        let colors = processed.colors() as u32;
+        
+        // Créer une image à partir des données traitées
+        let dynamic_img = if colors == 3 {
+            // Image RGB
+            let img = image::RgbImage::from_raw(width, height, processed.to_vec())
+                .ok_or_else(|| PreviewError::ProcessingError {
+                    message: "Impossible de créer l'image RGB à partir des données traitées".to_string(),
+                })?;
+            image::DynamicImage::ImageRgb8(img)
+        } else if colors == 1 {
+            // Image en niveaux de gris
+            let img = image::GrayImage::from_raw(width, height, processed.to_vec())
+                .ok_or_else(|| PreviewError::ProcessingError {
+                    message: "Impossible de créer l'image en niveaux de gris à partir des données traitées".to_string(),
+                })?;
+            image::DynamicImage::ImageLuma8(img)
+        } else {
+            return Err(PreviewError::ProcessingError {
+                message: format!("Nombre de canaux couleur non supporté: {}", colors),
+            });
+        };
+
+        // Redimensionner au ratio approprié pour preview standard (1440px bord long)
+        let scale_factor = size.0 as f32 / width.max(height) as f32;
+        let new_width = (width as f32 * scale_factor) as u32;
+        let new_height = (height as f32 * scale_factor) as u32;
+
+        let resized = dynamic_img.resize(new_width, new_height, image::imageops::FilterType::Lanczos3);
+
+        // Sauvegarder en JPEG avec qualité appropriée
+        resized.save(output_path).map_err(|e| PreviewError::WriteError {
+            path: output_path.to_string_lossy().to_string(),
+        })?;
+
+        Ok(())
     }
 
     /// Génère un thumbnail pour fichier standard avec image crate

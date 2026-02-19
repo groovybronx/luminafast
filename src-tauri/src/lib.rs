@@ -72,6 +72,13 @@ pub fn run() {
             commands::catalog::search_images,
             // Hashing commands
             commands::hashing::hash_file,
+            commands::hashing::hash_files_batch,
+            commands::hashing::detect_duplicates,
+            commands::hashing::verify_file_integrity,
+            commands::hashing::clear_hash_cache,
+            commands::hashing::get_hash_cache_stats,
+            commands::hashing::benchmark_hashing,
+            commands::hashing::scan_directory_for_duplicates,
             // Filesystem commands
             commands::filesystem::start_watcher,
             commands::filesystem::stop_watcher,

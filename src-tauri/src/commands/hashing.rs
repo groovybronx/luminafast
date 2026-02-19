@@ -68,6 +68,64 @@ pub async fn detect_duplicates(
         .map_err(|e| e.to_string())
 }
 
+/// Scan un répertoire et détecte les doublons
+#[tauri::command]
+pub async fn scan_directory_for_duplicates(
+    app: AppHandle,
+    directory_path: String,
+    recursive: bool,
+) -> Result<DuplicateAnalysis, String> {
+    let hashing_state = app.state::<HashingState>();
+    let service = hashing_state.service.clone();
+
+    let dir_path = PathBuf::from(directory_path);
+
+    // Vérifier que le répertoire existe
+    if !dir_path.exists() {
+        return Err(format!("Directory not found: {:?}", dir_path));
+    }
+
+    if !dir_path.is_dir() {
+        return Err(format!("Path is not a directory: {:?}", dir_path));
+    }
+
+    // Scanner les fichiers du répertoire
+    let file_paths = scan_files_in_directory(&dir_path, recursive)
+        .map_err(|e| format!("Failed to scan directory: {}", e))?;
+
+    // Détecter les doublons
+    service
+        .detect_duplicates(&file_paths, None)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Scan récursivement un répertoire pour trouver tous les fichiers
+fn scan_files_in_directory(dir_path: &PathBuf, recursive: bool) -> Result<Vec<PathBuf>, String> {
+    let mut files = Vec::new();
+
+    let entries = std::fs::read_dir(dir_path)
+        .map_err(|e| format!("Cannot read directory {:?}: {}", dir_path, e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Cannot read entry: {}", e))?;
+        let path = entry.path();
+        let metadata = entry
+            .metadata()
+            .map_err(|e| format!("Cannot read metadata for {:?}: {}", path, e))?;
+
+        if metadata.is_file() {
+            files.push(path);
+        } else if metadata.is_dir() && recursive {
+            // Récursivement scanner les sous-répertoires
+            let sub_files = scan_files_in_directory(&path, recursive)?;
+            files.extend(sub_files);
+        }
+    }
+
+    Ok(files)
+}
+
 /// Vérifie l'intégrité d'un fichier
 #[tauri::command]
 pub async fn verify_file_integrity(

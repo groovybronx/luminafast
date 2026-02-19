@@ -703,7 +703,8 @@ impl PreviewService {
                 });
             }
 
-            // Pour 16-bit, les données sont en u16
+            // Pour 16-bit, ProcessedImage<BIT_DEPTH_16> derefs to [u16]
+            // donc .to_vec() retourne Vec<u16> comme attendu par Rgb16Image::from_raw
             let img = image::Rgb16Image::from_raw(width, height, processed.to_vec())
                 .ok_or_else(|| PreviewError::ProcessingError {
                     message: "Impossible de créer l'image depuis les données RAW".to_string(),
@@ -793,6 +794,10 @@ impl PreviewService {
     }
 
     /// Calcule le facteur d'échelle et les nouvelles dimensions pour redimensionner une image
+    /// 
+    /// Redimensionne l'image en gardant son ratio d'aspect, de sorte que le côté le plus long
+    /// de l'image originale ne dépasse pas target_size.0 pixels. Cette approche garantit que
+    /// l'image s'inscrit dans un carré de target_size.0 x target_size.0 pixels.
     fn calculate_resize_dimensions(
         &self,
         original_width: u32,

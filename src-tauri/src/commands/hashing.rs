@@ -436,4 +436,43 @@ mod tests {
             // Comportement attendu
         }
     }
+
+    #[tokio::test]
+    async fn test_scan_files_in_directory() {
+        use std::fs::File;
+        let temp_dir = Builder::new().tempdir().unwrap();
+        let dir_path = temp_dir.path().to_path_buf();
+
+        // Créer quelques fichiers de test
+        File::create(dir_path.join("file1.txt")).unwrap();
+        File::create(dir_path.join("file2.txt")).unwrap();
+
+        // Créer un sous-répertoire avec un fichier
+        std::fs::create_dir(dir_path.join("subdir")).unwrap();
+        File::create(dir_path.join("subdir").join("file3.txt")).unwrap();
+
+        // Test non-récursif
+        let files = scan_files_in_directory(&dir_path, false).unwrap();
+        assert_eq!(files.len(), 2); // Seulement file1.txt et file2.txt
+
+        // Test récursif
+        let files = scan_files_in_directory(&dir_path, true).unwrap();
+        assert_eq!(files.len(), 3); // file1.txt, file2.txt, et subdir/file3.txt
+    }
+
+    #[tokio::test]
+    async fn test_scan_files_in_directory_empty() {
+        let temp_dir = Builder::new().tempdir().unwrap();
+        let dir_path = temp_dir.path().to_path_buf();
+
+        let files = scan_files_in_directory(&dir_path, false).unwrap();
+        assert_eq!(files.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_scan_files_in_directory_error() {
+        let non_existent_path = PathBuf::from("/nonexistent/directory");
+        let result = scan_files_in_directory(&non_existent_path, false);
+        assert!(result.is_err());
+    }
 }

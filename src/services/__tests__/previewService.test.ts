@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PreviewService } from '@/services/previewService';
-import { PreviewType } from '@/types';
+import { PreviewType, PreviewProgressEvent } from '@/types';
 
 // Mock Tauri internals
 const mockTauriInvoke = vi.fn();
@@ -667,8 +667,10 @@ describe('PreviewService', () => {
         expect(mockListen).toHaveBeenCalled();
       });
 
-      // Get the event handler that was registered
-      const eventHandler = mockListen.mock.calls[0][1];
+      // Get the event handler that was registered (using any to handle mock typing)
+      const mockCalls = mockListen.mock.calls as unknown[];
+      const eventHandler = mockCalls[0]?.[1] as ((event: { payload: PreviewProgressEvent }) => void) | undefined;
+      expect(eventHandler).toBeDefined();
 
       // Simulate event from Tauri
       const mockEvent = {
@@ -680,7 +682,7 @@ describe('PreviewService', () => {
         },
       };
 
-      eventHandler(mockEvent);
+      eventHandler!(mockEvent);
 
       // Both callbacks should be called
       expect(callback1).toHaveBeenCalledWith(mockEvent.payload);
@@ -702,8 +704,10 @@ describe('PreviewService', () => {
         expect(mockListen).toHaveBeenCalled();
       });
 
-      // Get the event handler
-      const eventHandler = mockListen.mock.calls[0][1];
+      // Get the event handler (using any to handle mock typing)
+      const mockCalls = mockListen.mock.calls as unknown[];
+      const eventHandler = mockCalls[0]?.[1] as ((event: { payload: PreviewProgressEvent }) => void) | undefined;
+      expect(eventHandler).toBeDefined();
 
       // Simulate event - should not throw even if callback errors
       const mockEvent = {
@@ -713,7 +717,7 @@ describe('PreviewService', () => {
       };
 
       // Should not throw
-      expect(() => eventHandler(mockEvent)).not.toThrow();
+      expect(() => eventHandler!(mockEvent)).not.toThrow();
 
       // Error callback should have been called (and errored)
       expect(errorCallback).toHaveBeenCalled();

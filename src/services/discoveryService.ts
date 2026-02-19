@@ -333,7 +333,7 @@ export class DiscoveryService {
     try {
       this.log('Stopping discovery', { sessionId });
       
-      await this.executeCommand<void>('stop_discovery', { session_id: sessionId });
+      await this.executeCommand<void>('stop_discovery', { sessionId });
       
       // Update local cache
       const session = this.activeSessions.get(sessionId);
@@ -360,7 +360,7 @@ export class DiscoveryService {
       
       const session = await this.executeCommand<DiscoverySession>(
         'get_discovery_status',
-        { session_id: sessionId }
+        { sessionId }
       );
 
       this.updateSession(session);
@@ -403,7 +403,7 @@ export class DiscoveryService {
       
       const files = await this.executeCommand<DiscoveredFile[]>(
         'get_discovered_files',
-        { session_id: sessionId }
+        { sessionId }
       );
 
       this.log('Retrieved discovered files', { sessionId, count: files.length });
@@ -490,14 +490,20 @@ export class DiscoveryService {
     try {
       this.log('Creating discovery config', { rootPath, recursive, maxDepth, maxFiles });
       
+      // Try camelCase as suggested by the error message
+      const args: Record<string, unknown> = {
+        rootPath: rootPath,
+        recursive: recursive,
+        maxDepth: maxDepth,
+        maxFiles: maxFiles
+      };
+      
+      console.warn('DEBUG: Full args object:', JSON.stringify(args, null, 2));
+      this.log('Sending args to create_discovery_config', args);
+      
       const config = await this.executeCommand<DiscoveryConfig>(
         'create_discovery_config',
-        { 
-          root_path: rootPath, 
-          recursive, 
-          max_depth: maxDepth, 
-          max_files: maxFiles 
-        }
+        args
       );
 
       return config;
@@ -601,7 +607,7 @@ export class DiscoveryService {
       
       const stats = await this.executeCommand<DiscoveryStats>(
         'get_discovery_stats',
-        { session_id: sessionId }
+        { sessionId }
       );
 
       this.log('Retrieved discovery stats', { sessionId });

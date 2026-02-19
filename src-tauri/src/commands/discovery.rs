@@ -6,9 +6,8 @@ use crate::services::discovery::DiscoveryService;
 use crate::services::ingestion::IngestionService;
 use std::path::PathBuf;
 use std::sync::Arc;
-use uuid::Uuid;
-
 use std::sync::OnceLock;
+use uuid::Uuid;
 
 /// Global discovery service instance
 static DISCOVERY_SERVICE: OnceLock<Arc<DiscoveryService>> = OnceLock::new();
@@ -54,12 +53,16 @@ fn get_ingestion_service() -> Arc<IngestionService> {
 
 /// Start a new discovery session
 #[tauri::command]
-pub fn start_discovery(config: DiscoveryConfig) -> Result<Uuid, String> {
-    // Use blocking runtime for async operations
+pub fn start_discovery(config: DiscoveryConfig) -> Result<DiscoverySession, String> {
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
-        get_discovery_service()
+        let service = get_discovery_service();
+        let session_id = service
             .start_discovery(config)
+            .await
+            .map_err(|e| e.to_string())?;
+        service
+            .get_session_status(session_id)
             .await
             .map_err(|e| e.to_string())
     })
@@ -67,11 +70,11 @@ pub fn start_discovery(config: DiscoveryConfig) -> Result<Uuid, String> {
 
 /// Stop an active discovery session
 #[tauri::command]
-pub fn stop_discovery(session_id: Uuid) -> Result<(), String> {
+pub fn stop_discovery(#[allow(non_snake_case)] sessionId: Uuid) -> Result<(), String> {
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
         get_discovery_service()
-            .stop_discovery(session_id)
+            .stop_discovery(sessionId)
             .await
             .map_err(|e| e.to_string())
     })
@@ -79,11 +82,11 @@ pub fn stop_discovery(session_id: Uuid) -> Result<(), String> {
 
 /// Get the status of a discovery session
 #[tauri::command]
-pub fn get_discovery_status(session_id: Uuid) -> Result<DiscoverySession, String> {
+pub fn get_discovery_status(#[allow(non_snake_case)] sessionId: Uuid) -> Result<DiscoverySession, String> {
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
         let session = get_discovery_service()
-            .get_session_status(session_id)
+            .get_session_status(sessionId)
             .await
             .map_err(|e| e.to_string())?;
 
@@ -104,11 +107,11 @@ pub fn get_all_discovery_sessions() -> Result<Vec<DiscoverySession>, String> {
 
 /// Get discovered files for a session
 #[tauri::command]
-pub fn get_discovered_files(session_id: Uuid) -> Result<Vec<DiscoveredFile>, String> {
+pub fn get_discovered_files(#[allow(non_snake_case)] sessionId: Uuid) -> Result<Vec<DiscoveredFile>, String> {
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
         let files = get_discovery_service()
-            .get_session_files(session_id)
+            .get_session_files(sessionId)
             .await
             .map_err(|e| e.to_string())?;
 
@@ -147,12 +150,12 @@ pub fn batch_ingest(request: BatchIngestionRequest) -> Result<BatchIngestionResu
 /// Create a discovery configuration from a directory path
 #[tauri::command]
 pub async fn create_discovery_config(
-    root_path: String,
+    #[allow(non_snake_case)] rootPath: String,
     recursive: Option<bool>,
-    max_depth: Option<usize>,
-    max_files: Option<usize>,
+    #[allow(non_snake_case)] maxDepth: Option<usize>,
+    #[allow(non_snake_case)] maxFiles: Option<usize>,
 ) -> Result<DiscoveryConfig, String> {
-    let path = PathBuf::from(&root_path);
+    let path = PathBuf::from(&rootPath);
 
     if !path.exists() {
         return Err("Directory does not exist".to_string());
@@ -161,10 +164,9 @@ pub async fn create_discovery_config(
     let config = DiscoveryConfig {
         root_path: path,
         recursive: recursive.unwrap_or(true),
-        formats: vec![],      // Will use default formats
-        exclude_dirs: vec![], // Will use default exclusions
-        max_depth,
-        max_files,
+        max_depth: Some(maxDepth.unwrap_or(10)),
+        max_files: Some(maxFiles.unwrap_or(50000)),
+        ..DiscoveryConfig::default()
     };
 
     Ok(config)
@@ -224,23 +226,23 @@ pub fn cleanup_discovery_sessions(max_age_hours: u64) -> Result<usize, String> {
 
 /// Get discovery statistics
 #[tauri::command]
-pub fn get_discovery_stats(session_id: Uuid) -> Result<DiscoveryStats, String> {
+pub fn get_discovery_stats(#[allow(non_snake_case)] sessionId: Uuid) -> Result<DiscoveryStats, String> {
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
         // Get session status
         let session = get_discovery_service()
-            .get_session_status(session_id)
+            .get_session_status(sessionId)
             .await
             .map_err(|e| e.to_string())?;
 
         // Get ingestion stats
         let ingestion_stats = get_ingestion_service()
-            .get_session_stats(session_id)
+            .get_session_stats(sessionId)
             .await
             .map_err(|e| e.to_string())?;
 
         let stats = DiscoveryStats {
-            session_id,
+            session_id: sessionId,
             status: session.status.clone(),
             files_found: session.files_found,
             files_processed: session.files_processed,
@@ -259,6 +261,7 @@ pub fn get_discovery_stats(session_id: Uuid) -> Result<DiscoveryStats, String> {
 
 /// Combined discovery statistics
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DiscoveryStats {
     pub session_id: Uuid,
     pub status: crate::models::discovery::DiscoveryStatus,

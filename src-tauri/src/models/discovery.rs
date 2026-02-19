@@ -85,6 +85,7 @@ impl RawFormat {
 
 /// A discovered RAW file candidate
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DiscoveredFile {
     /// Unique identifier for this discovery session
     pub session_id: Uuid,
@@ -163,6 +164,7 @@ impl DiscoveredFile {
 
 /// Discovery session configuration
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DiscoveryConfig {
     /// Root directory to scan
     pub root_path: PathBuf,
@@ -217,12 +219,11 @@ pub enum DiscoveryStatus {
 
 /// Discovery session information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DiscoverySession {
     /// Unique session identifier (used as session_id externally)
+    #[serde(rename = "sessionId")]
     pub id: Uuid,
-    /// Alias for id, for external API consistency
-    #[serde(skip)]
-    _session_id_alias: (),
     /// Session configuration
     pub config: DiscoveryConfig,
     /// Current status
@@ -253,7 +254,6 @@ impl DiscoverySession {
     pub fn new(config: DiscoveryConfig) -> Self {
         Self {
             id: Uuid::new_v4(),
-            _session_id_alias: (),
             config,
             status: DiscoveryStatus::Scanning,
             started_at: Utc::now(),
@@ -325,6 +325,7 @@ impl DiscoverySession {
 
 /// Ingestion result for a single file
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IngestionResult {
     /// The file that was ingested
     pub file: DiscoveredFile,
@@ -342,6 +343,7 @@ pub struct IngestionResult {
 
 /// Metadata extracted during ingestion
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IngestionMetadata {
     /// BLAKE3 hash of the file
     pub blake3_hash: String,
@@ -353,6 +355,7 @@ pub struct IngestionMetadata {
 
 /// Basic EXIF metadata extracted during ingestion
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BasicExif {
     /// Camera make
     pub make: Option<String>,
@@ -374,6 +377,7 @@ pub struct BasicExif {
 
 /// Format-specific details
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FormatDetails {
     /// RAW format
     pub format: RawFormat,
@@ -385,6 +389,7 @@ pub struct FormatDetails {
 
 /// Batch ingestion request
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BatchIngestionRequest {
     /// Session ID for the files to ingest
     pub session_id: Uuid,
@@ -398,6 +403,7 @@ pub struct BatchIngestionRequest {
 
 /// Batch ingestion results
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BatchIngestionResult {
     /// Session ID
     pub session_id: Uuid,

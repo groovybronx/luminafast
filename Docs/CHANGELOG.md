@@ -21,7 +21,7 @@
 | 2 | 2.1 | Discovery & Ingestion de Fichiers | ✅ Complétée | 2026-02-13 | Cascade |
 | 2 | 2.2 | Harvesting Métadonnées EXIF/IPTC | ✅ Complétée | 2026-02-16 | Cascade |
 | 2 | 2.3 | Génération de Previews | ✅ Complétée | 2026-02-16 | Cascade |
-| 2 | 2.4 | UI d'Import Connectée | ⬜ En attente | — | — |
+| 2 | 2.4 | UI d'Import Connectée | ✅ Complétée | 2026-02-18 | Cascade |
 | Maintenance | — | Conformité Testing (Fix Deadlocks + Integration) | ✅ Complétée | 2026-02-18 | Cascade |
 | 3 | 3.1 | Grille d'Images Réelle | ⬜ En attente | — | — |
 | 3 | 3.2 | Collections Statiques (CRUD) | ⬜ En attente | — | — |
@@ -60,7 +60,7 @@
 
 ## En Cours
 
-> _Aucune sous-phase n'est actuellement en cours. Prochaine : Phase 2.4 (UI d'Import Connectée)._
+> _Aucune sous-phase n'est actuellement en cours. Prochaine : Phase 3.1 (Grille d'Images Réelle)._
 
 ---
 
@@ -89,6 +89,53 @@ Travaux de maintenance pour assurer la conformité avec `Docs/TESTING_STRATEGY.m
 - **Rust** : 108 tests passants, 0 ignorés
 - **Frontend** : 5 tests composants passants
 - **Conformité** : ✅ Rétablissement complet
+
+---
+
+### 2026-02-18 — Phase 2.4 : UI d'Import Connectée
+
+**Statut** : ✅ Complétée
+**Agent** : Cascade
+**Durée** : ~1 session
+
+#### Résumé
+Connexion complète de l'interface utilisateur d'import (`ImportModal`) aux services Rust (`DiscoveryService`, `IngestionService`) via le wrapper TypeScript `discoveryService`. Remplacement des mocks par une logique réelle pour la sélection de dossiers, le scan de fichiers RAW, et leur ingestion en base de données.
+
+#### Fichiers créés/modifiés
+```
+src/stores/systemStore.ts — Extension importState avec sessionId, stats, stage, error
+src/hooks/useDiscovery.ts — Hook d'orchestration (321 lignes)
+src/hooks/__tests__/useDiscovery.test.ts — Tests du hook (11 tests)
+src/components/shared/ImportModal.tsx — UI connectée (212 lignes)
+src/components/shared/__tests__/ImportModal.test.tsx — Tests composant (12 tests)
+```
+
+#### Fonctionnalités Implémentées
+- **Sélection de dossier** : Dialogue natif via `dialog.open()` + validation `discoveryService.validateDiscoveryPath`
+- **Processus de découverte** : `discoveryService.startDiscovery()` avec monitoring progression en temps réel
+- **Processus d'ingestion** : `discoveryService.batchIngest()` avec feedback visuel et gestion d'erreurs
+- **Feedback utilisateur** : Logs système, barres de progression, états d'erreur/complétion
+- **Gestion d'état** : Store `systemStore` enrichi avec stage, sessionId, stats détaillées
+
+#### Tests
+- **Hook useDiscovery** : 11 tests couvrant tous les cas d'usage (sélection, scan, ingestion, erreurs)
+- **Composant ImportModal** : 12 tests d'intégration UI avec mocks complets
+- **Store systemStore** : 10 tests mis à jour pour nouvelle interface
+
+#### Architecture
+- **Hook d'abstraction** : `useDiscovery` isole la logique métier de l'UI
+- **Store centralisé** : `systemStore` gère l'état global d'import
+- **Services découplés** : UI → Hook → Service → Rust (pas de dépendance directe)
+- **Gestion d'erreurs robuste** : Types `ServiceError`, try/catch, feedback utilisateur
+
+#### Validation
+- ✅ Dialogue natif de sélection de dossier fonctionnel
+- ✅ Scan avec progression en temps réel
+- ✅ Ingestion par lots avec feedback
+- ✅ Gestion gracieuse des erreurs
+- ✅ UI non-bloquante (async)
+- ✅ TypeScript strict (0 `any`)
+- ✅ Tests complets (23 nouveaux tests)
 
 ---
 

@@ -31,10 +31,19 @@ impl DiscoveryService {
 
     /// Start a new discovery session
     pub async fn start_discovery(&self, config: DiscoveryConfig) -> Result<Uuid, DiscoveryError> {
-        // Check if discovery is already running
+        // Check if discovery is already running (only block if session is actively scanning)
         let mut current_task = self.current_task.lock().await;
-        if current_task.is_some() {
-            return Err(DiscoveryError::AlreadyInProgress);
+        if let Some(existing_id) = *current_task {
+            let sessions = self.sessions.read().await;
+            let is_active = sessions
+                .get(&existing_id)
+                .map(|s| matches!(s.status, DiscoveryStatus::Scanning))
+                .unwrap_or(false);
+            if is_active {
+                return Err(DiscoveryError::AlreadyInProgress);
+            }
+            // Previous session finished — allow a new one
+            *current_task = None;
         }
 
         // Validate the root path

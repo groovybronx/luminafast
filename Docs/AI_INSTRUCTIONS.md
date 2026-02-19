@@ -90,6 +90,7 @@ Ces documents définissent l'architecture cible et les choix technologiques. Ils
 - Enums pour les valeurs finies (états, flags, vues)
 - Gestion d'erreur explicite : try/catch avec types d'erreur
 - Imports absolus via alias `@/` pour `src/`
+- **Session tracking** : Utiliser les méthodes de session réelles (pas d'approximations)
 ```
 
 ### 4.2 — Rust (Backend Tauri)
@@ -100,6 +101,8 @@ Ces documents définissent l'architecture cible et les choix technologiques. Ils
 - Documentation Rust (`///`) pour toute fonction publique
 - Tests unitaires dans le même fichier (`#[cfg(test)]`)
 - Error types personnalisés avec `thiserror`
+- **Session tracking** : Implémenter les méthodes de session réelles (create/update/complete)
+- **Stats réelles** : Utiliser les tables de session, pas d'approximations temporelles
 ```
 
 ### 4.3 — Nommage
@@ -165,6 +168,8 @@ Avant chaque commit, l'agent DOIT vérifier :
 - [ ] La documentation APP_DOCUMENTATION est cohérente
 - [ ] Le périmètre de la sous-phase n'a pas été dépassé
 - [ ] Aucune fonctionnalité existante n'a été supprimée ou simplifiée
+- [ ] **Session tracking** : Implémenté avec tables dédiées (pas d'approximations)
+- [ ] **Stats réelles** : Utilisées dans les services (pas de fallback temporel)
 
 ---
 

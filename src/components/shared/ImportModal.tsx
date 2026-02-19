@@ -39,7 +39,7 @@ export const ImportModal = ({ onClose, onImportComplete }: ImportModalProps) => 
       setTimeout(() => {
         onImportComplete();
         onClose();
-      }, 1000);
+      }, 1500); // Give user time to see success state
     }
   }, [stage, onImportComplete, onClose]);
 

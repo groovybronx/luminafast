@@ -174,15 +174,16 @@ export class HashingService {
    * Analyse un répertoire pour détecter les doublons
    */
   static async analyzeDirectoryForDuplicates(
-    _directoryPath: string,
-    _recursive = true,
+    directoryPath: string,
+    recursive = true,
     _progressCallback?: HashProgressCallback
   ): Promise<DuplicateAnalysis> {
     try {
-      // TODO: Implémenter la commande Tauri pour scanner un répertoire
-      // Pour l'instant, utiliser detect_duplicates avec une liste vide
-      console.warn('Directory scanning not yet implemented, using empty file list');
-      return this.detectDuplicates([]);
+      const result = await this.invokeTauri('scan_directory_for_duplicates', { 
+        directoryPath,
+        recursive 
+      });
+      return this.parseDuplicateAnalysis(result);
     } catch (error) {
       throw this.parseError(error);
     }
@@ -242,6 +243,15 @@ export class HashingService {
           duplicates: [],
         };
       }
+      
+      case 'scan_directory_for_duplicates':
+        return {
+          total_files: 0,
+          duplicate_groups: 0,
+          duplicate_files: 0,
+          wasted_space: 0,
+          duplicates: [],
+        };
       
       case 'verify_file_integrity':
         return true;

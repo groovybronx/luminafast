@@ -400,10 +400,118 @@ describe('HashingService', () => {
   });
 
   describe('analyzeDirectoryForDuplicates', () => {
-    it('should return empty analysis for now (placeholder)', async () => {
-      // TODO: Réactiver ce test quand la méthode sera implémentée correctement
-      console.log('Directory scanning test skipped - placeholder implementation');
-      expect(true).toBe(true); // Test placeholder
+    beforeEach(() => {
+      // Re-enable Tauri mock for these tests
+      Object.defineProperty(window, '__TAURI_INTERNALS__', {
+        value: {
+          invoke: mockTauriInvoke,
+        },
+        writable: true,
+      });
+    });
+
+    it('should scan directory and detect duplicates', async () => {
+      const mockResponse = {
+        total_files: 5,
+        duplicate_groups: 1,
+        duplicate_files: 2,
+        wasted_space: 2048,
+        duplicates: [
+          {
+            hash: 'duplicate_hash',
+            file_paths: ['/test/dir/file1.jpg', '/test/dir/file2.jpg'],
+            file_size: 2048,
+            first_detected: '2026-02-13T00:00:00Z',
+          },
+        ],
+      };
+
+      mockTauriInvoke.mockResolvedValue(mockResponse);
+
+      const result = await HashingService.analyzeDirectoryForDuplicates('/test/dir', true);
+
+      expect(mockTauriInvoke).toHaveBeenCalledWith('scan_directory_for_duplicates', {
+        directoryPath: '/test/dir',
+        recursive: true,
+      });
+
+      expect(result).toEqual({
+        total_files: 5,
+        duplicate_groups: 1,
+        duplicate_files: 2,
+        wasted_space: 2048,
+        duplicates: [
+          {
+            hash: 'duplicate_hash',
+            file_paths: ['/test/dir/file1.jpg', '/test/dir/file2.jpg'],
+            file_size: 2048,
+            first_detected: '2026-02-13T00:00:00Z',
+          },
+        ],
+      });
+    });
+
+    it('should scan directory non-recursively', async () => {
+      const mockResponse = {
+        total_files: 2,
+        duplicate_groups: 0,
+        duplicate_files: 0,
+        wasted_space: 0,
+        duplicates: [],
+      };
+
+      mockTauriInvoke.mockResolvedValue(mockResponse);
+
+      const result = await HashingService.analyzeDirectoryForDuplicates('/test/dir', false);
+
+      expect(mockTauriInvoke).toHaveBeenCalledWith('scan_directory_for_duplicates', {
+        directoryPath: '/test/dir',
+        recursive: false,
+      });
+
+      expect(result.total_files).toBe(2);
+      expect(result.duplicate_groups).toBe(0);
+    });
+
+    it('should use recursive by default', async () => {
+      const mockResponse = {
+        total_files: 0,
+        duplicate_groups: 0,
+        duplicate_files: 0,
+        wasted_space: 0,
+        duplicates: [],
+      };
+
+      mockTauriInvoke.mockResolvedValue(mockResponse);
+
+      await HashingService.analyzeDirectoryForDuplicates('/test/dir');
+
+      expect(mockTauriInvoke).toHaveBeenCalledWith('scan_directory_for_duplicates', {
+        directoryPath: '/test/dir',
+        recursive: true,
+      });
+    });
+
+    it('should handle directory not found error', async () => {
+      mockTauriInvoke.mockRejectedValue(new Error('Directory not found'));
+
+      await expect(
+        HashingService.analyzeDirectoryForDuplicates('/nonexistent/dir')
+      ).rejects.toMatchObject({
+        type: HashErrorType.FileNotFound,
+        message: 'Directory not found',
+      });
+    });
+
+    it('should handle permission denied error', async () => {
+      mockTauriInvoke.mockRejectedValue(new Error('Permission denied'));
+
+      await expect(
+        HashingService.analyzeDirectoryForDuplicates('/restricted/dir')
+      ).rejects.toMatchObject({
+        type: HashErrorType.PermissionDenied,
+        message: 'Permission denied',
+      });
     });
   });
 

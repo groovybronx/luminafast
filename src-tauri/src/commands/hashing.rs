@@ -68,6 +68,64 @@ pub async fn detect_duplicates(
         .map_err(|e| e.to_string())
 }
 
+/// Scan un répertoire et détecte les doublons
+#[tauri::command]
+pub async fn scan_directory_for_duplicates(
+    app: AppHandle,
+    directory_path: String,
+    recursive: bool,
+) -> Result<DuplicateAnalysis, String> {
+    let hashing_state = app.state::<HashingState>();
+    let service = hashing_state.service.clone();
+
+    let dir_path = PathBuf::from(directory_path);
+
+    // Vérifier que le répertoire existe
+    if !dir_path.exists() {
+        return Err(format!("Directory not found: {:?}", dir_path));
+    }
+
+    if !dir_path.is_dir() {
+        return Err(format!("Path is not a directory: {:?}", dir_path));
+    }
+
+    // Scanner les fichiers du répertoire
+    let file_paths = scan_files_in_directory(&dir_path, recursive)
+        .map_err(|e| format!("Failed to scan directory: {}", e))?;
+
+    // Détecter les doublons
+    service
+        .detect_duplicates(&file_paths, None)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Scan récursivement un répertoire pour trouver tous les fichiers
+fn scan_files_in_directory(dir_path: &PathBuf, recursive: bool) -> Result<Vec<PathBuf>, String> {
+    let mut files = Vec::new();
+
+    let entries = std::fs::read_dir(dir_path)
+        .map_err(|e| format!("Cannot read directory {:?}: {}", dir_path, e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Cannot read entry: {}", e))?;
+        let path = entry.path();
+        let metadata = entry
+            .metadata()
+            .map_err(|e| format!("Cannot read metadata for {:?}: {}", path, e))?;
+
+        if metadata.is_file() {
+            files.push(path);
+        } else if metadata.is_dir() && recursive {
+            // Récursivement scanner les sous-répertoires
+            let sub_files = scan_files_in_directory(&path, recursive)?;
+            files.extend(sub_files);
+        }
+    }
+
+    Ok(files)
+}
+
 /// Vérifie l'intégrité d'un fichier
 #[tauri::command]
 pub async fn verify_file_integrity(
@@ -377,5 +435,44 @@ mod tests {
         if let Err(HashError::PermissionDenied(_)) = result {
             // Comportement attendu
         }
+    }
+
+    #[tokio::test]
+    async fn test_scan_files_in_directory() {
+        use std::fs::File;
+        let temp_dir = Builder::new().tempdir().unwrap();
+        let dir_path = temp_dir.path().to_path_buf();
+
+        // Créer quelques fichiers de test
+        File::create(dir_path.join("file1.txt")).unwrap();
+        File::create(dir_path.join("file2.txt")).unwrap();
+
+        // Créer un sous-répertoire avec un fichier
+        std::fs::create_dir(dir_path.join("subdir")).unwrap();
+        File::create(dir_path.join("subdir").join("file3.txt")).unwrap();
+
+        // Test non-récursif
+        let files = scan_files_in_directory(&dir_path, false).unwrap();
+        assert_eq!(files.len(), 2); // Seulement file1.txt et file2.txt
+
+        // Test récursif
+        let files = scan_files_in_directory(&dir_path, true).unwrap();
+        assert_eq!(files.len(), 3); // file1.txt, file2.txt, et subdir/file3.txt
+    }
+
+    #[tokio::test]
+    async fn test_scan_files_in_directory_empty() {
+        let temp_dir = Builder::new().tempdir().unwrap();
+        let dir_path = temp_dir.path().to_path_buf();
+
+        let files = scan_files_in_directory(&dir_path, false).unwrap();
+        assert_eq!(files.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_scan_files_in_directory_error() {
+        let non_existent_path = PathBuf::from("/nonexistent/directory");
+        let result = scan_files_in_directory(&non_existent_path, false);
+        assert!(result.is_err());
     }
 }

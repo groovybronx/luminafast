@@ -49,6 +49,9 @@ image = { version = "0.25", features = ["jpeg", "png"] }
 num_cpus = "1.16"
 dirs = "5.0"
 
+# EXIF extraction dependencies
+kamadak-exif = "0.6.1"
+
 [dev-dependencies]
 tempfile = "3.0"
 tauri = { version = "2.9.1", features = ["rustls-tls", "devtools", "test"] }

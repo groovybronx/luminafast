@@ -55,6 +55,16 @@ pub fn run() {
 
             Ok(())
         })
+        .setup(|app| {
+            // Initialize preview service for Phase 2.3
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = commands::preview::init_preview_service(&handle).await {
+                    eprintln!("Failed to initialize preview service: {}", e);
+                }
+            });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // Catalog commands
             commands::catalog::get_all_images,
@@ -62,6 +72,13 @@ pub fn run() {
             commands::catalog::search_images,
             // Hashing commands
             commands::hashing::hash_file,
+            commands::hashing::hash_files_batch,
+            commands::hashing::detect_duplicates,
+            commands::hashing::verify_file_integrity,
+            commands::hashing::clear_hash_cache,
+            commands::hashing::get_hash_cache_stats,
+            commands::hashing::benchmark_hashing,
+            commands::hashing::scan_directory_for_duplicates,
             // Filesystem commands
             commands::filesystem::start_watcher,
             commands::filesystem::stop_watcher,
@@ -95,6 +112,14 @@ pub fn run() {
             commands::discovery::get_default_discovery_config,
             commands::discovery::cleanup_discovery_sessions,
             commands::discovery::get_discovery_stats,
+            // Preview commands
+            commands::preview::generate_preview,
+            commands::preview::generate_preview_pyramid,
+            commands::preview::generate_batch_previews,
+            commands::preview::generate_previews_with_progress,
+            commands::preview::get_preview_cache_info,
+            commands::preview::cleanup_preview_cache,
+            commands::preview::remove_preview,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

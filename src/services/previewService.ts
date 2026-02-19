@@ -18,8 +18,7 @@ import {
 } from '../types';
 
 // Import Tauri API - utilise le pattern de pont existant comme les autres services
-// import { invoke } from '@tauri-apps/api/core';
-// import { listen } from '@tauri-apps/api/event';
+// Note: Using bridge pattern instead of direct imports for better testability and fallback handling
 
 /**
  * Service de gestion des previews avec wrapper Tauri
@@ -29,6 +28,7 @@ export class PreviewService {
   private progressListeners: Map<string, (event: PreviewProgressEvent) => void> = new Map();
   private isInitialized = false;
   private isTauriAvailable: boolean | null = null;
+  private unlistenFunctions: Array<() => void> = [];
 
   private constructor() {
     this.setupEventListeners();
@@ -58,6 +58,45 @@ export class PreviewService {
     return async (command: string, args?: Record<string, unknown>) => {
       console.warn(`[PreviewService] Tauri not available, mocking command: ${command}`, { args });
       throw new Error(`Tauri not available: ${command}`);
+    };
+  }
+
+  /**
+   * Get Tauri listen function (handle both __TAURI__ and __TAURI_INTERNALS__)
+   * Bridge architecture pattern for event listeners
+   */
+  private static getListen() {
+    if (typeof window !== 'undefined') {
+      // Try __TAURI__ first (normal case)
+      const tauriWindow = window as unknown as {
+        __TAURI__?: { 
+          event?: { 
+            listen: <T>(event: string, handler: (event: { payload: T }) => void) => Promise<() => void>;
+          }
+        };
+        __TAURI_INTERNALS__?: { 
+          event?: { 
+            listen: <T>(event: string, handler: (event: { payload: T }) => void) => Promise<() => void>;
+          }
+        };
+      };
+      
+      if (tauriWindow.__TAURI__?.event?.listen) {
+        return tauriWindow.__TAURI__.event.listen;
+      }
+      // Fallback to __TAURI_INTERNALS__ (brownfield pattern)
+      if (tauriWindow.__TAURI_INTERNALS__?.event?.listen) {
+        return tauriWindow.__TAURI_INTERNALS__.event.listen;
+      }
+    }
+    
+    // Mock fallback for tests - returns a promise that resolves to an unlisten function
+    return async <T>(_event: string, _handler: (event: { payload: T }) => void): Promise<() => void> => {
+      console.warn(`[PreviewService] Tauri event system not available, mocking listen for event: ${_event}`);
+      // Return a no-op unlisten function
+      return () => {
+        console.warn(`[PreviewService] Mock unlisten called for event: ${_event}`);
+      };
     };
   }
 
@@ -420,22 +459,53 @@ export class PreviewService {
 
   /**
    * Configure les écouteurs d'événements Tauri
-   * TODO: Implement event listeners using bridge architecture pattern
+   * Uses bridge architecture pattern for better testability and fallback handling
    */
   private setupEventListeners(): void {
-    // Event listeners will be implemented when needed
-    // listen('preview_progress', (event: any) => {
-    //   const progressEvent = event.payload as PreviewProgressEvent;
-    //   this.progressListeners.forEach(callback => {
-    //     try {
-    //       callback(progressEvent);
-    //     } catch (error: any) {
-    //       console.error('[PreviewService] Erreur callback progression:', error);
-    //     }
-    //   });
-    // }).catch((error: any) => {
-    //   console.error('[PreviewService] Erreur setup écouteur événements:', error);
-    // });
+    const listenFn = PreviewService.getListen();
+    
+    // Listen to preview_progress events emitted from Rust
+    listenFn<PreviewProgressEvent>('preview_progress', (event) => {
+      const progressEvent = event.payload;
+      
+      // Notify all registered progress listeners
+      this.progressListeners.forEach((callback, id) => {
+        try {
+          callback(progressEvent);
+        } catch (error) {
+          console.error(`[PreviewService] Error in progress callback ${id}:`, error);
+        }
+      });
+    })
+      .then((unlisten) => {
+        // Store the unlisten function for cleanup
+        this.unlistenFunctions.push(unlisten);
+        console.warn('[PreviewService] Event listener for preview_progress registered successfully');
+      })
+      .catch((error) => {
+        console.error('[PreviewService] Failed to setup preview_progress event listener:', error);
+      });
+  }
+
+  /**
+   * Cleanup event listeners when service is disposed
+   * Should be called when the service is no longer needed
+   */
+  public dispose(): void {
+    // Call all unlisten functions to cleanup event listeners
+    this.unlistenFunctions.forEach((unlisten) => {
+      try {
+        unlisten();
+      } catch (error) {
+        console.error('[PreviewService] Error during event listener cleanup:', error);
+      }
+    });
+    this.unlistenFunctions = [];
+    
+    // Clear all progress listeners
+    this.progressListeners.clear();
+    
+    console.warn('[PreviewService] Service disposed, all event listeners cleaned up');
   }
 
   /**

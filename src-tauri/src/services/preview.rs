@@ -434,12 +434,12 @@ impl PreviewService {
                 let thumb = thumbs.iter().max_by_key(|t| t.width * t.height).unwrap();
 
                 // Si le thumbnail est déjà assez petit, l'utiliser directement
-                if thumb.width <= size.0 && thumb.height <= size.0 {
+                if thumb.width <= size.0 && thumb.height <= size.1 {
                     // Écrire le thumbnail directement
                     tokio::fs::write(output_path, &thumb.data)
                         .await
                         .map_err(|e| PreviewError::WriteError {
-                            path: output_path.to_string_lossy().to_string(),
+                            path: format!("{}: {}", output_path.to_string_lossy(), e),
                         })?;
                 } else {
                     // Sinon, redimensionner le thumbnail
@@ -450,9 +450,8 @@ impl PreviewService {
                     })?;
 
                     let (original_width, original_height) = (img.width(), img.height());
-                    let scale_factor = size.0 as f32 / original_width.max(original_height) as f32;
-                    let new_width = (original_width as f32 * scale_factor) as u32;
-                    let new_height = (original_height as f32 * scale_factor) as u32;
+                    let (new_width, new_height) =
+                        self.calculate_resize_dimensions(original_width, original_height, size);
 
                     let resized = img.resize(
                         new_width,
@@ -463,7 +462,7 @@ impl PreviewService {
                     resized
                         .save(output_path)
                         .map_err(|e| PreviewError::WriteError {
-                            path: output_path.to_string_lossy().to_string(),
+                            path: format!("{}: {}", output_path.to_string_lossy(), e),
                         })?;
                 }
                 Ok(())
@@ -497,9 +496,7 @@ impl PreviewService {
                     })?;
 
                 // Redimensionner
-                let scale_factor = size.0 as f32 / width.max(height) as f32;
-                let new_width = (width as f32 * scale_factor) as u32;
-                let new_height = (height as f32 * scale_factor) as u32;
+                let (new_width, new_height) = self.calculate_resize_dimensions(width, height, size);
 
                 let resized = image::DynamicImage::ImageRgb8(img).resize(
                     new_width,
@@ -510,7 +507,7 @@ impl PreviewService {
                 resized
                     .save(output_path)
                     .map_err(|e| PreviewError::WriteError {
-                        path: output_path.to_string_lossy().to_string(),
+                        path: format!("{}: {}", output_path.to_string_lossy(), e),
                     })?;
 
                 Ok(())
@@ -577,9 +574,7 @@ impl PreviewService {
             })?;
 
         // Redimensionner pour la preview standard
-        let scale_factor = size.0 as f32 / width.max(height) as f32;
-        let new_width = (width as f32 * scale_factor) as u32;
-        let new_height = (height as f32 * scale_factor) as u32;
+        let (new_width, new_height) = self.calculate_resize_dimensions(width, height, size);
 
         let resized = image::DynamicImage::ImageRgb8(img).resize(
             new_width,
@@ -590,7 +585,7 @@ impl PreviewService {
         resized
             .save(output_path)
             .map_err(|e| PreviewError::WriteError {
-                path: output_path.to_string_lossy().to_string(),
+                path: format!("{}: {}", output_path.to_string_lossy(), e),
             })?;
 
         Ok(())
@@ -609,9 +604,8 @@ impl PreviewService {
 
         // Redimensionner en gardant le ratio et en utilisant 240px comme bord long
         let (original_width, original_height) = (img.width(), img.height());
-        let scale_factor = size.0 as f32 / original_width.max(original_height) as f32;
-        let new_width = (original_width as f32 * scale_factor) as u32;
-        let new_height = (original_height as f32 * scale_factor) as u32;
+        let (new_width, new_height) =
+            self.calculate_resize_dimensions(original_width, original_height, size);
 
         let resized = img.resize(new_width, new_height, image::imageops::FilterType::Lanczos3);
 
@@ -620,7 +614,7 @@ impl PreviewService {
         resized
             .save(output_path)
             .map_err(|e| PreviewError::WriteError {
-                path: output_path.to_string_lossy().to_string(),
+                path: format!("{}: {}", output_path.to_string_lossy(), e),
             })?;
 
         Ok(())
@@ -639,9 +633,8 @@ impl PreviewService {
 
         // Pour preview standard: 1440px bord long
         let (original_width, original_height) = (img.width(), img.height());
-        let scale_factor = size.0 as f32 / original_width.max(original_height) as f32;
-        let new_width = (original_width as f32 * scale_factor) as u32;
-        let new_height = (original_height as f32 * scale_factor) as u32;
+        let (new_width, new_height) =
+            self.calculate_resize_dimensions(original_width, original_height, size);
 
         let resized = img.resize(new_width, new_height, image::imageops::FilterType::Lanczos3);
 
@@ -650,7 +643,7 @@ impl PreviewService {
         resized
             .save(output_path)
             .map_err(|e| PreviewError::WriteError {
-                path: output_path.to_string_lossy().to_string(),
+                path: format!("{}: {}", output_path.to_string_lossy(), e),
             })?;
 
         Ok(())
@@ -720,7 +713,7 @@ impl PreviewService {
             image::DynamicImage::ImageRgb16(img)
                 .save(output_path)
                 .map_err(|e| PreviewError::WriteError {
-                    path: output_path.to_string_lossy().to_string(),
+                    path: format!("{}: {}", output_path.to_string_lossy(), e),
                 })?;
 
             Ok(())
@@ -734,7 +727,7 @@ impl PreviewService {
             // Sauvegarder avec la qualité maximale pour zoom pixel
             img.save(output_path)
                 .map_err(|e| PreviewError::WriteError {
-                    path: output_path.to_string_lossy().to_string(),
+                    path: format!("{}: {}", output_path.to_string_lossy(), e),
                 })?;
 
             Ok(())
@@ -797,6 +790,19 @@ impl PreviewService {
         })?;
 
         Ok((img.width(), img.height()))
+    }
+
+    /// Calcule le facteur d'échelle et les nouvelles dimensions pour redimensionner une image
+    fn calculate_resize_dimensions(
+        &self,
+        original_width: u32,
+        original_height: u32,
+        target_size: (u32, u32),
+    ) -> (u32, u32) {
+        let scale_factor = target_size.0 as f32 / original_width.max(original_height) as f32;
+        let new_width = (original_width as f32 * scale_factor) as u32;
+        let new_height = (original_height as f32 * scale_factor) as u32;
+        (new_width, new_height)
     }
 }
 

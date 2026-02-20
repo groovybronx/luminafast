@@ -340,9 +340,17 @@ export function useDiscovery(): UseDiscoveryReturn {
 
       // Generate previews for newly imported images
       addLog('Generating previews for imported images...', 'sync');
+      
+      // Ensure PreviewService is properly initialized before generating previews (Phase 2.3 fix)
+      // This prevents race condition where generatePreviewsForImages tries to use uninitialized service
       try {
-        await generatePreviewsForImages(result.successful);
-        addLog(`Previews generated for ${result.successful.length} images`, 'sync');
+        const previewServiceAvailable = await previewService.isAvailable();
+        if (!previewServiceAvailable) {
+          addLog('PreviewService not available, cannot generate previews', 'warning');
+        } else {
+          await generatePreviewsForImages(result.successful);
+          addLog(`Previews generated for ${result.successful.length} images`, 'sync');
+        }
       } catch (error) {
         addLog(`Preview generation failed: ${error}`, 'error');
       }

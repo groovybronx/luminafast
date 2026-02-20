@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { GridView } from '../GridView';
 import type { CatalogImage} from '../../../types';
@@ -8,7 +8,32 @@ import { DEFAULT_EDIT_STATE } from '../../../types';
 vi.mock('lucide-react', () => ({
   Cloud: () => <div data-testid="icon-cloud" />,
   RefreshCw: () => <div data-testid="icon-refresh" />,
+  Image: () => <div data-testid="icon-image" />,
 }));
+
+// Mock @tanstack/react-virtual to simplify testing
+// The virtualizer's absolute positioning makes standard testing harder,
+// so we mock it to render items in a simpler grid layout for testing
+vi.mock('@tanstack/react-virtual', () => {
+  const React = require('react');
+  return {
+    useVirtualizer: vi.fn((config) => {
+      const count = config.count;
+      const estimateSize = config.estimateSize;
+      const items = Array.from({ length: count }, (_, i) => ({
+        key: i,
+        index: i,
+        start: estimateSize() * i,
+      }));
+
+      return {
+        getTotalSize: () => estimateSize() * count,
+        getVirtualItems: () => items,
+        measure: vi.fn(),
+      };
+    }),
+  };
+});
 
 const mockImages: CatalogImage[] = [
   {
@@ -34,6 +59,18 @@ const mockImages: CatalogImage[] = [
 ];
 
 describe('GridView Component', () => {
+  beforeEach(() => {
+    // Mock clientWidth/clientHeight for dimension calculations (no longer needed with mocked virtualizer)
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      value: 800,
+    });
+    Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
+      configurable: true,
+      value: 600,
+    });
+  });
+
   it('renders correct number of images', () => {
     const onToggle = vi.fn();
     const onSetView = vi.fn();

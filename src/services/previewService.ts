@@ -161,6 +161,7 @@ export class PreviewService {
 
   /**
    * Initialise le service preview
+   * Note: Backend launch une init en parallel, cette méthode est idempotente
    */
   public async initialize(): Promise<void> {
     if (this.isInitialized) {
@@ -168,13 +169,25 @@ export class PreviewService {
     }
 
     try {
+      // Add small delay to avoid race condition avec backend async init
+      await new Promise(resolve => setTimeout(resolve, 100));
       await this.invokeCommand('init_preview_service');
       this.isInitialized = true;
       PreviewService.logDev('[PreviewService] Service initialisé avec succès');
     } catch (error) {
       const serviceError = this.createErrorFromUnknown(error);
       console.error('[PreviewService] Erreur initialisation:', serviceError);
-      throw serviceError;
+      // Retry once in case of race condition
+      if (this.isInitialized) {
+        return;
+      }
+      try {
+        await this.invokeCommand('init_preview_service');
+        this.isInitialized = true;
+      } catch (retryError) {
+        console.error('[PreviewService] Erreur initialisation retry:', retryError);
+        throw serviceError;
+      }
     }
   }
 

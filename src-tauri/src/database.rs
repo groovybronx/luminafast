@@ -311,7 +311,7 @@ mod tests {
         let temp_dir = tempdir()?;
         let db_path = temp_dir.path().join("test.db");
 
-        let db = Database::new(&db_path)?;
+        let _db = Database::new(&db_path)?;
         assert!(db_path.exists());
 
         Ok(())

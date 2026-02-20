@@ -359,7 +359,8 @@ mod tests {
             .prepare("SELECT COUNT(*) FROM migrations")?
             .query_row([], |row| row.get(0))?;
 
-        assert_eq!(migration_count, 1);
+        // Two migrations are run: 001_initial and 002_ingestion_sessions
+        assert_eq!(migration_count, 2);
 
         Ok(())
     }

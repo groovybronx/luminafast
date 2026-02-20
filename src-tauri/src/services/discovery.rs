@@ -210,7 +210,7 @@ impl DiscoveryService {
 
                 // Update progress periodically
                 if last_update.elapsed().as_millis() > 100 {
-                    let progress = if let Some(max_files) = config.max_files {
+                    let _progress = if let Some(max_files) = config.max_files {
                         (files_found as f64 / max_files as f64 * 100.0).min(100.0) as f32
                     } else {
                         0.0 // Can't calculate progress without max_files
@@ -499,7 +499,7 @@ mod tests {
         };
 
         // Start a session
-        let session_id = service.start_discovery(config).await.unwrap();
+        let _session_id = service.start_discovery(config).await.unwrap();
 
         // Should have one session
         let sessions = service.get_all_sessions().await;

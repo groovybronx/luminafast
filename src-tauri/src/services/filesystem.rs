@@ -26,17 +26,17 @@ pub struct FilesystemService {
 /// Handle pour un watcher actif
 struct WatcherHandle {
     /// ID du watcher
-    id: Uuid,
+    id: Uuid, // Prévu pour usage futur (tracking multi-watchers)
     /// Watcher notify
     watcher: RecommendedWatcher,
     /// Configuration
-    config: WatcherConfig,
+    config: WatcherConfig, // Prévu pour extension (config dynamique)
     /// Channel pour les événements
-    event_tx: mpsc::UnboundedSender<FileEvent>,
+    event_tx: mpsc::UnboundedSender<FileEvent>, // Utilisé dans la prochaine phase (event streaming)
     /// Statistics
     stats: WatcherStats,
     /// Dernier événement pour debouncing
-    last_event: Arc<RwLock<Option<(PathBuf, Instant)>>>,
+    last_event: Arc<RwLock<Option<(PathBuf, Instant)>>>, // Utilisé pour la gestion du debounce
 }
 
 impl FilesystemService {
@@ -654,7 +654,7 @@ mod tests {
             .unwrap();
 
         // Verrou avec timeout court
-        let lock_id = service
+        let _lock_id = service
             .acquire_lock(
                 file_path.clone(),
                 FileLockType::Exclusive,

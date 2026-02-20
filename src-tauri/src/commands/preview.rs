@@ -290,7 +290,7 @@ pub async fn benchmark_preview_generation(
 /// Récupère la configuration actuelle du service preview
 #[tauri::command]
 pub async fn get_preview_config() -> Result<PreviewConfig, String> {
-    let service = get_preview_service()?;
+    let _service = get_preview_service()?;
 
     // Note: Le service n'expose pas directement sa config,
     // donc on retourne la config par défaut pour l'instant

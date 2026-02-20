@@ -365,7 +365,7 @@ impl IngestionService {
     }
 
     /// Detect camera model from filename patterns
-    fn detect_camera_model(&self, filename: &str, extension: &str) -> Option<String> {
+    fn detect_camera_model(&self, filename: &str, _extension: &str) -> Option<String> {
         if filename.contains("EOSR") || filename.contains("R5") || filename.contains("R6") {
             Some("EOS R5".to_string())
         } else if filename.contains("GFX") {
@@ -430,7 +430,7 @@ impl IngestionService {
     }
 
     /// Detect lens from filename patterns
-    fn detect_lens(&self, filename: &str, extension: &str) -> Option<String> {
+    fn detect_lens(&self, filename: &str, _extension: &str) -> Option<String> {
         if filename.contains("24-70") {
             Some("24-70mm f/2.8".to_string())
         } else if filename.contains("70-200") {
@@ -677,7 +677,7 @@ impl IngestionService {
         &self,
         session_id: Uuid,
     ) -> Result<(), DiscoveryError> {
-        let mut db = self
+        let db = self
             .db
             .lock()
             .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
@@ -703,7 +703,7 @@ impl IngestionService {
         total_size_bytes: u64,
         avg_processing_time_ms: f64,
     ) -> Result<(), DiscoveryError> {
-        let mut db = self
+        let db = self
             .db
             .lock()
             .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
@@ -738,7 +738,7 @@ impl IngestionService {
         &self,
         session_id: Uuid,
     ) -> Result<(), DiscoveryError> {
-        let mut db = self
+        let db = self
             .db
             .lock()
             .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;

@@ -668,7 +668,7 @@ describe('PreviewService', () => {
       });
 
       // Get the event handler that was registered (using any to handle mock typing)
-      const mockCalls = mockListen.mock.calls as unknown[];
+      const mockCalls = mockListen.mock.calls as unknown[][];
       const eventHandler = mockCalls[0]?.[1] as ((event: { payload: PreviewProgressEvent }) => void) | undefined;
       expect(eventHandler).toBeDefined();
 
@@ -705,7 +705,7 @@ describe('PreviewService', () => {
       });
 
       // Get the event handler (using any to handle mock typing)
-      const mockCalls = mockListen.mock.calls as unknown[];
+      const mockCalls = mockListen.mock.calls as unknown[][];
       const eventHandler = mockCalls[0]?.[1] as ((event: { payload: PreviewProgressEvent }) => void) | undefined;
       expect(eventHandler).toBeDefined();
 

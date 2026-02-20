@@ -1,0 +1,34 @@
+/* Styles pour ImageCard et GridView */
+
+.image-card {
+  border: 1px solid #18181b;
+  border-radius: 8px;
+  padding: 8px;
+}
+.image-card.selected {
+  border: 2px solid #3b82f6;
+}
+.image-card img {
+  width: 100%;
+  border-radius: 4px;
+}
+
+.grid-view {
+  grid-auto-flow: row;
+}
+
+/* Classes dynamiques pour la taille des vignettes */
+/* Générer dynamiquement via JS ou ajouter quelques tailles courantes */
+.thumbnail-size-2 {
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+}
+.thumbnail-size-3 {
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+}
+.thumbnail-size-4 {
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+}
+.thumbnail-size-5 {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+/* Ajouter d'autres tailles si besoin */

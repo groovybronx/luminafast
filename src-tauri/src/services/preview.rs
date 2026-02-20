@@ -704,14 +704,18 @@ impl PreviewService {
             }
 
             // Pour 16-bit, ProcessedImage<BIT_DEPTH_16> derefs to [u16]
-            // donc .to_vec() retourne Vec<u16> comme attendu par Rgb16Image::from_raw
-            let img = image::Rgb16Image::from_raw(width, height, processed.to_vec())
+            // Convertir en 8-bit pour compatibilité avec RgbImage
+            let processed_8bit: Vec<u8> = processed.iter()
+                .map(|&pixel| (pixel >> 8) as u8) // Convertir 16-bit vers 8-bit
+                .collect();
+            
+            let img = image::RgbImage::from_raw(width, height, processed_8bit)
                 .ok_or_else(|| PreviewError::ProcessingError {
                     message: "Impossible de créer l'image depuis les données RAW".to_string(),
                 })?;
 
             // Sauvegarder sans redimensionnement pour 1:1
-            image::DynamicImage::ImageRgb16(img)
+            image::DynamicImage::ImageRgb8(img)
                 .save(output_path)
                 .map_err(|e| PreviewError::WriteError {
                     path: format!("{}: {}", output_path.to_string_lossy(), e),

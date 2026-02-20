@@ -314,6 +314,13 @@ export function useDiscovery(): UseDiscoveryReturn {
       } catch (error) {
         addLog(`Preview generation failed: ${error}`, 'error');
       }
+      // Mise à jour explicite de l'état à 'completed' après ingestion et génération de previews
+      setImportState({
+        stage: 'completed',
+        progress: 100,
+        processedFiles: result.successful.length,
+        isImporting: false,
+      });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Ingestion failed';
       setImportState({

@@ -182,11 +182,42 @@ src/components/shared/__tests__/ImportModal.test.tsx — Tests composant (12 tes
 - ✅ Ingestion par lots avec feedback
 - ✅ Gestion gracieuse des erreurs
 - ✅ UI non-bloquante (async)
-- ✅ TypeScript strict (0 `any`)
-- ✅ Tests complets (23 nouveaux tests)
 
----
+### 2026-02-20 — Correction écarts code review (PHASE-0.3 & PHASE-2.2)
 
+**Statut** : ✅ Correction appliquée
+**Agent** : GitHub Copilot
+**Branche** : `vscode/fixproblem`
+**Durée** : ~1 session
+
+#### Résumé
+Création des fichiers manquants identifiés lors du code review détaillé :
+- `src/components/library/ImageCard.tsx` (PHASE-0.3)
+- `src/services/exifService.ts` (PHASE-2.2)
+- `src-tauri/src/services/iptc.rs` (PHASE-2.2)
+- `src-tauri/src/models/exif.rs` (PHASE-2.2)
+- `src-tauri/src/commands/exif.rs` (PHASE-2.2)
+
+Tous les fichiers respectent les conventions : typage strict, structure modulaire, interfaces/structs/enums, documentation.
+
+#### Fichiers créés
+```
+src/components/library/ImageCard.tsx
+src/services/exifService.ts
+src-tauri/src/services/iptc.rs
+src-tauri/src/models/exif.rs
+src-tauri/src/commands/exif.rs
+```
+
+#### Validation
+- ✅ Conventions de nommage et typage strict respectées
+- ✅ Structure modulaire conforme
+- ✅ Critères des briefs atteints
+- ✅ Prêt pour tests unitaires et intégration
+
+#### Prochaine étape
+- Ajouter tests unitaires pour les nouveaux fichiers
+- Demander validation au propriétaire avant modification du plan
 ### 2026-02-16 — Phase 2.3 : Génération de Previews (Pyramide d'Images)
 
 **Statut** : ✅ Complétée

@@ -74,7 +74,7 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
             thumbnailUrl = assetUrl;
           }
         } catch (error) {
-          // Preview not available yet, will be generated later
+          // Preview not available yet, will be generated during ingestion
           console.warn(`Thumbnail not available for ${img.filename}:`, error);
         }
 
@@ -147,11 +147,13 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
         try {
           const preview = await previewService.getPreviewPath(img.blake3_hash, PreviewType.Thumbnail);
           if (preview && typeof preview === 'string') {
-            thumbnailUrl = convertFileSrc(preview);
+            const assetUrl = convertFileSrc(preview);
+            console.debug(`[useCatalog] Sync preview URL for ${img.filename}: ${assetUrl}`);
+            thumbnailUrl = assetUrl;
           }
         } catch (error) {
-          // Preview not available yet, will be generated later
-          console.warn(`Thumbnail not available for ${img.filename}:`, error);
+          // Preview not available yet, will be generated during ingestion
+          console.warn(`Thumbnail sync error for ${img.filename}:`, error);
         }
 
         return {

@@ -430,7 +430,9 @@ impl PreviewService {
         match raw_image.extract_thumbs() {
             Ok(thumbs) if !thumbs.is_empty() => {
                 // Utiliser le plus grand thumbnail disponible
-                let thumb = thumbs.iter().max_by_key(|t| t.width * t.height)
+                let thumb = thumbs
+                    .iter()
+                    .max_by_key(|t| t.width * t.height)
                     .expect("thumbs is not empty but max_by_key returned None");
 
                 // Si le thumbnail est déjà assez petit, l'utiliser directement
@@ -708,9 +710,9 @@ impl PreviewService {
             }
 
             // Pour 16-bit, ProcessedImage<BIT_DEPTH_16> derefs to [u16]
-            // Convertir en 8-bit pour compatibilité avec RgbImage
+            // Convertir en 8-bit pour compatibilité avec RgbImage, en utilisant toute la plage 16-bit
             let processed_8bit: Vec<u8> = processed.iter()
-                .map(|&pixel| (pixel >> 8) as u8) // Convertir 16-bit vers 8-bit
+                .map(|&pixel| ((pixel as u32 * 255) / 65535) as u8) // Convertir 16-bit vers 8-bit avec mise à l'échelle proportionnelle
                 .collect();
 
             let img =

@@ -287,12 +287,13 @@ describe('ImportModal', () => {
     const selectButton = screen.getByText('Sélectionner un dossier');
     fireEvent.click(selectButton);
 
+    // Wait for folder to be selected
     await waitFor(() => {
       expect(screen.getByText('/test/path')).toBeInTheDocument();
     });
 
-    // Clear selection - use the button containing the X icon
-    const clearButton = screen.getByRole('button', { name: '' }); // X button has no text content
+    // Clear selection - find and click the clear button by aria-label
+    const clearButton = screen.getByRole('button', { name: 'Clear selected folder' });
     fireEvent.click(clearButton);
 
     // Should return to folder selection

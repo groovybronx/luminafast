@@ -257,8 +257,7 @@ impl IngestionService {
             avg_processing_time_ms: avg_processing_time,
         };
 
-        self.update_session_stats(request.session_id, stats)
-        .await?;
+        self.update_session_stats(request.session_id, stats).await?;
 
         // Mark session as completed
         self.complete_session(request.session_id).await?;

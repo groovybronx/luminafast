@@ -7,7 +7,7 @@ import { vi } from 'vitest';
 
 // Mock invoke function
 export const invoke = vi.fn().mockImplementation((cmd: string, args?: unknown) => {
-  console.log(`[Mock] invoke called: ${cmd}`, args);
+  console.warn(`[Mock] invoke called: ${cmd}`, args);
   return Promise.resolve(null);
 });
 

@@ -141,11 +141,11 @@ export default function App() {
     // Refresh catalog from SQLite to show newly imported images
     try {
       await syncAfterImport();
-      addLog(`Catalog refreshed: ${images.length} images loaded`, 'sqlite');
+      addLog('Catalog refreshed from SQLite', 'sqlite');
     } catch (err) {
       addLog(`Failed to refresh catalog: ${err}`, 'error');
     }
-  }, [setShowImport, addLog, syncAfterImport, images.length]);
+  }, [setShowImport, addLog, syncAfterImport]);
 
 
   useEffect(() => {

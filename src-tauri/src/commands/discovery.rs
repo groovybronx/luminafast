@@ -13,6 +13,9 @@ use uuid::Uuid;
 /// Global discovery service instance
 static DISCOVERY_SERVICE: OnceLock<Arc<DiscoveryService>> = OnceLock::new();
 
+/// Global ingestion service instance
+static INGESTION_SERVICE: OnceLock<Arc<IngestionService>> = OnceLock::new();
+
 /// Initialize the discovery services (called from lib.rs)
 pub fn initialize_discovery_services() {
     // Services will be initialized lazily when needed
@@ -27,6 +30,31 @@ fn get_discovery_service() -> Arc<DiscoveryService> {
                 crate::models::hashing::HashConfig::default(),
             ));
             Arc::new(DiscoveryService::new(blake3_service))
+        })
+        .clone()
+}
+
+/// Get the global ingestion service
+fn get_ingestion_service() -> Arc<IngestionService> {
+    INGESTION_SERVICE
+        .get_or_init(|| {
+            // Create BLAKE3 service for ingestion
+            let blake3_service = Arc::new(Blake3Service::new(
+                crate::models::hashing::HashConfig::default(),
+            ));
+
+            // Open connection to main database
+            let db_path = get_db_path();
+            let conn = rusqlite::Connection::open(&db_path)
+                .expect("Failed to open database for ingestion service");
+
+            // Enable WAL mode for better concurrency
+            conn.execute_batch("PRAGMA journal_mode = WAL;")
+                .expect("Failed to enable WAL mode");
+
+            let db = Arc::new(std::sync::Mutex::new(conn));
+
+            Arc::new(IngestionService::new(blake3_service, db))
         })
         .clone()
 }
@@ -48,20 +76,7 @@ fn get_db_path() -> std::path::PathBuf {
 pub fn ingest_file(file: DiscoveredFile) -> Result<IngestionResult, String> {
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
-        // Create BLAKE3 service
-        let blake3_service = Arc::new(Blake3Service::new(
-            crate::models::hashing::HashConfig::default(),
-        ));
-
-        // Open connection to main database
-        let db_path = get_db_path();
-        let conn = rusqlite::Connection::open(&db_path)
-            .map_err(|e| format!("Failed to open database: {}", e))?;
-        let db = Arc::new(std::sync::Mutex::new(conn));
-
-        // Create ingestion service with main DB
-        let ingestion_service = IngestionService::new(blake3_service, db);
-
+        let ingestion_service = get_ingestion_service();
         let result = ingestion_service
             .ingest_file(&file)
             .await
@@ -76,20 +91,7 @@ pub fn ingest_file(file: DiscoveredFile) -> Result<IngestionResult, String> {
 pub fn batch_ingest(request: BatchIngestionRequest) -> Result<BatchIngestionResult, String> {
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
-        // Create BLAKE3 service
-        let blake3_service = Arc::new(Blake3Service::new(
-            crate::models::hashing::HashConfig::default(),
-        ));
-
-        // Open connection to main database
-        let db_path = get_db_path();
-        let conn = rusqlite::Connection::open(&db_path)
-            .map_err(|e| format!("Failed to open database: {}", e))?;
-        let db = Arc::new(std::sync::Mutex::new(conn));
-
-        // Create ingestion service with main DB
-        let ingestion_service = IngestionService::new(blake3_service, db);
-
+        let ingestion_service = get_ingestion_service();
         let result = ingestion_service
             .batch_ingest(&request)
             .await
@@ -261,16 +263,8 @@ pub fn get_discovery_stats(
             .await
             .map_err(|e| e.to_string())?;
 
-        // Get ingestion stats - create service with main DB
-        let blake3_service = Arc::new(Blake3Service::new(
-            crate::models::hashing::HashConfig::default(),
-        ));
-        let db_path = get_db_path();
-        let conn = rusqlite::Connection::open(&db_path)
-            .map_err(|e| format!("Failed to open database: {}", e))?;
-        let db = Arc::new(std::sync::Mutex::new(conn));
-        let ingestion_service = IngestionService::new(blake3_service, db);
-
+        // Get ingestion stats using singleton
+        let ingestion_service = get_ingestion_service();
         let ingestion_stats = ingestion_service
             .get_session_stats(sessionId)
             .await

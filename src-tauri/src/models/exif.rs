@@ -22,7 +22,7 @@ mod tests {
             iso: Some(100),
             aperture: Some(2.8),
             shutter_speed: Some(1.0 / 125.0),
-            date: Some("2026-02-20".to_string()),
+             date: Some("YYYY-MM-DD".to_string()), 
             gps: Some((48.8566, 2.3522)),
             camera_model: Some("MockCam X".to_string()),
             lens_model: Some("MockLens 50mm".to_string()),

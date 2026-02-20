@@ -1,6 +1,10 @@
+// Correction : déclaration globale pour __dirname
+declare const __dirname: string;
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+// Correction : assurez-vous que les types Node.js sont installés
+// npm install --save-dev @types/node
 
 export default defineConfig({
   plugins: [react()],

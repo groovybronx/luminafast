@@ -12,7 +12,6 @@ export const ImportModal = ({ onClose, onImportComplete }: ImportModalProps) => 
   const [isStarted, setIsStarted] = useState(false);
   
   const {
-    isIngesting,
     progress,
     totalFiles,
     processedFiles,
@@ -21,17 +20,8 @@ export const ImportModal = ({ onClose, onImportComplete }: ImportModalProps) => 
     error,
     selectRootFolder,
     startScan,
-    startIngestion,
     cancel,
-    sessionId,
   } = useDiscovery();
-
-  // Auto-start ingestion when scanning completes
-  useEffect(() => {
-    if (stage === 'ingesting' && sessionId && !isIngesting) {
-      startIngestion(sessionId);
-    }
-  }, [stage, sessionId, isIngesting, startIngestion]);
 
   // Handle completion
   useEffect(() => {
@@ -90,8 +80,8 @@ export const ImportModal = ({ onClose, onImportComplete }: ImportModalProps) => 
   const hasError = stage === 'error';
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[200] flex items-center justify-center">
-      <div className="bg-zinc-950 border border-zinc-800 w-[500px] p-8 rounded-xl shadow-2xl space-y-6">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-200 flex items-center justify-center">
+      <div className="bg-zinc-950 border border-zinc-800 w-125 p-8 rounded-xl shadow-2xl space-y-6">
         {/* Header */}
         <div className="flex flex-col items-center text-center space-y-2">
           <div className="w-16 h-16 bg-blue-600/20 rounded-full flex items-center justify-center mb-2">
@@ -136,7 +126,9 @@ export const ImportModal = ({ onClose, onImportComplete }: ImportModalProps) => 
                 Commencer l'import
               </button>
               <button
+                type="button"
                 onClick={() => setSelectedPath(null)}
+                aria-label="Clear selected folder"
                 className="px-4 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-zinc-400 transition-colors"
               >
                 <X size={20} />

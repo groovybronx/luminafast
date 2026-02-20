@@ -53,9 +53,6 @@ pub fn run() {
 
             log::info!("Hashing, filesystem and discovery services initialized");
 
-            Ok(())
-        })
-        .setup(|app| {
             // Initialize preview service for Phase 2.3
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
@@ -63,6 +60,7 @@ pub fn run() {
                     eprintln!("Failed to initialize preview service: {}", e);
                 }
             });
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

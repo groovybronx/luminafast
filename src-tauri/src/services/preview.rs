@@ -414,24 +414,26 @@ impl PreviewService {
         }
 
         // Lire le fichier RAW
-        let data = tokio::fs::read(input_path).await.map_err(|e| {
-            PreviewError::IoError {
+        let data = tokio::fs::read(input_path)
+            .await
+            .map_err(|e| PreviewError::IoError {
                 message: format!("Impossible de lire le fichier RAW: {}", e),
-            }
-        })?;
+            })?;
 
         // Ouvrir le fichier RAW avec rsraw
-        let mut raw_image = rsraw::RawImage::open(&data).map_err(|e| {
-            PreviewError::ProcessingError {
+        let mut raw_image =
+            rsraw::RawImage::open(&data).map_err(|e| PreviewError::ProcessingError {
                 message: format!("Erreur ouverture fichier RAW: {:?}", e),
-            }
-        })?;
+            })?;
 
         // Essayer d'extraire les thumbnails embarqués
         match raw_image.extract_thumbs() {
             Ok(thumbs) if !thumbs.is_empty() => {
                 // Utiliser le plus grand thumbnail disponible
-                let thumb = thumbs.iter().max_by_key(|t| t.width * t.height).unwrap();
+                let thumb = thumbs
+                    .iter()
+                    .max_by_key(|t| t.width * t.height)
+                    .expect("thumbs is not empty but max_by_key returned None");
 
                 // Si le thumbnail est déjà assez petit, l'utiliser directement
                 if thumb.width <= size.0 && thumb.height <= size.1 {
@@ -453,11 +455,8 @@ impl PreviewService {
                     let (new_width, new_height) =
                         self.calculate_resize_dimensions(original_width, original_height, size);
 
-                    let resized = img.resize(
-                        new_width,
-                        new_height,
-                        image::imageops::FilterType::Lanczos3,
-                    );
+                    let resized =
+                        img.resize(new_width, new_height, image::imageops::FilterType::Lanczos3);
 
                     resized
                         .save(output_path)
@@ -469,15 +468,17 @@ impl PreviewService {
             }
             _ => {
                 // Pas de thumbnail embarqué, traiter le RAW complet
-                raw_image.unpack().map_err(|e| PreviewError::ProcessingError {
-                    message: format!("Erreur décompression RAW: {:?}", e),
-                })?;
-
-                let processed = raw_image
-                    .process::<{ rsraw::BIT_DEPTH_8 }>()
+                raw_image
+                    .unpack()
                     .map_err(|e| PreviewError::ProcessingError {
-                        message: format!("Erreur traitement RAW: {:?}", e),
+                        message: format!("Erreur décompression RAW: {:?}", e),
                     })?;
+
+                let processed = raw_image.process::<{ rsraw::BIT_DEPTH_8 }>().map_err(|e| {
+                    PreviewError::ProcessingError {
+                        message: format!("Erreur traitement RAW: {:?}", e),
+                    }
+                })?;
 
                 // Convertir les données RAW en image
                 let width = processed.width();
@@ -490,10 +491,11 @@ impl PreviewService {
                     });
                 }
 
-                let img = image::RgbImage::from_raw(width, height, processed.to_vec())
-                    .ok_or_else(|| PreviewError::ProcessingError {
+                let img = image::RgbImage::from_raw(width, height, processed.to_vec()).ok_or_else(
+                    || PreviewError::ProcessingError {
                         message: "Impossible de créer l'image depuis les données RAW".to_string(),
-                    })?;
+                    },
+                )?;
 
                 // Redimensionner
                 let (new_width, new_height) = self.calculate_resize_dimensions(width, height, size);
@@ -532,30 +534,31 @@ impl PreviewService {
         }
 
         // Lire le fichier RAW
-        let data = tokio::fs::read(input_path).await.map_err(|e| {
-            PreviewError::IoError {
+        let data = tokio::fs::read(input_path)
+            .await
+            .map_err(|e| PreviewError::IoError {
                 message: format!("Impossible de lire le fichier RAW: {}", e),
-            }
-        })?;
+            })?;
 
         // Ouvrir et traiter le fichier RAW avec rsraw
-        let mut raw_image = rsraw::RawImage::open(&data).map_err(|e| {
-            PreviewError::ProcessingError {
+        let mut raw_image =
+            rsraw::RawImage::open(&data).map_err(|e| PreviewError::ProcessingError {
                 message: format!("Erreur ouverture fichier RAW: {:?}", e),
-            }
-        })?;
+            })?;
 
         // Décompresser le RAW
-        raw_image.unpack().map_err(|e| PreviewError::ProcessingError {
-            message: format!("Erreur décompression RAW: {:?}", e),
-        })?;
+        raw_image
+            .unpack()
+            .map_err(|e| PreviewError::ProcessingError {
+                message: format!("Erreur décompression RAW: {:?}", e),
+            })?;
 
         // Traiter en 8-bit pour les previews standard (meilleur compromis taille/qualité)
-        let processed = raw_image
-            .process::<{ rsraw::BIT_DEPTH_8 }>()
-            .map_err(|e| PreviewError::ProcessingError {
+        let processed = raw_image.process::<{ rsraw::BIT_DEPTH_8 }>().map_err(|e| {
+            PreviewError::ProcessingError {
                 message: format!("Erreur traitement RAW: {:?}", e),
-            })?;
+            }
+        })?;
 
         // Convertir les données RAW en image
         let width = processed.width();
@@ -568,9 +571,11 @@ impl PreviewService {
             });
         }
 
-        let img = image::RgbImage::from_raw(width, height, processed.to_vec())
-            .ok_or_else(|| PreviewError::ProcessingError {
-                message: "Impossible de créer l'image depuis les données RAW".to_string(),
+        let img =
+            image::RgbImage::from_raw(width, height, processed.to_vec()).ok_or_else(|| {
+                PreviewError::ProcessingError {
+                    message: "Impossible de créer l'image depuis les données RAW".to_string(),
+                }
             })?;
 
         // Redimensionner pour la preview standard
@@ -667,23 +672,24 @@ impl PreviewService {
             }
 
             // Lire le fichier RAW
-            let data = tokio::fs::read(input_path).await.map_err(|e| {
-                PreviewError::IoError {
+            let data = tokio::fs::read(input_path)
+                .await
+                .map_err(|e| PreviewError::IoError {
                     message: format!("Impossible de lire le fichier RAW: {}", e),
-                }
-            })?;
+                })?;
 
             // Ouvrir et traiter le fichier RAW avec rsraw
-            let mut raw_image = rsraw::RawImage::open(&data).map_err(|e| {
-                PreviewError::ProcessingError {
+            let mut raw_image =
+                rsraw::RawImage::open(&data).map_err(|e| PreviewError::ProcessingError {
                     message: format!("Erreur ouverture fichier RAW: {:?}", e),
-                }
-            })?;
+                })?;
 
             // Décompresser le RAW
-            raw_image.unpack().map_err(|e| PreviewError::ProcessingError {
-                message: format!("Erreur décompression RAW: {:?}", e),
-            })?;
+            raw_image
+                .unpack()
+                .map_err(|e| PreviewError::ProcessingError {
+                    message: format!("Erreur décompression RAW: {:?}", e),
+                })?;
 
             // Traiter en 16-bit pour la qualité maximale en 1:1
             let processed = raw_image
@@ -704,14 +710,20 @@ impl PreviewService {
             }
 
             // Pour 16-bit, ProcessedImage<BIT_DEPTH_16> derefs to [u16]
-            // donc .to_vec() retourne Vec<u16> comme attendu par Rgb16Image::from_raw
-            let img = image::Rgb16Image::from_raw(width, height, processed.to_vec())
-                .ok_or_else(|| PreviewError::ProcessingError {
-                    message: "Impossible de créer l'image depuis les données RAW".to_string(),
+            // Convertir en 8-bit pour compatibilité avec RgbImage, en utilisant toute la plage 16-bit
+            let processed_8bit: Vec<u8> = processed.iter()
+                .map(|&pixel| ((pixel as u32 * 255) / 65535) as u8) // Convertir 16-bit vers 8-bit avec mise à l'échelle proportionnelle
+                .collect();
+
+            let img =
+                image::RgbImage::from_raw(width, height, processed_8bit).ok_or_else(|| {
+                    PreviewError::ProcessingError {
+                        message: "Impossible de créer l'image depuis les données RAW".to_string(),
+                    }
                 })?;
 
             // Sauvegarder sans redimensionnement pour 1:1
-            image::DynamicImage::ImageRgb16(img)
+            image::DynamicImage::ImageRgb8(img)
                 .save(output_path)
                 .map_err(|e| PreviewError::WriteError {
                     path: format!("{}: {}", output_path.to_string_lossy(), e),
@@ -794,7 +806,7 @@ impl PreviewService {
     }
 
     /// Calcule le facteur d'échelle et les nouvelles dimensions pour redimensionner une image
-    /// 
+    ///
     /// Redimensionne l'image en gardant son ratio d'aspect, de sorte que le côté le plus long
     /// de l'image originale ne dépasse pas target_size.0 pixels. Cette approche garantit que
     /// l'image s'inscrit dans un carré de target_size.0 x target_size.0 pixels.

@@ -287,12 +287,13 @@ describe('ImportModal', () => {
     const selectButton = screen.getByText('Sélectionner un dossier');
     fireEvent.click(selectButton);
 
+    // Wait for folder to be selected
     await waitFor(() => {
       expect(screen.getByText('/test/path')).toBeInTheDocument();
     });
 
-    // Clear selection - use the button containing the X icon
-    const clearButton = screen.getByRole('button', { name: '' }); // X button has no text content
+    // Clear selection - find and click the clear button by aria-label
+    const clearButton = screen.getByRole('button', { name: 'Clear selected folder' });
     fireEvent.click(clearButton);
 
     // Should return to folder selection
@@ -301,29 +302,7 @@ describe('ImportModal', () => {
     });
   });
 
-  it('should auto-start ingestion when scanning completes', () => {
-    const { rerender } = render(<ImportModal onClose={mockOnClose} />);
-
-    // Initial state - scanning
-    mockUseDiscovery.mockReturnValue({
-      isScanning: false,
-      isIngesting: false,
-      isImporting: true,
-      progress: 100,
-      totalFiles: 100,
-      processedFiles: 100,
-      currentFile: '',
-      stage: 'ingesting',
-      error: null,
-      selectRootFolder: mockSelectRootFolder,
-      startScan: mockStartScan,
-      startIngestion: mockStartIngestion,
-      cancel: mockCancel,
-      sessionId: 'sess_123',
-    });
-
-    rerender(<ImportModal onClose={mockOnClose} />);
-
-    expect(mockStartIngestion).toHaveBeenCalledWith('sess_123');
-  });
+  // NOTE: Auto-start ingestion test removed - this functionality is now 
+  // handled internally by useDiscovery hook via startIngestionRef pattern
+  // and is tested in useDiscovery.test.ts
 });

@@ -13,7 +13,8 @@ import { useCatalog } from '@/hooks/useCatalog';
 import { previewService } from '@/services/previewService';
 import type { 
   DiscoveryProgress, 
-  BatchIngestionRequest 
+  BatchIngestionRequest,
+  IngestionResult
 } from '@/types/discovery';
 import { PreviewType } from '@/types';
 
@@ -50,30 +51,36 @@ export function useDiscovery(): UseDiscoveryReturn {
   const { syncAfterImport } = useCatalog();
   const progressListenerRef = useRef<(() => void) | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const startIngestionRef = useRef<((sessionId: string) => Promise<void>) | null>(null);
 
   // Generate previews for a list of successfully ingested images
-  const generatePreviewsForImages = useCallback(async (successfulIngestions: any[]) => {
+  const generatePreviewsForImages = useCallback(async (successfulIngestions: IngestionResult[]) => {
     const previewPromises = successfulIngestions.map(async (ingestion) => {
       try {
+        const hash = ingestion.metadata?.blake3Hash ?? ingestion.file.blake3Hash;
+        if (!hash) {
+          throw new Error('No hash available for preview generation');
+        }
+        
         // Generate thumbnail preview
         await previewService.generatePreview(
           ingestion.file.path,
           PreviewType.Thumbnail,
-          ingestion.file.hash
+          hash
         );
         
         // Generate standard preview
         await previewService.generatePreview(
           ingestion.file.path,
           PreviewType.Standard,
-          ingestion.file.hash
+          hash
         );
         
         // Generate 1:1 preview
         await previewService.generatePreview(
           ingestion.file.path,
           PreviewType.OneToOne,
-          ingestion.file.hash
+          hash
         );
         
         return { success: true, file: ingestion.file };
@@ -200,9 +207,27 @@ export function useDiscovery(): UseDiscoveryReturn {
 
       addLog(`Discovery session started: ${session.sessionId}`, 'sync');
 
-      // Monitor session status
+      // Monitor session status with timeout protection
+      let pollAttempts = 0;
+      const maxPollAttempts = 600; // 10 minutes @ 1s interval
+      
       const monitorSession = async () => {
         try {
+          pollAttempts++;
+          
+          // Timeout protection
+          if (pollAttempts > maxPollAttempts) {
+            const errorMsg = `Discovery timeout after ${maxPollAttempts} attempts`;
+            setImportState({
+              stage: 'error',
+              error: errorMsg,
+              isImporting: false,
+            });
+            addLog(errorMsg, 'error');
+            cleanupProgressListener();
+            return;
+          }
+          
           const status = await discoveryService.getDiscoveryStatus(session.sessionId);
           
           if (status.status === 'completed') {
@@ -212,6 +237,13 @@ export function useDiscovery(): UseDiscoveryReturn {
             });
             addLog(`Discovery completed: ${status.filesFound} files found`, 'sync');
             cleanupProgressListener();
+            
+            // Auto-start ingestion with the session
+            setTimeout(() => {
+              if (startIngestionRef.current) {
+                startIngestionRef.current(session.sessionId);
+              }
+            }, 100);
           } else if (status.status === 'error') {
             const errorMsg = 'Discovery failed';
             setImportState({
@@ -314,6 +346,13 @@ export function useDiscovery(): UseDiscoveryReturn {
       } catch (error) {
         addLog(`Preview generation failed: ${error}`, 'error');
       }
+      // Mise à jour explicite de l'état à 'completed' après ingestion et génération de previews
+      setImportState({
+        stage: 'completed',
+        progress: 100,
+        processedFiles: result.successful.length,
+        isImporting: false,
+      });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Ingestion failed';
       setImportState({
@@ -329,6 +368,11 @@ export function useDiscovery(): UseDiscoveryReturn {
       }, 3000);
     }
   }, [setImportState, addLog, syncAfterImport, generatePreviewsForImages]);
+
+  // Update ref when startIngestion changes
+  useEffect(() => {
+    startIngestionRef.current = startIngestion;
+  }, [startIngestion]);
 
   // Cancel current operation
   const cancel = useCallback(async (): Promise<void> => {

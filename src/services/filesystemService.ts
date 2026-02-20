@@ -39,6 +39,15 @@ export class FilesystemService {
   }
 
   /**
+   * Log uniquement en mode développement (pas en production)
+   */
+  private static logDev(message: string, ...args: unknown[]): void {
+    if (import.meta.env.DEV) {
+      console.warn(message, ...args);
+    }
+  }
+
+  /**
    * Get Tauri invoke function (handle both __TAURI__ and __TAURI_INTERNALS__)
    */
   private static getInvoke() {
@@ -60,7 +69,7 @@ export class FilesystemService {
     
     // Mock fallback for tests
     return async (command: string, args?: Record<string, unknown>) => {
-      console.warn(`[FilesystemService] Tauri not available, mocking command: ${command}`, { args });
+      FilesystemService.logDev(`[FilesystemService] Tauri not available, mocking command: ${command}`, { args });
       throw new Error(`Tauri not available: ${command}`);
     };
   }

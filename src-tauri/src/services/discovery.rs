@@ -13,6 +13,8 @@ use walkdir::WalkDir;
 pub struct DiscoveryService {
     /// Active discovery sessions
     sessions: Arc<RwLock<HashMap<Uuid, DiscoverySession>>>,
+    /// Discovered files for each session
+    discovered_files: Arc<RwLock<HashMap<Uuid, Vec<DiscoveredFile>>>>,
     /// BLAKE3 service for file hashing
     blake3_service: Arc<Blake3Service>,
     /// Currently running discovery task
@@ -24,6 +26,7 @@ impl DiscoveryService {
     pub fn new(blake3_service: Arc<Blake3Service>) -> Self {
         Self {
             sessions: Arc::new(RwLock::new(HashMap::new())),
+            discovered_files: Arc::new(RwLock::new(HashMap::new())),
             blake3_service,
             current_task: Arc::new(Mutex::new(None)),
         }
@@ -65,6 +68,7 @@ impl DiscoveryService {
 
         // Start the discovery task
         let sessions_clone = Arc::clone(&self.sessions);
+        let discovered_files_clone = Arc::clone(&self.discovered_files);
         let blake3_service_clone = Arc::clone(&self.blake3_service);
         let current_task_clone = Arc::clone(&self.current_task);
         let sessions_error_clone = Arc::clone(&self.sessions);
@@ -72,9 +76,14 @@ impl DiscoveryService {
         *current_task = Some(session_id);
 
         tokio::spawn(async move {
-            let result =
-                Self::perform_discovery(sessions_clone, blake3_service_clone, session_id, config)
-                    .await;
+            let result = Self::perform_discovery(
+                sessions_clone,
+                discovered_files_clone,
+                blake3_service_clone,
+                session_id,
+                config,
+            )
+            .await;
 
             // Clear the current task when done
             let mut task_guard = current_task_clone.lock().await;
@@ -127,15 +136,18 @@ impl DiscoveryService {
         &self,
         session_id: Uuid,
     ) -> Result<Vec<DiscoveredFile>, DiscoveryError> {
-        // For now, we'll return an empty vector
-        // In a full implementation, we would store discovered files in the session or database
+        // Verify session exists
         let _session = self.get_session_status(session_id).await?;
-        Ok(vec![])
+
+        // Get discovered files for this session
+        let files = self.discovered_files.read().await;
+        Ok(files.get(&session_id).cloned().unwrap_or_default())
     }
 
     /// Perform the actual discovery operation
     async fn perform_discovery(
         sessions: Arc<RwLock<HashMap<Uuid, DiscoverySession>>>,
+        discovered_files: Arc<RwLock<HashMap<Uuid, Vec<DiscoveredFile>>>>,
         _blake3_service: Arc<Blake3Service>,
         session_id: Uuid,
         config: DiscoveryConfig,
@@ -144,6 +156,7 @@ impl DiscoveryService {
         let mut files_processed = 0;
         let mut files_with_errors = 0;
         let mut last_update = std::time::Instant::now();
+        let mut session_files: Vec<DiscoveredFile> = Vec::new();
 
         // Build the walker
         let mut walkdir = WalkDir::new(&config.root_path);
@@ -158,9 +171,9 @@ impl DiscoveryService {
         for entry in walkdir.into_iter() {
             // Check if discovery was stopped
             {
-                let current_task = sessions.read().await;
-                if let Some(task_id) = current_task.keys().next() {
-                    if *task_id != session_id {
+                let sessions_guard = sessions.read().await;
+                if let Some(session) = sessions_guard.get(&session_id) {
+                    if session.status == DiscoveryStatus::Stopped {
                         return Ok(()); // Discovery was stopped
                     }
                 }
@@ -202,6 +215,9 @@ impl DiscoveryService {
             {
                 files_found += 1;
 
+                // Store the discovered file
+                session_files.push(file_result.clone());
+
                 if file_result.error_message.is_some() {
                     files_with_errors += 1;
                 } else {
@@ -210,7 +226,7 @@ impl DiscoveryService {
 
                 // Update progress periodically
                 if last_update.elapsed().as_millis() > 100 {
-                    let progress = if let Some(max_files) = config.max_files {
+                    let _progress = if let Some(max_files) = config.max_files {
                         (files_found as f64 / max_files as f64 * 100.0).min(100.0) as f32
                     } else {
                         0.0 // Can't calculate progress without max_files
@@ -245,6 +261,12 @@ impl DiscoveryService {
                 session.set_current_directory(None);
                 session.mark_completed();
             }
+        }
+
+        // Store discovered files for this session
+        {
+            let mut files_map = discovered_files.write().await;
+            files_map.insert(session_id, session_files);
         }
 
         Ok(())
@@ -499,7 +521,7 @@ mod tests {
         };
 
         // Start a session
-        let session_id = service.start_discovery(config).await.unwrap();
+        let _session_id = service.start_discovery(config).await.unwrap();
 
         // Should have one session
         let sessions = service.get_all_sessions().await;

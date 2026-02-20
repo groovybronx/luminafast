@@ -2,6 +2,7 @@ use crate::models::discovery::{
     BatchIngestionRequest, BatchIngestionResult, DiscoveredFile, DiscoveryConfig, DiscoverySession,
     IngestionResult,
 };
+use crate::services::blake3::Blake3Service;
 use crate::services::discovery::DiscoveryService;
 use crate::services::ingestion::IngestionService;
 use std::path::PathBuf;
@@ -37,18 +38,67 @@ fn get_discovery_service() -> Arc<DiscoveryService> {
 fn get_ingestion_service() -> Arc<IngestionService> {
     INGESTION_SERVICE
         .get_or_init(|| {
-            // Create database connection (std::sync::Mutex for Sync safety)
-            let conn = rusqlite::Connection::open_in_memory()
-                .expect("Failed to create in-memory database for ingestion");
-            let db = Arc::new(std::sync::Mutex::new(conn));
-
             // Create BLAKE3 service for ingestion
-            let blake3_service = Arc::new(crate::services::blake3::Blake3Service::new(
+            let blake3_service = Arc::new(Blake3Service::new(
                 crate::models::hashing::HashConfig::default(),
             ));
+
+            // Open connection to main database
+            let db_path = get_db_path();
+            let conn = rusqlite::Connection::open(&db_path)
+                .expect("Failed to open database for ingestion service");
+
+            // Enable WAL mode for better concurrency
+            conn.execute_batch("PRAGMA journal_mode = WAL;")
+                .expect("Failed to enable WAL mode");
+
+            let db = Arc::new(std::sync::Mutex::new(conn));
+
             Arc::new(IngestionService::new(blake3_service, db))
         })
         .clone()
+}
+
+/// Get database path from environment or default location
+fn get_db_path() -> std::path::PathBuf {
+    let app_data_dir = std::env::var("TAURI_APP_DATA_DIR").unwrap_or_else(|_| {
+        dirs::data_local_dir()
+            .expect("Failed to get local data directory")
+            .join("com.luminafast.V2")
+            .to_string_lossy()
+            .to_string()
+    });
+    std::path::PathBuf::from(app_data_dir).join("luminafast.db")
+}
+
+/// Ingest a single discovered file using the main database
+#[tauri::command]
+pub fn ingest_file(file: DiscoveredFile) -> Result<IngestionResult, String> {
+    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
+    rt.block_on(async {
+        let ingestion_service = get_ingestion_service();
+        let result = ingestion_service
+            .ingest_file(&file)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(result)
+    })
+}
+
+/// Batch ingest multiple files using the main database
+#[tauri::command]
+pub fn batch_ingest(request: BatchIngestionRequest) -> Result<BatchIngestionResult, String> {
+    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
+    rt.block_on(async {
+        let ingestion_service = get_ingestion_service();
+        let result = ingestion_service
+            .batch_ingest(&request)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(result)
+    })
 }
 
 /// Start a new discovery session
@@ -82,7 +132,9 @@ pub fn stop_discovery(#[allow(non_snake_case)] sessionId: Uuid) -> Result<(), St
 
 /// Get the status of a discovery session
 #[tauri::command]
-pub fn get_discovery_status(#[allow(non_snake_case)] sessionId: Uuid) -> Result<DiscoverySession, String> {
+pub fn get_discovery_status(
+    #[allow(non_snake_case)] sessionId: Uuid,
+) -> Result<DiscoverySession, String> {
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
         let session = get_discovery_service()
@@ -107,7 +159,9 @@ pub fn get_all_discovery_sessions() -> Result<Vec<DiscoverySession>, String> {
 
 /// Get discovered files for a session
 #[tauri::command]
-pub fn get_discovered_files(#[allow(non_snake_case)] sessionId: Uuid) -> Result<Vec<DiscoveredFile>, String> {
+pub fn get_discovered_files(
+    #[allow(non_snake_case)] sessionId: Uuid,
+) -> Result<Vec<DiscoveredFile>, String> {
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
         let files = get_discovery_service()
@@ -116,34 +170,6 @@ pub fn get_discovered_files(#[allow(non_snake_case)] sessionId: Uuid) -> Result<
             .map_err(|e| e.to_string())?;
 
         Ok(files)
-    })
-}
-
-/// Ingest a single discovered file
-#[tauri::command]
-pub fn ingest_file(file: DiscoveredFile) -> Result<IngestionResult, String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        let result = get_ingestion_service()
-            .ingest_file(&file)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        Ok(result)
-    })
-}
-
-/// Batch ingest multiple files
-#[tauri::command]
-pub fn batch_ingest(request: BatchIngestionRequest) -> Result<BatchIngestionResult, String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        let result = get_ingestion_service()
-            .batch_ingest(&request)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        Ok(result)
     })
 }
 
@@ -226,7 +252,9 @@ pub fn cleanup_discovery_sessions(max_age_hours: u64) -> Result<usize, String> {
 
 /// Get discovery statistics
 #[tauri::command]
-pub fn get_discovery_stats(#[allow(non_snake_case)] sessionId: Uuid) -> Result<DiscoveryStats, String> {
+pub fn get_discovery_stats(
+    #[allow(non_snake_case)] sessionId: Uuid,
+) -> Result<DiscoveryStats, String> {
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
         // Get session status
@@ -235,8 +263,9 @@ pub fn get_discovery_stats(#[allow(non_snake_case)] sessionId: Uuid) -> Result<D
             .await
             .map_err(|e| e.to_string())?;
 
-        // Get ingestion stats
-        let ingestion_stats = get_ingestion_service()
+        // Get ingestion stats using singleton
+        let ingestion_service = get_ingestion_service();
+        let ingestion_stats = ingestion_service
             .get_session_stats(sessionId)
             .await
             .map_err(|e| e.to_string())?;

@@ -5,7 +5,7 @@
  * the catalog service and update the catalog store with real data from SQLite.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { CatalogService } from '@/services/catalogService';
 import { previewService } from '@/services/previewService';
@@ -227,12 +227,8 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
     }
   }, [filter, storeImages, setImages, addImages, addLog]);
 
-  // Initial load
-  useEffect(() => {
-    if (storeImages.length === 0 && !isLoading && !error) {
-      refreshCatalog();
-    }
-  }, [storeImages.length, isLoading, error, refreshCatalog]);
+  // Initial load - removed to prevent infinite loop
+  // Catalog loading is now explicitly triggered from App.tsx on mount
 
   return {
     // Data

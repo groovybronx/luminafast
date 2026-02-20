@@ -1,3 +1,10 @@
+// Mock useCatalog pour éviter les blocages asynchrones
+const mockSyncAfterImport = vi.fn().mockResolvedValue(undefined);
+vi.mock('@/hooks/useCatalog', () => ({
+  useCatalog: () => ({
+    syncAfterImport: mockSyncAfterImport,
+  }),
+}));
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useDiscovery } from '../useDiscovery';
@@ -26,6 +33,13 @@ vi.mock('@/services/discoveryService', () => ({
     batchIngest: vi.fn(),
     stopDiscovery: vi.fn(),
     addProgressListener: vi.fn(),
+  },
+}));
+
+// Mock preview service
+vi.mock('@/services/previewService', () => ({
+  previewService: {
+    generatePreview: vi.fn().mockResolvedValue({}),
   },
 }));
 
@@ -207,6 +221,9 @@ describe('useDiscovery', () => {
   });
 
   it('should start ingestion successfully', async () => {
+    // Use real timers for this test
+    vi.useRealTimers();
+    
     const mockGetFiles = vi.mocked(discoveryService.getDiscoveredFiles);
     const mockBatchIngest = vi.mocked(discoveryService.batchIngest);
     
@@ -286,6 +303,11 @@ describe('useDiscovery', () => {
 
     await act(async () => {
       await result.current.startIngestion('sess_123');
+    });
+
+    // Wait for all async effects to complete
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 10));
     });
 
     expect(result.current.stage).toBe('completed');

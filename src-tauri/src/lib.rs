@@ -115,12 +115,16 @@ pub fn run() {
             // Preview commands
             commands::preview::init_preview_service,
             commands::preview::generate_preview,
-            commands::preview::generate_preview_pyramid,
             commands::preview::generate_batch_previews,
-            commands::preview::generate_previews_with_progress,
+            commands::preview::generate_preview_pyramid,
+            commands::preview::is_preview_cached,
             commands::preview::get_preview_cache_info,
             commands::preview::cleanup_preview_cache,
             commands::preview::remove_preview,
+            commands::preview::get_preview_path,
+            commands::preview::generate_previews_with_progress,
+            commands::preview::benchmark_preview_generation,
+            commands::preview::get_preview_config,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

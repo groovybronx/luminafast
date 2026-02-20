@@ -13,7 +13,8 @@ import { useCatalog } from '@/hooks/useCatalog';
 import { previewService } from '@/services/previewService';
 import type { 
   DiscoveryProgress, 
-  BatchIngestionRequest 
+  BatchIngestionRequest,
+  IngestionResult
 } from '@/types/discovery';
 import { PreviewType } from '@/types';
 
@@ -53,28 +54,33 @@ export function useDiscovery(): UseDiscoveryReturn {
   const startIngestionRef = useRef<((sessionId: string) => Promise<void>) | null>(null);
 
   // Generate previews for a list of successfully ingested images
-  const generatePreviewsForImages = useCallback(async (successfulIngestions: any[]) => {
+  const generatePreviewsForImages = useCallback(async (successfulIngestions: IngestionResult[]) => {
     const previewPromises = successfulIngestions.map(async (ingestion) => {
       try {
+        const hash = ingestion.metadata?.blake3Hash ?? ingestion.file.blake3Hash;
+        if (!hash) {
+          throw new Error('No hash available for preview generation');
+        }
+        
         // Generate thumbnail preview
         await previewService.generatePreview(
           ingestion.file.path,
           PreviewType.Thumbnail,
-          ingestion.file.hash
+          hash
         );
         
         // Generate standard preview
         await previewService.generatePreview(
           ingestion.file.path,
           PreviewType.Standard,
-          ingestion.file.hash
+          hash
         );
         
         // Generate 1:1 preview
         await previewService.generatePreview(
           ingestion.file.path,
           PreviewType.OneToOne,
-          ingestion.file.hash
+          hash
         );
         
         return { success: true, file: ingestion.file };

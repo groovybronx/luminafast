@@ -121,7 +121,10 @@ jobs:
     - name: Clippy lint
       run: cd src-tauri && cargo clippy --all-targets --all-features -- -D warnings -A dead_code -A unused_variables
       
-    # Build backend supprimé : le build Tauri est désormais uniquement dans le job integration
+    # NOTE: Vérification que le code Rust compile (hors Tauri)
+    # Le build Tauri complet est fait dans le job integration
+    - name: Build Rust code
+      run: cd src-tauri && cargo build --lib --verbose
       
     # NOTE: Les tests Rust peuvent hanging indéfiniment sur CI
     # Problème identifié: 4 tests ignorés localement qui peuvent timeout:
@@ -153,6 +156,11 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
+    
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: src-tauri
         
     # NOTE: Dépendances système critiques pour Tauri sur Ubuntu
     # Problème: build Tauri échoue si libssl-dev ou pkg-config manquant
@@ -168,14 +176,30 @@ jobs:
           librsvg2-dev patchelf libssl-dev pkg-config build-essential
     
     # Étape critique : build frontend pour générer le dossier dist attendu par Tauri
+    # IMPORTANT: Le dossier dist DOIT exister avant la compilation Rust car le macro
+    # tauri::generate_context!() vérifie sa présence au moment de la compilation
     - name: Install frontend dependencies
       run: npm ci
+      
     - name: Build frontend (dist)
       run: npm run build
+      
+    - name: Verify dist folder exists
+      run: |
+        if [ -d "dist" ]; then
+          echo "✅ dist folder exists"
+          ls -lh dist/ | head -10
+        else
+          echo "❌ ERROR: dist folder not found after build"
+          echo "Current directory: $(pwd)"
+          echo "Directory contents:"
+          ls -la
+          exit 1
+        fi
         
-    # NOTE: Build Tauri peut échouer silencieusement sans logs détaillés
-    # Problème potentiel: erreurs de compilation Rust ou frontend non visibles
-    # Solution: build verbose pour diagnostiquer les problèmes
+    # NOTE: Build Tauri complet avec frontend intégré
+    # beforeBuildCommand dans tauri.conf.json relancera npm run build,
+    # mais dist doit déjà exister pour que le macro Rust compile
     - name: Build Tauri app
       run: npm run build:tauri -- --verbose
       

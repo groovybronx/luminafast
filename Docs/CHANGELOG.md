@@ -28,6 +28,7 @@
 | Maintenance | — | Correction Bug Stockage Fichiers Découverts | ✅ Complétée | 2026-02-20 | Cascade |
 | Maintenance | — | Correction Bug Transition Scan→Ingestion | ✅ Complétée | 2026-02-20 | Cascade |
 | Maintenance | — | Correction Migrations Base de Données | ✅ Complétée | 2026-02-20 | Cascade |
+| Maintenance | — | Correction Pipeline Import (DB + SQL + Init) | ✅ Complétée | 2026-02-20 | Cascade |
 | 3 | 3.1 | Grille d'Images Réelle | ⬜ En attente | — | — |
 | 3 | 3.2 | Collections Statiques (CRUD) | ⬜ En attente | — | — |
 | 3 | 3.3 | Smart Collections | ⬜ En attente | — | — |
@@ -264,6 +265,79 @@
 - Migrations : 001_initial et 002_ingestion_sessions appliquées
 - Application : Lancée (PID 72400)
 - **Test utilisateur requis** : Import complet `101_FUJI` end-to-end
+
+---
+
+### 2026-02-20 — Maintenance : Correction Pipeline Import (DB + SQL + Init) (Complétée)
+
+**Statut** : ✅ **Complétée**
+**Agent** : Cascade
+**Branche** : `vscode/fixproblem`
+**Commit** : `34c8dc2`
+**Type** : Critical Bug Fix
+
+#### Résumé
+Suite des corrections critiques pour rendre le pipeline d'import end-to-end fonctionnel. Après la correction des migrations, 4 bugs bloquants restaient : IngestionService utilisait une DB in-memory, indices SQL incorrects dans get_all_images, PreviewService non initialisé, et problème de dépendance circulaire.
+
+**Cause racine #1 (IngestionService)** : La fonction `get_ingestion_service()` créait une connexion in-memory (`Connection::open_in_memory()`) via `OnceLock`, donc toutes les insertions SQL allaient dans une DB temporaire sans le schéma des migrations.
+
+**Cause racine #2 (get_all_images)** : Les indices de colonnes SQL étaient incorrects. La requête retournait 14 colonnes mais `rating` utilisait l'index 9 (qui est `imported_at` TEXT) au lieu de 11, causant "Invalid column type Text at index: 9".
+
+**Cause racine #3 (PreviewService)** : `previewService.initialize()` n'était jamais appelé au démarrage de l'app, causant "PreviewService non initialisé" lors du chargement des thumbnails.
+
+**Cause racine #4 (Auto-ingestion)** : Problème de dépendance circulaire déjà corrigé mais solution useRef incomplète.
+
+**Solution** :
+- **IngestionService** : Suppression de `get_ingestion_service()` et création de connexions vers le fichier DB réel (`luminafast.db`) dans `batch_ingest()` et `ingest_file()`
+- **get_all_images** : Correction indices colonnes SQL (rating→11, flag→12)
+- **PreviewService** : Ajout de `previewService.initialize()` dans App.tsx avant `refreshCatalog()`
+- **Auto-ingestion** : useRef déjà en place (pas de modification supplémentaire)
+
+#### Fichiers modifiés
+- `src-tauri/src/commands/discovery.rs` :
+  - Suppression `INGESTION_SERVICE` OnceLock et `get_ingestion_service()`
+  - Ajout `get_db_path()` helper
+  - Modification `batch_ingest()` et `ingest_file()` pour ouvrir connexion vers DB réelle
+  - Modification `get_discovery_stats()` (removed get_ingestion_service call)
+  
+- `src-tauri/src/commands/catalog.rs` :
+  - Ligne 76-89 : Correction indices colonnes (rating 9→11, flag 10→12) dans `get_all_images`
+  - Ligne 356-369 : Correction indices colonnes dans `search_images`
+
+- `src/App.tsx` :
+  - Ligne 7 : Import `previewService`
+  - Ligne 78-88 : Initialisation `previewService.initialize()` avant `refreshCatalog()`
+
+- Autres fichiers mineurs : 
+  - `src-tauri/src/database.rs` (ligne 80-86, 123) - Ajout migration 002
+  - `src-tauri/src/services/discovery.rs` - HashMap discovered_files
+  - `src/hooks/useDiscovery.ts` - useRef pattern
+  - `src/components/shared/ImportModal.tsx` - Cleanup
+  - `src/hooks/useCatalog.ts` - Minor adjustments
+  - `Docs/CHANGELOG.md` - Mise à jour
+
+#### Impact
+- IngestionService : Utilise maintenant la DB principale avec toutes les migrations ✅
+- Batch ingestion : **30 fichiers RAF importés avec succès** en SQLite ✅
+- Catalogue frontend : Images affichées sans erreur de typage ✅
+- PreviewService : Initialisé correctement (plus d'erreur) ✅
+- Pipeline end-to-end : **FONCTIONNEL** (scan → hash → insert → display) ✅
+
+#### Tests validés
+- Compilation Rust : `cargo check` OK
+- Compilation TypeScript : `npm run build` OK
+- Base de données : 30 images insérées avec BLAKE3 hashes
+- SQLite vérification : `SELECT COUNT(*) FROM images` → 30
+- Frontend : Images chargées (sans thumbnails, attendu Phase 2.3)
+- **Import complet testé** : 101_FUJI (30x RAF) → DB → Library view
+
+#### Limitations connues
+- **Dimensions NULL** : width/height non extraits (extraction RAW pas implémentée)
+- **Thumbnails vides** : Génération previews Phase 2.3 pas encore intégrée à l'ingestion
+- **Session orpheline** : Recompilation pendant import crée session "scanning" non terminée (bénin)
+
+#### Prochaine étape
+Phase 3.1 — Grille d'Images Réelle (remplacer URLs mockées par previews locales)
 
 ---
 

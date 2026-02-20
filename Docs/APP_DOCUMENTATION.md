@@ -3,7 +3,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-19 (Phase 2.1 Partielle) — État : IngestionService ~85% complet, EXIF réel en attente.
+> **Dernière mise à jour** : 2026-02-20 (Post corrections critiques) — État : Pipeline import end-to-end fonctionnel (scan → hash → DB → display).
 >
 > ### Décisions Projet (validées par le propriétaire)
 > - **Phase 8 (Cloud/Sync)** : Reportée post-lancement
@@ -16,8 +16,8 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : Phase 2.1 partiellement complétée (~85%)
-IngestionService implémenté avec `batch_ingest()`, `extract_basic_exif()` (fallback), et `get_session_stats()`. 18 tests unitaires ingestion passants. **L'extraction EXIF réelle avec kamadak-exif reste en attente** due à des problèmes de dépendances. Phases 2.2, 2.3, et 2.4 sont complétées (UI d'import connectée, previews pyramide, harvesting EXIF).
+### État actuel : Phases 0 à 2.4 complétées — Pipeline import fonctionnel
+Import end-to-end validé : Discovery (scan récursif) → BLAKE3 hashing → Insertion SQLite → Affichage catalogue. **30 fichiers RAF testés avec succès**. Corrections critiques appliquées (DB principale, indices SQL, PreviewService init). Limitations : dimensions NULL (extraction RAW à implémenter), thumbnails vides (génération previews pas encore intégrée à l'ingestion).
 
 ### Objectif : Application Tauri autonome commercialisable
 Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructive, catalogue SQLite, et gestion de bibliothèques photographiques massives.

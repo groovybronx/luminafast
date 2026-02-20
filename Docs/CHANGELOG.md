@@ -29,6 +29,7 @@
 | Maintenance | — | Correction Bug Transition Scan→Ingestion | ✅ Complétée | 2026-02-20 | Cascade |
 | Maintenance | — | Correction Migrations Base de Données | ✅ Complétée | 2026-02-20 | Cascade |
 | Maintenance | — | Correction Pipeline Import (DB + SQL + Init) | ✅ Complétée | 2026-02-20 | Cascade |
+| Infra | — | Agents IA dédiés (code-review, pr-verification, phase-implementation, documentation-sync) | ✅ Complétée | 2026-02-20 | Copilot |
 | 3 | 3.1 | Grille d'Images Réelle | ⬜ En attente | — | — |
 | 3 | 3.2 | Collections Statiques (CRUD) | ⬜ En attente | — | — |
 | 3 | 3.3 | Smart Collections | ⬜ En attente | — | — |
@@ -73,6 +74,40 @@
 ## Historique des Sous-Phases Complétées
 
 > _Les entrées ci-dessous sont ajoutées chronologiquement par l'agent IA après chaque sous-phase._
+
+### 2026-02-20 — Infra : Agents IA Dédiés (Complétée)
+
+**Statut** : ✅ **Complétée**
+**Agent** : Copilot
+**Branche** : `copilot/create-dedicated-agents`
+**Type** : Infrastructure / Outillage
+
+#### Résumé
+**Contexte** : Le projet manquait d'agents IA spécialisés pour la qualité du code, la vérification des PR et la maintenance de la documentation, forçant chaque agent générique à re-découvrir les conventions du projet.
+**Solution** : Création de 4 agents dédiés dans `.github/agents/` avec des instructions précises ancrées sur les conventions LuminaFast, le plan de phases et les documents de référence.
+
+#### Fichiers créés
+- `.github/agents/code-review.agent.md` — Agent de review code (TypeScript strict, Rust, architecture, tests)
+- `.github/agents/pr-verification.agent.md` — Agent de vérification PR vs brief de phase
+- `.github/agents/phase-implementation.agent.md` — Agent d'implémentation de phase avec protocole complet
+- `.github/agents/documentation-sync.agent.md` — Agent de mise à jour CHANGELOG + APP_DOCUMENTATION
+
+#### Agents disponibles
+
+| Agent | Fichier | Usage |
+|-------|---------|-------|
+| **LuminaFast Code Review** | `code-review.agent.md` | Reviewer un diff ou une PR contre les conventions du projet |
+| **LuminaFast PR Verification** | `pr-verification.agent.md` | Vérifier qu'une PR correspond exactement à son brief de phase |
+| **LuminaFast Phase Implementation** | `phase-implementation.agent.md` | Implémenter une sous-phase avec le protocole complet |
+| **LuminaFast Documentation Sync** | `documentation-sync.agent.md` | Mettre à jour CHANGELOG et APP_DOCUMENTATION après une phase |
+
+#### Impact
+- Qualité du code : reviews systématiques et exhaustives ✅
+- Conformité au plan : vérification automatique PR vs brief ✅
+- Documentation : synchronisation maintenue à chaque phase ✅
+- Onboarding : tout nouvel agent connaît les conventions dès le premier appel ✅
+
+---
 
 ### 2026-02-20 — Maintenance : Correction Logs Production (Complétée)
 

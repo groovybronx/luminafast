@@ -4,6 +4,7 @@ use std::path::Path;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+#[allow(dead_code)] // NotInitialized et NotFound prévus pour la gestion d'erreurs élargie
 pub enum DatabaseError {
     #[error("SQLite error: {0}")]
     Sqlite(#[from] rusqlite::Error),
@@ -52,6 +53,7 @@ impl Database {
     }
 
     /// Execute a transaction with the given function
+    #[allow(dead_code)] // Prévu pour les opérations transactionnelles (Phase 1.2+)
     pub fn execute_transaction<F, R>(&mut self, f: F) -> DatabaseResult<R>
     where
         F: FnOnce(&rusqlite::Transaction) -> DatabaseResult<R>,
@@ -311,7 +313,7 @@ mod tests {
         let temp_dir = tempdir()?;
         let db_path = temp_dir.path().join("test.db");
 
-        let db = Database::new(&db_path)?;
+        let _db = Database::new(&db_path)?;
         assert!(db_path.exists());
 
         Ok(())

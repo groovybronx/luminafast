@@ -15,7 +15,6 @@ vi.mock('lucide-react', () => ({
 // The virtualizer's absolute positioning makes standard testing harder,
 // so we mock it to render items in a simpler grid layout for testing
 vi.mock('@tanstack/react-virtual', () => {
-  const React = require('react');
   return {
     useVirtualizer: vi.fn((config) => {
       const count = config.count;

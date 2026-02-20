@@ -68,6 +68,9 @@ pub fn run() {
             commands::catalog::get_all_images,
             commands::catalog::get_collections,
             commands::catalog::search_images,
+            // EXIF commands
+            commands::exif::extract_exif,
+            commands::exif::extract_exif_batch,
             // Hashing commands
             commands::hashing::hash_file,
             commands::hashing::hash_files_batch,

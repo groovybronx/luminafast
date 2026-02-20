@@ -40,7 +40,7 @@ Connecter l'interface utilisateur d'import (`ImportModal`) aux services Rust (`D
 ## Critères de Validation
 - [x] Le dialogue natif de sélection de dossier s'ouvre et retourne un chemin valide.
 - [x] Le scan démarre et la progression s'affiche correctement (X fichiers trouvés).
-- [ ] L'ingestion se lance et peuple la base de données SQLite.
+- [x] L'ingestion se lance et peuple la base de données SQLite.
 - [ ] Les images importées apparaissent dans la grille (via `catalogStore`).
 - [ ] Les erreurs sont gérées gracieusement (toast ou log).
 - [ ] Aucun blocage de l'UI pendant le scan (async).

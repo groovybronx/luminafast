@@ -121,8 +121,7 @@ jobs:
     - name: Clippy lint
       run: cd src-tauri && cargo clippy --all-targets --all-features -- -D warnings -A dead_code -A unused_variables
       
-    - name: Build backend
-      run: cd src-tauri && cargo build --verbose
+    # Build backend supprimé : le build Tauri est désormais uniquement dans le job integration
       
     # NOTE: Les tests Rust peuvent hanging indéfiniment sur CI
     # Problème identifié: 4 tests ignorés localement qui peuvent timeout:

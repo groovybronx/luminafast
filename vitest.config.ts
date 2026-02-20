@@ -8,7 +8,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     globals: true,
-    watch: true, // Les tests s'arrêtent après exécution
+    // Use --watch flag for development: npm run test:ci -- --watch
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

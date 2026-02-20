@@ -173,7 +173,20 @@ Avant chaque commit, l'agent DOIT vérifier :
 
 ---
 
-## 8. RAPPEL FINAL
+## 8. AGENTS SPÉCIALISÉS DISPONIBLES
+
+Des agents dédiés au projet sont disponibles dans `.github/agents/`. **Utilise-les en priorité** pour les tâches correspondantes.
+
+| Agent | Fichier | Quand l'utiliser |
+|-------|---------|-----------------|
+| **LuminaFast Code Review** | `code-review.agent.md` | Avant tout merge — review d'un diff ou d'une PR |
+| **LuminaFast PR Verification** | `pr-verification.agent.md` | Avant tout merge — vérifier la conformité PR vs brief |
+| **LuminaFast Phase Implementation** | `phase-implementation.agent.md` | Pour implémenter une nouvelle sous-phase |
+| **LuminaFast Documentation Sync** | `documentation-sync.agent.md` | Après chaque sous-phase — mettre à jour CHANGELOG + APP_DOCUMENTATION |
+
+---
+
+## 9. RAPPEL FINAL
 
 > **L'objectif est de produire une application de qualité commerciale.**
 > La rapidité d'exécution ne justifie JAMAIS de sacrifier la qualité, la robustesse ou la cohérence architecturale.

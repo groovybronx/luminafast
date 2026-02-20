@@ -48,6 +48,10 @@ pub fn run() {
             // Initialize filesystem service for Phase 1.4
             commands::filesystem::initialize_filesystem_service();
 
+            // Exposer le chemin DB réel pour l'IngestionService (OnceLock statique)
+            // Doit être défini AVANT initialize_discovery_services() qui initialise la static
+            std::env::set_var("TAURI_APP_DATA_DIR", app_data_dir.to_string_lossy().as_ref());
+
             // Initialize discovery services for Phase 2.1
             commands::discovery::initialize_discovery_services();
 

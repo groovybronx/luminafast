@@ -9,7 +9,8 @@ use tokio::sync::OnceCell;
 static PREVIEW_SERVICE: OnceCell<Arc<PreviewService>> = OnceCell::const_new();
 
 /// Initialise le service preview (idempotent — multiple appels retournent OK)
-pub async fn init_preview_service(_app_handle: &AppHandle) -> Result<(), String> {
+#[tauri::command]
+pub async fn init_preview_service() -> Result<(), String> {
     // Si déjà initialisé, retourner succès (idempotente)
     if PREVIEW_SERVICE.get().is_some() {
         log::debug!("Service preview déjà initialisé");

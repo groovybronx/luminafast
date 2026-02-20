@@ -54,9 +54,8 @@ pub fn run() {
             log::info!("Hashing, filesystem and discovery services initialized");
 
             // Initialize preview service for Phase 2.3
-            let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = commands::preview::init_preview_service(&handle).await {
+                if let Err(e) = commands::preview::init_preview_service().await {
                     eprintln!("Failed to initialize preview service: {}", e);
                 }
             });
@@ -114,6 +113,7 @@ pub fn run() {
             commands::discovery::cleanup_discovery_sessions,
             commands::discovery::get_discovery_stats,
             // Preview commands
+            commands::preview::init_preview_service,
             commands::preview::generate_preview,
             commands::preview::generate_preview_pyramid,
             commands::preview::generate_batch_previews,

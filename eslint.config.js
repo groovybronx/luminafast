@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'build', 'node_modules', 'src-tauri/target', 'coverage']),
+  globalIgnores(['dist', 'build', 'node_modules', 'src-tauri/target', 'coverage', '*.local.ts', '*.config.local.ts']),
   
   // JavaScript/JSX files
   {

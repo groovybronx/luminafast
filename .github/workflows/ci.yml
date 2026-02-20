@@ -180,6 +180,14 @@ jobs:
     # tauri::generate_context!() vérifie sa présence au moment de la compilation
     - name: Install frontend dependencies
       run: npm ci
+    
+    # Créer le dossier dist avec un fichier minimal AVANT le build
+    # pour satisfaire le macro Rust qui vérifie l'existence pendant la compilation
+    - name: Create dist directory
+      run: |
+        mkdir -p dist
+        echo '<!DOCTYPE html><html><body>Build in progress...</body></html>' > dist/index.html
+        echo "✅ dist directory created with placeholder"
       
     - name: Build frontend (dist)
       run: npm run build

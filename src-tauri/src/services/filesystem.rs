@@ -24,6 +24,7 @@ pub struct FilesystemService {
 }
 
 /// Handle pour un watcher actif
+#[allow(dead_code)] // Champs prévus pour les phases suivantes (multi-watcher, event streaming)
 struct WatcherHandle {
     /// ID du watcher
     id: Uuid, // Prévu pour usage futur (tracking multi-watchers)

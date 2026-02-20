@@ -15,6 +15,7 @@ pub struct PreviewService {
     /// Cache des métadonnées de previews
     cache_metadata: Arc<RwLock<HashMap<String, PreviewMetadata>>>,
     /// Cache des previews en cours de génération
+    #[allow(dead_code)] // Prévu pour la gestion des requêtes concurrentes (Phase 2.3)
     generating: Arc<RwLock<HashMap<String, Vec<mpsc::UnboundedSender<PreviewProgressEvent>>>>>,
     /// Statistiques du service
     stats: Arc<RwLock<PreviewCacheInfo>>,

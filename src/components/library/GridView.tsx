@@ -106,7 +106,7 @@ export const GridView = ({
                       key={img.id}
                       onClick={(e) => onToggleSelection(img.id, e)}
                       onDoubleClick={() => onSetActiveView('develop')}
-                      className={`flex-shrink-0 bg-zinc-900 border transition-all relative group rounded-lg overflow-hidden cursor-pointer ${
+                      className={`shrink-0 bg-zinc-900 border transition-all relative group rounded-lg overflow-hidden cursor-pointer ${
                         isSelected
                           ? 'border-blue-500 ring-4 ring-blue-500/20 z-10 scale-[0.97]'
                           : 'border-zinc-800 hover:border-zinc-700 shadow-md'
@@ -153,7 +153,7 @@ export const GridView = ({
                             {'★'.repeat(img.state.rating)}
                           </div>
                         </div>
-                        <div className="text-[8px] font-mono text-zinc-500 flex-shrink-0">
+                        <div className="text-[8px] font-mono text-zinc-500 shrink-0">
                           {img.exif.iso} ISO
                         </div>
                       </div>

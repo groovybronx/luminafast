@@ -58,6 +58,7 @@ pub struct CollectionDTO {
 }
 
 /// DTO for creating collections
+#[allow(dead_code)] // Utilisé par create_collection (Phase 1.2)
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateCollectionDTO {
     pub name: String,

@@ -643,6 +643,7 @@ impl IngestionService {
     }
 
     /// Update a discovered file with ingestion results
+    #[allow(dead_code)] // Prévu pour la synchronisation d'état (Phase 2.1+)
     pub async fn update_discovered_file_status(
         &self,
         file: &mut DiscoveredFile,

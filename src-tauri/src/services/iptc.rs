@@ -1,5 +1,6 @@
 //! Service IPTC pour extraction des métadonnées
 //! Phase 2.2 - Extraction IPTC : titre, description, copyright, mots-clés
+#![allow(dead_code)] // Implémentation complète prévue en Phase 2.2
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

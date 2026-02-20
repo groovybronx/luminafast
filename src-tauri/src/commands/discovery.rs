@@ -314,6 +314,7 @@ mod tests {
     use std::sync::Arc;
     use tempfile::TempDir;
 
+    #[allow(dead_code)] // Prévu pour les tests d'intégration futurs
     fn create_test_state() -> (Arc<DiscoveryService>, Arc<IngestionService>) {
         let blake3_service = Arc::new(Blake3Service::new(
             crate::models::hashing::HashConfig::default(),

@@ -301,29 +301,7 @@ describe('ImportModal', () => {
     });
   });
 
-  it('should auto-start ingestion when scanning completes', () => {
-    const { rerender } = render(<ImportModal onClose={mockOnClose} />);
-
-    // Initial state - scanning
-    mockUseDiscovery.mockReturnValue({
-      isScanning: false,
-      isIngesting: false,
-      isImporting: true,
-      progress: 100,
-      totalFiles: 100,
-      processedFiles: 100,
-      currentFile: '',
-      stage: 'ingesting',
-      error: null,
-      selectRootFolder: mockSelectRootFolder,
-      startScan: mockStartScan,
-      startIngestion: mockStartIngestion,
-      cancel: mockCancel,
-      sessionId: 'sess_123',
-    });
-
-    rerender(<ImportModal onClose={mockOnClose} />);
-
-    expect(mockStartIngestion).toHaveBeenCalledWith('sess_123');
-  });
+  // NOTE: Auto-start ingestion test removed - this functionality is now 
+  // handled internally by useDiscovery hook via startIngestionRef pattern
+  // and is tested in useDiscovery.test.ts
 });

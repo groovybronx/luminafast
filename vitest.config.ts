@@ -36,6 +36,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@tauri-apps/api': path.resolve(__dirname, './src/test/mocks/tauri-api'),
+      '@tauri-apps/api/core': path.resolve(__dirname, './src/test/mocks/tauri-api/core'),
     },
   },
 });

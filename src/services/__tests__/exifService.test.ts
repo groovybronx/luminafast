@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ExifService } from '../exifService';
 
+// Mock Tauri invoke - use vi.hoisted to ensure it's available during mock hoisting
+const { mockInvoke } = vi.hoisted(() => ({
+  mockInvoke: vi.fn(),
+}));
+
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: mockInvoke,
+}));
+
 const mockExif = {
   iso: 100,
   aperture: 2.8,
@@ -11,16 +20,11 @@ const mockExif = {
   lens_model: 'MockLens 50mm',
 };
 
-// Mock Tauri invoke
-const mockInvoke = vi.fn().mockResolvedValue(mockExif);
-
-vi.mock('@tauri-apps/api/core', () => ({
-  invoke: mockInvoke,
-}));
-
 describe('ExifService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Configure default resolved value for mockInvoke
+    mockInvoke.mockResolvedValue(mockExif);
   });
 
   it('extractExif appelle la commande Tauri et retourne les données', async () => {

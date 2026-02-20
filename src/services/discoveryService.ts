@@ -27,7 +27,7 @@ import type {
 
 /** Service configuration */
 interface DiscoveryServiceConfig {
-  /** Enable debug logging */
+  /** Enable debug logging (dev mode only) */
   debug: boolean;
   /** Request timeout in milliseconds */
   timeout: number;
@@ -151,7 +151,9 @@ export class DiscoveryService {
     
     // Mock fallback for tests
     return async (command: string, args?: Record<string, unknown>) => {
-      console.warn(`[DiscoveryService] Tauri not available, mocking command: ${command}`, { args });
+      if (import.meta.env.DEV) {
+        console.warn(`[DiscoveryService] Tauri not available, mocking command: ${command}`, { args });
+      }
       throw new Error(`Tauri not available: ${command}`);
     };
   }
@@ -160,9 +162,9 @@ export class DiscoveryService {
   // Private Methods
   // ============================================================================
 
-  /** Log debug messages */
+  /** Log debug messages (dev mode only) */
   private log(message: string, data?: unknown): void {
-    if (this.config.debug) {
+    if (this.config.debug && import.meta.env.DEV) {
       console.warn(`[DiscoveryService] ${message}`, data);
     }
   }
@@ -498,7 +500,9 @@ export class DiscoveryService {
         maxFiles: maxFiles
       };
       
-      console.warn('DEBUG: Full args object:', JSON.stringify(args, null, 2));
+      if (import.meta.env.DEV) {
+        console.warn('DEBUG: Full args object:', JSON.stringify(args, null, 2));
+      }
       this.log('Sending args to create_discovery_config', args);
       
       const config = await this.executeCommand<DiscoveryConfig>(

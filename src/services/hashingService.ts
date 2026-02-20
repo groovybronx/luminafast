@@ -22,6 +22,15 @@ declare global {
  */
 export class HashingService {
   /**
+   * Log uniquement en mode développement (pas en production)
+   */
+  private static logDev(message: string, ...args: unknown[]): void {
+    if (import.meta.env.DEV) {
+      console.warn(message, ...args);
+    }
+  }
+
+  /**
    * Calcule le hash BLAKE3 d'un fichier
    */
   static async hashFile(filePath: string): Promise<FileHash> {
@@ -203,7 +212,7 @@ export class HashingService {
     }
     
     // Fallback pour développement/testing
-    console.warn(`Tauri not available, mocking command: ${command}`, args);
+    this.logDev(`Tauri not available, mocking command: ${command}`, args);
     return this.mockTauriCommand(command, args);
   }
 

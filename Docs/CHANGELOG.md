@@ -68,6 +68,46 @@
 
 > _Les entrées ci-dessous sont ajoutées chronologiquement par l'agent IA après chaque sous-phase._
 
+### 2026-02-20 — Maintenance : Correction Logs Production (Complétée)
+
+**Statut** : ✅ **Complétée**
+**Agent** : Cascade
+**Branche** : `vscode/fixproblem`
+**Type** : Quality Fix (Production)
+
+#### Résumé
+**Cause racine** : Les logs de fallback Tauri (`console.warn`) s'affichaient systématiquement dans l'application buildée en production, créant du bruit inutile pour les utilisateurs finaux.
+
+**Solution** : Ajout de logs conditionnels utilisant `import.meta.env.DEV` pour afficher les warnings de fallback uniquement en développement. Les vrais errors (problèmes critiques) restent toujours visibles.
+
+#### Fichiers modifiés
+- `src/services/previewService.ts` - Ajout méthode `logDev()`, remplacement 12 console.warn (fallbacks + logs de succès)
+- `src/services/filesystemService.ts` - Ajout méthode `logDev()`, remplacement 1 console.warn
+- `src/services/discoveryService.ts` - Logs conditionnels (3 console.warn)
+- `src/services/hashingService.ts` - Ajout méthode `logDev()`, remplacement 1 console.warn
+
+#### Impact
+- Application buildée : Aucun warning/log de succès en production ✅
+- Mode développement : Warnings et logs conservés pour debugging ✅
+- Tests unitaires : Comportement inchangé (399 tests passants) ✅
+- Errors réels : Toujours affichés (console.error préservés) ✅
+
+#### Logs rendus conditionnels
+**Fallbacks Tauri** (mock mode) :
+- `Tauri not available, mocking command`
+- `Tauri event system not available`
+- `Mock unlisten called`
+
+**Succès d'opérations** (PreviewService) :
+- `Preview générée` (ligne 210)
+- `Batch terminé` (ligne 235)
+- `Pyramide générée` (ligne 274)
+- `Cache cleanup terminé` (ligne 361)
+- `Preview supprimée` (ligne 384)
+- `Benchmark` (ligne 430)
+
+---
+
 ### 2026-02-19 — Phase 2.1 : Discovery & Ingestion de Fichiers (Complétée)
 
 **Statut** : ✅ **Complétée (100%)**

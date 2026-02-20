@@ -30,6 +30,15 @@ export class PreviewService {
   private isTauriAvailable: boolean | null = null;
   private unlistenFunctions: Array<() => void> = [];
 
+  /**
+   * Log uniquement en mode développement (pas en production)
+   */
+  private static logDev(message: string, ...args: unknown[]): void {
+    if (import.meta.env.DEV) {
+      console.warn(message, ...args);
+    }
+  }
+
   private constructor() {
     this.setupEventListeners();
   }
@@ -56,7 +65,7 @@ export class PreviewService {
     
     // Mock fallback for tests
     return async (command: string, args?: Record<string, unknown>) => {
-      console.warn(`[PreviewService] Tauri not available, mocking command: ${command}`, { args });
+      PreviewService.logDev(`[PreviewService] Tauri not available, mocking command: ${command}`, { args });
       throw new Error(`Tauri not available: ${command}`);
     };
   }
@@ -92,10 +101,10 @@ export class PreviewService {
     
     // Mock fallback for tests - returns a promise that resolves to an unlisten function
     return async <T>(_event: string, _handler: (event: { payload: T }) => void): Promise<() => void> => {
-      console.warn(`[PreviewService] Tauri event system not available, mocking listen for event: ${_event}`);
+      PreviewService.logDev(`[PreviewService] Tauri event system not available, mocking listen for event: ${_event}`);
       // Return a no-op unlisten function
       return () => {
-        console.warn(`[PreviewService] Mock unlisten called for event: ${_event}`);
+        PreviewService.logDev(`[PreviewService] Mock unlisten called for event: ${_event}`);
       };
     };
   }
@@ -161,7 +170,7 @@ export class PreviewService {
     try {
       await this.invokeCommand('init_preview_service');
       this.isInitialized = true;
-      console.warn('[PreviewService] Service initialisé avec succès');
+      PreviewService.logDev('[PreviewService] Service initialisé avec succès');
     } catch (error) {
       const serviceError = this.createErrorFromUnknown(error);
       console.error('[PreviewService] Erreur initialisation:', serviceError);
@@ -198,7 +207,7 @@ export class PreviewService {
         sourceHash
       });
       
-      console.warn(`[PreviewService] Preview générée: ${result.path} (${result.generation_time}ms)`);
+      PreviewService.logDev(`[PreviewService] Preview générée: ${result.path} (${result.generation_time}ms)`);
       return result;
     } catch (error) {
       const serviceError = this.createErrorFromUnknown(error);
@@ -223,7 +232,7 @@ export class PreviewService {
         previewType
       });
       
-      console.warn(`[PreviewService] Batch terminé: ${stats.successful_count}/${stats.total_files} succès`);
+      PreviewService.logDev(`[PreviewService] Batch terminé: ${stats.successful_count}/${stats.total_files} succès`);
       return stats;
     } catch (error) {
       const serviceError = this.createErrorFromUnknown(error);
@@ -262,7 +271,7 @@ export class PreviewService {
         generated_at: new Date().toISOString()
       };
 
-      console.warn(`[PreviewService] Pyramide générée: ${results.length} previews en ${pyramidResult.total_generation_time}ms`);
+      PreviewService.logDev(`[PreviewService] Pyramide générée: ${results.length} previews en ${pyramidResult.total_generation_time}ms`);
       return pyramidResult;
     } catch (error) {
       const serviceError = this.createErrorFromUnknown(error);
@@ -349,7 +358,7 @@ export class PreviewService {
         max_previews_per_type: defaultConfig.max_previews_per_type
       });
       
-      console.warn('[PreviewService] Cache cleanup terminé');
+      PreviewService.logDev('[PreviewService] Cache cleanup terminé');
     } catch (error) {
       const serviceError = this.createErrorFromUnknown(error);
       console.error('[PreviewService] Erreur cleanup cache:', serviceError);
@@ -372,7 +381,7 @@ export class PreviewService {
         previewType
       });
       
-      console.warn(`[PreviewService] Preview supprimée: ${sourceHash} (${previewType})`);
+      PreviewService.logDev(`[PreviewService] Preview supprimée: ${sourceHash} (${previewType})`);
     } catch (error) {
       const serviceError = this.createErrorFromUnknown(error);
       console.error('[PreviewService] Erreur suppression preview:', serviceError);
@@ -418,7 +427,7 @@ export class PreviewService {
       });
       
       const avgTime = results.reduce((sum: number, r: PreviewResult) => sum + r.generation_time, 0) / results.length;
-      console.warn(`[PreviewService] Benchmark: ${iterations} previews, temps moyen: ${avgTime.toFixed(2)}ms`);
+      PreviewService.logDev(`[PreviewService] Benchmark: ${iterations} previews, temps moyen: ${avgTime.toFixed(2)}ms`);
       
       return results;
     } catch (error) {
@@ -480,7 +489,7 @@ export class PreviewService {
       .then((unlisten) => {
         // Store the unlisten function for cleanup
         this.unlistenFunctions.push(unlisten);
-        console.warn('[PreviewService] Event listener for preview_progress registered successfully');
+        PreviewService.logDev('[PreviewService] Event listener for preview_progress registered successfully');
       })
       .catch((error) => {
         console.error('[PreviewService] Failed to setup preview_progress event listener:', error);
@@ -505,7 +514,7 @@ export class PreviewService {
     // Clear all progress listeners
     this.progressListeners.clear();
     
-    console.warn('[PreviewService] Service disposed, all event listeners cleaned up');
+    PreviewService.logDev('[PreviewService] Service disposed, all event listeners cleaned up');
   }
 
   /**

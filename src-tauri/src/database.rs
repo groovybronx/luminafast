@@ -76,10 +76,10 @@ impl Database {
 
         // Run initial migration
         self.run_migration("001_initial")?;
-        
+
         // Run ingestion sessions migration
         self.run_migration("002_ingestion_sessions")?;
-        
+
         // TODO: Fix 003_previews migration parsing (triggers with BEGIN...END)
         // self.run_migration("003_previews")?;
 

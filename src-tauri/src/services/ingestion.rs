@@ -10,6 +10,17 @@ use std::sync::Arc;
 use std::time::Instant;
 use uuid::Uuid;
 
+/// Session statistics update parameters
+#[derive(Debug, Clone)]
+pub struct SessionStatsUpdate {
+    pub total_files: usize,
+    pub ingested_files: usize,
+    pub failed_files: usize,
+    pub skipped_files: usize,
+    pub total_size_bytes: u64,
+    pub avg_processing_time_ms: f64,
+}
+
 /// Service for ingesting discovered RAW files into the catalog
 pub struct IngestionService {
     /// BLAKE3 service for file hashing
@@ -101,19 +112,26 @@ impl IngestionService {
         let mut files_to_process = Vec::new();
         for file_path in &request.file_paths {
             let path = std::path::Path::new(file_path);
-            
+
             // Get file metadata
-            let metadata = std::fs::metadata(path)
-                .map_err(|e| DiscoveryError::IoError(format!("Failed to read metadata for {}: {}", path.display(), e)))?;
-            
-            let modified_time = metadata.modified()
+            let metadata = std::fs::metadata(path).map_err(|e| {
+                DiscoveryError::IoError(format!(
+                    "Failed to read metadata for {}: {}",
+                    path.display(),
+                    e
+                ))
+            })?;
+
+            let modified_time = metadata
+                .modified()
                 .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
-            
+
             // Determine format from extension (only supported formats)
-            let extension = path.extension()
+            let extension = path
+                .extension()
                 .and_then(|ext| ext.to_str())
                 .map(|ext| ext.to_lowercase());
-            
+
             let format = match extension.as_deref() {
                 Some("cr3") => crate::models::discovery::RawFormat::CR3,
                 Some("raf") => crate::models::discovery::RawFormat::RAF,
@@ -123,7 +141,7 @@ impl IngestionService {
                     continue;
                 }
             };
-            
+
             let discovered_file = crate::models::discovery::DiscoveredFile::new(
                 request.session_id,
                 path.to_path_buf(),
@@ -131,7 +149,7 @@ impl IngestionService {
                 metadata.len(),
                 chrono::DateTime::<chrono::Utc>::from(modified_time),
             );
-            
+
             files_to_process.push(discovered_file);
         }
 
@@ -141,33 +159,34 @@ impl IngestionService {
         }
 
         // Update session with total files count
-        self.update_session_stats(
-            request.session_id,
-            files_to_process.len(),
-            0,
-            0,
-            0,
-            0,
-            0.0,
-        ).await?;
+        let initial_stats = SessionStatsUpdate {
+            total_files: files_to_process.len(),
+            ingested_files: 0,
+            failed_files: 0,
+            skipped_files: 0,
+            total_size_bytes: 0,
+            avg_processing_time_ms: 0.0,
+        };
+        self.update_session_stats(request.session_id, initial_stats)
+            .await?;
 
         // Process files sequentially for now (avoid async issues with rayon)
         let mut ingest_results = Vec::new();
         let mut total_size = 0u64;
         let mut total_processing_time = 0u64;
-        
+
         for file in &files_to_process {
             let file_start_time = Instant::now();
             let ingest_result = self.ingest_file(file).await;
             let file_processing_time = file_start_time.elapsed().as_millis() as u64;
-            
+
             total_processing_time += file_processing_time;
-            
+
             // Get file size for total
             if let Ok(metadata) = std::fs::metadata(&file.path) {
                 total_size += metadata.len();
             }
-            
+
             ingest_results.push(ingest_result);
         }
 
@@ -175,7 +194,7 @@ impl IngestionService {
         let mut successful_count = 0;
         let mut failed_count = 0;
         let mut skipped_count = 0;
-        
+
         for ingest_result in ingest_results {
             match ingest_result {
                 Ok(ingestion_result) => {
@@ -223,21 +242,23 @@ impl IngestionService {
         }
 
         // Finalize session stats
-        let avg_processing_time = if files_to_process.len() > 0 {
+        let avg_processing_time = if !files_to_process.is_empty() {
             total_processing_time as f64 / files_to_process.len() as f64
         } else {
             0.0
         };
 
-        self.update_session_stats(
-            request.session_id,
-            files_to_process.len(),
-            successful_count,
-            failed_count,
-            skipped_count,
-            total_size,
-            avg_processing_time,
-        ).await?;
+        let stats = SessionStatsUpdate {
+            total_files: files_to_process.len(),
+            ingested_files: successful_count,
+            failed_files: failed_count,
+            skipped_files: skipped_count,
+            total_size_bytes: total_size,
+            avg_processing_time_ms: avg_processing_time,
+        };
+
+        self.update_session_stats(request.session_id, stats)
+        .await?;
 
         // Mark session as completed
         self.complete_session(request.session_id).await?;
@@ -245,7 +266,8 @@ impl IngestionService {
         // Finalize result with timing
         result.total_processing_time_ms = start_time.elapsed().as_millis() as u64;
         if result.total_requested > 0 {
-            result.avg_processing_time_ms = result.total_processing_time_ms as f64 / result.total_requested as f64;
+            result.avg_processing_time_ms =
+                result.total_processing_time_ms as f64 / result.total_requested as f64;
         }
 
         Ok(result)
@@ -293,25 +315,28 @@ impl IngestionService {
         file_path: &Path,
     ) -> Result<BasicExif, DiscoveryError> {
         // Get file metadata as basic information
-        let metadata = std::fs::metadata(file_path)
-            .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
-        
-        let modified_time = metadata.modified()
+        let metadata =
+            std::fs::metadata(file_path).map_err(|e| DiscoveryError::IoError(e.to_string()))?;
+
+        let modified_time = metadata
+            .modified()
             .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
         let date_taken = chrono::DateTime::<chrono::Utc>::from(modified_time);
 
         // Extract basic info from filename and extension
-        let filename = file_path.file_name()
+        let filename = file_path
+            .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("unknown");
 
-        let extension = file_path.extension()
+        let extension = file_path
+            .extension()
             .and_then(|ext| ext.to_str())
             .unwrap_or("");
 
         // Enhanced camera make detection with multiple patterns
         let make = self.detect_camera_make(filename, extension);
-        
+
         // Enhanced model detection based on filename patterns
         let model = self.detect_camera_model(filename, extension);
 
@@ -353,11 +378,11 @@ impl IngestionService {
             Some("Fujifilm".to_string())
         } else if filename.contains("DSC") || filename.contains("ILCE") {
             Some("Sony".to_string())
-        } else if filename.contains("D") && filename.chars().any(|c| c.is_digit(10)) {
+        } else if filename.contains("D") && filename.chars().any(|c| c.is_ascii_digit()) {
             Some("Nikon".to_string())
         } else if filename.contains("E-") {
             Some("Olympus".to_string())
-        } else if filename.contains("P") && filename.chars().any(|c| c.is_digit(10)) {
+        } else if filename.contains("P") && filename.chars().any(|c| c.is_ascii_digit()) {
             Some("Panasonic".to_string())
         } else {
             Some("Unknown".to_string())
@@ -394,7 +419,10 @@ impl IngestionService {
     }
 
     /// Detect camera parameters from filename patterns
-    fn detect_camera_params(&self, filename: &str) -> (Option<u16>, Option<f32>, Option<String>, Option<f32>) {
+    fn detect_camera_params(
+        &self,
+        filename: &str,
+    ) -> (Option<u16>, Option<f32>, Option<String>, Option<f32>) {
         let mut iso = Some(100u16);
         let mut aperture = Some(2.8f32);
         let shutter_speed = Some("1/125".to_string());
@@ -600,7 +628,8 @@ impl IngestionService {
 
         // Query real session statistics from ingestion_sessions table
         let mut stmt = db
-            .prepare("
+            .prepare(
+                "
                 SELECT 
                     total_files,
                     ingested_files,
@@ -610,13 +639,19 @@ impl IngestionService {
                     avg_processing_time_ms
                 FROM ingestion_sessions 
                 WHERE id = ?
-            ")
+            ",
+            )
             .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
 
         let session_id_str = session_id.to_string();
-        let (total_files, ingested_files, failed_files, skipped_files, total_size_bytes, avg_processing_time_ms): (
-            i64, i64, i64, i64, Option<i64>, Option<f64>
-        ) = stmt
+        let (
+            total_files,
+            ingested_files,
+            failed_files,
+            skipped_files,
+            total_size_bytes,
+            avg_processing_time_ms,
+        ): (i64, i64, i64, i64, Option<i64>, Option<f64>) = stmt
             .query_row([&session_id_str], |row| {
                 Ok((
                     row.get(0)?,
@@ -632,22 +667,19 @@ impl IngestionService {
         // Fallback to images table if session not found yet (for backward compatibility)
         if total_files == 0 {
             let mut stmt = db
-                .prepare("
+                .prepare(
+                    "
                     SELECT 
                         COUNT(*) as total_files,
                         SUM(file_size_bytes) as total_size
                     FROM images 
                     WHERE imported_at >= datetime('now', '-1 hour')
-                ")
+                ",
+                )
                 .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
 
             let (fallback_total, fallback_size): (i64, Option<i64>) = stmt
-                .query_row([], |row| {
-                    Ok((
-                        row.get(0)?,
-                        row.get(1)?,
-                    ))
-                })
+                .query_row([], |row| Ok((row.get(0)?, row.get(1)?)))
                 .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
 
             Ok(IngestionStats {
@@ -673,21 +705,21 @@ impl IngestionService {
     }
 
     /// Create a new ingestion session for tracking
-    pub async fn create_ingestion_session(
-        &self,
-        session_id: Uuid,
-    ) -> Result<(), DiscoveryError> {
+    pub async fn create_ingestion_session(&self, session_id: Uuid) -> Result<(), DiscoveryError> {
         let db = self
             .db
             .lock()
             .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
 
-        db
-            .execute(
-                "INSERT OR REPLACE INTO ingestion_sessions (id, started_at, status) VALUES (?, ?, ?)",
-                rusqlite::params![session_id.to_string(), chrono::Utc::now().to_rfc3339(), "scanning"],
-            )
-            .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
+        db.execute(
+            "INSERT OR REPLACE INTO ingestion_sessions (id, started_at, status) VALUES (?, ?, ?)",
+            rusqlite::params![
+                session_id.to_string(),
+                chrono::Utc::now().to_rfc3339(),
+                "scanning"
+            ],
+        )
+        .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
 
         Ok(())
     }
@@ -696,21 +728,15 @@ impl IngestionService {
     pub async fn update_session_stats(
         &self,
         session_id: Uuid,
-        total_files: usize,
-        ingested_files: usize,
-        failed_files: usize,
-        skipped_files: usize,
-        total_size_bytes: u64,
-        avg_processing_time_ms: f64,
+        stats: SessionStatsUpdate,
     ) -> Result<(), DiscoveryError> {
         let db = self
             .db
             .lock()
             .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
 
-        db
-            .execute(
-                "UPDATE ingestion_sessions SET 
+        db.execute(
+            "UPDATE ingestion_sessions SET 
                     total_files = ?, 
                     ingested_files = ?, 
                     failed_files = ?, 
@@ -718,40 +744,36 @@ impl IngestionService {
                     total_size_bytes = ?, 
                     avg_processing_time_ms = ?
                 WHERE id = ?",
-                rusqlite::params![
-                    total_files as i64,
-                    ingested_files as i64,
-                    failed_files as i64,
-                    skipped_files as i64,
-                    total_size_bytes as i64,
-                    avg_processing_time_ms,
-                    session_id.to_string()
-                ],
-            )
-            .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
+            rusqlite::params![
+                stats.total_files as i64,
+                stats.ingested_files as i64,
+                stats.failed_files as i64,
+                stats.skipped_files as i64,
+                stats.total_size_bytes as i64,
+                stats.avg_processing_time_ms,
+                session_id.to_string()
+            ],
+        )
+        .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
 
         Ok(())
     }
 
     /// Mark session as completed
-    pub async fn complete_session(
-        &self,
-        session_id: Uuid,
-    ) -> Result<(), DiscoveryError> {
+    pub async fn complete_session(&self, session_id: Uuid) -> Result<(), DiscoveryError> {
         let db = self
             .db
             .lock()
             .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
 
-        db
-            .execute(
-                "UPDATE ingestion_sessions SET 
+        db.execute(
+            "UPDATE ingestion_sessions SET 
                     status = 'completed', 
                     completed_at = ? 
                 WHERE id = ?",
-                rusqlite::params![chrono::Utc::now().to_rfc3339(), session_id.to_string()],
-            )
-            .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
+            rusqlite::params![chrono::Utc::now().to_rfc3339(), session_id.to_string()],
+        )
+        .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
 
         Ok(())
     }

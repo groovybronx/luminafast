@@ -76,9 +76,14 @@ impl DiscoveryService {
         *current_task = Some(session_id);
 
         tokio::spawn(async move {
-            let result =
-                Self::perform_discovery(sessions_clone, discovered_files_clone, blake3_service_clone, session_id, config)
-                    .await;
+            let result = Self::perform_discovery(
+                sessions_clone,
+                discovered_files_clone,
+                blake3_service_clone,
+                session_id,
+                config,
+            )
+            .await;
 
             // Clear the current task when done
             let mut task_guard = current_task_clone.lock().await;
@@ -133,7 +138,7 @@ impl DiscoveryService {
     ) -> Result<Vec<DiscoveredFile>, DiscoveryError> {
         // Verify session exists
         let _session = self.get_session_status(session_id).await?;
-        
+
         // Get discovered files for this session
         let files = self.discovered_files.read().await;
         Ok(files.get(&session_id).cloned().unwrap_or_default())
@@ -209,7 +214,7 @@ impl DiscoveryService {
                 Self::check_raw_file(path, &config.formats, session_id).await?
             {
                 files_found += 1;
-                
+
                 // Store the discovered file
                 session_files.push(file_result.clone());
 

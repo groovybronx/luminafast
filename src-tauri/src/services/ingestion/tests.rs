@@ -331,11 +331,13 @@ async fn test_exif_format_detection() {
             .expect("EXIF extraction failed");
 
         let actual_make = exif.make.expect("Make should be present");
-        println!("DEBUG: filename={}, actual_make={}, expected_make={}", filename, actual_make, expected_make);
+        println!(
+            "DEBUG: filename={}, actual_make={}, expected_make={}",
+            filename, actual_make, expected_make
+        );
 
         assert_eq!(
-            actual_make,
-            expected_make,
+            actual_make, expected_make,
             "Failed for filename: {}",
             filename
         );
@@ -502,8 +504,17 @@ async fn test_session_stats() {
         .expect("Create session failed");
 
     // Update session with some stats to ensure it exists
+    use crate::services::ingestion::SessionStatsUpdate;
+    let stats_update = SessionStatsUpdate {
+        total_files: 10,
+        ingested_files: 8,
+        failed_files: 1,
+        skipped_files: 1,
+        total_size_bytes: 1024000,
+        avg_processing_time_ms: 125.5,
+    };
     service
-        .update_session_stats(session_id, 10, 8, 1, 1, 1024000, 125.5)
+        .update_session_stats(session_id, stats_update)
         .await
         .expect("Update session stats failed");
 

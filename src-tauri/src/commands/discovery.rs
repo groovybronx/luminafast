@@ -4,6 +4,7 @@ use crate::models::discovery::{
 };
 use crate::services::discovery::DiscoveryService;
 use crate::services::ingestion::IngestionService;
+use crate::services::blake3::Blake3Service;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::OnceLock;
@@ -11,9 +12,6 @@ use uuid::Uuid;
 
 /// Global discovery service instance
 static DISCOVERY_SERVICE: OnceLock<Arc<DiscoveryService>> = OnceLock::new();
-
-/// Global ingestion service instance
-static INGESTION_SERVICE: OnceLock<Arc<IngestionService>> = OnceLock::new();
 
 /// Initialize the discovery services (called from lib.rs)
 pub fn initialize_discovery_services() {
@@ -33,22 +31,77 @@ fn get_discovery_service() -> Arc<DiscoveryService> {
         .clone()
 }
 
-/// Get the global ingestion service
-fn get_ingestion_service() -> Arc<IngestionService> {
-    INGESTION_SERVICE
-        .get_or_init(|| {
-            // Create database connection (std::sync::Mutex for Sync safety)
-            let conn = rusqlite::Connection::open_in_memory()
-                .expect("Failed to create in-memory database for ingestion");
-            let db = Arc::new(std::sync::Mutex::new(conn));
+/// Get database path from environment or default location
+fn get_db_path() -> std::path::PathBuf {
+    let app_data_dir = std::env::var("TAURI_APP_DATA_DIR")
+        .unwrap_or_else(|_| {
+            dirs::data_local_dir()
+                .unwrap()
+                .join("com.luminafast.V2")
+                .to_string_lossy()
+                .to_string()
+        });
+    std::path::PathBuf::from(app_data_dir).join("luminafast.db")
+}
 
-            // Create BLAKE3 service for ingestion
-            let blake3_service = Arc::new(crate::services::blake3::Blake3Service::new(
-                crate::models::hashing::HashConfig::default(),
-            ));
-            Arc::new(IngestionService::new(blake3_service, db))
-        })
-        .clone()
+/// Ingest a single discovered file using the main database
+#[tauri::command]
+pub fn ingest_file(
+    file: DiscoveredFile,
+) -> Result<IngestionResult, String> {
+    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
+    rt.block_on(async {
+        // Create BLAKE3 service
+        let blake3_service = Arc::new(Blake3Service::new(
+            crate::models::hashing::HashConfig::default(),
+        ));
+        
+        // Open connection to main database
+        let db_path = get_db_path();
+        let conn = rusqlite::Connection::open(&db_path)
+            .map_err(|e| format!("Failed to open database: {}", e))?;
+        let db = Arc::new(std::sync::Mutex::new(conn));
+        
+        // Create ingestion service with main DB
+        let ingestion_service = IngestionService::new(blake3_service, db);
+        
+        let result = ingestion_service
+            .ingest_file(&file)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(result)
+    })
+}
+
+/// Batch ingest multiple files using the main database
+#[tauri::command]
+pub fn batch_ingest(
+    request: BatchIngestionRequest,
+) -> Result<BatchIngestionResult, String> {
+    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
+    rt.block_on(async {
+        // Create BLAKE3 service
+        let blake3_service = Arc::new(Blake3Service::new(
+            crate::models::hashing::HashConfig::default(),
+        ));
+        
+        // Open connection to main database
+        let db_path = get_db_path();
+        let conn = rusqlite::Connection::open(&db_path)
+            .map_err(|e| format!("Failed to open database: {}", e))?;
+        let db = Arc::new(std::sync::Mutex::new(conn));
+        
+        // Create ingestion service with main DB
+        let ingestion_service = IngestionService::new(blake3_service, db);
+        
+        let result = ingestion_service
+            .batch_ingest(&request)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(result)
+    })
 }
 
 /// Start a new discovery session
@@ -116,34 +169,6 @@ pub fn get_discovered_files(#[allow(non_snake_case)] sessionId: Uuid) -> Result<
             .map_err(|e| e.to_string())?;
 
         Ok(files)
-    })
-}
-
-/// Ingest a single discovered file
-#[tauri::command]
-pub fn ingest_file(file: DiscoveredFile) -> Result<IngestionResult, String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        let result = get_ingestion_service()
-            .ingest_file(&file)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        Ok(result)
-    })
-}
-
-/// Batch ingest multiple files
-#[tauri::command]
-pub fn batch_ingest(request: BatchIngestionRequest) -> Result<BatchIngestionResult, String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        let result = get_ingestion_service()
-            .batch_ingest(&request)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        Ok(result)
     })
 }
 
@@ -235,8 +260,17 @@ pub fn get_discovery_stats(#[allow(non_snake_case)] sessionId: Uuid) -> Result<D
             .await
             .map_err(|e| e.to_string())?;
 
-        // Get ingestion stats
-        let ingestion_stats = get_ingestion_service()
+        // Get ingestion stats - create service with main DB
+        let blake3_service = Arc::new(Blake3Service::new(
+            crate::models::hashing::HashConfig::default(),
+        ));
+        let db_path = get_db_path();
+        let conn = rusqlite::Connection::open(&db_path)
+            .map_err(|e| format!("Failed to open database: {}", e))?;
+        let db = Arc::new(std::sync::Mutex::new(conn));
+        let ingestion_service = IngestionService::new(blake3_service, db);
+        
+        let ingestion_stats = ingestion_service
             .get_session_stats(sessionId)
             .await
             .map_err(|e| e.to_string())?;

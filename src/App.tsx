@@ -1,8 +1,10 @@
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo, useRef } from 'react';
 import type { FlagType, EditState, CatalogEvent } from './types';
 import { safeID } from './lib/helpers';
 import { type MockEvent } from './lib/mockData';
 import { useCatalogStore, useUiStore, useEditStore, useSystemStore } from './stores';
+import { useCatalog } from './hooks/useCatalog';
+import { previewService } from './services/previewService';
 import { GlobalStyles } from './components/shared/GlobalStyles';
 import { ArchitectureMonitor } from './components/shared/ArchitectureMonitor';
 import { ImportModal } from './components/shared/ImportModal';
@@ -17,10 +19,19 @@ import { GridView } from './components/library/GridView';
 import { DevelopView } from './components/develop/DevelopView';
 
 export default function App() {
+  // Catalog hook - loads images from SQLite
+  const { 
+    images, 
+    isLoading: catalogLoading, 
+    error: catalogError,
+    refreshCatalog, 
+    syncAfterImport,
+    hasImages 
+  } = useCatalog();
+  
   // Stores Zustand
   const activeView = useUiStore((state) => state.activeView);
   const setActiveView = useUiStore((state) => state.setActiveView);
-  const images = useCatalogStore((state) => state.images);
   const setImages = useCatalogStore((state) => state.setImages);
   const selectionSet = useCatalogStore((state) => state.selection);
   const toggleSelection = useCatalogStore((state) => state.toggleSelection);
@@ -62,14 +73,33 @@ export default function App() {
   const setThumbnailSize = useUiStore((state) => state.setThumbnailSize);
   const sidebarOpen = useUiStore((state) => state.leftSidebarOpen);
   
-  // Initialisation des images au montage - utilise le catalogue réel
+  // Track if initial load has been triggered
+  const initialLoadTriggered = useRef(false);
+  
+  // Initialize services and load catalog on mount (once only)
   useEffect(() => {
-    // Si le catalogue est vide, on pourrait charger des images par défaut
-    // mais pour l'instant on laisse le catalogue vide jusqu'au premier import
-    if (images.length === 0) {
-      addLog('Catalog empty - ready for first import', 'info');
+    if (!initialLoadTriggered.current) {
+      initialLoadTriggered.current = true;
+      
+      // Initialize PreviewService first (Phase 2.3 du plan)
+      previewService.initialize()
+        .then(() => {
+          addLog('PreviewService initialized', 'system');
+          return refreshCatalog();
+        })
+        .catch(err => {
+          addLog(`Initialization error: ${err}`, 'error');
+        });
     }
-  }, [images.length, addLog]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - run only once on mount
+
+  // Handle catalog errors
+  useEffect(() => {
+    if (catalogError) {
+      addLog(`Catalog error: ${catalogError}`, 'error');
+    }
+  }, [catalogError, addLog]);
 
 
   const dispatchEvent = useCallback((eventType: string, payload: number | string | 'pick' | 'reject' | null | Partial<EditState>) => {
@@ -103,12 +133,19 @@ export default function App() {
     toggleSelection(id, isMultiSelect);
   };
 
-  const handleImport = useCallback(() => {
-    // Import is now handled automatically by useDiscovery hook
-    // This callback is just for closing the modal and any additional UI updates
+  const handleImport = useCallback(async () => {
+    // Close modal first for better UX
     setShowImport(false);
-    addLog(`Import workflow completed successfully`, 'sync');
-  }, [setShowImport, addLog]);
+    addLog(`Import workflow completed, syncing catalog...`, 'sync');
+    
+    // Refresh catalog from SQLite to show newly imported images
+    try {
+      await syncAfterImport();
+      addLog(`Catalog refreshed: ${images.length} images loaded`, 'sqlite');
+    } catch (err) {
+      addLog(`Failed to refresh catalog: ${err}`, 'error');
+    }
+  }, [setShowImport, addLog, syncAfterImport, images.length]);
 
 
   useEffect(() => {
@@ -137,11 +174,60 @@ export default function App() {
 
   const activeImg = images.find(i => i.id === selection[0]) ?? images[0];
 
-  // Ne pas rendre l'app si aucune image n'est disponible
-  if (!activeImg) {
+  // Show loading state while catalog is loading
+  if (catalogLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-zinc-950 text-zinc-400">
-        Chargement des images...
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <p>Loading catalog from database...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state if no images after loading
+  if (!hasImages && !catalogLoading) {
+    return (
+      <div className="flex flex-col h-screen w-full bg-zinc-950 text-zinc-300 font-sans">
+        <GlobalStyles />
+        <TopNav activeView={activeView} onSetActiveView={setActiveView} />
+        
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-zinc-400 mb-4">Catalog is empty</h2>
+            <p className="text-zinc-500 mb-8">Import your first photos to get started</p>
+            <button 
+              onClick={() => setShowImport(true)}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            >
+              Import Photos
+            </button>
+          </div>
+        </div>
+        
+        {showImport && <ImportModal onClose={() => setShowImport(false)} onImportComplete={handleImport} />}
+        <ArchitectureMonitor logs={logs} />
+      </div>
+    );
+  }
+
+  // Main app UI (show even if activeImg is undefined - will use first image as fallback)
+  const displayImg = activeImg || images[0];
+  
+  // Safety check - should not happen after hasImages check, but TypeScript needs it
+  if (!displayImg) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-zinc-950 text-zinc-400">
+        <div className="text-center">
+          <p className="text-xl text-zinc-500">No images available</p>
+          <button 
+            onClick={() => setShowImport(true)}
+            className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+          >
+            Import Photos
+          </button>
+        </div>
       </div>
     );
   }
@@ -166,7 +252,7 @@ export default function App() {
             {activeView === 'library' ? (
             <GridView images={filteredImages} selection={selection} thumbnailSize={thumbnailSize} onToggleSelection={handleToggleSelection} onSetActiveView={setActiveView} />
             ) : (
-              <DevelopView activeImg={activeImg} showBeforeAfter={showBeforeAfter} />
+              <DevelopView activeImg={displayImg} showBeforeAfter={showBeforeAfter} />
             )}
             <BatchBar selectionCount={selection.length} onDispatchEvent={dispatchEvent} onAddLog={addLog} onClearSelection={() => setSingleSelection(selection[0] ?? 0)} />
           </div>
@@ -174,7 +260,7 @@ export default function App() {
           <Filmstrip images={images} selection={selection} selectionCount={selection.length} imageCount={images.length} onToggleSelection={handleToggleSelection} />
         </div>
 
-        <RightSidebar activeView={activeView} activeImg={activeImg} eventLog={eventLog as MockEvent[]} onDispatchEvent={dispatchEvent} />
+        <RightSidebar activeView={activeView} activeImg={displayImg} eventLog={eventLog as MockEvent[]} onDispatchEvent={dispatchEvent} />
       </div>
 
       <ArchitectureMonitor logs={logs} />

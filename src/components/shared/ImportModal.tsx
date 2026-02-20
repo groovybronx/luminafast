@@ -12,7 +12,6 @@ export const ImportModal = ({ onClose, onImportComplete }: ImportModalProps) => 
   const [isStarted, setIsStarted] = useState(false);
   
   const {
-    isIngesting,
     progress,
     totalFiles,
     processedFiles,
@@ -21,17 +20,8 @@ export const ImportModal = ({ onClose, onImportComplete }: ImportModalProps) => 
     error,
     selectRootFolder,
     startScan,
-    startIngestion,
     cancel,
-    sessionId,
   } = useDiscovery();
-
-  // Auto-start ingestion when scanning completes
-  useEffect(() => {
-    if (stage === 'ingesting' && sessionId && !isIngesting) {
-      startIngestion(sessionId);
-    }
-  }, [stage, sessionId, isIngesting, startIngestion]);
 
   // Handle completion
   useEffect(() => {

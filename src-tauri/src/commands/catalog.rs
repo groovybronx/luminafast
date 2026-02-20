@@ -75,16 +75,16 @@ pub async fn get_all_images(
     let images_iter = stmt
         .query_map(rusqlite::params_from_iter(params), |row| {
             Ok(ImageDTO {
-                id: row.get(0)?,
-                blake3_hash: row.get(1)?,
-                filename: row.get(2)?,
-                extension: row.get(3)?,
-                width: row.get(4)?,
-                height: row.get(5)?,
-                rating: row.get(9)?,
-                flag: row.get(10)?,
-                captured_at: row.get(8)?,
-                imported_at: row.get(9)?,
+                id: row.get(0)?,           // i.id
+                blake3_hash: row.get(1)?,  // i.blake3_hash
+                filename: row.get(2)?,     // i.filename
+                extension: row.get(3)?,    // i.extension
+                width: row.get(4)?,        // i.width
+                height: row.get(5)?,       // i.height
+                rating: row.get(11)?,      // image_state.rating
+                flag: row.get(12)?,        // image_state.flag
+                captured_at: row.get(8)?,  // i.captured_at
+                imported_at: row.get(9)?,  // i.imported_at
             })
         })
         .map_err(|e| format!("Query error: {}", e))?;
@@ -355,16 +355,16 @@ pub async fn search_images(
     let images_iter = stmt
         .query_map([&search_pattern, &search_pattern], |row| {
             Ok(ImageDTO {
-                id: row.get(0)?,
-                blake3_hash: row.get(1)?,
-                filename: row.get(2)?,
-                extension: row.get(3)?,
-                width: row.get(4)?,
-                height: row.get(5)?,
-                rating: row.get(9)?,
-                flag: row.get(10)?,
-                captured_at: row.get(8)?,
-                imported_at: row.get(9)?,
+                id: row.get(0)?,           // i.id
+                blake3_hash: row.get(1)?,  // i.blake3_hash
+                filename: row.get(2)?,     // i.filename
+                extension: row.get(3)?,    // i.extension
+                width: row.get(4)?,        // i.width
+                height: row.get(5)?,       // i.height
+                rating: row.get(11)?,      // image_state.rating
+                flag: row.get(12)?,        // image_state.flag
+                captured_at: row.get(8)?,  // i.captured_at
+                imported_at: row.get(9)?,  // i.imported_at
             })
         })
         .map_err(|e| format!("Query error: {}", e))?;

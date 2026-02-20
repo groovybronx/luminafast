@@ -50,6 +50,7 @@ export function useDiscovery(): UseDiscoveryReturn {
   const { syncAfterImport } = useCatalog();
   const progressListenerRef = useRef<(() => void) | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const startIngestionRef = useRef<((sessionId: string) => Promise<void>) | null>(null);
 
   // Generate previews for a list of successfully ingested images
   const generatePreviewsForImages = useCallback(async (successfulIngestions: any[]) => {
@@ -200,9 +201,27 @@ export function useDiscovery(): UseDiscoveryReturn {
 
       addLog(`Discovery session started: ${session.sessionId}`, 'sync');
 
-      // Monitor session status
+      // Monitor session status with timeout protection
+      let pollAttempts = 0;
+      const maxPollAttempts = 600; // 10 minutes @ 1s interval
+      
       const monitorSession = async () => {
         try {
+          pollAttempts++;
+          
+          // Timeout protection
+          if (pollAttempts > maxPollAttempts) {
+            const errorMsg = `Discovery timeout after ${maxPollAttempts} attempts`;
+            setImportState({
+              stage: 'error',
+              error: errorMsg,
+              isImporting: false,
+            });
+            addLog(errorMsg, 'error');
+            cleanupProgressListener();
+            return;
+          }
+          
           const status = await discoveryService.getDiscoveryStatus(session.sessionId);
           
           if (status.status === 'completed') {
@@ -212,6 +231,13 @@ export function useDiscovery(): UseDiscoveryReturn {
             });
             addLog(`Discovery completed: ${status.filesFound} files found`, 'sync');
             cleanupProgressListener();
+            
+            // Auto-start ingestion with the session
+            setTimeout(() => {
+              if (startIngestionRef.current) {
+                startIngestionRef.current(session.sessionId);
+              }
+            }, 100);
           } else if (status.status === 'error') {
             const errorMsg = 'Discovery failed';
             setImportState({
@@ -336,6 +362,11 @@ export function useDiscovery(): UseDiscoveryReturn {
       }, 3000);
     }
   }, [setImportState, addLog, syncAfterImport, generatePreviewsForImages]);
+
+  // Update ref when startIngestion changes
+  useEffect(() => {
+    startIngestionRef.current = startIngestion;
+  }, [startIngestion]);
 
   // Cancel current operation
   const cancel = useCallback(async (): Promise<void> => {

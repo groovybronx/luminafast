@@ -79,6 +79,9 @@ impl Database {
         
         // Run ingestion sessions migration
         self.run_migration("002_ingestion_sessions")?;
+        
+        // TODO: Fix 003_previews migration parsing (triggers with BEGIN...END)
+        // self.run_migration("003_previews")?;
 
         Ok(())
     }
@@ -120,6 +123,7 @@ impl Database {
         let migration_sql = match version {
             "001_initial" => include_str!("../migrations/001_initial.sql"),
             "002_ingestion_sessions" => include_str!("../migrations/002_ingestion_sessions.sql"),
+            // "003_previews" => include_str!("../migrations/003_previews.sql"),  // TODO: Fix trigger parsing
             _ => {
                 return Err(DatabaseError::MigrationFailed(format!(
                     "Unknown migration version: {}",

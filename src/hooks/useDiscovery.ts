@@ -334,15 +334,10 @@ export function useDiscovery(): UseDiscoveryReturn {
         addLog(`Failed files: ${result.failed.map(f => f.file.filename).join(', ')}`, 'error');
       }
 
-      // Sync catalog with new images
-      addLog('Syncing catalog with newly imported images...', 'sync');
-      await syncAfterImport();
-
-      // Generate previews for newly imported images
+      // Generate previews FIRST before syncing catalog (Phase 2.3 critical order fix)
+      // Must generate previews BEFORE useCatalog tries to load them in syncAfterImport()
       addLog('Generating previews for imported images...', 'sync');
       
-      // Ensure PreviewService is properly initialized before generating previews (Phase 2.3 fix)
-      // This prevents race condition where generatePreviewsForImages tries to use uninitialized service
       try {
         const previewServiceAvailable = await previewService.isAvailable();
         if (!previewServiceAvailable) {
@@ -354,6 +349,10 @@ export function useDiscovery(): UseDiscoveryReturn {
       } catch (error) {
         addLog(`Preview generation failed: ${error}`, 'error');
       }
+
+      // NOW sync catalog with new images - previews exist so useCatalog can load URLs correctly
+      addLog('Syncing catalog with newly imported images...', 'sync');
+      await syncAfterImport();
       // Mise à jour explicite de l'état à 'completed' après ingestion et génération de previews
       setImportState({
         stage: 'completed',

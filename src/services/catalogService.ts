@@ -103,8 +103,8 @@ export class CatalogService {
       const invoke = this.getInvoke();
       const result = await invoke('create_collection', {
         name,
-        collection_type: collectionType,
-        parent_id: parentId
+        collectionType,
+        parentId
       });
       return result as CollectionDTO;
     } catch (error) {
@@ -122,9 +122,64 @@ export class CatalogService {
     try {
       const invoke = this.getInvoke();
       await invoke('add_images_to_collection', {
-        collection_id: collectionId,
-        image_ids: imageIds
+        collectionId,
+        imageIds
       });
+    } catch (error) {
+      throw this.parseError(error);
+    }
+  }
+
+  /**
+   * Delete a collection and all its image associations
+   */
+  static async deleteCollection(id: number): Promise<void> {
+    try {
+      const invoke = this.getInvoke();
+      await invoke('delete_collection', { collectionId: id });
+    } catch (error) {
+      throw this.parseError(error);
+    }
+  }
+
+  /**
+   * Rename an existing collection
+   */
+  static async renameCollection(id: number, name: string): Promise<void> {
+    try {
+      const invoke = this.getInvoke();
+      await invoke('rename_collection', { collectionId: id, name });
+    } catch (error) {
+      throw this.parseError(error);
+    }
+  }
+
+  /**
+   * Remove specific images from a collection (does not delete images from catalogue)
+   */
+  static async removeImagesFromCollection(
+    collectionId: number,
+    imageIds: number[]
+  ): Promise<void> {
+    try {
+      const invoke = this.getInvoke();
+      await invoke('remove_images_from_collection', {
+        collectionId,
+        imageIds
+      });
+    } catch (error) {
+      throw this.parseError(error);
+    }
+  }
+
+  /**
+   * Get all images belonging to a specific collection
+   */
+  static async getCollectionImages(collectionId: number): Promise<import('../types/dto').ImageDTO[]> {
+    try {
+      const invoke = this.getInvoke();
+      const result = await invoke('get_collection_images', { collectionId });
+      return result as import('../types/dto').ImageDTO[];
     } catch (error) {
       throw this.parseError(error);
     }

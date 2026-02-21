@@ -418,6 +418,180 @@ pub async fn search_images(
     Ok(images)
 }
 
+/// Delete a collection and all its image associations (cascade)
+#[tauri::command]
+pub async fn delete_collection(
+    collection_id: u32,
+    state: State<'_, AppState>,
+) -> CommandResult<()> {
+    let mut db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+
+    let collection_exists: Result<i32, _> = db.connection().query_row(
+        "SELECT 1 FROM collections WHERE id = ?",
+        [collection_id],
+        |row| row.get(0),
+    );
+
+    if collection_exists.is_err() {
+        return Err("Collection not found".to_string());
+    }
+
+    db.execute_transaction(|tx| {
+        // Remove associations first (FK constraint: collection_images → collections)
+        tx.execute(
+            "DELETE FROM collection_images WHERE collection_id = ?",
+            [collection_id],
+        )?;
+        tx.execute("DELETE FROM collections WHERE id = ?", [collection_id])?;
+        Ok(())
+    })
+    .map_err(|e| format!("Transaction failed: {}", e))?;
+
+    Ok(())
+}
+
+/// Rename an existing static collection
+#[tauri::command]
+pub async fn rename_collection(
+    collection_id: u32,
+    name: String,
+    state: State<'_, AppState>,
+) -> CommandResult<()> {
+    if name.trim().is_empty() {
+        return Err("Collection name cannot be empty".to_string());
+    }
+
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+
+    let rows_affected = db
+        .connection()
+        .execute(
+            "UPDATE collections SET name = ? WHERE id = ?",
+            rusqlite::params![name, collection_id],
+        )
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    if rows_affected == 0 {
+        return Err("Collection not found".to_string());
+    }
+
+    Ok(())
+}
+
+/// Remove specific images from a collection (does not delete images from the catalogue)
+#[tauri::command]
+pub async fn remove_images_from_collection(
+    collection_id: u32,
+    image_ids: Vec<u32>,
+    state: State<'_, AppState>,
+) -> CommandResult<()> {
+    let mut db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+
+    let collection_exists: Result<i32, _> = db.connection().query_row(
+        "SELECT 1 FROM collections WHERE id = ?",
+        [collection_id],
+        |row| row.get(0),
+    );
+
+    if collection_exists.is_err() {
+        return Err("Collection not found".to_string());
+    }
+
+    db.execute_transaction(|tx| {
+        for image_id in &image_ids {
+            // Idempotent: ignore if the image is not in the collection
+            tx.execute(
+                "DELETE FROM collection_images WHERE collection_id = ? AND image_id = ?",
+                [collection_id, *image_id],
+            )?;
+        }
+        Ok(())
+    })
+    .map_err(|e| format!("Transaction failed: {}", e))?;
+
+    Ok(())
+}
+
+/// Get all images belonging to a specific collection
+#[tauri::command]
+pub async fn get_collection_images(
+    collection_id: u32,
+    state: State<'_, AppState>,
+) -> CommandResult<Vec<ImageDTO>> {
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+
+    let collection_exists: Result<i32, _> = db.connection().query_row(
+        "SELECT 1 FROM collections WHERE id = ?",
+        [collection_id],
+        |row| row.get(0),
+    );
+
+    if collection_exists.is_err() {
+        return Err("Collection not found".to_string());
+    }
+
+    let mut stmt = db
+        .connection()
+        .prepare(
+            "SELECT i.id, i.blake3_hash, i.filename, i.extension,
+                    i.width, i.height, i.file_size_bytes, i.orientation,
+                    i.captured_at, i.imported_at, i.folder_id,
+                    ist.rating, ist.flag, ist.color_label,
+                    e.iso, e.aperture, e.shutter_speed, e.focal_length,
+                    e.lens, e.camera_make, e.camera_model
+             FROM images i
+             INNER JOIN collection_images ci ON i.id = ci.image_id
+             LEFT JOIN image_state ist ON i.id = ist.image_id
+             LEFT JOIN exif_metadata e ON i.id = e.image_id
+             WHERE ci.collection_id = ?
+             ORDER BY ci.sort_order ASC, i.imported_at DESC",
+        )
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    let images_iter = stmt
+        .query_map([collection_id], |row| {
+            Ok(ImageDTO {
+                id: row.get(0)?,
+                blake3_hash: row.get(1)?,
+                filename: row.get(2)?,
+                extension: row.get(3)?,
+                width: row.get(4)?,
+                height: row.get(5)?,
+                rating: row.get(11)?,
+                flag: row.get(12)?,
+                captured_at: row.get(8)?,
+                imported_at: row.get(9)?,
+                iso: row.get(14)?,
+                aperture: row.get(15)?,
+                shutter_speed: row.get(16)?,
+                focal_length: row.get(17)?,
+                lens: row.get(18)?,
+                camera_make: row.get(19)?,
+                camera_model: row.get(20)?,
+            })
+        })
+        .map_err(|e| format!("Query error: {}", e))?;
+
+    let mut images = Vec::new();
+    for image in images_iter {
+        images.push(image.map_err(|e| format!("Row error: {}", e))?);
+    }
+
+    Ok(images)
+}
+
 #[cfg(test)]
 mod tests {
     // use super::*;
@@ -602,5 +776,325 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM collections", [], |row| row.get(0))
             .unwrap();
         assert_eq!(count, 0);
+    }
+
+    // --- Phase 3.2: Tests for delete_collection ---
+
+    #[test]
+    fn test_delete_collection_success() {
+        let mut db = setup_test_db();
+
+        // Create a collection
+        db.connection()
+            .execute(
+                "INSERT INTO collections (name, type) VALUES (?, ?)",
+                ["To Delete", "static"],
+            )
+            .unwrap();
+        let id = db.connection().last_insert_rowid() as u32;
+
+        // Delete it
+        db.execute_transaction(|tx| {
+            tx.execute(
+                "DELETE FROM collection_images WHERE collection_id = ?",
+                [id],
+            )?;
+            tx.execute("DELETE FROM collections WHERE id = ?", [id])?;
+            Ok(())
+        })
+        .unwrap();
+
+        let count: i64 = db
+            .connection()
+            .query_row(
+                "SELECT COUNT(*) FROM collections WHERE id = ?",
+                [id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0, "Collection should be deleted");
+    }
+
+    #[test]
+    fn test_delete_collection_not_found() {
+        let db = setup_test_db();
+        let exists: Result<i32, _> =
+            db.connection()
+                .query_row("SELECT 1 FROM collections WHERE id = ?", [9999u32], |row| {
+                    row.get(0)
+                });
+        assert!(exists.is_err(), "Collection 9999 should not exist");
+    }
+
+    #[test]
+    fn test_delete_collection_cascades_images() {
+        let mut db = setup_test_db();
+
+        // Create image
+        db.connection()
+            .execute(
+                "INSERT INTO images (blake3_hash, filename, extension, imported_at) VALUES (?, ?, ?, ?)",
+                ["hash_del_test", "del_test.CR3", "CR3", "2026-01-01T00:00:00Z"],
+            )
+            .unwrap();
+        let image_id = db.connection().last_insert_rowid() as u32;
+
+        // Create collection
+        db.connection()
+            .execute(
+                "INSERT INTO collections (name, type) VALUES (?, ?)",
+                ["To Delete With Images", "static"],
+            )
+            .unwrap();
+        let col_id = db.connection().last_insert_rowid() as u32;
+
+        // Link image to collection
+        db.connection()
+            .execute(
+                "INSERT INTO collection_images (collection_id, image_id, sort_order) VALUES (?, ?, ?)",
+                [col_id, image_id, 0u32],
+            )
+            .unwrap();
+
+        let link_count_before: i64 = db
+            .connection()
+            .query_row(
+                "SELECT COUNT(*) FROM collection_images WHERE collection_id = ?",
+                [col_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(link_count_before, 1);
+
+        // Delete collection (cascade)
+        db.execute_transaction(|tx| {
+            tx.execute(
+                "DELETE FROM collection_images WHERE collection_id = ?",
+                [col_id],
+            )?;
+            tx.execute("DELETE FROM collections WHERE id = ?", [col_id])?;
+            Ok(())
+        })
+        .unwrap();
+
+        let link_count_after: i64 = db
+            .connection()
+            .query_row(
+                "SELECT COUNT(*) FROM collection_images WHERE collection_id = ?",
+                [col_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            link_count_after, 0,
+            "collection_images should be cleaned up"
+        );
+
+        // Image itself should still exist
+        let img_count: i64 = db
+            .connection()
+            .query_row(
+                "SELECT COUNT(*) FROM images WHERE id = ?",
+                [image_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            img_count, 1,
+            "Image should not be deleted when collection is"
+        );
+    }
+
+    // --- Phase 3.2: Tests for rename_collection ---
+
+    #[test]
+    fn test_rename_collection_success() {
+        let db = setup_test_db();
+
+        db.connection()
+            .execute(
+                "INSERT INTO collections (name, type) VALUES (?, ?)",
+                ["Old Name", "static"],
+            )
+            .unwrap();
+        let id = db.connection().last_insert_rowid() as u32;
+
+        let rows = db
+            .connection()
+            .execute(
+                "UPDATE collections SET name = ? WHERE id = ?",
+                rusqlite::params!["New Name", id],
+            )
+            .unwrap();
+        assert_eq!(rows, 1);
+
+        let name: String = db
+            .connection()
+            .query_row("SELECT name FROM collections WHERE id = ?", [id], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(name, "New Name");
+    }
+
+    #[test]
+    fn test_rename_collection_not_found() {
+        let db = setup_test_db();
+        let rows = db
+            .connection()
+            .execute(
+                "UPDATE collections SET name = ? WHERE id = ?",
+                rusqlite::params!["New Name", 9999u32],
+            )
+            .unwrap();
+        assert_eq!(rows, 0, "Should affect 0 rows when id does not exist");
+    }
+
+    // --- Phase 3.2: Tests for remove_images_from_collection ---
+
+    #[test]
+    fn test_remove_images_from_collection() {
+        let mut db = setup_test_db();
+
+        // Create image
+        db.connection()
+            .execute(
+                "INSERT INTO images (blake3_hash, filename, extension, imported_at) VALUES (?, ?, ?, ?)",
+                ["hash_remove_test", "remove_test.RAF", "RAF", "2026-01-01T00:00:00Z"],
+            )
+            .unwrap();
+        let image_id = db.connection().last_insert_rowid() as u32;
+
+        // Create collection
+        db.connection()
+            .execute(
+                "INSERT INTO collections (name, type) VALUES (?, ?)",
+                ["Remove Test Collection", "static"],
+            )
+            .unwrap();
+        let col_id = db.connection().last_insert_rowid() as u32;
+
+        // Link
+        db.connection()
+            .execute(
+                "INSERT INTO collection_images (collection_id, image_id, sort_order) VALUES (?, ?, ?)",
+                [col_id, image_id, 0u32],
+            )
+            .unwrap();
+
+        // Remove image from collection
+        db.execute_transaction(|tx| {
+            tx.execute(
+                "DELETE FROM collection_images WHERE collection_id = ? AND image_id = ?",
+                [col_id, image_id],
+            )?;
+            Ok(())
+        })
+        .unwrap();
+
+        let count: i64 = db
+            .connection()
+            .query_row(
+                "SELECT COUNT(*) FROM collection_images WHERE collection_id = ? AND image_id = ?",
+                [col_id, image_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0, "Image-collection link should be removed");
+
+        // Image itself should still exist
+        let img_count: i64 = db
+            .connection()
+            .query_row(
+                "SELECT COUNT(*) FROM images WHERE id = ?",
+                [image_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(img_count, 1, "Image should not be deleted");
+    }
+
+    // --- Phase 3.2: Tests for get_collection_images ---
+
+    #[test]
+    fn test_get_collection_images_empty() {
+        let db = setup_test_db();
+
+        db.connection()
+            .execute(
+                "INSERT INTO collections (name, type) VALUES (?, ?)",
+                ["Empty Collection", "static"],
+            )
+            .unwrap();
+        let col_id = db.connection().last_insert_rowid() as u32;
+
+        let count: i64 = db
+            .connection()
+            .query_row(
+                "SELECT COUNT(*) FROM images i
+                 INNER JOIN collection_images ci ON i.id = ci.image_id
+                 WHERE ci.collection_id = ?",
+                [col_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0, "Empty collection should return no images");
+    }
+
+    #[test]
+    fn test_get_collection_images_with_data() {
+        let db = setup_test_db();
+
+        // Create 2 images
+        db.connection()
+            .execute(
+                "INSERT INTO images (blake3_hash, filename, extension, imported_at) VALUES (?, ?, ?, ?)",
+                ["hash_gi_1", "img1.CR3", "CR3", "2026-01-01T00:00:00Z"],
+            )
+            .unwrap();
+        let img1 = db.connection().last_insert_rowid() as u32;
+
+        db.connection()
+            .execute(
+                "INSERT INTO images (blake3_hash, filename, extension, imported_at) VALUES (?, ?, ?, ?)",
+                ["hash_gi_2", "img2.RAF", "RAF", "2026-01-02T00:00:00Z"],
+            )
+            .unwrap();
+        let img2 = db.connection().last_insert_rowid() as u32;
+
+        // Create collection
+        db.connection()
+            .execute(
+                "INSERT INTO collections (name, type) VALUES (?, ?)",
+                ["Test Collection GI", "static"],
+            )
+            .unwrap();
+        let col_id = db.connection().last_insert_rowid() as u32;
+
+        // Link both images
+        db.connection()
+            .execute(
+                "INSERT INTO collection_images (collection_id, image_id, sort_order) VALUES (?, ?, ?)",
+                [col_id, img1, 0u32],
+            )
+            .unwrap();
+        db.connection()
+            .execute(
+                "INSERT INTO collection_images (collection_id, image_id, sort_order) VALUES (?, ?, ?)",
+                [col_id, img2, 1u32],
+            )
+            .unwrap();
+
+        let count: i64 = db
+            .connection()
+            .query_row(
+                "SELECT COUNT(*) FROM images i
+                 INNER JOIN collection_images ci ON i.id = ci.image_id
+                 WHERE ci.collection_id = ?",
+                [col_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 2, "Collection should contain 2 images");
     }
 }

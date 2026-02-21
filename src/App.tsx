@@ -3,6 +3,7 @@ import type { FlagType, EditState, CatalogEvent, EventPayload, EventType } from 
 import { safeID } from './lib/helpers';
 
 import { useCatalogStore, useUiStore, useEditStore, useSystemStore } from './stores';
+import { useCollectionStore } from './stores/collectionStore';
 import { useCatalog } from './hooks/useCatalog';
 import { previewService } from './services/previewService';
 import { GlobalStyles } from './components/shared/GlobalStyles';
@@ -38,15 +39,24 @@ export default function App() {
   const setSingleSelection = useCatalogStore((state) => state.setSingleSelection);
   const filterText = useCatalogStore((state) => state.filterText);
   const setFilterText = useCatalogStore((state) => state.setFilterText);
-  
+
+  // Collection active (filtre par collection)
+  const activeCollectionImageIds = useCollectionStore((state) => state.activeCollectionImageIds);
+
   // Compute derived values with useMemo
   const selection = useMemo(() => Array.from(selectionSet), [selectionSet]);
   
   const filteredImages = useMemo(() => {
-    if (!filterText) return images;
-    
+    // 1. Filtrer par collection active (si une collection est sélectionnée)
+    const baseImages = activeCollectionImageIds !== null
+      ? images.filter((img) => activeCollectionImageIds.includes(img.id))
+      : images;
+
+    // 2. Appliquer le filtre texte
+    if (!filterText) return baseImages;
+
     const q = filterText.toLowerCase();
-    return images.filter(img => {
+    return baseImages.filter(img => {
       if (q.startsWith('star')) return img.state.rating >= parseInt(q.split(' ')[1] ?? '0');
       if (q.includes('gfx')) return [img.exif.cameraMake, img.exif.cameraModel].join(' ').toLowerCase().includes('gfx');
       if (q.includes('iso')) {
@@ -59,7 +69,7 @@ export default function App() {
         img.state.tags.some(t => t.toLowerCase().includes(q))
       );
     });
-  }, [images, filterText]);
+  }, [images, filterText, activeCollectionImageIds]);
   
   const logs = useSystemStore((state) => state.logs);
   const addLog = useSystemStore((state) => state.addLog);

@@ -3,7 +3,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-21 (Post Corrections Critiques Phases 0→3.1) — État : Pipeline import end-to-end + grille virtualisée + pipeline EXIF E2E complets. 425 tests. Branche `fix/phases-0-to-3.1-critical-corrections` mergée.
+> **Dernière mise à jour** : 2026-02-21 (Phase 3.2 Collections Statiques CRUD + corrections camelCase Tauri + BatchBar collection picker) — État : Pipeline import + grille virtualisée + collections CRUD connectées + ajout en collection depuis la sélection. 455 tests frontend, 127 tests Rust. Branche `develop`.
 >
 > ### Décisions Projet (validées par le propriétaire)
 > - **Phase 8 (Cloud/Sync)** : Reportée post-lancement
@@ -17,8 +17,8 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : Phases 0 à 3.1 complétées + corrections critiques — Pipeline EXIF E2E fonctionnel
-Pipeline complet validé : Discovery (scan récursif) → BLAKE3 hashing → **Extraction EXIF réelle (kamadak-exif v0.6.1)** → Insertion SQLite (images + exif_metadata + image_state) → **Exposition via LEFT JOIN dans les commandes CRUD** → Mapping TypeScript → Affichage UI. **Grille virtualisée** avec `@tanstack/react-virtual` (10K+ images, 60fps). IPTC skeleton créé mais extraction non implémentée (reportée Phase 5.4). 10 bugs critiques corrigés (BLOC 1→3).
+### État actuel : Phases 0 à 3.2 complétées — Collections statiques CRUD opérationnelles + sélection batch vers collection
+Pipeline complet validé : Discovery (scan récursif) → BLAKE3 hashing → **Extraction EXIF réelle (kamadak-exif v0.6.1)** → Insertion SQLite (images + exif_metadata + image_state) → **Exposition via LEFT JOIN dans les commandes CRUD** → Mapping TypeScript → Affichage UI. **Grille virtualisée** avec `@tanstack/react-virtual` (10K+ images, 60fps). **Collections statiques CRUD** : création, renommage, suppression, filtrage via `collectionStore` Zustand et 4 commandes Tauri dédiées. **Ajout batch à une collection** : bouton `FolderPlus` dans la `BatchBar` (popover collections, Cmd+clic multi-sélection). IPTC skeleton créé mais extraction non implémentée (reportée Phase 5.4).
 
 ### Objectif : Application Tauri autonome commercialisable
 Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructive, catalogue SQLite, et gestion de bibliothèques photographiques massives.
@@ -76,6 +76,7 @@ LuminaFast/
 │   ├── stores/                     # Stores Zustand (state management)
 │   │   ├── index.ts                # Re-export central
 │   │   ├── catalogStore.ts         # Images, sélection, filtres
+│   │   ├── collectionStore.ts      # Collections CRUD + collection active (Phase 3.2)
 │   │   ├── uiStore.ts              # UI (vues, sidebars, modals)
 │   │   ├── editStore.ts            # Événements, edits, historique
 │   │   └── systemStore.ts          # Logs, import, état système
@@ -119,6 +120,7 @@ LuminaFast/
 │   │       ├── GlobalStyles.tsx    # Styles CSS inline
 │   │       ├── ArchitectureMonitor.tsx # Console monitoring
 │   │       ├── ImportModal.tsx     # Modal d'import
+│   │       ├── BatchBar.tsx        # Actions batch : pick, favoris, ajout collection (FolderPlus popover), clear
 │   │       └── SearchBar.tsx        # Barre de recherche
 │   └── hooks/                       # Hooks React personnalisés
 │       ├── useCatalog.ts           # Hook principal catalogue (mapping DTO→CatalogImage + EXIF)
@@ -136,7 +138,7 @@ LuminaFast/
 │   │   ├── lib.rs                  # Module library + plugins + init DB + commandes
 │   │   ├── database.rs               # Gestion SQLite, migrations, PRAGMA
 │   │   ├── commands/                 # Commandes Tauri CRUD (Phase 1.2 + 2.2)
-│   │   │   ├── catalog.rs           # 7 commandes CRUD avec validation
+│   │   │   ├── catalog.rs           # 11 commandes CRUD (+ delete/rename/remove/get_collection_images — Phase 3.2)
 │   │   │   ├── exif.rs              # Commandes EXIF/IPTC (Phase 2.2)
 │   │   │   ├── filesystem.rs        # Commandes système de fichiers
 │   │   │   └── mod.rs               # Export des commandes
@@ -174,7 +176,7 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 | `GlobalStyles` | `shared/GlobalStyles.tsx` | 16 | Styles CSS inline |
 | `ArchitectureMonitor` | `shared/ArchitectureMonitor.tsx` | 54 | Console monitoring système |
 | `ImportModal` | `shared/ImportModal.tsx` | 68 | Modal d'import avec progression |
-| `BatchBar` | `shared/BatchBar.tsx` | 32 | Actions batch sur sélection |
+| `BatchBar` | `shared/BatchBar.tsx` | — | Actions batch : pick, favoris, ajout à une collection (popover FolderPlus), clear sélection |
 | `KeyboardOverlay` | `shared/KeyboardOverlay.tsx` | 9 | Indicateurs raccourcis |
 | `TopNav` | `layout/TopNav.tsx` | 29 | Navigation supérieure |
 | `LeftSidebar` | `layout/LeftSidebar.tsx` | 64 | Catalogue, collections, folders |
@@ -194,6 +196,7 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 | Store | Fichier | État géré | Actions principales |
 |-------|---------|-----------|-------------------|
 | `catalogStore` | `stores/catalogStore.ts` | images[], selection (Set), filterText, activeImageId | setImages, toggleSelection, setFilterText, getFilteredImages |
+| `collectionStore` | `stores/collectionStore.ts` | collections[], activeCollectionId, activeCollectionImageIds | loadCollections, createCollection, deleteCollection, renameCollection, setActiveCollection, clearActiveCollection |
 | `uiStore` | `stores/uiStore.ts` | activeView, sidebars, thumbnailSize, modals | setActiveView, toggleLeftSidebar, setThumbnailSize |
 | `editStore` | `stores/editStore.ts` | eventLog[], currentEdits, historyIndex | addEvent, setCurrentEdits, updateEdit, undo/redo (préparés) |
 | `systemStore` | `stores/systemStore.ts` | logs[], importState, appReady | addLog, setImportState, setAppReady |

@@ -11,6 +11,14 @@ export interface ImageDTO {
   flag?: string;
   captured_at?: string;
   imported_at: string;
+  // EXIF fields (from LEFT JOIN exif_metadata)
+  iso?: number;
+  aperture?: number;
+  shutter_speed?: number;
+  focal_length?: number;
+  lens?: string;
+  camera_make?: string;
+  camera_model?: string;
 }
 
 export interface ImageDetailDTO extends ImageDTO {

@@ -201,7 +201,7 @@ describe('catalogStore', () => {
     
     const filteredImages = useCatalogStore.getState().getFilteredImages();
     expect(filteredImages.every(img => 
-      img.exif.camera.toLowerCase().includes('gfx')
+      [img.exif.cameraMake, img.exif.cameraModel].join(' ').toLowerCase().includes('gfx')
     )).toBe(true);
   });
 
@@ -212,7 +212,7 @@ describe('catalogStore', () => {
     });
     
     const filteredImages = useCatalogStore.getState().getFilteredImages();
-    expect(filteredImages.every(img => img.exif.iso >= 800)).toBe(true);
+    expect(filteredImages.every(img => (img.exif.iso ?? 0) >= 800)).toBe(true);
   });
 
   it('should filter images by filename', () => {

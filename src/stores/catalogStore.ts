@@ -83,14 +83,14 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
     const q = filterText.toLowerCase();
     return images.filter(img => {
       if (q.startsWith('star')) return img.state.rating >= parseInt(q.split(' ')[1] ?? '0');
-      if (q.includes('gfx')) return img.exif.camera.toLowerCase().includes('gfx');
+      if (q.includes('gfx')) return [img.exif.cameraMake, img.exif.cameraModel].join(' ').toLowerCase().includes('gfx');
       if (q.includes('iso')) {
         const val = parseInt(q.replace(/[^0-9]/g, ''));
-        return img.exif.iso >= val;
+        return (img.exif.iso ?? 0) >= val;
       }
       return (
         img.filename.toLowerCase().includes(q) || 
-        img.exif.lens.toLowerCase().includes(q) ||
+        (img.exif.lens ?? '').toLowerCase().includes(q) ||
         img.state.tags.some(t => t.toLowerCase().includes(q))
       );
     });

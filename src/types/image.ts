@@ -1,12 +1,16 @@
 // --- Domain Types: Image & related data ---
 
 export interface ExifData {
-  iso: number;
-  fstop: number;
-  shutter: string;
-  lens: string;
-  camera: string;
-  location: string;
+  iso?: number;
+  aperture?: number;
+  shutterSpeed?: string;
+  focalLength?: number;
+  lens?: string;
+  cameraMake?: string;
+  cameraModel?: string;
+  gpsLat?: number;
+  gpsLon?: number;
+  colorSpace?: string;
 }
 
 export interface EditState {

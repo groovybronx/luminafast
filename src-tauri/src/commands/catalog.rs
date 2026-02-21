@@ -18,12 +18,15 @@ pub async fn get_all_images(
     let db = state.db.lock().map_err(|e| format!("Database lock poisoned: {}", e))?;
 
     let mut query = String::from(
-        "SELECT i.id, i.blake3_hash, i.filename, i.extension, 
+        "SELECT i.id, i.blake3_hash, i.filename, i.extension,
                 i.width, i.height, i.file_size_bytes, i.orientation,
                 i.captured_at, i.imported_at, i.folder_id,
-                image_state.rating, image_state.flag, image_state.color_label
+                ist.rating, ist.flag, ist.color_label,
+                e.iso, e.aperture, e.shutter_speed, e.focal_length,
+                e.lens, e.camera_make, e.camera_model
          FROM images i
-         LEFT JOIN image_state image_state ON i.id = image_state.image_id",
+         LEFT JOIN image_state ist ON i.id = ist.image_id
+         LEFT JOIN exif_metadata e ON i.id = e.image_id",
     );
 
     let mut params = Vec::new();
@@ -75,16 +78,23 @@ pub async fn get_all_images(
     let images_iter = stmt
         .query_map(rusqlite::params_from_iter(params), |row| {
             Ok(ImageDTO {
-                id: row.get(0)?,          // i.id
-                blake3_hash: row.get(1)?, // i.blake3_hash
-                filename: row.get(2)?,    // i.filename
-                extension: row.get(3)?,   // i.extension
-                width: row.get(4)?,       // i.width
-                height: row.get(5)?,      // i.height
-                rating: row.get(11)?,     // image_state.rating
-                flag: row.get(12)?,       // image_state.flag
-                captured_at: row.get(8)?, // i.captured_at
-                imported_at: row.get(9)?, // i.imported_at
+                id: row.get(0)?,
+                blake3_hash: row.get(1)?,
+                filename: row.get(2)?,
+                extension: row.get(3)?,
+                width: row.get(4)?,
+                height: row.get(5)?,
+                rating: row.get(11)?,
+                flag: row.get(12)?,
+                captured_at: row.get(8)?,
+                imported_at: row.get(9)?,
+                iso: row.get(14)?,
+                aperture: row.get(15)?,
+                shutter_speed: row.get(16)?,
+                focal_length: row.get(17)?,
+                lens: row.get(18)?,
+                camera_make: row.get(19)?,
+                camera_model: row.get(20)?,
             })
         })
         .map_err(|e| format!("Query error: {}", e))?;
@@ -343,12 +353,15 @@ pub async fn search_images(
     let mut stmt = db
         .connection()
         .prepare(
-            "SELECT i.id, i.blake3_hash, i.filename, i.extension, 
+            "SELECT i.id, i.blake3_hash, i.filename, i.extension,
                 i.width, i.height, i.file_size_bytes, i.orientation,
                 i.captured_at, i.imported_at, i.folder_id,
-                image_state.rating, image_state.flag, image_state.color_label
+                ist.rating, ist.flag, ist.color_label,
+                e.iso, e.aperture, e.shutter_speed, e.focal_length,
+                e.lens, e.camera_make, e.camera_model
          FROM images i
-         LEFT JOIN image_state image_state ON i.id = image_state.image_id
+         LEFT JOIN image_state ist ON i.id = ist.image_id
+         LEFT JOIN exif_metadata e ON i.id = e.image_id
          WHERE i.filename LIKE ? OR i.blake3_hash LIKE ?
          ORDER BY i.imported_at DESC",
         )
@@ -357,16 +370,23 @@ pub async fn search_images(
     let images_iter = stmt
         .query_map([&search_pattern, &search_pattern], |row| {
             Ok(ImageDTO {
-                id: row.get(0)?,          // i.id
-                blake3_hash: row.get(1)?, // i.blake3_hash
-                filename: row.get(2)?,    // i.filename
-                extension: row.get(3)?,   // i.extension
-                width: row.get(4)?,       // i.width
-                height: row.get(5)?,      // i.height
-                rating: row.get(11)?,     // image_state.rating
-                flag: row.get(12)?,       // image_state.flag
-                captured_at: row.get(8)?, // i.captured_at
-                imported_at: row.get(9)?, // i.imported_at
+                id: row.get(0)?,
+                blake3_hash: row.get(1)?,
+                filename: row.get(2)?,
+                extension: row.get(3)?,
+                width: row.get(4)?,
+                height: row.get(5)?,
+                rating: row.get(11)?,
+                flag: row.get(12)?,
+                captured_at: row.get(8)?,
+                imported_at: row.get(9)?,
+                iso: row.get(14)?,
+                aperture: row.get(15)?,
+                shutter_speed: row.get(16)?,
+                focal_length: row.get(17)?,
+                lens: row.get(18)?,
+                camera_make: row.get(19)?,
+                camera_model: row.get(20)?,
             })
         })
         .map_err(|e| format!("Query error: {}", e))?;

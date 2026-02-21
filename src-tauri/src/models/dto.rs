@@ -13,6 +13,14 @@ pub struct ImageDTO {
     pub flag: Option<String>,
     pub captured_at: Option<String>,
     pub imported_at: String,
+    // Champs EXIF depuis LEFT JOIN exif_metadata (Phase 2.1/3.1)
+    pub iso: Option<u32>,
+    pub aperture: Option<f64>,
+    pub shutter_speed: Option<f64>,
+    pub focal_length: Option<f64>,
+    pub lens: Option<String>,
+    pub camera_make: Option<String>,
+    pub camera_model: Option<String>,
 }
 
 /// DTO for detailed image information
@@ -89,12 +97,19 @@ impl From<crate::models::catalog::Image> for ImageDTO {
             extension: image.extension,
             width: image.width.map(|w| w as u32),
             height: image.height.map(|h| h as u32),
-            rating: None, // Will be populated from image_state join
-            flag: None,   // Will be populated from image_state join
+            rating: None,
+            flag: None,
             captured_at: image
                 .captured_at
                 .map(|dt: chrono::DateTime<chrono::Utc>| dt.to_rfc3339()),
             imported_at: image.imported_at.to_rfc3339(),
+            iso: None,
+            aperture: None,
+            shutter_speed: None,
+            focal_length: None,
+            lens: None,
+            camera_make: None,
+            camera_model: None,
         }
     }
 }

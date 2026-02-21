@@ -8,7 +8,7 @@ interface BatchBarProps {
   onClearSelection: () => void;
 }
 
-export const BatchBar = ({ selectionCount, onDispatchEvent, onAddLog, onClearSelection }: BatchBarProps) => {
+export const BatchBar = ({ selectionCount, onDispatchEvent, onClearSelection }: BatchBarProps) => {
   if (selectionCount <= 1) return null;
 
   return (
@@ -21,8 +21,8 @@ export const BatchBar = ({ selectionCount, onDispatchEvent, onAddLog, onClearSel
       <div className="flex gap-6">
         <button onClick={() => onDispatchEvent('FLAG', 'pick')} className="text-zinc-400 hover:text-emerald-500 transition-colors flex flex-col items-center gap-1 text-[9px] font-bold uppercase"><Check size={18}/> Pick</button>
         <button onClick={() => onDispatchEvent('RATING', 5)} className="text-zinc-400 hover:text-amber-500 transition-colors flex flex-col items-center gap-1 text-[9px] font-bold uppercase"><Star size={18}/> Favoris</button>
-        <button onClick={() => onAddLog('Metadata batch sync triggered', 'sqlite')} className="text-zinc-400 hover:text-blue-500 transition-colors flex flex-col items-center gap-1 text-[9px] font-bold uppercase"><Tag size={18}/> Tags</button>
-        <button onClick={() => onAddLog('Re-indexing batch...', 'duckdb')} className="text-zinc-400 hover:text-purple-500 transition-colors flex flex-col items-center gap-1 text-[9px] font-bold uppercase"><RefreshCw size={18}/> Sync</button>
+        <button disabled title="Non implémenté" className="opacity-40 cursor-not-allowed flex flex-col items-center gap-1 text-[9px] font-bold uppercase text-zinc-600"><Tag size={18}/> Tags</button>
+        <button disabled title="Non implémenté" className="opacity-40 cursor-not-allowed flex flex-col items-center gap-1 text-[9px] font-bold uppercase text-zinc-600"><RefreshCw size={18}/> Sync</button>
       </div>
       <div className="w-8 h-8 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 rounded-full cursor-pointer text-zinc-500 hover:text-white transition-colors" onClick={onClearSelection}>
         <X size={16} />

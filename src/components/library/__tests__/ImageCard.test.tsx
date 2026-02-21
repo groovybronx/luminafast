@@ -9,7 +9,7 @@ const mockImage: CatalogImage = {
   url: '/mock/test.jpg',
   hash: 'mockhash',
   capturedAt: '',
-  exif: { iso: 100, fstop: 2.8, shutter: '1/125', lens: '', camera: '', location: '' },
+  exif: { iso: 100, aperture: 2.8, shutterSpeed: '1/125', lens: undefined, cameraModel: undefined },
   state: { rating: 4, flag: null, edits: { exposure: 0, contrast: 0, highlights: 0, shadows: 0, temp: 0, tint: 0, vibrance: 0, saturation: 0, clarity: 0 }, isSynced: false, revision: '', tags: [] },
   sizeOnDisk: '',
 };

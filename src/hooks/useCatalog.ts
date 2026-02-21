@@ -85,12 +85,17 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
           url: thumbnailUrl, // Use real thumbnail URL or empty
           capturedAt: img.captured_at || '',
           exif: {
-            iso: 0,
-            fstop: 0,
-            shutter: '',
-            lens: '',
-            camera: '',
-            location: '',
+            iso: img.iso,
+            aperture: img.aperture,
+            shutterSpeed: img.shutter_speed != null
+              ? (img.shutter_speed >= 1
+                ? `${img.shutter_speed}s`
+                : `1/${Math.round(1 / img.shutter_speed)}`)
+              : undefined,
+            focalLength: img.focal_length,
+            lens: img.lens,
+            cameraMake: img.camera_make,
+            cameraModel: img.camera_model,
           },
           state: {
             rating: img.rating || 0,
@@ -163,12 +168,17 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
           url: thumbnailUrl, // Use real thumbnail URL or empty
           capturedAt: img.captured_at || '',
           exif: {
-            iso: 0,
-            fstop: 0,
-            shutter: '',
-            lens: '',
-            camera: '',
-            location: '',
+            iso: img.iso,
+            aperture: img.aperture,
+            shutterSpeed: img.shutter_speed != null
+              ? (img.shutter_speed >= 1
+                ? `${img.shutter_speed}s`
+                : `1/${Math.round(1 / img.shutter_speed)}`)
+              : undefined,
+            focalLength: img.focal_length,
+            lens: img.lens,
+            cameraMake: img.camera_make,
+            cameraModel: img.camera_model,
           },
           state: {
             rating: img.rating || 0,

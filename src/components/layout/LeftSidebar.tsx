@@ -24,7 +24,7 @@ export const LeftSidebar = ({ sidebarOpen, imageCount, onSetFilterText, onShowIm
               <Database size={14} className="text-blue-500"/> Toutes les photos <span className="ml-auto opacity-30 text-[9px] font-mono">{imageCount}</span>
            </button>
            <button onClick={() => onSetFilterText('star 5')} className="w-full text-left p-2 rounded text-xs hover:bg-zinc-800 flex gap-2 text-zinc-400 group">
-              <Star size={14} className="text-amber-500 group-hover:scale-110 transition-transform"/> Meilleures Notes <span className="ml-auto opacity-30 text-[9px] font-mono">12</span>
+              <Star size={14} className="text-amber-500 group-hover:scale-110 transition-transform"/> Meilleures Notes
            </button>
            <button onClick={() => onSetFilterText('picked')} className="w-full text-left p-2 rounded text-xs hover:bg-zinc-800 flex gap-2 text-zinc-400">
               <Check size={14} className="text-emerald-500"/> Sélection active

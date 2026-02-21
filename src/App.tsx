@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useMemo, useRef } from 'react';
-import type { FlagType, EditState, CatalogEvent } from './types';
+import type { FlagType, EditState, CatalogEvent, EventPayload, EventType } from './types';
 import { safeID } from './lib/helpers';
-import { type MockEvent } from './lib/mockData';
+
 import { useCatalogStore, useUiStore, useEditStore, useSystemStore } from './stores';
 import { useCatalog } from './hooks/useCatalog';
 import { previewService } from './services/previewService';
@@ -48,14 +48,14 @@ export default function App() {
     const q = filterText.toLowerCase();
     return images.filter(img => {
       if (q.startsWith('star')) return img.state.rating >= parseInt(q.split(' ')[1] ?? '0');
-      if (q.includes('gfx')) return img.exif.camera.toLowerCase().includes('gfx');
+      if (q.includes('gfx')) return [img.exif.cameraMake, img.exif.cameraModel].join(' ').toLowerCase().includes('gfx');
       if (q.includes('iso')) {
         const val = parseInt(q.replace(/[^0-9]/g, ''));
-        return img.exif.iso >= val;
+        return (img.exif.iso ?? 0) >= val;
       }
       return (
         img.filename.toLowerCase().includes(q) || 
-        img.exif.lens.toLowerCase().includes(q) ||
+        (img.exif.lens ?? '').toLowerCase().includes(q) ||
         img.state.tags.some(t => t.toLowerCase().includes(q))
       );
     });
@@ -103,8 +103,16 @@ export default function App() {
 
 
   const dispatchEvent = useCallback((eventType: string, payload: number | string | 'pick' | 'reject' | null | Partial<EditState>) => {
-    const event: MockEvent = { id: safeID(), timestamp: Date.now(), type: eventType, payload, targets: selection };
-    addEvent(event as unknown as CatalogEvent);
+    // Build typed EventPayload based on event type
+    let typedPayload: EventPayload;
+    if (eventType === 'RATING') typedPayload = { type: 'RATING', value: payload as number };
+    else if (eventType === 'FLAG') typedPayload = { type: 'FLAG', value: payload as FlagType };
+    else if (eventType === 'EDIT') typedPayload = { type: 'EDIT', value: payload as Partial<EditState> };
+    else if (eventType === 'ADD_TAG') typedPayload = { type: 'ADD_TAG', value: payload as string };
+    else typedPayload = { type: 'REMOVE_TAG', value: payload as string };
+
+    const event: CatalogEvent = { id: safeID(), timestamp: Date.now(), type: eventType as EventType, payload: typedPayload, targets: selection };
+    addEvent(event);
     
     // Mettre à jour les images
     const updatedImages = images.map(img => {
@@ -121,10 +129,9 @@ export default function App() {
     setImages(updatedImages);
     
     if (eventType !== 'EDIT') {
-      addLog(`SQLite Transaction: ACID Commit for ${selection.length} assets`, 'sqlite');
-      setTimeout(() => addLog(`PouchDB: Syncing revision ${safeID()} to CouchDB`, 'sync'), 1200);
+      addLog(`SQLite: ACID commit for ${selection.length} asset(s) [${eventType}]`, 'sqlite');
     } else {
-      addLog(`Event Sourcing: Replaying delta on FlatBuffer`, 'io');
+      addLog(`SQLite: Edit stored for ${selection.length} asset(s)`, 'sqlite');
     }
   }, [selection, addEvent, images, setImages, addLog]);
 
@@ -153,7 +160,7 @@ export default function App() {
       const start = performance.now();
       const resultCount = filteredImages.length;
       const end = performance.now();
-      setTimeout(() => addLog(`DUCKDB Scan: ${resultCount} rows found in ${(end - start).toFixed(2)}ms`, 'duckdb'), 0);
+      setTimeout(() => addLog(`SQLite Filter: ${resultCount} images matched in ${(end - start).toFixed(2)}ms`, 'sqlite'), 0);
     }
   }, [filteredImages, filterText, addLog, setActiveView]);
 
@@ -260,7 +267,7 @@ export default function App() {
           <Filmstrip images={images} selection={selection} selectionCount={selection.length} imageCount={images.length} onToggleSelection={handleToggleSelection} />
         </div>
 
-        <RightSidebar activeView={activeView} activeImg={displayImg} eventLog={eventLog as MockEvent[]} onDispatchEvent={dispatchEvent} />
+        <RightSidebar activeView={activeView} activeImg={displayImg} eventLog={eventLog} onDispatchEvent={dispatchEvent} />
       </div>
 
       <ArchitectureMonitor logs={logs} />

@@ -21,7 +21,7 @@ export const TopNav = ({ activeView, onSetActiveView }: TopNavProps) => (
       </nav>
     </div>
     <div className="flex items-center gap-4 text-[10px] text-zinc-500 font-mono">
-       <div className="flex items-center gap-2"><Cloud size={12} className="text-blue-500"/> PouchDB ACTIVE</div>
+       <div className="flex items-center gap-2"><Cloud size={12} className="text-green-500"/> SQLite</div>
        <div className="w-px h-3 bg-zinc-800"></div>
        <div className="flex items-center gap-2"><Settings size={12}/> V1.7.2-BETA</div>
     </div>

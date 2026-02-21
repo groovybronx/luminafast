@@ -59,7 +59,7 @@ impl IngestionService {
         // Check if file already exists in database
         if let Ok(Some(_)) = self.check_file_exists(&file.path).await {
             result.error = Some("File already exists in catalog".to_string());
-            result.processing_time_ms = start_time.elapsed().as_micros() as u64;
+            result.processing_time_ms = start_time.elapsed().as_millis() as u64;
             return Ok(result);
         }
 
@@ -114,7 +114,7 @@ impl IngestionService {
         result.success = true;
         result.database_id = Some(database_id);
         result.metadata = Some(metadata);
-        result.processing_time_ms = start_time.elapsed().as_micros() as u64;
+        result.processing_time_ms = start_time.elapsed().as_millis() as u64;
 
         Ok(result)
     }

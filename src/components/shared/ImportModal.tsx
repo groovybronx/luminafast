@@ -162,7 +162,7 @@ export const ImportModal = ({ onClose, onImportComplete }: ImportModalProps) => 
               </div>
               <div className="text-right">
                 Vitesse: <span className="text-emerald-500">
-                  {isActive ? '~1.2 GB/s' : '--'}
+                  {isActive ? `${((processedFiles / totalFiles) * 100).toFixed(1)} %` : '--'}
                 </span>
               </div>
             </div>

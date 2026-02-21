@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useState, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Cloud, RefreshCw, Image as ImageIcon } from 'lucide-react';
 import type { CatalogImage, ActiveView } from '../../types';
@@ -29,6 +29,26 @@ export const GridView = ({
   onSetActiveView 
 }: GridViewProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Track container width to recalculate columns on resize
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    // Set initial width
+    setContainerWidth(el.clientWidth);
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   
   // Dynamic sizing based on thumbnailSize prop (1-10)
   const pixelSize = useMemo(() => {
@@ -40,14 +60,13 @@ export const GridView = ({
   const itemHeight = Math.round(pixelSize / 1.5); // 3:2 aspect ratio
   const gap = 12; // gap-x-3 gap-y-4
   
-  // Calculate columns based on container width
+  // Calculate columns based on measured container width (reacts to resize)
   const columnCount = useMemo(() => {
-    if (!containerRef.current) return 1;
-    const containerWidth = containerRef.current.clientWidth;
+    if (containerWidth === 0) return 1;
     const availableWidth = containerWidth - 32; // p-4 = 16px × 2
     const cellWidth = itemWidth + gap;
     return Math.max(1, Math.floor(availableWidth / cellWidth));
-  }, [itemWidth, gap]);
+  }, [containerWidth, itemWidth, gap]);
   
   // Calculate virtual row/column layout
   const rowCount = Math.ceil(images.length / columnCount);

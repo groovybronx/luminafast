@@ -41,7 +41,7 @@ const mockImages: CatalogImage[] = [
     filename: 'IMG_001.JPG',
     url: 'file://img1.jpg',
     capturedAt: '2023-01-01',
-    exif: { iso: 100, fstop: 2.8, shutter: '1/100', lens: '50mm', camera: 'Sony', location: '' },
+    exif: { iso: 100, aperture: 2.8, shutterSpeed: '1/100', lens: '50mm', cameraModel: 'Sony' },
     state: { rating: 3, flag: null, edits: DEFAULT_EDIT_STATE, isSynced: true, revision: '1', tags: [] },
     sizeOnDisk: '10MB'
   },
@@ -51,7 +51,7 @@ const mockImages: CatalogImage[] = [
     filename: 'IMG_002.JPG',
     url: 'file://img2.jpg',
     capturedAt: '2023-01-02',
-    exif: { iso: 200, fstop: 4.0, shutter: '1/200', lens: '85mm', camera: 'Sony', location: '' },
+    exif: { iso: 200, aperture: 4.0, shutterSpeed: '1/200', lens: '85mm', cameraModel: 'Sony' },
     state: { rating: 5, flag: 'pick', edits: DEFAULT_EDIT_STATE, isSynced: false, revision: '1', tags: [] },
     sizeOnDisk: '12MB'
   }

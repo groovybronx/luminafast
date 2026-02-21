@@ -1,8 +1,8 @@
 import { History } from 'lucide-react';
-import type { MockEvent } from '../../lib/mockData';
+import type { CatalogEvent } from '../../types';
 
 interface HistoryPanelProps {
-  eventLog: MockEvent[];
+  eventLog: CatalogEvent[];
 }
 
 export const HistoryPanel = ({ eventLog }: HistoryPanelProps) => (

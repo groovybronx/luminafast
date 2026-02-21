@@ -610,10 +610,10 @@ pub async fn create_smart_collection(
     // Validate smart_query is valid JSON
     let _parsed: serde_json::Value = serde_json::from_str(&smart_query)
         .map_err(|e| format!("Invalid smart_query JSON: {}", e))?;
-        // Additionally validate that smart_query is structurally supported by the backend
-        if let Err(e) = crate::services::smart_query_parser::parse_smart_query(&smart_query) {
-            return Err(format!("Invalid smart_query structure: {}", e));
-        }
+    // Additionally validate that smart_query is structurally supported by the backend
+    if let Err(e) = crate::services::smart_query_parser::parse_smart_query(&smart_query) {
+        return Err(format!("Invalid smart_query structure: {}", e));
+    }
     let db = state
         .db
         .lock()
@@ -789,7 +789,10 @@ pub async fn update_smart_collection(
 }
 
 /// Helper: Get image count for a smart collection
-fn get_smart_collection_image_count(db: &crate::database::Database, collection_id: u32) -> Result<u32, String> {
+fn get_smart_collection_image_count(
+    db: &crate::database::Database,
+    collection_id: u32,
+) -> Result<u32, String> {
     let smart_query: String = db
         .connection()
         .query_row(
@@ -1491,7 +1494,8 @@ mod tests {
         let db = setup_test_db();
 
         // Create initial smart collection
-        let initial_query = r#"{"rules":[{"field":"rating","operator":">=","value":3}],"combinator":"AND"}"#;
+        let initial_query =
+            r#"{"rules":[{"field":"rating","operator":">=","value":3}],"combinator":"AND"}"#;
         db.connection()
             .execute(
                 "INSERT INTO collections (name, type, smart_query) VALUES (?, ?, ?)",
@@ -1501,7 +1505,8 @@ mod tests {
         let col_id = db.connection().last_insert_rowid() as u32;
 
         // Update the query
-        let new_query = r#"{"rules":[{"field":"rating","operator":">=","value":5}],"combinator":"AND"}"#;
+        let new_query =
+            r#"{"rules":[{"field":"rating","operator":">=","value":5}],"combinator":"AND"}"#;
         let result = db.connection().execute(
             "UPDATE collections SET smart_query = ? WHERE id = ?",
             rusqlite::params![new_query, col_id],
@@ -1535,7 +1540,8 @@ mod tests {
 
     #[test]
     fn test_smart_query_parser_aperture() {
-        let query = r#"{"rules":[{"field":"aperture","operator":"<=","value":2.8}],"combinator":"AND"}"#;
+        let query =
+            r#"{"rules":[{"field":"aperture","operator":"<=","value":2.8}],"combinator":"AND"}"#;
         let result = crate::services::smart_query_parser::parse_smart_query(query);
         assert!(result.is_ok());
         let sql = result.unwrap();
@@ -1544,7 +1550,8 @@ mod tests {
 
     #[test]
     fn test_smart_query_parser_focal_length() {
-        let query = r#"{"rules":[{"field":"focal_length","operator":">=","value":50}],"combinator":"AND"}"#;
+        let query =
+            r#"{"rules":[{"field":"focal_length","operator":">=","value":50}],"combinator":"AND"}"#;
         let result = crate::services::smart_query_parser::parse_smart_query(query);
         assert!(result.is_ok());
         let sql = result.unwrap();

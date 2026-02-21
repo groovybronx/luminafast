@@ -59,7 +59,8 @@ impl IngestionService {
         // Check if file already exists in database
         if let Ok(Some(_)) = self.check_file_exists(&file.path).await {
             result.error = Some("File already exists in catalog".to_string());
-            result.processing_time_ms = std::cmp::max(1, start_time.elapsed().as_micros() / 1000) as u64;
+            result.processing_time_ms =
+                std::cmp::max(1, start_time.elapsed().as_micros() / 1000) as u64;
             return Ok(result);
         }
 
@@ -114,7 +115,8 @@ impl IngestionService {
         result.success = true;
         result.database_id = Some(database_id);
         result.metadata = Some(metadata);
-        result.processing_time_ms = std::cmp::max(1, start_time.elapsed().as_micros() / 1000) as u64;
+        result.processing_time_ms =
+            std::cmp::max(1, start_time.elapsed().as_micros() / 1000) as u64;
 
         Ok(result)
     }
@@ -286,7 +288,8 @@ impl IngestionService {
         self.complete_session(request.session_id).await?;
 
         // Finalize result with timing and statistics
-        result.total_processing_time_ms = std::cmp::max(1, start_time.elapsed().as_micros() / 1000) as u64;
+        result.total_processing_time_ms =
+            std::cmp::max(1, start_time.elapsed().as_micros() / 1000) as u64;
         result.finalize();
 
         Ok(result)

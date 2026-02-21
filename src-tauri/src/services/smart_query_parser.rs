@@ -62,7 +62,9 @@ fn build_sql_clause(rule: &SmartQueryRule) -> Result<String, Box<dyn Error>> {
         "rating" => build_numeric_clause("image_state.rating", &operator, &rule.value),
         "iso" => build_numeric_clause("exif_metadata.iso", &operator, &rule.value),
         "aperture" => build_numeric_clause("exif_metadata.aperture", &operator, &rule.value),
-        "focal_length" => build_numeric_clause("exif_metadata.focal_length", &operator, &rule.value),
+        "focal_length" => {
+            build_numeric_clause("exif_metadata.focal_length", &operator, &rule.value)
+        }
 
         // String fields
         "camera_make" => build_string_clause("exif_metadata.camera_make", &operator, &rule.value),
@@ -130,10 +132,12 @@ fn build_enum_clause(
     let str_val = value.as_str().ok_or("Invalid enum value")?;
 
     // Validate flag values
-    if field.contains("flag") {
-        if !["pick", "reject"].contains(&str_val) {
-            return Err(format!("Invalid flag value: {}. Must be 'pick' or 'reject'", str_val).into());
-        }
+    if field.contains("flag") && !["pick", "reject"].contains(&str_val) {
+        return Err(format!(
+            "Invalid flag value: {}. Must be 'pick' or 'reject'",
+            str_val
+        )
+        .into());
     }
 
     let escaped = str_val.replace("'", "''");
@@ -198,14 +202,16 @@ mod tests {
 
     #[test]
     fn test_parse_smart_query_flag_pick() {
-        let json = r#"{"rules":[{"field":"flag","operator":"=","value":"pick"}],"combinator":"AND"}"#;
+        let json =
+            r#"{"rules":[{"field":"flag","operator":"=","value":"pick"}],"combinator":"AND"}"#;
         let sql = parse_smart_query(json).unwrap();
         assert!(sql.contains("image_state.flag = 'pick'"));
     }
 
     #[test]
     fn test_parse_smart_query_flag_reject() {
-        let json = r#"{"rules":[{"field":"flag","operator":"=","value":"reject"}],"combinator":"AND"}"#;
+        let json =
+            r#"{"rules":[{"field":"flag","operator":"=","value":"reject"}],"combinator":"AND"}"#;
         let sql = parse_smart_query(json).unwrap();
         assert!(sql.contains("image_state.flag = 'reject'"));
     }

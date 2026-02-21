@@ -13,7 +13,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 const mockExif = {
   iso: 100,
   aperture: 2.8,
-  shutter_speed: 1/125,
+  shutter_speed: 1 / 125,
   date: '2026-02-20',
   gps: [48.8566, 2.3522],
   camera_model: 'MockCam X',

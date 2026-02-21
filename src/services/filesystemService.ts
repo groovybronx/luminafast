@@ -54,10 +54,14 @@ export class FilesystemService {
     if (typeof window !== 'undefined') {
       // Try __TAURI__ first (normal case)
       const tauriWindow = window as unknown as {
-        __TAURI__?: { invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown> };
-        __TAURI_INTERNALS__?: { invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown> };
+        __TAURI__?: {
+          invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>;
+        };
+        __TAURI_INTERNALS__?: {
+          invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>;
+        };
       };
-      
+
       if (tauriWindow.__TAURI__?.invoke) {
         return tauriWindow.__TAURI__.invoke;
       }
@@ -66,10 +70,13 @@ export class FilesystemService {
         return tauriWindow.__TAURI_INTERNALS__.invoke;
       }
     }
-    
+
     // Mock fallback for tests
     return async (command: string, args?: Record<string, unknown>) => {
-      FilesystemService.logDev(`[FilesystemService] Tauri not available, mocking command: ${command}`, { args });
+      FilesystemService.logDev(
+        `[FilesystemService] Tauri not available, mocking command: ${command}`,
+        { args },
+      );
       throw new Error(`Tauri not available: ${command}`);
     };
   }
@@ -90,7 +97,7 @@ export class FilesystemService {
   private async checkTauriAvailability(): Promise<boolean> {
     try {
       if (!this.isTauriAvailable) return false;
-      
+
       // Test simple avec une commande existante
       const invokeFn = FilesystemService.getInvoke();
       await invokeFn('path_exists', { path: '/' });
@@ -106,7 +113,7 @@ export class FilesystemService {
    */
   private async invokeCommand<T>(
     command: string,
-    args: Record<string, unknown> = {}
+    args: Record<string, unknown> = {},
   ): Promise<FilesystemResult<T>> {
     try {
       if (!(await this.checkTauriAvailability())) {
@@ -114,7 +121,7 @@ export class FilesystemService {
       }
 
       const invokeFn = FilesystemService.getInvoke();
-      const result = await invokeFn(command, args) as T;
+      const result = (await invokeFn(command, args)) as T;
       return {
         success: true,
         data: result,
@@ -133,7 +140,7 @@ export class FilesystemService {
    */
   private mapErrorToEnum(error: unknown): FilesystemError {
     const message = this.extractErrorMessage(error).toLowerCase();
-    
+
     if (message.includes('permission denied')) return FilesystemError.PermissionDenied;
     if (message.includes('not found')) return FilesystemError.FileNotFound;
     if (message.includes('lock')) return FilesystemError.LockAlreadyAcquired;
@@ -141,7 +148,7 @@ export class FilesystemService {
     if (message.includes('invalid path')) return FilesystemError.InvalidPath;
     if (message.includes('too large')) return FilesystemError.FileTooLarge;
     if (message.includes('mime')) return FilesystemError.MimeError;
-    
+
     return FilesystemError.IoError;
   }
 
@@ -150,41 +157,56 @@ export class FilesystemService {
    */
   private extractErrorMessage(error: unknown): string {
     if (typeof error === 'string') return error;
-    if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') return error.message;
-    if (error && typeof error === 'object' && 'toString' in error && typeof error.toString === 'function') return error.toString();
+    if (
+      error &&
+      typeof error === 'object' &&
+      'message' in error &&
+      typeof error.message === 'string'
+    )
+      return error.message;
+    if (
+      error &&
+      typeof error === 'object' &&
+      'toString' in error &&
+      typeof error.toString === 'function'
+    )
+      return error.toString();
     return 'Unknown error';
   }
 
   /**
    * Crée un résultat mock pour le développement sans Tauri
    */
-  private createMockResult<T>(command: string, _args: Record<string, unknown>): FilesystemResult<T> {
+  private createMockResult<T>(
+    command: string,
+    _args: Record<string, unknown>,
+  ): FilesystemResult<T> {
     switch (command) {
       case 'start_watcher':
         return {
           success: true,
           data: 'mock-watcher-id' as T,
         };
-      
+
       case 'stop_watcher':
       case 'release_lock':
         return {
           success: true,
           data: undefined as T,
         };
-      
+
       case 'acquire_lock':
         return {
           success: true,
           data: 'mock-lock-id' as T,
         };
-      
+
       case 'get_pending_events':
         return {
           success: true,
           data: [] as T,
         };
-      
+
       case 'get_filesystem_state':
         return {
           success: true,
@@ -196,19 +218,19 @@ export class FilesystemService {
             last_updated: new Date().toISOString(),
           } as T,
         };
-      
+
       case 'path_exists':
         return {
           success: true,
           data: false as T,
         };
-      
+
       case 'get_file_size':
         return {
           success: true,
           data: 0 as T,
         };
-      
+
       case 'get_file_metadata':
         return {
           success: true,
@@ -221,44 +243,44 @@ export class FilesystemService {
             mime_type: 'text/plain',
           } as T,
         };
-      
+
       case 'list_directory':
         return {
           success: true,
           data: ['file1.txt', 'file2.txt'] as T,
         };
-      
+
       case 'create_directory':
       case 'delete_path':
         return {
           success: true,
           data: undefined as T,
         };
-      
+
       case 'clear_pending_events':
         return {
           success: true,
           data: undefined as T,
         };
-      
+
       case 'get_active_locks':
         return {
           success: true,
           data: [] as T,
         };
-      
+
       case 'list_active_watchers':
         return {
           success: true,
           data: [] as T,
         };
-      
+
       case 'get_watcher_stats':
         return {
           success: true,
           data: null as T,
         };
-      
+
       default:
         return {
           success: false,
@@ -282,7 +304,7 @@ export class FilesystemService {
     }
 
     const result = await this.invokeCommand<string>('start_watcher', { config });
-    
+
     if (result.success) {
       this.notifyListeners('watcher_started', {
         watcher_id: result.data,
@@ -290,7 +312,7 @@ export class FilesystemService {
         timestamp: new Date().toISOString(),
       });
     }
-    
+
     return result;
   }
 
@@ -299,24 +321,21 @@ export class FilesystemService {
    */
   async stopWatcher(watcherId: string): Promise<FilesystemResult<void>> {
     const result = await this.invokeCommand<void>('stop_watcher', { watcherId });
-    
+
     if (result.success) {
       this.notifyListeners('watcher_stopped', {
         watcher_id: watcherId,
         timestamp: new Date().toISOString(),
       });
     }
-    
+
     return result;
   }
 
   /**
    * Acquiert un verrou sur un fichier
    */
-  async acquireLock(
-    path: string,
-    options: AcquireLockOptions
-  ): Promise<FilesystemResult<string>> {
+  async acquireLock(path: string, options: AcquireLockOptions): Promise<FilesystemResult<string>> {
     if (!isValidPath(path)) {
       return {
         success: false,
@@ -339,7 +358,7 @@ export class FilesystemService {
       lock_type: options.lock_type,
       timeout_ms: options.timeout,
     });
-    
+
     if (result.success) {
       this.notifyListeners('lock_acquired', {
         lock_id: result.data,
@@ -347,7 +366,7 @@ export class FilesystemService {
         timestamp: new Date().toISOString(),
       });
     }
-    
+
     return result;
   }
 
@@ -356,14 +375,14 @@ export class FilesystemService {
    */
   async releaseLock(lockId: string): Promise<FilesystemResult<void>> {
     const result = await this.invokeCommand<void>('release_lock', { lockId });
-    
+
     if (result.success) {
       this.notifyListeners('lock_released', {
         lock_id: lockId,
         timestamp: new Date().toISOString(),
       });
     }
-    
+
     return result;
   }
 
@@ -519,7 +538,7 @@ export class FilesystemService {
    */
   async listDirectory(
     path: string,
-    options?: ListDirectoryOptions
+    options?: ListDirectoryOptions,
   ): Promise<FilesystemResult<string[]>> {
     if (!isValidPath(path)) {
       return {
@@ -570,17 +589,17 @@ export class FilesystemService {
    */
   addEventListener(
     eventType: string,
-    callback: (event: FilesystemMonitoringEvent) => void
+    callback: (event: FilesystemMonitoringEvent) => void,
   ): () => void {
     if (!this.eventListeners.has(eventType)) {
       this.eventListeners.set(eventType, new Set());
     }
-    
+
     const listeners = this.eventListeners.get(eventType);
     if (listeners) {
       listeners.add(callback);
     }
-    
+
     // Retourne une fonction pour désinscrire
     return () => {
       const listeners = this.eventListeners.get(eventType);
@@ -598,7 +617,7 @@ export class FilesystemService {
    */
   private notifyListeners(
     type: FilesystemMonitoringEvent['type'],
-    data: Omit<FilesystemMonitoringEvent['data'], 'type'>
+    data: Omit<FilesystemMonitoringEvent['data'], 'type'>,
   ): void {
     const event: FilesystemMonitoringEvent = {
       type,
@@ -644,8 +663,10 @@ export class FilesystemService {
   }> {
     return {
       tauri_available: await this.checkTauriAvailability(),
-      active_listeners: Array.from(this.eventListeners.values())
-        .reduce((total, set) => total + set.size, 0),
+      active_listeners: Array.from(this.eventListeners.values()).reduce(
+        (total, set) => total + set.size,
+        0,
+      ),
       last_check: new Date().toISOString(),
     };
   }
@@ -667,11 +688,7 @@ export function createDefaultWatcherConfig(path: string): WatcherConfig {
   return {
     path,
     recursive: true,
-    watch_events: [
-      FileEventType.Created,
-      FileEventType.Modified,
-      FileEventType.Deleted,
-    ],
+    watch_events: [FileEventType.Created, FileEventType.Modified, FileEventType.Deleted],
     extensions_filter: ['jpg', 'jpeg', 'cr3', 'raf', 'arw', 'png', 'tiff'],
     pattern_filter: undefined,
     ignore_hidden: true,
@@ -684,7 +701,7 @@ export function createDefaultWatcherConfig(path: string): WatcherConfig {
  * Crée des options de verrou par défaut
  */
 export function createDefaultLockOptions(
-  type: FileLockType = FileLockType.Exclusive
+  type: FileLockType = FileLockType.Exclusive,
 ): AcquireLockOptions {
   return {
     lock_type: type,
@@ -699,12 +716,12 @@ export function formatFileSize(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   let size = bytes;
   let unitIndex = 0;
-  
+
   while (size >= 1024 && unitIndex < units.length - 1) {
     size /= 1024;
     unitIndex++;
   }
-  
+
   return `${size.toFixed(1)} ${units[unitIndex]}`;
 }
 
@@ -715,12 +732,12 @@ export function formatDuration(timestamp: string): string {
   const date = new Date(timestamp);
   const now = new Date();
   const diff = now.getTime() - date.getTime();
-  
+
   const seconds = Math.floor(diff / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
-  
+
   if (days > 0) return `${days}d ${hours % 24}h`;
   if (hours > 0) return `${hours}h ${minutes % 60}m`;
   if (minutes > 0) return `${minutes}m ${seconds % 60}s`;

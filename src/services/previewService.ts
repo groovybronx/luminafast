@@ -14,7 +14,7 @@ import {
   PreviewPyramidOptions,
   PreviewPyramidResult,
   CacheCleanupConfig,
-  PreviewConfig
+  PreviewConfig,
 } from '../types';
 
 // Import Tauri API - utilise le pattern de pont existant comme les autres services
@@ -50,10 +50,14 @@ export class PreviewService {
     if (typeof window !== 'undefined') {
       // Try __TAURI__ first (normal case)
       const tauriWindow = window as unknown as {
-        __TAURI__?: { invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown> };
-        __TAURI_INTERNALS__?: { invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown> };
+        __TAURI__?: {
+          invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>;
+        };
+        __TAURI_INTERNALS__?: {
+          invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>;
+        };
       };
-      
+
       if (tauriWindow.__TAURI__?.invoke) {
         return tauriWindow.__TAURI__.invoke;
       }
@@ -62,10 +66,12 @@ export class PreviewService {
         return tauriWindow.__TAURI_INTERNALS__.invoke;
       }
     }
-    
+
     // Mock fallback for tests
     return async (command: string, args?: Record<string, unknown>) => {
-      PreviewService.logDev(`[PreviewService] Tauri not available, mocking command: ${command}`, { args });
+      PreviewService.logDev(`[PreviewService] Tauri not available, mocking command: ${command}`, {
+        args,
+      });
       throw new Error(`Tauri not available: ${command}`);
     };
   }
@@ -78,18 +84,24 @@ export class PreviewService {
     if (typeof window !== 'undefined') {
       // Try __TAURI__ first (normal case)
       const tauriWindow = window as unknown as {
-        __TAURI__?: { 
-          event?: { 
-            listen: <T>(event: string, handler: (event: { payload: T }) => void) => Promise<() => void>;
-          }
+        __TAURI__?: {
+          event?: {
+            listen: <T>(
+              event: string,
+              handler: (event: { payload: T }) => void,
+            ) => Promise<() => void>;
+          };
         };
-        __TAURI_INTERNALS__?: { 
-          event?: { 
-            listen: <T>(event: string, handler: (event: { payload: T }) => void) => Promise<() => void>;
-          }
+        __TAURI_INTERNALS__?: {
+          event?: {
+            listen: <T>(
+              event: string,
+              handler: (event: { payload: T }) => void,
+            ) => Promise<() => void>;
+          };
         };
       };
-      
+
       if (tauriWindow.__TAURI__?.event?.listen) {
         return tauriWindow.__TAURI__.event.listen;
       }
@@ -98,10 +110,15 @@ export class PreviewService {
         return tauriWindow.__TAURI_INTERNALS__.event.listen;
       }
     }
-    
+
     // Mock fallback for tests - returns a promise that resolves to an unlisten function
-    return async <T>(_event: string, _handler: (event: { payload: T }) => void): Promise<() => void> => {
-      PreviewService.logDev(`[PreviewService] Tauri event system not available, mocking listen for event: ${_event}`);
+    return async <T>(
+      _event: string,
+      _handler: (event: { payload: T }) => void,
+    ): Promise<() => void> => {
+      PreviewService.logDev(
+        `[PreviewService] Tauri event system not available, mocking listen for event: ${_event}`,
+      );
       // Return a no-op unlisten function
       return () => {
         PreviewService.logDev(`[PreviewService] Mock unlisten called for event: ${_event}`);
@@ -115,7 +132,7 @@ export class PreviewService {
   private async checkTauriAvailability(): Promise<boolean> {
     try {
       if (this.isTauriAvailable !== null) return this.isTauriAvailable;
-      
+
       // Test simple avec une commande existante
       const invokeFn = PreviewService.getInvoke();
       await invokeFn('get_preview_cache_info', {});
@@ -130,17 +147,14 @@ export class PreviewService {
   /**
    * Wrapper invoke avec gestion d'erreurs
    */
-  private async invokeCommand<T>(
-    command: string,
-    args: Record<string, unknown> = {}
-  ): Promise<T> {
+  private async invokeCommand<T>(command: string, args: Record<string, unknown> = {}): Promise<T> {
     try {
       if (!(await this.checkTauriAvailability())) {
         throw new Error(`Tauri not available for command: ${command}`);
       }
 
       const invokeFn = PreviewService.getInvoke();
-      const result = await invokeFn(command, args) as T;
+      const result = (await invokeFn(command, args)) as T;
       return result;
     } catch (error) {
       const serviceError = this.createErrorFromUnknown(error);
@@ -170,7 +184,7 @@ export class PreviewService {
 
     try {
       // Add small delay to avoid race condition avec backend async init
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       await this.invokeCommand('init_preview_service');
       this.isInitialized = true;
       PreviewService.logDev('[PreviewService] Service initialisé avec succès');
@@ -209,18 +223,20 @@ export class PreviewService {
   public async generatePreview(
     filePath: string,
     previewType: PreviewType,
-    sourceHash: string
+    sourceHash: string,
   ): Promise<PreviewResult> {
     this.ensureInitialized();
-    
+
     try {
       const result = await this.invokeCommand<PreviewResult>('generate_preview', {
         filePath,
         previewType,
-        sourceHash
+        sourceHash,
       });
-      
-      PreviewService.logDev(`[PreviewService] Preview générée: ${result.path} (${result.generation_time}ms)`);
+
+      PreviewService.logDev(
+        `[PreviewService] Preview générée: ${result.path} (${result.generation_time}ms)`,
+      );
       return result;
     } catch (error) {
       const serviceError = this.createErrorFromUnknown(error);
@@ -234,18 +250,20 @@ export class PreviewService {
    */
   public async generateBatchPreviews(
     files: Array<{ path: string; hash: string }>,
-    previewType: PreviewType
+    previewType: PreviewType,
   ): Promise<BatchPreviewStats> {
     this.ensureInitialized();
-    
+
     try {
-      const filesArray = files.map(f => [f.path, f.hash] as [string, string]);
+      const filesArray = files.map((f) => [f.path, f.hash] as [string, string]);
       const stats = await this.invokeCommand<BatchPreviewStats>('generate_batch_previews', {
         files: filesArray,
-        previewType
+        previewType,
       });
-      
-      PreviewService.logDev(`[PreviewService] Batch terminé: ${stats.successful_count}/${stats.total_files} succès`);
+
+      PreviewService.logDev(
+        `[PreviewService] Batch terminé: ${stats.successful_count}/${stats.total_files} succès`,
+      );
       return stats;
     } catch (error) {
       const serviceError = this.createErrorFromUnknown(error);
@@ -260,18 +278,22 @@ export class PreviewService {
   public async generatePreviewPyramid(
     filePath: string,
     sourceHash: string,
-    options: PreviewPyramidOptions = { generate_all: true, force_regenerate: false, emit_progress: true }
+    options: PreviewPyramidOptions = {
+      generate_all: true,
+      force_regenerate: false,
+      emit_progress: true,
+    },
   ): Promise<PreviewPyramidResult> {
     this.ensureInitialized();
-    
+
     const startTime = Date.now();
-    const previewTypes = options.generate_all 
+    const previewTypes = options.generate_all
       ? [PreviewType.Thumbnail, PreviewType.Standard, PreviewType.OneToOne]
       : options.preview_types || [PreviewType.Thumbnail];
 
     try {
       const results: PreviewResult[] = [];
-      
+
       for (const previewType of previewTypes) {
         const result = await this.generatePreview(filePath, previewType, sourceHash);
         results.push(result);
@@ -281,10 +303,12 @@ export class PreviewService {
         source_hash: sourceHash,
         results,
         total_generation_time: Date.now() - startTime,
-        generated_at: new Date().toISOString()
+        generated_at: new Date().toISOString(),
       };
 
-      PreviewService.logDev(`[PreviewService] Pyramide générée: ${results.length} previews en ${pyramidResult.total_generation_time}ms`);
+      PreviewService.logDev(
+        `[PreviewService] Pyramide générée: ${results.length} previews en ${pyramidResult.total_generation_time}ms`,
+      );
       return pyramidResult;
     } catch (error) {
       const serviceError = this.createErrorFromUnknown(error);
@@ -296,16 +320,13 @@ export class PreviewService {
   /**
    * Vérifie si une preview existe en cache
    */
-  public async isPreviewCached(
-    sourceHash: string,
-    previewType: PreviewType
-  ): Promise<boolean> {
+  public async isPreviewCached(sourceHash: string, previewType: PreviewType): Promise<boolean> {
     this.ensureInitialized();
-    
+
     try {
       return await this.invokeCommand<boolean>('is_preview_cached', {
         sourceHash,
-        previewType
+        previewType,
       });
     } catch (error) {
       const serviceError = this.createErrorFromUnknown(error);
@@ -319,14 +340,14 @@ export class PreviewService {
    */
   public async getPreviewPath(
     sourceHash: string,
-    previewType: PreviewType
+    previewType: PreviewType,
   ): Promise<string | null> {
     this.ensureInitialized();
-    
+
     try {
       return await this.invokeCommand<string | null>('get_preview_path', {
         sourceHash,
-        previewType
+        previewType,
       });
     } catch (error) {
       const serviceError = this.createErrorFromUnknown(error);
@@ -340,7 +361,7 @@ export class PreviewService {
    */
   public async getCacheInfo(): Promise<PreviewCacheInfo> {
     this.ensureInitialized();
-    
+
     try {
       return await this.invokeCommand<PreviewCacheInfo>('get_preview_cache_info');
     } catch (error) {
@@ -355,22 +376,22 @@ export class PreviewService {
    */
   public async cleanupCache(config: Partial<CacheCleanupConfig> = {}): Promise<void> {
     this.ensureInitialized();
-    
+
     const defaultConfig: CacheCleanupConfig = {
       max_cache_size: 2 * 1024 * 1024 * 1024, // 2GB
       max_age_days: 30,
       max_previews_per_type: 10000,
       cleanup_interval_hours: 24,
-      ...config
+      ...config,
     };
 
     try {
       await this.invokeCommand('cleanup_preview_cache', {
         max_cache_size: defaultConfig.max_cache_size,
         max_age_days: defaultConfig.max_age_days,
-        max_previews_per_type: defaultConfig.max_previews_per_type
+        max_previews_per_type: defaultConfig.max_previews_per_type,
       });
-      
+
       PreviewService.logDev('[PreviewService] Cache cleanup terminé');
     } catch (error) {
       const serviceError = this.createErrorFromUnknown(error);
@@ -382,18 +403,15 @@ export class PreviewService {
   /**
    * Supprime une preview spécifique du cache
    */
-  public async removePreview(
-    sourceHash: string,
-    previewType: PreviewType
-  ): Promise<void> {
+  public async removePreview(sourceHash: string, previewType: PreviewType): Promise<void> {
     this.ensureInitialized();
-    
+
     try {
       await this.invokeCommand('remove_preview', {
         sourceHash,
-        previewType
+        previewType,
       });
-      
+
       PreviewService.logDev(`[PreviewService] Preview supprimée: ${sourceHash} (${previewType})`);
     } catch (error) {
       const serviceError = this.createErrorFromUnknown(error);
@@ -407,15 +425,15 @@ export class PreviewService {
    */
   public async generatePreviewsWithProgress(
     files: Array<{ path: string; hash: string }>,
-    previewTypes: PreviewType[]
+    previewTypes: PreviewType[],
   ): Promise<BatchPreviewStats> {
     this.ensureInitialized();
-    
+
     try {
-      const filesArray = files.map(f => [f.path, f.hash] as [string, string]);
+      const filesArray = files.map((f) => [f.path, f.hash] as [string, string]);
       return await this.invokeCommand<BatchPreviewStats>('generate_previews_with_progress', {
         files: filesArray,
-        previewTypes
+        previewTypes,
       });
     } catch (error) {
       const serviceError = this.createErrorFromUnknown(error);
@@ -427,21 +445,22 @@ export class PreviewService {
   /**
    * Test de performance du service preview
    */
-  public async benchmarkPerformance(
-    testFile: string,
-    iterations = 10
-  ): Promise<PreviewResult[]> {
+  public async benchmarkPerformance(testFile: string, iterations = 10): Promise<PreviewResult[]> {
     this.ensureInitialized();
-    
+
     try {
       const results = await this.invokeCommand<PreviewResult[]>('benchmark_preview_generation', {
         testFile,
-        iterations
+        iterations,
       });
-      
-      const avgTime = results.reduce((sum: number, r: PreviewResult) => sum + r.generation_time, 0) / results.length;
-      PreviewService.logDev(`[PreviewService] Benchmark: ${iterations} previews, temps moyen: ${avgTime.toFixed(2)}ms`);
-      
+
+      const avgTime =
+        results.reduce((sum: number, r: PreviewResult) => sum + r.generation_time, 0) /
+        results.length;
+      PreviewService.logDev(
+        `[PreviewService] Benchmark: ${iterations} previews, temps moyen: ${avgTime.toFixed(2)}ms`,
+      );
+
       return results;
     } catch (error) {
       const serviceError = this.createErrorFromUnknown(error);
@@ -455,7 +474,7 @@ export class PreviewService {
    */
   public async getConfig(): Promise<PreviewConfig> {
     this.ensureInitialized();
-    
+
     try {
       return await this.invokeCommand<PreviewConfig>('get_preview_config');
     } catch (error) {
@@ -468,12 +487,10 @@ export class PreviewService {
   /**
    * S'abonne aux événements de progression
    */
-  public onProgress(
-    callback: (event: PreviewProgressEvent) => void
-  ): () => void {
+  public onProgress(callback: (event: PreviewProgressEvent) => void): () => void {
     const id = `progress_${Date.now()}_${Math.random()}`;
     this.progressListeners.set(id, callback);
-    
+
     return () => {
       this.progressListeners.delete(id);
     };
@@ -485,11 +502,11 @@ export class PreviewService {
    */
   private setupEventListeners(): void {
     const listenFn = PreviewService.getListen();
-    
+
     // Listen to preview_progress events emitted from Rust
     listenFn<PreviewProgressEvent>('preview_progress', (event) => {
       const progressEvent = event.payload;
-      
+
       // Notify all registered progress listeners
       this.progressListeners.forEach((callback, id) => {
         try {
@@ -502,7 +519,9 @@ export class PreviewService {
       .then((unlisten) => {
         // Store the unlisten function for cleanup
         this.unlistenFunctions.push(unlisten);
-        PreviewService.logDev('[PreviewService] Event listener for preview_progress registered successfully');
+        PreviewService.logDev(
+          '[PreviewService] Event listener for preview_progress registered successfully',
+        );
       })
       .catch((error) => {
         console.error('[PreviewService] Failed to setup preview_progress event listener:', error);
@@ -523,10 +542,10 @@ export class PreviewService {
       }
     });
     this.unlistenFunctions = [];
-    
+
     // Clear all progress listeners
     this.progressListeners.clear();
-    
+
     PreviewService.logDev('[PreviewService] Service disposed, all event listeners cleaned up');
   }
 
@@ -535,7 +554,7 @@ export class PreviewService {
    */
   private ensureInitialized(): void {
     if (!this.isInitialized) {
-      throw new Error('PreviewService non initialisé. Appelez initialize() d\'abord.');
+      throw new Error("PreviewService non initialisé. Appelez initialize() d'abord.");
     }
   }
 
@@ -547,15 +566,22 @@ export class PreviewService {
     if (typeof error === 'object' && error !== null && 'type' in error) {
       const previewError = error as PreviewError;
       // Validate it's a proper PreviewError by checking the type
-      const validTypes = ['unsupported_format', 'corrupted_file', 'generation_timeout', 'out_of_memory', 'io_error', 'processing_error'];
+      const validTypes = [
+        'unsupported_format',
+        'corrupted_file',
+        'generation_timeout',
+        'out_of_memory',
+        'io_error',
+        'processing_error',
+      ];
       if (validTypes.includes(previewError.type)) {
         return previewError;
       }
     }
-    
+
     let message: string;
     let originalMessage: string;
-    
+
     // Extract message from both Error instances and generic objects
     if (error instanceof Error) {
       message = error.message.toLowerCase();
@@ -568,7 +594,7 @@ export class PreviewService {
       message = String(error).toLowerCase();
       originalMessage = String(error);
     }
-    
+
     // Enhanced keyword matching for error type classification
     if (message.includes('unsupported') || message.includes('format')) {
       return { type: 'unsupported_format', format: originalMessage };
@@ -582,10 +608,14 @@ export class PreviewService {
     if (message.includes('memory') || message.includes('out of memory')) {
       return { type: 'out_of_memory' };
     }
-    if (message.includes('io') || message.includes('file system') || message.includes('permission')) {
+    if (
+      message.includes('io') ||
+      message.includes('file system') ||
+      message.includes('permission')
+    ) {
       return { type: 'io_error', message: originalMessage };
     }
-    
+
     return { type: 'processing_error', message: originalMessage };
   }
 
@@ -596,7 +626,7 @@ export class PreviewService {
     return {
       generate_all: true,
       force_regenerate: false,
-      emit_progress: true
+      emit_progress: true,
     };
   }
 
@@ -608,7 +638,7 @@ export class PreviewService {
       max_cache_size: 2 * 1024 * 1024 * 1024, // 2GB
       max_age_days: 30,
       max_previews_per_type: 10000,
-      cleanup_interval_hours: 24
+      cleanup_interval_hours: 24,
     };
   }
 }

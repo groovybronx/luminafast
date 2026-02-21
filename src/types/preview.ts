@@ -132,7 +132,7 @@ export interface BatchPreviewStats {
 /**
  * Erreurs spécifiques au service preview
  */
-export type PreviewError = 
+export type PreviewError =
   | { type: 'unsupported_format'; format: string }
   | { type: 'corrupted_file'; path: string }
   | { type: 'processing_error'; message: string }
@@ -321,7 +321,7 @@ export interface PreviewServiceStatus {
 /**
  * Événements émis par le service preview
  */
-export type PreviewServiceEvent = 
+export type PreviewServiceEvent =
   | { type: 'preview_generated'; result: PreviewResult }
   | { type: 'preview_error'; error: PreviewError; source_hash: string }
   | { type: 'batch_started'; batch_id: string; total_files: number }

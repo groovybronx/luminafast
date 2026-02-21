@@ -27,7 +27,7 @@ describe('catalogStore', () => {
     act(() => {
       useCatalogStore.getState().setImages(INITIAL_IMAGES);
     });
-    
+
     expect(useCatalogStore.getState().images).toEqual(INITIAL_IMAGES);
     expect(useCatalogStore.getState().images).toHaveLength(60);
   });
@@ -35,36 +35,36 @@ describe('catalogStore', () => {
   it('should add images to existing ones', () => {
     const firstBatch = INITIAL_IMAGES.slice(0, 10);
     const secondBatch = INITIAL_IMAGES.slice(10, 15);
-    
+
     act(() => {
       useCatalogStore.getState().setImages(firstBatch);
       useCatalogStore.getState().addImages(secondBatch);
     });
-    
+
     const images = useCatalogStore.getState().images;
     expect(images).toHaveLength(15);
     // Verify IDs to confirm correct images were added
-    expect(images.slice(0, 10).map(i => i.id)).toEqual(firstBatch.map(i => i.id));
-    expect(images.slice(10, 15).map(i => i.id)).toEqual(secondBatch.map(i => i.id));
+    expect(images.slice(0, 10).map((i) => i.id)).toEqual(firstBatch.map((i) => i.id));
+    expect(images.slice(10, 15).map((i) => i.id)).toEqual(secondBatch.map((i) => i.id));
   });
 
   it('should toggle selection in multi-select mode', () => {
     act(() => {
       useCatalogStore.getState().setImages(INITIAL_IMAGES);
-      
+
       // Add first image to selection
       useCatalogStore.getState().toggleSelection(1, true);
     });
     expect(useCatalogStore.getState().selection.has(1)).toBe(true);
     expect(useCatalogStore.getState().selection).toHaveLength(1);
-    
+
     act(() => {
       // Add second image to selection
       useCatalogStore.getState().toggleSelection(2, true);
     });
     expect(useCatalogStore.getState().selection.has(2)).toBe(true);
     expect(useCatalogStore.getState().selection).toHaveLength(2);
-    
+
     act(() => {
       // Remove first image from selection
       useCatalogStore.getState().toggleSelection(1, true);
@@ -81,7 +81,7 @@ describe('catalogStore', () => {
       useCatalogStore.getState().toggleSelection(2, true);
     });
     expect(useCatalogStore.getState().selection).toHaveLength(2);
-    
+
     act(() => {
       useCatalogStore.getState().setSingleSelection(3);
     });
@@ -96,7 +96,7 @@ describe('catalogStore', () => {
       useCatalogStore.getState().toggleSelection(2, true);
     });
     expect(useCatalogStore.getState().selection).toHaveLength(2);
-    
+
     // Single selection replaces previous
     act(() => {
       useCatalogStore.getState().toggleSelection(3, false);
@@ -112,7 +112,7 @@ describe('catalogStore', () => {
       useCatalogStore.getState().toggleSelection(2, true);
     });
     expect(useCatalogStore.getState().selection).toHaveLength(2);
-    
+
     act(() => {
       useCatalogStore.getState().clearSelection();
     });
@@ -123,7 +123,7 @@ describe('catalogStore', () => {
     act(() => {
       useCatalogStore.getState().setFilterText('test filter');
     });
-    
+
     expect(useCatalogStore.getState().filterText).toBe('test filter');
   });
 
@@ -131,9 +131,9 @@ describe('catalogStore', () => {
     act(() => {
       useCatalogStore.getState().setActiveImage(5);
     });
-    
+
     expect(useCatalogStore.getState().activeImageId).toBe(5);
-    
+
     act(() => {
       useCatalogStore.getState().setActiveImage(null);
     });
@@ -146,11 +146,11 @@ describe('catalogStore', () => {
       useCatalogStore.getState().toggleSelection(1, true);
       useCatalogStore.getState().toggleSelection(3, true);
     });
-    
+
     const selectedImages = useCatalogStore.getState().getSelectedImages();
     expect(selectedImages).toHaveLength(2);
-    expect(selectedImages.find(i => i.id === 1)).toBeDefined();
-    expect(selectedImages.find(i => i.id === 3)).toBeDefined();
+    expect(selectedImages.find((i) => i.id === 1)).toBeDefined();
+    expect(selectedImages.find((i) => i.id === 3)).toBeDefined();
   });
 
   it('should get active image', () => {
@@ -160,7 +160,7 @@ describe('catalogStore', () => {
     });
     const activeImage = useCatalogStore.getState().getActiveImage();
     expect(activeImage?.id).toBe(5);
-    
+
     act(() => {
       useCatalogStore.getState().setActiveImage(999);
     });
@@ -174,7 +174,7 @@ describe('catalogStore', () => {
       useCatalogStore.getState().toggleSelection(3, true);
       useCatalogStore.getState().toggleSelection(5, true);
     });
-    
+
     const selectionArray = useCatalogStore.getState().getSelectionArray();
     expect(selectionArray).toContain(1);
     expect(selectionArray).toContain(3);
@@ -188,9 +188,9 @@ describe('catalogStore', () => {
       useCatalogStore.getState().setImages(INITIAL_IMAGES);
       useCatalogStore.getState().setFilterText('star 4');
     });
-    
+
     const filteredImages = useCatalogStore.getState().getFilteredImages();
-    expect(filteredImages.every(img => img.state.rating >= 4)).toBe(true);
+    expect(filteredImages.every((img) => img.state.rating >= 4)).toBe(true);
   });
 
   it('should filter images by camera model', () => {
@@ -198,11 +198,13 @@ describe('catalogStore', () => {
       useCatalogStore.getState().setImages(INITIAL_IMAGES);
       useCatalogStore.getState().setFilterText('gfx');
     });
-    
+
     const filteredImages = useCatalogStore.getState().getFilteredImages();
-    expect(filteredImages.every(img => 
-      [img.exif.cameraMake, img.exif.cameraModel].join(' ').toLowerCase().includes('gfx')
-    )).toBe(true);
+    expect(
+      filteredImages.every((img) =>
+        [img.exif.cameraMake, img.exif.cameraModel].join(' ').toLowerCase().includes('gfx'),
+      ),
+    ).toBe(true);
   });
 
   it('should filter images by ISO', () => {
@@ -210,9 +212,9 @@ describe('catalogStore', () => {
       useCatalogStore.getState().setImages(INITIAL_IMAGES);
       useCatalogStore.getState().setFilterText('iso 800');
     });
-    
+
     const filteredImages = useCatalogStore.getState().getFilteredImages();
-    expect(filteredImages.every(img => (img.exif.iso ?? 0) >= 800)).toBe(true);
+    expect(filteredImages.every((img) => (img.exif.iso ?? 0) >= 800)).toBe(true);
   });
 
   it('should filter images by filename', () => {
@@ -220,18 +222,18 @@ describe('catalogStore', () => {
       useCatalogStore.getState().setImages(INITIAL_IMAGES);
       useCatalogStore.getState().setFilterText('img_001');
     });
-    
+
     const filteredImages = useCatalogStore.getState().getFilteredImages();
-    expect(filteredImages.every(img => 
-      img.filename.toLowerCase().includes('img_001')
-    )).toBe(true);
+    expect(filteredImages.every((img) => img.filename.toLowerCase().includes('img_001'))).toBe(
+      true,
+    );
   });
 
   it('should return all images when no filter', () => {
     act(() => {
       useCatalogStore.getState().setImages(INITIAL_IMAGES);
     });
-    
+
     const filteredImages = useCatalogStore.getState().getFilteredImages();
     expect(filteredImages).toEqual(INITIAL_IMAGES);
   });

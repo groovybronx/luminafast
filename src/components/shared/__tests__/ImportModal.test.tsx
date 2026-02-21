@@ -89,7 +89,7 @@ describe('ImportModal', () => {
     await waitFor(() => {
       expect(screen.getByText('Dossier sélectionné:')).toBeInTheDocument();
       expect(screen.getByText('/test/path')).toBeInTheDocument();
-      expect(screen.getByText('Commencer l\'import')).toBeInTheDocument();
+      expect(screen.getByText("Commencer l'import")).toBeInTheDocument();
     });
   });
 
@@ -119,11 +119,11 @@ describe('ImportModal', () => {
     fireEvent.click(selectButton);
 
     await waitFor(() => {
-      expect(screen.getByText('Commencer l\'import')).toBeInTheDocument();
+      expect(screen.getByText("Commencer l'import")).toBeInTheDocument();
     });
 
     // Then start import
-    const startButton = screen.getByText('Commencer l\'import');
+    const startButton = screen.getByText("Commencer l'import");
     fireEvent.click(startButton);
 
     expect(mockStartScan).toHaveBeenCalledWith('/test/path');
@@ -302,7 +302,7 @@ describe('ImportModal', () => {
     });
   });
 
-  // NOTE: Auto-start ingestion test removed - this functionality is now 
+  // NOTE: Auto-start ingestion test removed - this functionality is now
   // handled internally by useDiscovery hook via startIngestionRef pattern
   // and is tested in useDiscovery.test.ts
 });

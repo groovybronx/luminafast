@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import type { 
-  CatalogImage, 
-  ExifData, 
-  EditState, 
-  ImageState, 
+import type {
+  CatalogImage,
+  ExifData,
+  EditState,
+  ImageState,
   FlagType,
   Collection,
   SmartQuery,
@@ -13,7 +13,7 @@ import type {
   ActiveView,
   LogEntry,
   LogType,
-  SliderParam
+  SliderParam,
 } from '../index';
 
 describe('Type Definitions', () => {
@@ -142,7 +142,7 @@ describe('Type Definitions', () => {
         clarity: 0,
       };
 
-      expect(Object.values(zeroEdits).every(v => v === 0 || v === 5500)).toBe(true);
+      expect(Object.values(zeroEdits).every((v) => v === 0 || v === 5500)).toBe(true);
     });
   });
 
@@ -327,7 +327,7 @@ describe('Type Definitions', () => {
   describe('ActiveView', () => {
     it('should accept valid views', () => {
       const views: ActiveView[] = ['library', 'develop'];
-      
+
       expect(views).toHaveLength(2);
       expect(views.includes('library')).toBe(true);
       expect(views.includes('develop')).toBe(true);

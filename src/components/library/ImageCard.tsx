@@ -9,10 +9,7 @@ interface ImageCardProps {
 
 export const ImageCard = ({ image, selected, onSelect }: ImageCardProps) => {
   return (
-    <div
-      className={`image-card${selected ? ' selected' : ''}`}
-      onClick={() => onSelect(image.id)}
-    >
+    <div className={`image-card${selected ? ' selected' : ''}`} onClick={() => onSelect(image.id)}>
       <img src={image.url} alt={image.filename} />
       <div className="image-info">
         <span>{image.filename}</span>

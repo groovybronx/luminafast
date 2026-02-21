@@ -121,7 +121,7 @@ describe('HashingService', () => {
       expect(mockTauriInvoke).toHaveBeenCalledWith('hash_files_batch', {
         filePaths: ['/path/to/file1.jpg', '/path/to/file2.jpg'],
       });
-      
+
       expect(result.size).toBe(2);
       expect(result.get('/path/to/file1.jpg')).toEqual({
         hash: 'hash1',
@@ -219,10 +219,7 @@ describe('HashingService', () => {
     it('should verify file integrity successfully', async () => {
       mockTauriInvoke.mockResolvedValue(true);
 
-      const result = await HashingService.verifyFileIntegrity(
-        '/path/to/file.jpg',
-        'expected_hash'
-      );
+      const result = await HashingService.verifyFileIntegrity('/path/to/file.jpg', 'expected_hash');
 
       expect(mockTauriInvoke).toHaveBeenCalledWith('verify_file_integrity', {
         filePath: '/path/to/file.jpg',
@@ -234,10 +231,7 @@ describe('HashingService', () => {
     it('should return false for mismatched hash', async () => {
       mockTauriInvoke.mockResolvedValue(false);
 
-      const result = await HashingService.verifyFileIntegrity(
-        '/path/to/file.jpg',
-        'wrong_hash'
-      );
+      const result = await HashingService.verifyFileIntegrity('/path/to/file.jpg', 'wrong_hash');
 
       expect(result).toBe(false);
     });
@@ -269,9 +263,7 @@ describe('HashingService', () => {
     it('should handle invalid cache stats response', async () => {
       mockTauriInvoke.mockResolvedValue('invalid');
 
-      await expect(HashingService.getCacheStats()).rejects.toThrow(
-        'Invalid cache stats response'
-      );
+      await expect(HashingService.getCacheStats()).rejects.toThrow('Invalid cache stats response');
     });
   });
 
@@ -389,10 +381,10 @@ describe('HashingService', () => {
       mockTauriInvoke.mockImplementation(() => new Promise(() => {}));
 
       const start = Date.now();
-      await expect(
-        HashingService.hashFileWithTimeout('/path/to/file.jpg', 100)
-      ).rejects.toThrow('Hashing timeout after 100ms');
-      
+      await expect(HashingService.hashFileWithTimeout('/path/to/file.jpg', 100)).rejects.toThrow(
+        'Hashing timeout after 100ms',
+      );
+
       const elapsed = Date.now() - start;
       expect(elapsed).toBeGreaterThan(90); // Allow some margin
       expect(elapsed).toBeLessThan(200); // But not too much
@@ -496,7 +488,7 @@ describe('HashingService', () => {
       mockTauriInvoke.mockRejectedValue(new Error('Directory not found'));
 
       await expect(
-        HashingService.analyzeDirectoryForDuplicates('/nonexistent/dir')
+        HashingService.analyzeDirectoryForDuplicates('/nonexistent/dir'),
       ).rejects.toMatchObject({
         type: HashErrorType.FileNotFound,
         message: 'Directory not found',
@@ -507,7 +499,7 @@ describe('HashingService', () => {
       mockTauriInvoke.mockRejectedValue(new Error('Permission denied'));
 
       await expect(
-        HashingService.analyzeDirectoryForDuplicates('/restricted/dir')
+        HashingService.analyzeDirectoryForDuplicates('/restricted/dir'),
       ).rejects.toMatchObject({
         type: HashErrorType.PermissionDenied,
         message: 'Permission denied',
@@ -558,7 +550,7 @@ describe('HashingService', () => {
 
       expect(consoleSpy).toHaveBeenCalledWith(
         'Tauri not available, mocking command: hash_file',
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(result).toEqual({
         hash: expect.stringMatching(/^[a-f0-9]{64}$/i),

@@ -10,7 +10,7 @@ interface UiStore {
   rightSidebarTab: 'develop' | 'metadata' | 'history';
   showImport: boolean;
   showBeforeAfter: boolean;
-  
+
   // Actions
   setActiveView: (view: ActiveView) => void;
   toggleLeftSidebar: () => void;
@@ -30,25 +30,28 @@ export const useUiStore = create<UiStore>((set) => ({
   rightSidebarTab: 'develop',
   showImport: false,
   showBeforeAfter: false,
-  
+
   // Actions
   setActiveView: (view: ActiveView) => set({ activeView: view }),
-  
-  toggleLeftSidebar: () => set((state) => ({ 
-    leftSidebarOpen: !state.leftSidebarOpen 
-  })),
-  
-  toggleRightSidebar: () => set((state) => ({ 
-    rightSidebarOpen: !state.rightSidebarOpen 
-  })),
-  
+
+  toggleLeftSidebar: () =>
+    set((state) => ({
+      leftSidebarOpen: !state.leftSidebarOpen,
+    })),
+
+  toggleRightSidebar: () =>
+    set((state) => ({
+      rightSidebarOpen: !state.rightSidebarOpen,
+    })),
+
   setThumbnailSize: (size: number) => set({ thumbnailSize: Math.max(1, Math.min(10, size)) }),
-  
+
   setRightSidebarTab: (tab: 'develop' | 'metadata' | 'history') => set({ rightSidebarTab: tab }),
-  
+
   setShowImport: (show: boolean) => set({ showImport: show }),
-  
-  toggleBeforeAfter: () => set((state) => ({ 
-    showBeforeAfter: !state.showBeforeAfter 
-  }))
+
+  toggleBeforeAfter: () =>
+    set((state) => ({
+      showBeforeAfter: !state.showBeforeAfter,
+    })),
 }));

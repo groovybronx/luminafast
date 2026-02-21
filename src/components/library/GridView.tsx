@@ -15,22 +15,22 @@ interface GridViewProps {
 /**
  * Virtualized grid component for rendering large image collections (5000+).
  * Uses @tanstack/react-virtual for efficient rendering with 60fps scrolling.
- * 
+ *
  * Thumbnail size calculation (pixels):
  * - Size 1-10 maps to 120px-600px per side
  * - Aspect ratio: 3/2 (width × 1.5 height)
  * - Gap: 12px (gap-x-3 gap-y-4 × 4px = 3/4 × 12px)
  */
-export const GridView = ({ 
-  images, 
-  selection, 
-  thumbnailSize, 
-  onToggleSelection, 
-  onSetActiveView 
+export const GridView = ({
+  images,
+  selection,
+  thumbnailSize,
+  onToggleSelection,
+  onSetActiveView,
 }: GridViewProps) => {
   // Opt out of React Compiler memoization: useVirtualizer returns functions
   // that cannot be safely memoized (stale UI risk).
-  "use no memo";
+  'use no memo';
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -53,17 +53,17 @@ export const GridView = ({
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
-  
+
   // Dynamic sizing based on thumbnailSize prop (1-10)
   const pixelSize = useMemo(() => {
     // Maps 1 -> 120px, 10 -> 600px (linear scaling)
     return Math.round(120 + (thumbnailSize - 1) * (480 / 9));
   }, [thumbnailSize]);
-  
+
   const itemWidth = pixelSize;
   const itemHeight = Math.round(pixelSize / 1.5); // 3:2 aspect ratio
   const gap = 12; // gap-x-3 gap-y-4
-  
+
   // Calculate columns based on measured container width (reacts to resize)
   const columnCount = useMemo(() => {
     if (containerWidth === 0) return 1;
@@ -71,10 +71,10 @@ export const GridView = ({
     const cellWidth = itemWidth + gap;
     return Math.max(1, Math.floor(availableWidth / cellWidth));
   }, [containerWidth, itemWidth, gap]);
-  
+
   // Calculate virtual row/column layout
   const rowCount = Math.ceil(images.length / columnCount);
-  
+
   // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
     count: rowCount,
@@ -82,11 +82,11 @@ export const GridView = ({
     estimateSize: () => itemHeight + gap,
     overscan: 3, // Render 3 extra rows ahead for smooth scrolling
   });
-  
+
   const virtualRows = rowVirtualizer.getVirtualItems();
-  
+
   return (
-    <div 
+    <div
       ref={containerRef}
       className="h-full overflow-y-auto custom-scrollbar grid-virtual-container"
     >
@@ -123,7 +123,7 @@ export const GridView = ({
                 {cells.map((img) => {
                   const isSelected = selection.includes(img.id);
                   const hasPreview = img.url && img.url.length > 0;
-                  
+
                   return (
                     <div
                       key={img.id}
@@ -148,22 +148,24 @@ export const GridView = ({
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-zinc-800">
-                          <ImageIcon size={Math.max(16, itemHeight / 4)} className="text-zinc-600" />
+                          <ImageIcon
+                            size={Math.max(16, itemHeight / 4)}
+                            className="text-zinc-600"
+                          />
                         </div>
                       )}
 
                       {/* Sync status indicator */}
                       <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm rounded-full p-1 shadow-lg">
-                        {img.state.isSynced ? 
-                          (hasPreview ? (
+                        {img.state.isSynced ? (
+                          hasPreview ? (
                             <Cloud size={10} className="text-blue-400" />
                           ) : (
                             <RefreshCw size={10} className="text-amber-500 animate-spin" />
-                          )) 
-                          : (
-                            <RefreshCw size={10} className="text-amber-500 animate-spin" />
                           )
-                        }
+                        ) : (
+                          <RefreshCw size={10} className="text-amber-500 animate-spin" />
+                        )}
                       </div>
 
                       {/* Metadata overlay */}

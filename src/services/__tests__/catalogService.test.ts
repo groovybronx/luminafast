@@ -47,7 +47,9 @@ describe('CatalogService — Collection Methods (Phase 3.2)', () => {
     it('should throw when the backend rejects an empty name', async () => {
       mockTauriInvoke.mockRejectedValue(new Error('Collection name cannot be empty'));
 
-      await expect(CatalogService.renameCollection(3, '')).rejects.toThrow('Collection name cannot be empty');
+      await expect(CatalogService.renameCollection(3, '')).rejects.toThrow(
+        'Collection name cannot be empty',
+      );
     });
   });
 
@@ -67,7 +69,9 @@ describe('CatalogService — Collection Methods (Phase 3.2)', () => {
     it('should throw when collection is not found', async () => {
       mockTauriInvoke.mockRejectedValue(new Error('Collection not found'));
 
-      await expect(CatalogService.removeImagesFromCollection(999, [1])).rejects.toThrow('Collection not found');
+      await expect(CatalogService.removeImagesFromCollection(999, [1])).rejects.toThrow(
+        'Collection not found',
+      );
     });
   });
 
@@ -75,8 +79,20 @@ describe('CatalogService — Collection Methods (Phase 3.2)', () => {
   describe('getCollectionImages', () => {
     it('should return images belonging to the collection', async () => {
       const mockImages = [
-        { id: 10, filename: 'img1.CR3', blake3_hash: 'abc', extension: 'CR3', imported_at: '2026-01-01T00:00:00Z' },
-        { id: 20, filename: 'img2.RAF', blake3_hash: 'def', extension: 'RAF', imported_at: '2026-01-02T00:00:00Z' },
+        {
+          id: 10,
+          filename: 'img1.CR3',
+          blake3_hash: 'abc',
+          extension: 'CR3',
+          imported_at: '2026-01-01T00:00:00Z',
+        },
+        {
+          id: 20,
+          filename: 'img2.RAF',
+          blake3_hash: 'def',
+          extension: 'RAF',
+          imported_at: '2026-01-02T00:00:00Z',
+        },
       ];
       mockTauriInvoke.mockResolvedValue(mockImages);
 

@@ -9,12 +9,19 @@ interface RightSidebarProps {
   activeView: ActiveView;
   activeImg: CatalogImage;
   eventLog: CatalogEvent[];
-  onDispatchEvent: (eventType: string, payload: number | string | FlagType | Partial<EditState>) => void;
+  onDispatchEvent: (
+    eventType: string,
+    payload: number | string | FlagType | Partial<EditState>,
+  ) => void;
 }
 
-export const RightSidebar = ({ activeView, activeImg, eventLog, onDispatchEvent }: RightSidebarProps) => (
+export const RightSidebar = ({
+  activeView,
+  activeImg,
+  eventLog,
+  onDispatchEvent,
+}: RightSidebarProps) => (
   <div className="w-80 bg-zinc-900 border-l border-black flex flex-col shrink-0 overflow-y-auto custom-scrollbar">
-    
     {/* PANEL: HISTOGRAM & EXIF */}
     <div className="p-5 border-b border-black bg-zinc-950 shrink-0 space-y-4">
       <Histogram />

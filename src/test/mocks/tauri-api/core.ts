@@ -17,6 +17,8 @@ export const convertFileSrc = vi.fn().mockImplementation((path: string, protocol
 });
 
 // Mock transformCallback function (if needed)
-export const transformCallback = vi.fn().mockImplementation((callback?: (response: unknown) => void) => {
-  return callback;
-});
+export const transformCallback = vi
+  .fn()
+  .mockImplementation((callback?: (response: unknown) => void) => {
+    return callback;
+  });

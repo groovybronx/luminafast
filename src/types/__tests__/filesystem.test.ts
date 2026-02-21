@@ -3,12 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  FileEventType,
-  FileLockType,
-  FileEvent,
-  isValidPath,
-} from '../filesystem';
+import { FileEventType, FileLockType, FileEvent, isValidPath } from '../filesystem';
 
 describe('Filesystem Types', () => {
   describe('FileEventType', () => {

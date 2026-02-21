@@ -38,7 +38,8 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
       const collections = await CatalogService.getCollections();
       set({ collections, isLoading: false });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erreur lors du chargement des collections';
+      const message =
+        err instanceof Error ? err.message : 'Erreur lors du chargement des collections';
       set({ error: message, isLoading: false });
     }
   },
@@ -69,9 +70,7 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
   renameCollection: async (id: number, name: string) => {
     await CatalogService.renameCollection(id, name);
     set((state) => ({
-      collections: state.collections.map((c) =>
-        c.id === id ? { ...c, name } : c
-      ),
+      collections: state.collections.map((c) => (c.id === id ? { ...c, name } : c)),
     }));
   },
 
@@ -107,7 +106,8 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
         isLoading: false,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erreur lors du chargement de la collection';
+      const message =
+        err instanceof Error ? err.message : 'Erreur lors du chargement de la collection';
       set({ error: message, isLoading: false });
     }
   },

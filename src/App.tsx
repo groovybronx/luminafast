@@ -21,15 +21,15 @@ import { DevelopView } from './components/develop/DevelopView';
 
 export default function App() {
   // Catalog hook - loads images from SQLite
-  const { 
-    images, 
-    isLoading: catalogLoading, 
+  const {
+    images,
+    isLoading: catalogLoading,
     error: catalogError,
-    refreshCatalog, 
+    refreshCatalog,
     syncAfterImport,
-    hasImages 
+    hasImages,
   } = useCatalog();
-  
+
   // Stores Zustand
   const activeView = useUiStore((state) => state.activeView);
   const setActiveView = useUiStore((state) => state.setActiveView);
@@ -45,32 +45,34 @@ export default function App() {
 
   // Compute derived values with useMemo
   const selection = useMemo(() => Array.from(selectionSet), [selectionSet]);
-  
+
   const filteredImages = useMemo(() => {
     // 1. Filtrer par collection active (si une collection est sélectionnée)
-    const baseImages = activeCollectionImageIds !== null
-      ? images.filter((img) => activeCollectionImageIds.includes(img.id))
-      : images;
+    const baseImages =
+      activeCollectionImageIds !== null
+        ? images.filter((img) => activeCollectionImageIds.includes(img.id))
+        : images;
 
     // 2. Appliquer le filtre texte
     if (!filterText) return baseImages;
 
     const q = filterText.toLowerCase();
-    return baseImages.filter(img => {
+    return baseImages.filter((img) => {
       if (q.startsWith('star')) return img.state.rating >= parseInt(q.split(' ')[1] ?? '0');
-      if (q.includes('gfx')) return [img.exif.cameraMake, img.exif.cameraModel].join(' ').toLowerCase().includes('gfx');
+      if (q.includes('gfx'))
+        return [img.exif.cameraMake, img.exif.cameraModel].join(' ').toLowerCase().includes('gfx');
       if (q.includes('iso')) {
         const val = parseInt(q.replace(/[^0-9]/g, ''));
         return (img.exif.iso ?? 0) >= val;
       }
       return (
-        img.filename.toLowerCase().includes(q) || 
+        img.filename.toLowerCase().includes(q) ||
         (img.exif.lens ?? '').toLowerCase().includes(q) ||
-        img.state.tags.some(t => t.toLowerCase().includes(q))
+        img.state.tags.some((t) => t.toLowerCase().includes(q))
       );
     });
   }, [images, filterText, activeCollectionImageIds]);
-  
+
   const logs = useSystemStore((state) => state.logs);
   const addLog = useSystemStore((state) => state.addLog);
   const eventLog = useEditStore((state) => state.eventLog);
@@ -82,22 +84,23 @@ export default function App() {
   const thumbnailSize = useUiStore((state) => state.thumbnailSize);
   const setThumbnailSize = useUiStore((state) => state.setThumbnailSize);
   const sidebarOpen = useUiStore((state) => state.leftSidebarOpen);
-  
+
   // Track if initial load has been triggered
   const initialLoadTriggered = useRef(false);
-  
+
   // Initialize services and load catalog on mount (once only)
   useEffect(() => {
     if (!initialLoadTriggered.current) {
       initialLoadTriggered.current = true;
-      
+
       // Initialize PreviewService first (Phase 2.3 du plan)
-      previewService.initialize()
+      previewService
+        .initialize()
         .then(() => {
           addLog('PreviewService initialized', 'system');
           return refreshCatalog();
         })
-        .catch(err => {
+        .catch((err) => {
           addLog(`Initialization error: ${err}`, 'error');
         });
     }
@@ -111,39 +114,54 @@ export default function App() {
     }
   }, [catalogError, addLog]);
 
+  const dispatchEvent = useCallback(
+    (
+      eventType: string,
+      payload: number | string | 'pick' | 'reject' | null | Partial<EditState>,
+    ) => {
+      // Build typed EventPayload based on event type
+      let typedPayload: EventPayload;
+      if (eventType === 'RATING') typedPayload = { type: 'RATING', value: payload as number };
+      else if (eventType === 'FLAG') typedPayload = { type: 'FLAG', value: payload as FlagType };
+      else if (eventType === 'EDIT')
+        typedPayload = { type: 'EDIT', value: payload as Partial<EditState> };
+      else if (eventType === 'ADD_TAG')
+        typedPayload = { type: 'ADD_TAG', value: payload as string };
+      else typedPayload = { type: 'REMOVE_TAG', value: payload as string };
 
-  const dispatchEvent = useCallback((eventType: string, payload: number | string | 'pick' | 'reject' | null | Partial<EditState>) => {
-    // Build typed EventPayload based on event type
-    let typedPayload: EventPayload;
-    if (eventType === 'RATING') typedPayload = { type: 'RATING', value: payload as number };
-    else if (eventType === 'FLAG') typedPayload = { type: 'FLAG', value: payload as FlagType };
-    else if (eventType === 'EDIT') typedPayload = { type: 'EDIT', value: payload as Partial<EditState> };
-    else if (eventType === 'ADD_TAG') typedPayload = { type: 'ADD_TAG', value: payload as string };
-    else typedPayload = { type: 'REMOVE_TAG', value: payload as string };
+      const event: CatalogEvent = {
+        id: safeID(),
+        timestamp: Date.now(),
+        type: eventType as EventType,
+        payload: typedPayload,
+        targets: selection,
+      };
+      addEvent(event);
 
-    const event: CatalogEvent = { id: safeID(), timestamp: Date.now(), type: eventType as EventType, payload: typedPayload, targets: selection };
-    addEvent(event);
-    
-    // Mettre à jour les images
-    const updatedImages = images.map(img => {
-      if (selection.includes(img.id)) {
-        const newState = { ...img.state, isSynced: false };
-        if (eventType === 'RATING') newState.rating = payload as number;
-        if (eventType === 'FLAG') newState.flag = payload as FlagType;
-        if (eventType === 'EDIT') newState.edits = { ...newState.edits, ...(payload as Partial<EditState>) };
-        if (eventType === 'ADD_TAG') newState.tags = [...new Set([...newState.tags, payload as string])];
-        return { ...img, state: newState };
+      // Mettre à jour les images
+      const updatedImages = images.map((img) => {
+        if (selection.includes(img.id)) {
+          const newState = { ...img.state, isSynced: false };
+          if (eventType === 'RATING') newState.rating = payload as number;
+          if (eventType === 'FLAG') newState.flag = payload as FlagType;
+          if (eventType === 'EDIT')
+            newState.edits = { ...newState.edits, ...(payload as Partial<EditState>) };
+          if (eventType === 'ADD_TAG')
+            newState.tags = [...new Set([...newState.tags, payload as string])];
+          return { ...img, state: newState };
+        }
+        return img;
+      });
+      setImages(updatedImages);
+
+      if (eventType !== 'EDIT') {
+        addLog(`SQLite: ACID commit for ${selection.length} asset(s) [${eventType}]`, 'sqlite');
+      } else {
+        addLog(`SQLite: Edit stored for ${selection.length} asset(s)`, 'sqlite');
       }
-      return img;
-    });
-    setImages(updatedImages);
-    
-    if (eventType !== 'EDIT') {
-      addLog(`SQLite: ACID commit for ${selection.length} asset(s) [${eventType}]`, 'sqlite');
-    } else {
-      addLog(`SQLite: Edit stored for ${selection.length} asset(s)`, 'sqlite');
-    }
-  }, [selection, addEvent, images, setImages, addLog]);
+    },
+    [selection, addEvent, images, setImages, addLog],
+  );
 
   const handleToggleSelection = (id: number, e: React.MouseEvent) => {
     const isMultiSelect = e.shiftKey || e.metaKey;
@@ -154,7 +172,7 @@ export default function App() {
     // Close modal first for better UX
     setShowImport(false);
     addLog(`Import workflow completed, syncing catalog...`, 'sync');
-    
+
     // Refresh catalog from SQLite to show newly imported images
     try {
       await syncAfterImport();
@@ -164,13 +182,19 @@ export default function App() {
     }
   }, [setShowImport, addLog, syncAfterImport]);
 
-
   useEffect(() => {
     if (filterText.length > 2) {
       const start = performance.now();
       const resultCount = filteredImages.length;
       const end = performance.now();
-      setTimeout(() => addLog(`SQLite Filter: ${resultCount} images matched in ${(end - start).toFixed(2)}ms`, 'sqlite'), 0);
+      setTimeout(
+        () =>
+          addLog(
+            `SQLite Filter: ${resultCount} images matched in ${(end - start).toFixed(2)}ms`,
+            'sqlite',
+          ),
+        0,
+      );
     }
   }, [filteredImages, filterText, addLog, setActiveView]);
 
@@ -178,7 +202,7 @@ export default function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-      if (['1','2','3','4','5','0'].includes(e.key)) dispatchEvent('RATING', parseInt(e.key));
+      if (['1', '2', '3', '4', '5', '0'].includes(e.key)) dispatchEvent('RATING', parseInt(e.key));
       if (e.key === 'p') dispatchEvent('FLAG', 'pick');
       if (e.key === 'x') dispatchEvent('FLAG', 'reject');
       if (e.key === 'u') dispatchEvent('FLAG', null);
@@ -189,7 +213,7 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [dispatchEvent, setActiveView]);
 
-  const activeImg = images.find(i => i.id === selection[0]) ?? images[0];
+  const activeImg = images.find((i) => i.id === selection[0]) ?? images[0];
 
   // Show loading state while catalog is loading
   if (catalogLoading) {
@@ -209,12 +233,12 @@ export default function App() {
       <div className="flex flex-col h-screen w-full bg-zinc-950 text-zinc-300 font-sans">
         <GlobalStyles />
         <TopNav activeView={activeView} onSetActiveView={setActiveView} />
-        
+
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-zinc-400 mb-4">Catalog is empty</h2>
             <p className="text-zinc-500 mb-8">Import your first photos to get started</p>
-            <button 
+            <button
               onClick={() => setShowImport(true)}
               className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
@@ -222,8 +246,10 @@ export default function App() {
             </button>
           </div>
         </div>
-        
-        {showImport && <ImportModal onClose={() => setShowImport(false)} onImportComplete={handleImport} />}
+
+        {showImport && (
+          <ImportModal onClose={() => setShowImport(false)} onImportComplete={handleImport} />
+        )}
         <ArchitectureMonitor logs={logs} />
       </div>
     );
@@ -231,14 +257,14 @@ export default function App() {
 
   // Main app UI (show even if activeImg is undefined - will use first image as fallback)
   const displayImg = activeImg || images[0];
-  
+
   // Safety check - should not happen after hasImages check, but TypeScript needs it
   if (!displayImg) {
     return (
       <div className="flex items-center justify-center h-screen bg-zinc-950 text-zinc-400">
         <div className="text-center">
           <p className="text-xl text-zinc-500">No images available</p>
-          <button 
+          <button
             onClick={() => setShowImport(true)}
             className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
           >
@@ -255,33 +281,66 @@ export default function App() {
       <TopNav activeView={activeView} onSetActiveView={setActiveView} />
 
       <div className="flex flex-1 min-h-0">
-        <LeftSidebar sidebarOpen={sidebarOpen} imageCount={images.length} onSetFilterText={setFilterText} onShowImport={() => setShowImport(true)} />
+        <LeftSidebar
+          sidebarOpen={sidebarOpen}
+          imageCount={images.length}
+          onSetFilterText={setFilterText}
+          onShowImport={() => setShowImport(true)}
+        />
 
         <div className="flex-1 flex flex-col bg-zinc-950 min-h-0 relative">
           <Toolbar
-            activeView={activeView} onSetActiveView={setActiveView}
-            filterText={filterText} onSetFilterText={setFilterText}
-            thumbnailSize={thumbnailSize} onSetThumbnailSize={setThumbnailSize}
-            showBeforeAfter={showBeforeAfter} onToggleBeforeAfter={toggleBeforeAfter}
+            activeView={activeView}
+            onSetActiveView={setActiveView}
+            filterText={filterText}
+            onSetFilterText={setFilterText}
+            thumbnailSize={thumbnailSize}
+            onSetThumbnailSize={setThumbnailSize}
+            showBeforeAfter={showBeforeAfter}
+            onToggleBeforeAfter={toggleBeforeAfter}
           />
 
           <div className="flex-1 overflow-hidden">
             {activeView === 'library' ? (
-            <GridView images={filteredImages} selection={selection} thumbnailSize={thumbnailSize} onToggleSelection={handleToggleSelection} onSetActiveView={setActiveView} />
+              <GridView
+                images={filteredImages}
+                selection={selection}
+                thumbnailSize={thumbnailSize}
+                onToggleSelection={handleToggleSelection}
+                onSetActiveView={setActiveView}
+              />
             ) : (
               <DevelopView activeImg={displayImg} showBeforeAfter={showBeforeAfter} />
             )}
-            <BatchBar selectionCount={selection.length} onDispatchEvent={dispatchEvent} onAddLog={addLog} onClearSelection={() => setSingleSelection(selection[0] ?? 0)} />
+            <BatchBar
+              selectionCount={selection.length}
+              onDispatchEvent={dispatchEvent}
+              onAddLog={addLog}
+              onClearSelection={() => setSingleSelection(selection[0] ?? 0)}
+            />
           </div>
 
-          <Filmstrip images={images} selection={selection} selectionCount={selection.length} imageCount={images.length} onToggleSelection={handleToggleSelection} />
+          <Filmstrip
+            images={images}
+            selection={selection}
+            selectionCount={selection.length}
+            imageCount={images.length}
+            onToggleSelection={handleToggleSelection}
+          />
         </div>
 
-        <RightSidebar activeView={activeView} activeImg={displayImg} eventLog={eventLog} onDispatchEvent={dispatchEvent} />
+        <RightSidebar
+          activeView={activeView}
+          activeImg={displayImg}
+          eventLog={eventLog}
+          onDispatchEvent={dispatchEvent}
+        />
       </div>
 
       <ArchitectureMonitor logs={logs} />
-      {showImport && <ImportModal onClose={() => setShowImport(false)} onImportComplete={handleImport} />}
+      {showImport && (
+        <ImportModal onClose={() => setShowImport(false)} onImportComplete={handleImport} />
+      )}
       <KeyboardOverlay />
     </div>
   );

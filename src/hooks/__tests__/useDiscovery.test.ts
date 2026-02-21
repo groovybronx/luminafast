@@ -90,9 +90,15 @@ describe('useDiscovery', () => {
   it('should handle successful folder selection', async () => {
     const mockOpen = vi.mocked(await import('@tauri-apps/plugin-dialog')).open;
     const mockValidate = vi.mocked(discoveryService.validateDiscoveryPath);
-    
+
     mockOpen.mockResolvedValue('/test/path');
-    mockValidate.mockResolvedValue({ valid: true, type: 'directory', readable: true, writable: false, error: null });
+    mockValidate.mockResolvedValue({
+      valid: true,
+      type: 'directory',
+      readable: true,
+      writable: false,
+      error: null,
+    });
 
     const { result } = renderHook(() => useDiscovery());
 
@@ -108,14 +114,14 @@ describe('useDiscovery', () => {
       title: 'Select Root Folder for Import',
     });
     expect(mockValidate).toHaveBeenCalledWith('/test/path');
-    
+
     const logs = useSystemStore.getState().logs;
-    expect(logs.some(log => log.message.includes('Selected folder: /test/path'))).toBe(true);
+    expect(logs.some((log) => log.message.includes('Selected folder: /test/path'))).toBe(true);
   });
 
   it('should handle cancelled folder selection', async () => {
     const mockOpen = vi.mocked(await import('@tauri-apps/plugin-dialog')).open;
-    
+
     mockOpen.mockResolvedValue(null);
 
     const { result } = renderHook(() => useDiscovery());
@@ -126,17 +132,23 @@ describe('useDiscovery', () => {
     });
 
     expect(selectedPath).toBe(null);
-    
+
     const logs = useSystemStore.getState().logs;
-    expect(logs.some(log => log.message.includes('Folder selection cancelled'))).toBe(true);
+    expect(logs.some((log) => log.message.includes('Folder selection cancelled'))).toBe(true);
   });
 
   it('should handle invalid path selection', async () => {
     const mockOpen = vi.mocked(await import('@tauri-apps/plugin-dialog')).open;
     const mockValidate = vi.mocked(discoveryService.validateDiscoveryPath);
-    
+
     mockOpen.mockResolvedValue('/invalid/path');
-    mockValidate.mockResolvedValue({ valid: false, type: 'nonexistent', readable: false, writable: false, error: 'Path does not exist' });
+    mockValidate.mockResolvedValue({
+      valid: false,
+      type: 'nonexistent',
+      readable: false,
+      writable: false,
+      error: 'Path does not exist',
+    });
 
     const { result } = renderHook(() => useDiscovery());
 
@@ -154,7 +166,7 @@ describe('useDiscovery', () => {
     const mockCreateConfig = vi.mocked(discoveryService.createDiscoveryConfig);
     const mockStartDiscovery = vi.mocked(discoveryService.startDiscovery);
     const mockAddProgressListener = vi.mocked(discoveryService.addProgressListener);
-    
+
     mockCreateConfig.mockResolvedValue({
       rootPath: '/test/path',
       recursive: true,
@@ -163,7 +175,7 @@ describe('useDiscovery', () => {
       formats: [RawFormat.CR3, RawFormat.RAF],
       excludeDirs: ['.git', 'node_modules'],
     });
-    
+
     const mockSession: DiscoverySession = {
       sessionId: 'sess_123',
       config: {
@@ -185,7 +197,7 @@ describe('useDiscovery', () => {
       errorMessage: null,
     };
     mockStartDiscovery.mockResolvedValue(mockSession);
-    
+
     mockAddProgressListener.mockReturnValue(() => {});
 
     const { result } = renderHook(() => useDiscovery());
@@ -206,7 +218,7 @@ describe('useDiscovery', () => {
 
   it('should handle discovery scan failure', async () => {
     const mockCreateConfig = vi.mocked(discoveryService.createDiscoveryConfig);
-    
+
     mockCreateConfig.mockRejectedValue(new Error('Scan failed to start'));
 
     const { result } = renderHook(() => useDiscovery());
@@ -223,10 +235,10 @@ describe('useDiscovery', () => {
   it('should start ingestion successfully', async () => {
     // Use real timers for this test
     vi.useRealTimers();
-    
+
     const mockGetFiles = vi.mocked(discoveryService.getDiscoveredFiles);
     const mockBatchIngest = vi.mocked(discoveryService.batchIngest);
-    
+
     // Set up session
     useSystemStore.setState({
       importState: {
@@ -269,7 +281,7 @@ describe('useDiscovery', () => {
       },
     ];
     mockGetFiles.mockResolvedValue(mockFiles);
-    
+
     const mockResult: BatchIngestionResult = {
       sessionId: 'sess_123',
       totalRequested: 2,
@@ -307,7 +319,7 @@ describe('useDiscovery', () => {
 
     // Wait for all async effects to complete
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
     });
 
     expect(result.current.stage).toBe('completed');
@@ -325,7 +337,7 @@ describe('useDiscovery', () => {
 
   it('should handle ingestion failure', async () => {
     const mockGetFiles = vi.mocked(discoveryService.getDiscoveredFiles);
-    
+
     // Set up session
     useSystemStore.setState({
       importState: {
@@ -351,16 +363,16 @@ describe('useDiscovery', () => {
   it('should cancel operation successfully', async () => {
     const mockStopDiscovery = vi.mocked(discoveryService.stopDiscovery);
     const mockAddProgressListener = vi.mocked(discoveryService.addProgressListener);
-    
+
     mockStopDiscovery.mockResolvedValue();
     mockAddProgressListener.mockReturnValue(() => {});
-    
+
     const { result } = renderHook(() => useDiscovery());
 
     // Start a scan first to set up the session
     const mockCreateConfig = vi.mocked(discoveryService.createDiscoveryConfig);
     const mockStartDiscovery = vi.mocked(discoveryService.startDiscovery);
-    
+
     mockCreateConfig.mockResolvedValue({
       rootPath: '/test/path',
       recursive: true,
@@ -369,7 +381,7 @@ describe('useDiscovery', () => {
       formats: [RawFormat.CR3],
       excludeDirs: ['.git', 'node_modules'],
     });
-    
+
     const mockSession: DiscoverySession = {
       sessionId: 'sess_123',
       config: {
@@ -410,7 +422,7 @@ describe('useDiscovery', () => {
     const mockCreateConfig = vi.mocked(discoveryService.createDiscoveryConfig);
     const mockStartDiscovery = vi.mocked(discoveryService.startDiscovery);
     const mockAddProgressListener = vi.mocked(discoveryService.addProgressListener);
-    
+
     mockCreateConfig.mockResolvedValue({
       rootPath: '/test/path',
       recursive: true,
@@ -419,7 +431,7 @@ describe('useDiscovery', () => {
       formats: [RawFormat.CR3],
       excludeDirs: ['.git', 'node_modules'],
     });
-    
+
     const mockSession: DiscoverySession = {
       sessionId: 'sess_123',
       config: {
@@ -441,7 +453,7 @@ describe('useDiscovery', () => {
       errorMessage: null,
     };
     mockStartDiscovery.mockResolvedValue(mockSession);
-    
+
     let progressCallback: ((progress: any) => void) | null = null;
     mockAddProgressListener.mockImplementation((_sessionId, callback) => {
       progressCallback = callback;
@@ -485,7 +497,7 @@ describe('useDiscovery', () => {
     // Start a scan to set up the progress listener
     const mockCreateConfig = vi.mocked(discoveryService.createDiscoveryConfig);
     const mockStartDiscovery = vi.mocked(discoveryService.startDiscovery);
-    
+
     mockCreateConfig.mockResolvedValue({
       rootPath: '/test/path',
       recursive: true,
@@ -494,7 +506,7 @@ describe('useDiscovery', () => {
       formats: [RawFormat.CR3],
       excludeDirs: ['.git', 'node_modules'],
     });
-    
+
     const mockSession: DiscoverySession = {
       sessionId: 'sess_123',
       config: {

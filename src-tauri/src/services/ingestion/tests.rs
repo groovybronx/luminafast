@@ -34,6 +34,14 @@ fn create_test_database() -> Arc<std::sync::Mutex<rusqlite::Connection>> {
             imported_at DATETIME,
             folder_id INTEGER
         );
+        CREATE TABLE folders (
+            id INTEGER PRIMARY KEY,
+            path TEXT NOT NULL UNIQUE,
+            volume_name TEXT,
+            parent_id INTEGER REFERENCES folders(id),
+            is_online BOOLEAN NOT NULL DEFAULT 1,
+            name TEXT DEFAULT ''
+        );
         CREATE TABLE exif_metadata (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             image_id INTEGER NOT NULL,

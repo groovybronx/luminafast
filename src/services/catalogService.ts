@@ -1,4 +1,5 @@
-import type { ImageDTO, ImageDetailDTO, CollectionDTO, ImageFilter } from '../types/dto';
+import type { CollectionDTO, ImageDTO, ImageDetailDTO, ImageFilter } from '../types/dto';
+import type { FolderTreeNode } from '../types/folder';
 
 /**
  * Service for catalog operations - Phase 1.2
@@ -250,6 +251,44 @@ export class CatalogService {
       const invoke = this.getInvoke();
       const result = await invoke('search_images', { query, filters });
       return result as ImageDTO[];
+    } catch (error) {
+      throw this.parseError(error);
+    }
+  }
+
+  /**
+   * Get folder tree hierarchy with image counts
+   */
+  static async getFolderTree(): Promise<FolderTreeNode[]> {
+    try {
+      const invoke = this.getInvoke();
+      const result = await invoke('get_folder_tree');
+      return result as FolderTreeNode[];
+    } catch (error) {
+      throw this.parseError(error);
+    }
+  }
+
+  /**
+   * Get images from a specific folder
+   */
+  static async getFolderImages(folderId: number, recursive: boolean): Promise<ImageDTO[]> {
+    try {
+      const invoke = this.getInvoke();
+      const result = await invoke('get_folder_images', { folderId, recursive });
+      return result as ImageDTO[];
+    } catch (error) {
+      throw this.parseError(error);
+    }
+  }
+
+  /**
+   * Update volume online status
+   */
+  static async updateVolumeStatus(volumeName: string, isOnline: boolean): Promise<void> {
+    try {
+      const invoke = this.getInvoke();
+      await invoke('update_volume_status', { volumeName, isOnline });
     } catch (error) {
       throw this.parseError(error);
     }

@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
-import { Database, Star, Check, Zap, HardDrive, Import, Trash2, Pencil, X } from 'lucide-react';
+import { Check, Database, Import, Pencil, Star, Trash2, X, Zap } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useCollectionStore } from '../../stores/collectionStore';
-import { SmartCollectionBuilder } from '../library/SmartCollectionBuilder';
-import type { CollectionDTO } from '../../types/dto';
+import { useFolderStore } from '../../stores/folderStore';
 import type { SmartQuery } from '../../types/collection';
+import type { CollectionDTO } from '../../types/dto';
+import { FolderTree } from '../library/FolderTree';
+import { SmartCollectionBuilder } from '../library/SmartCollectionBuilder';
 
 interface LeftSidebarProps {
   sidebarOpen: boolean;
@@ -180,8 +182,18 @@ export const LeftSidebar = ({
     clearActiveCollection,
   } = useCollectionStore();
 
+  const {
+    folderTree,
+    activeFolderId,
+    expandedFolderIds,
+    loadFolderTree,
+    setActiveFolder,
+    toggleFolderExpanded,
+  } = useFolderStore();
+
   useEffect(() => {
     void loadCollections();
+    void loadFolderTree();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCreate = async (name: string) => {
@@ -353,18 +365,24 @@ export const LeftSidebar = ({
 
         <section>
           <div className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4 px-2">
-            Folders
+            Dossiers
           </div>
-          <div className="space-y-2 px-2">
-            <div className="flex gap-2 items-center text-xs text-zinc-400 hover:text-white cursor-pointer">
-              <HardDrive size={14} className="text-zinc-600" /> WORK_SSD_01
-            </div>
-            <div className="flex gap-2 items-center text-xs text-zinc-500 pl-4 border-l border-zinc-800 hover:text-white cursor-pointer">
-              / 2025_PROJECT_X
-            </div>
-            <div className="flex gap-2 items-center text-xs text-zinc-500 pl-4 border-l border-zinc-800 hover:text-white cursor-pointer">
-              / 2025_PERSONAL
-            </div>
+          <div className="space-y-1">
+            {folderTree.length > 0 ? (
+              <FolderTree
+                nodes={folderTree}
+                activeFolderId={activeFolderId}
+                expandedFolderIds={expandedFolderIds}
+                onSelectFolder={async (id) => {
+                  onSetFilterText('');
+                  clearActiveCollection();
+                  await setActiveFolder(id, true);
+                }}
+                onToggleExpand={toggleFolderExpanded}
+              />
+            ) : (
+              <p className="text-[10px] text-zinc-700 italic px-2 py-1">Aucun dossier importé</p>
+            )}
           </div>
         </section>
       </div>

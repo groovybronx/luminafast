@@ -85,6 +85,9 @@ impl Database {
         // Run previews migration (tables + triggers)
         self.run_migration("003_previews")?;
 
+        // Run folder online status migration
+        self.run_migration("004_add_folder_online_status")?;
+
         Ok(())
     }
 
@@ -126,6 +129,9 @@ impl Database {
             "001_initial" => include_str!("../migrations/001_initial.sql"),
             "002_ingestion_sessions" => include_str!("../migrations/002_ingestion_sessions.sql"),
             "003_previews" => include_str!("../migrations/003_previews.sql"),
+            "004_add_folder_online_status" => {
+                include_str!("../migrations/004_add_folder_online_status.sql")
+            }
             _ => {
                 return Err(DatabaseError::MigrationFailed(format!(
                     "Unknown migration version: {}",
@@ -328,13 +334,13 @@ mod tests {
         db.initialize()?;
         db.initialize()?;
 
-        // 3 migrations: 001_initial, 002_ingestion_sessions, 003_previews
+        // 4 migrations: 001_initial, 002_ingestion_sessions, 003_previews, 004_add_folder_online_status
         let migration_count: i64 = db
             .connection()
             .prepare("SELECT COUNT(*) FROM migrations")?
             .query_row([], |row| row.get(0))?;
 
-        assert_eq!(migration_count, 3);
+        assert_eq!(migration_count, 4);
 
         Ok(())
     }
@@ -349,7 +355,7 @@ mod tests {
 
         // Insert a test image as specified in schema
         db.connection.execute(
-            "INSERT INTO images (blake3_hash, filename, extension, width, height, orientation, file_size_bytes, captured_at, imported_at) 
+            "INSERT INTO images (blake3_hash, filename, extension, width, height, orientation, file_size_bytes, captured_at, imported_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))",
             ["hash123", "test.CR3", "CR3", "6000", "4000", "0", "25000000"],
         )?;

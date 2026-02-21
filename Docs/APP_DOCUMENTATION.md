@@ -3,7 +3,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-21 (Phase 3.3 Smart Collections) — État : Pipeline import + grille virtualisée + collections CRUD + smart collections avec parser JSON→SQL. 339 tests frontend, 153 tests Rust, **492/492 tests ✅**. Branche `phase/3.3-smart-collections`.
+> **Dernière mise à jour** : 2026-02-21 (Phase 3.4 Folder Navigator) — État : Pipeline import + grille virtualisée + collections CRUD + smart collections avec parser JSON→SQL + navigation dossiers hiérarchique. 345 tests frontend, 159 tests Rust, **504/504 tests ✅**. Branche `phase/3.4-folder-navigator`.
 >
 > ### Décisions Projet (validées par le propriétaire)
 > - **Phase 8 (Cloud/Sync)** : Reportée post-lancement
@@ -17,8 +17,8 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : Phases 0 à 3.3 complétées — Collections statiques CRUD + Smart Collections avec parser JSON→SQL
-Pipeline complet validé : Discovery (scan récursif) → BLAKE3 hashing → **Extraction EXIF réelle (kamadak-exif v0.6.1)** → Insertion SQLite (images + exif_metadata + image_state) → **Exposition via LEFT JOIN dans les commandes CRUD** → Mapping TypeScript → Affichage UI. **Grille virtualisée** avec `@tanstack/react-virtual` (10K+ images, 60fps). **Collections statiques CRUD** : création, renommage, suppression, filtrage via `collectionStore` Zustand et 4 commandes Tauri dédiées. **Smart Collections** : Parser `smart_query_parser.rs` converti JSON→SQL, 10 champs supportés (rating, ISO, aperture, focal_length, camera, lens, flag, color_label, filename), 8 opérateurs (=, !=, >, >=, <, <=, contains, starts_with). UI `SmartCollectionBuilder.tsx` avec preview live. IPTC skeleton créé mais extraction non implémentée (reportée Phase 5.4).
+### État actuel : Phases 0 à 3.4 complétées — Collections CRUD + Smart Collections + Navigation Dossiers Hiérarchique
+Pipeline complet validé : Discovery (scan récursif) → BLAKE3 hashing → **Extraction EXIF réelle (kamadak-exif v0.6.1)** → Insertion SQLite (images + exif_metadata + image_state + folders) → **Exposition via LEFT JOIN dans les commandes CRUD** → Mapping TypeScript → Affichage UI. **Grille virtualisée** avec `@tanstack/react-virtual` (10K+ images, 60fps). **Collections statiques CRUD** : création, renommage, suppression, filtrage via `collectionStore` Zustand et 4 commandes Tauri dédiées. **Smart Collections** : Parser `smart_query_parser.rs` converti JSON→SQL, 10 champs supportés (rating, ISO, aperture, focal_length, camera, lens, flag, color_label, filename), 8 opérateurs (=, !=, >, >=, <, <=, contains, starts_with). **Navigation Dossiers** : Arborescence hiérarchique groupée par volumes avec compteurs d'images, statut en ligne/hors ligne, sélection récursive, filtrage avec priorité Collection > Dossier > Recherche textuelle. UI `SmartCollectionBuilder.tsx` + `FolderTree.tsx` avec preview live. IPTC skeleton créé mais extraction non implémentée (reportée Phase 5.4).
 
 ### Objectif : Application Tauri autonome commercialisable
 Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructive, catalogue SQLite, et gestion de bibliothèques photographiques massives.
@@ -856,3 +856,154 @@ Le mapping des champs EXIF, rating, flag, etc. est synchronisé entre Rust et Ty
 ### Tests
 
 Les tests unitaires Rust et TypeScript pour le filtrage des smart collections sont présents et passants (voir CHANGELOG).
+---
+
+## Phase 3.4 : Folder Navigator — Architecture et Schéma
+
+### Migration 004 : Colonnes `is_online` et `name` sur `folders`
+
+```sql
+ALTER TABLE folders ADD COLUMN is_online BOOLEAN DEFAULT 1 NOT NULL;
+ALTER TABLE folders ADD COLUMN name TEXT;
+```
+
+Ces colonnes permettent de tracker le statut en ligne des volumes externes et de stocker le nom du volume pour le regroupement dans l'arborescence.
+
+### DTO `FolderTreeNode`
+
+**⚠️ CONVENTION PROJET** : Les DTOs utilisent **snake_case** (pas camelCase) côté Rust ET TypeScript pour éviter le mapping. La sérialisation serde par défaut produit du snake_case.
+
+```rust
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FolderTreeNode {
+    pub id: u32,
+    pub name: String,
+    pub path: String,
+    pub volume_name: String,
+    pub is_online: bool,
+    pub image_count: u32,
+    pub total_image_count: u32,
+    pub children: Vec<FolderTreeNode>,
+}
+```
+
+```typescript
+export interface FolderTreeNode {
+  id: number;
+  name: string;
+  path: string;
+  volume_name: string;  // ⚠️ snake_case
+  is_online: boolean;
+  image_count: number;
+  total_image_count: number;
+  children: FolderTreeNode[];
+}
+```
+
+### Commandes Tauri — Phase 3.4
+
+#### `get_folder_tree() → CommandResult<Vec<FolderTreeNode>>`
+Retourne l'arborescence hiérarchique groupée par volumes. Requête SQL récursive (CTE) pour construire l'arbre, compteurs d'images direct et récursif, filtrage des dossiers vides.
+
+#### `get_folder_images(folder_id: u32, recursive: bool) → CommandResult<Vec<ImageDTO>>`
+Retourne les images d'un dossier spécifique. Si `recursive=true`, utilise une CTE récursive pour inclure les sous-dossiers. Retourne un JOIN complet (images + image_state + exif_metadata) dans le même format que `get_all_images`.
+
+#### `update_volume_status(volume_name: String, is_online: bool) → CommandResult<()>`
+Met à jour le statut en ligne d'un volume. UPDATE SET `is_online` = ? WHERE `name` = ?. Sera utilisé par le file watcher (Phase 5+).
+
+### Services TypeScript — `catalogService.ts`
+
+```typescript
+static async getFolderTree(): Promise<FolderTreeNode[]> {
+  return invoke('get_folder_tree');
+}
+
+static async getFolderImages(folderId: number, recursive: boolean): Promise<ImageDTO[]> {
+  return invoke('get_folder_images', { folderId, recursive });
+}
+
+static async updateVolumeStatus(volumeName: string, isOnline: boolean): Promise<void> {
+  return invoke('update_volume_status', { volumeName, isOnline });
+}
+```
+
+### Store Zustand — `folderStore.ts`
+
+```typescript
+interface FolderStore {
+  folderTree: FolderTreeNode[];
+  activeFolderId: number | null;
+  activeFolderImageIds: number[] | null;
+  expandedFolderIds: Set<number>;
+  isLoading: boolean;
+  error: string | null;
+
+  loadFolderTree: () => Promise<void>;
+  setActiveFolder: (id: number, recursive: boolean) => Promise<void>;
+  clearActiveFolder: () => void;
+  toggleFolderExpanded: (id: number) => void;
+  checkVolumeStatus: () => Promise<void>;
+}
+```
+
+**État-clé** : `activeFolderImageIds` contient les IDs des images du dossier actif. Cet état est utilisé dans `App.tsx` pour filtrer `filteredImages`.
+
+### Logique de filtrage dans `App.tsx`
+
+Priorité de filtrage (ordre de précédence) :
+1. **Collection active** (`activeCollectionId != null`) → filtre par `collectionImages`
+2. **Dossier actif** (`activeFolderImageIds != null` ET pas de collection) → filtre par `activeFolderImageIds`
+3. **Recherche textuelle** (`searchQuery`) → appliquée après filtrage collection/dossier
+
+```typescript
+const filteredImages = useMemo(() => {
+  let images = allImages;
+
+  // Priority 1: Filter by collection
+  if (activeCollectionId && collectionImages) {
+    images = collectionImages;
+  }
+  // Priority 2: Filter by folder (only if no collection active)
+  else if (activeFolderImageIds !== null) {
+    const folderIdSet = new Set(activeFolderImageIds);
+    images = allImages.filter((img) => folderIdSet.has(img.id));
+  }
+
+  // Then apply search filter
+  if (searchQuery) {
+    images = images.filter((img) =>
+      img.filename.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }
+
+  return images;
+}, [allImages, activeCollectionId, collectionImages, activeFolderImageIds, searchQuery]);
+```
+
+### Composant `FolderTree.tsx`
+
+- Arborescence récursive avec `ChevronRight`/`ChevronDown` pour expand/collapse
+- Icônes `Folder` colorées selon `isOnline` (bleu si en ligne, gris si hors ligne)
+- Compteurs d'images affichés (`imageCount` / `totalImageCount`)
+- Click handler appelle `setActiveFolder(id, true)` avec `recursive=true` par défaut
+- Intégré dans `LeftSidebar` dans une nouvelle section "Dossiers"
+
+### Tests
+
+**Backend (6 nouveaux tests)** :
+- `test_get_folder_tree_with_images` : Arborescence avec images
+- `test_get_folder_images_direct` : Images direct folder only
+- `test_get_folder_images_recursive` : Images avec sous-dossiers
+- `test_update_volume_status_online` : Statut online
+- `test_update_volume_status_offline` : Statut offline
+- `test_get_folder_tree_empty` : Arborescence vide
+
+**Frontend (6 nouveaux tests)** :
+- Initialize with default values
+- Load folder tree
+- Set active folder and load images
+- Clear active folder
+- Toggle folder expansion
+- Handle load error
+
+**Total : 504 tests passent (345 frontend + 159 backend)**

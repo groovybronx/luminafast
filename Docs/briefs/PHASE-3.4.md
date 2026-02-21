@@ -13,14 +13,18 @@ Implémenter une arborescence des dossiers dans la sidebar gauche, affichant les
 - Smart Collections (Phase 3.3)
 - LeftSidebar structure existante avec Collections
 
-### ⚠️ À implémenter
-1. **Backend** : Command `get_folder_tree()` retournant hiérarchie complète avec counts
-2. **Backend** : Command `get_folder_images(folder_id)` (filtrage par dossier)
-3. **Backend** : Command `update_volume_status(volume_name, is_online)` (détection en ligne/hors ligne)
-4. **Frontend** : Service methods pour wrapper les commandes
-5. **Frontend** : Store `folderStore` pour gérer l'état du navigateur de dossiers
-6. **Frontend** : UI dans LeftSidebar : nouvel onglet/section "Dossiers" avec arborescence interactive
-7. **Frontend** : Filtrage par dossier dans `App.tsx` (similaire à collections)
+### ✅ Implémenté (Phase 3.4)
+1. ✅ **Backend** : Command `get_folder_tree()` retournant hiérarchie complète avec counts
+2. ✅ **Backend** : Command `get_folder_images(folder_id)` (filtrage par dossier)
+3. ✅ **Backend** : Command `update_volume_status(volume_name, is_online)` (détection en ligne/hors ligne)
+4. ✅ **Frontend** : Service methods pour wrapper les commandes
+5. ✅ **Frontend** : Store `folderStore` pour gérer l'état du navigateur de dossiers
+6. ✅ **Frontend** : UI dans LeftSidebar : nouvel onglet/section "Dossiers" avec arborescence interactive
+7. ✅ **Frontend** : Filtrage par dossier dans `App.tsx` (similaire à collections)
+8. ✅ **Backend** : Fix critique — Ingestion popule automatiquement la table `folders`
+
+### ⚠️ Action Restante
+- **Backfill** : Images existantes avec `folder_id=NULL` ne sont pas liées aux dossiers (voir section "État d'Implémentation" ci-dessous)
 
 ---
 
@@ -71,20 +75,22 @@ updateVolumeStatus(volumeName: string, isOnline: boolean): Promise<void>
 ```
 
 ### 4. Frontend : `src/types/folder.ts` (nouveau)
+**⚠️ CONVENTION PROJET** : Les DTOs utilisent **snake_case** (pas camelCase) pour correspondre à la sérialisation Rust par défaut (voir `ImageDTO`, `CollectionDTO`, etc.)
+
 ```typescript
 export interface FolderTreeNode {
   id: number;
   name: string;
   path: string;
-  volumeName: string;
-  isOnline: boolean;
-  imageCount: number;        // direct
-  totalImageCount: number;   // recursive
+  volume_name: string;  // ⚠️ snake_case
+  is_online: boolean;   // ⚠️ snake_case
+  image_count: number;  // ⚠️ snake_case
+  total_image_count: number;  // ⚠️ snake_case
   children: FolderTreeNode[];
 }
 
 export interface FolderFilter {
-  folderId: number | null;
+  folder_id: number | null;  // ⚠️ snake_case
   recursive: boolean;
 }
 ```
@@ -205,14 +211,63 @@ Ordre d'application (priorité descendante) :
 
 ---
 
+## État d'Implémentation
+
+### ✅ Complété (21 février 2026)
+
+**Backend :**
+- Migration 004 : Colonnes `is_online` et `name` ajoutées à la table `folders`
+- 3 commandes Tauri implémentées dans `src-tauri/src/commands/catalog.rs` :
+  - `get_folder_tree()` : Retourne hiérarchie complète avec compteurs
+  - `get_folder_images(folder_id, recursive)` : Filtrage par dossier
+  - `update_volume_status(volume_name, is_online)` : Gestion statut volumes
+- 6 tests unitaires backend ajoutés (tous passants)
+- **Fix critique** : `IngestionService.get_or_create_folder_id()` implémenté pour peupler automatiquement la table `folders` lors de l'ingestion
+
+**Frontend :**
+- Types `folder.ts` créés avec convention **snake_case** (volume_name, is_online, etc.)
+- Store `folderStore.ts` avec gestion état (tree, active folder, expanded state)
+- Service `catalogService.ts` : 3 méthodes wrapper des commandes
+- Composant `FolderTree.tsx` dans LeftSidebar avec arborescence récursive
+- Filtrage par dossier intégré dans `App.tsx` (priorité collections > folders > texte)
+- 6 tests unitaires frontend ajoutés (tous passants)
+
+**Tests :**
+- ✅ 159 tests backend passants (cargo test --lib)
+- ✅ 345+ tests frontend passants (npm run test:run)
+
+### ⚠️ Problème Restant : Images Existantes Sans folder_id
+
+**Contexte :**
+Les images importées avant l'implémentation de `get_or_create_folder_id()` (Phase 2.1) ont `folder_id=NULL` car le service d'ingestion ne créait pas d'enregistrements dans la table `folders`.
+
+**Impact :**
+- `get_folder_tree()` retourne un tableau vide pour ces images
+- Le navigateur de dossiers ne les affiche pas
+- Les nouveaux fichiers importés seront correctement liés
+
+**Solutions Possibles :**
+1. **Réimporter** : Supprimer et réimporter les images concernées (simple mais destructif)
+2. **Script de backfill** : Créer une migration ou commande Tauri qui :
+   - Parcourt toutes les images avec `folder_id=NULL`
+   - Extrait le chemin du dossier depuis `images.filename` (si le chemin complet est stocké)
+   - Appelle `get_or_create_folder_id()` pour chaque image
+   - Met à jour `images.folder_id`
+
+**Action Requise :**
+Choisir et implémenter une stratégie de backfill avant de marquer la Phase 3.4 comme ✅ complète.
+
+---
+
 ## Critères de Validation Finaux
 
-- [ ] `cargo check` : 0 erreurs
-- [ ] `cargo test --lib` : Nouveaux tests + tous les anciens passants (150+ tests)
-- [ ] `tsc --noEmit` : 0 erreurs
-- [ ] `npm run test:run` : 340+ tests frontend passants
-- [ ] LeftSidebar affiche arborescence dossiers complète avec compteurs
-- [ ] Click dossier → filtrage images en temps réel
-- [ ] Volumes en ligne/hors ligne affordés visuellement
-- [ ] Aucun `any` TypeScript ajouté
-- [ ] Aucun `unwrap()` Rust en production
+- [x] `cargo check` : 0 erreurs
+- [x] `cargo test --lib` : Nouveaux tests + tous les anciens passants (159 tests)
+- [x] `tsc --noEmit` : 0 erreurs
+- [x] `npm run test:run` : 345+ tests frontend passants
+- [ ] **LeftSidebar affiche arborescence dossiers complète avec compteurs** (bloqué par backfill)
+- [ ] **Click dossier → filtrage images en temps réel** (non testé en conditions réelles)
+- [ ] **Volumes en ligne/hors ligne affordés visuellement** (non testé en conditions réelles)
+- [x] Aucun `any` TypeScript ajouté
+- [x] Aucun `unwrap()` Rust en production
+- [ ] **Images existantes liées à leurs dossiers** (backfill requis)

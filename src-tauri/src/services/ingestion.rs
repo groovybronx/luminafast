@@ -519,6 +519,63 @@ impl IngestionService {
         None
     }
 
+    /// Get or create a folder entry in the database
+    /// Returns the folder_id for the given file path
+    fn get_or_create_folder_id(
+        &self,
+        transaction: &rusqlite::Transaction,
+        file_path: &str,
+    ) -> Result<Option<i64>, DiscoveryError> {
+        let path = Path::new(file_path);
+        let folder_path = match path.parent() {
+            Some(p) => match p.to_str() {
+                Some(s) => s,
+                None => return Ok(None), // Invalid UTF-8 path
+            },
+            None => return Ok(None), // File at root (unlikely)
+        };
+
+        // Extract folder name (last component)
+        let folder_name = Path::new(folder_path)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("")
+            .to_string();
+
+        // Extract volume name (first component after root)
+        let volume_name = Path::new(folder_path)
+            .components()
+            .nth(1) // Skip root, take first real component
+            .and_then(|c| c.as_os_str().to_str())
+            .unwrap_or("Unknown")
+            .to_string();
+
+        // Check if folder already exists
+        let existing_id: Option<i64> = transaction
+            .query_row(
+                "SELECT id FROM folders WHERE path = ?",
+                [folder_path],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
+
+        if let Some(id) = existing_id {
+            return Ok(Some(id));
+        }
+
+        // Insert new folder
+        transaction
+            .execute(
+                "INSERT INTO folders (path, name, volume_name, is_online, parent_id) VALUES (?, ?, ?, 1, NULL)",
+                rusqlite::params![folder_path, folder_name, volume_name],
+            )
+            .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
+
+        let folder_id = transaction.last_insert_rowid();
+        Ok(Some(folder_id))
+    }
+
     /// Create image and EXIF records in the database
     async fn create_image_record(
         &self,
@@ -537,6 +594,12 @@ impl IngestionService {
             .transaction()
             .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
 
+        // Get or create folder for this file
+        let file_path_str = file.path.to_str().ok_or_else(|| {
+            DiscoveryError::IoError("Invalid UTF-8 in file path".to_string())
+        })?;
+        let folder_id = self.get_or_create_folder_id(&transaction, file_path_str)?;
+
         // Create image record
         let new_image = NewImage {
             blake3_hash: blake3_hash.to_string(),
@@ -547,7 +610,7 @@ impl IngestionService {
             orientation: 0,
             file_size_bytes: Some(file.size_bytes as i64),
             captured_at: exif.date_taken,
-            folder_id: None,
+            folder_id,
         };
 
         let _rows = transaction

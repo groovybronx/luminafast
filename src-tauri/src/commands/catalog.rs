@@ -821,6 +821,240 @@ fn get_smart_collection_image_count(
     Ok(count as u32)
 }
 
+/// Get folder tree hierarchy with image counts
+#[tauri::command]
+pub async fn get_folder_tree(state: State<'_, AppState>) -> CommandResult<Vec<FolderTreeNode>> {
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+
+    // Fetch all folders with their direct image counts
+    let mut stmt = db
+        .connection()
+        .prepare(
+            "SELECT f.id, f.name, f.path, f.volume_name, f.is_online,
+                    COALESCE((SELECT COUNT(*) FROM images WHERE folder_id = f.id), 0) as image_count
+             FROM folders f
+             ORDER BY f.path",
+        )
+        .map_err(|e| format!("Failed to prepare statement: {}", e))?;
+
+    let folder_rows = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, u32>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, bool>(4)?,
+                row.get::<_, u32>(5)?,
+            ))
+        })
+        .map_err(|e| format!("Failed to query folders: {}", e))?;
+
+    let mut folders: Vec<(u32, String, String, String, bool, u32)> = Vec::new();
+    for row in folder_rows {
+        folders.push(row.map_err(|e| format!("Failed to read row: {}", e))?);
+    }
+
+    // Build a map of folders by their paths
+    let mut folder_map: std::collections::HashMap<String, FolderTreeNode> =
+        std::collections::HashMap::new();
+
+    for (id, name, path, volume_name, is_online, image_count) in folders.iter() {
+        folder_map.insert(
+            path.clone(),
+            FolderTreeNode {
+                id: *id,
+                name: name.clone(),
+                path: path.clone(),
+                volume_name: volume_name.clone(),
+                is_online: *is_online,
+                image_count: *image_count,
+                total_image_count: *image_count,
+                children: Vec::new(),
+            },
+        );
+    }
+
+    // Build tree hierarchy
+    let mut root_folders: Vec<FolderTreeNode> = Vec::new();
+    let paths: Vec<String> = folders.iter().map(|(_, _, path, _, _, _)| path.clone()).collect();
+
+    for path in paths {
+        let parent_path = std::path::Path::new(&path)
+            .parent()
+            .and_then(|p| p.to_str())
+            .map(|s| s.to_string());
+
+        if let Some(parent_path) = parent_path {
+            if folder_map.contains_key(&parent_path) {
+                // This is a child folder
+                if let Some(node) = folder_map.remove(&path) {
+                    if let Some(parent) = folder_map.get_mut(&parent_path) {
+                        parent.children.push(node.clone());
+                        folder_map.insert(path.clone(), node);
+                    }
+                }
+            } else {
+                // This is a root folder
+                if let Some(node) = folder_map.get(&path) {
+                    root_folders.push(node.clone());
+                }
+            }
+        } else {
+            // This is a root folder
+            if let Some(node) = folder_map.get(&path) {
+                root_folders.push(node.clone());
+            }
+        }
+    }
+
+    // Calculate total counts recursively
+    fn calculate_total_counts(node: &mut FolderTreeNode) {
+        let mut total = node.image_count;
+        for child in &mut node.children {
+            calculate_total_counts(child);
+            total += child.total_image_count;
+        }
+        node.total_image_count = total;
+    }
+
+    for node in &mut root_folders {
+        calculate_total_counts(node);
+    }
+
+    // Filter out empty folders
+    fn filter_empty_folders(nodes: Vec<FolderTreeNode>) -> Vec<FolderTreeNode> {
+        nodes
+            .into_iter()
+            .filter_map(|mut node| {
+                node.children = filter_empty_folders(node.children);
+                if node.total_image_count > 0 {
+                    Some(node)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    let result = filter_empty_folders(root_folders);
+    Ok(result)
+}
+
+/// Get images from a specific folder
+#[tauri::command]
+pub async fn get_folder_images(
+    folder_id: u32,
+    recursive: bool,
+    state: State<'_, AppState>,
+) -> CommandResult<Vec<ImageDTO>> {
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+
+    let query = if recursive {
+        // Get folder path
+        let folder_path: String = db
+            .connection()
+            .query_row(
+                "SELECT path FROM folders WHERE id = ?",
+                [folder_id],
+                |row| row.get(0),
+            )
+            .map_err(|e| format!("Folder not found: {}", e))?;
+
+        // Get all folders that start with this path
+        format!(
+            "SELECT i.id, i.blake3_hash, i.filename, i.extension, i.width, i.height,
+                    s.rating, s.flag, i.captured_at, i.imported_at,
+                    e.iso, e.aperture, e.shutter_speed, e.focal_length, e.lens,
+                    e.camera_make, e.camera_model
+             FROM images i
+             LEFT JOIN image_state s ON i.id = s.image_id
+             LEFT JOIN exif_metadata e ON i.id = e.image_id
+             INNER JOIN folders f ON i.folder_id = f.id
+             WHERE f.path LIKE '{}%'
+             ORDER BY i.filename",
+            folder_path
+        )
+    } else {
+        format!(
+            "SELECT i.id, i.blake3_hash, i.filename, i.extension, i.width, i.height,
+                    s.rating, s.flag, i.captured_at, i.imported_at,
+                    e.iso, e.aperture, e.shutter_speed, e.focal_length, e.lens,
+                    e.camera_make, e.camera_model
+             FROM images i
+             LEFT JOIN image_state s ON i.id = s.image_id
+             LEFT JOIN exif_metadata e ON i.id = e.image_id
+             WHERE i.folder_id = {}
+             ORDER BY i.filename",
+            folder_id
+        )
+    };
+
+    let mut stmt = db
+        .connection()
+        .prepare(&query)
+        .map_err(|e| format!("Failed to prepare statement: {}", e))?;
+
+    let image_iter = stmt
+        .query_map([], |row| {
+            Ok(ImageDTO {
+                id: row.get(0)?,
+                blake3_hash: row.get(1)?,
+                filename: row.get(2)?,
+                extension: row.get(3)?,
+                width: row.get(4)?,
+                height: row.get(5)?,
+                rating: row.get(6)?,
+                flag: row.get(7)?,
+                captured_at: row.get(8)?,
+                imported_at: row.get(9)?,
+                iso: row.get(10)?,
+                aperture: row.get(11)?,
+                shutter_speed: row.get(12)?,
+                focal_length: row.get(13)?,
+                lens: row.get(14)?,
+                camera_make: row.get(15)?,
+                camera_model: row.get(16)?,
+            })
+        })
+        .map_err(|e| format!("Failed to query images: {}", e))?;
+
+    let mut images = Vec::new();
+    for image_result in image_iter {
+        images.push(image_result.map_err(|e| format!("Failed to read image: {}", e))?);
+    }
+
+    Ok(images)
+}
+
+/// Update the online status of a volume
+#[tauri::command]
+pub async fn update_volume_status(
+    volume_name: String,
+    is_online: bool,
+    state: State<'_, AppState>,
+) -> CommandResult<()> {
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+
+    db.connection()
+        .execute(
+            "UPDATE folders SET is_online = ? WHERE volume_name = ?",
+            rusqlite::params![is_online, volume_name],
+        )
+        .map_err(|e| format!("Failed to update volume status: {}", e))?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     // use super::*;
@@ -1565,5 +1799,228 @@ mod tests {
         assert!(result.is_ok());
         let sql = result.unwrap();
         assert!(sql.contains("exif_metadata.camera_model LIKE '%EOS%'"));
+    }
+
+    #[test]
+    fn test_update_volume_status_online() {
+        let db = setup_test_db();
+
+        // Créer un dossier avec un volume
+        db.connection()
+            .execute(
+                "INSERT INTO folders (name, path, volume_name, is_online) VALUES (?, ?, ?, ?)",
+                rusqlite::params!["TestFolder", "/test/path", "WORK_SSD", false],
+            )
+            .unwrap();
+
+        // Mettre à jour le statut à online
+        db.connection()
+            .execute(
+                "UPDATE folders SET is_online = ? WHERE volume_name = ?",
+                rusqlite::params![true, "WORK_SSD"],
+            )
+            .unwrap();
+
+        // Vérifier le statut
+        let is_online: bool = db
+            .connection()
+            .query_row(
+                "SELECT is_online FROM folders WHERE volume_name = ?",
+                ["WORK_SSD"],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert!(is_online);
+    }
+
+    #[test]
+    fn test_update_volume_status_offline() {
+        let db = setup_test_db();
+
+        // Créer un dossier avec un volume online
+        db.connection()
+            .execute(
+                "INSERT INTO folders (name, path, volume_name, is_online) VALUES (?, ?, ?, ?)",
+                rusqlite::params!["TestFolder", "/test/path", "WORK_SSD", true],
+            )
+            .unwrap();
+
+        // Mettre à jour le statut à offline
+        db.connection()
+            .execute(
+                "UPDATE folders SET is_online = ? WHERE volume_name = ?",
+                rusqlite::params![false, "WORK_SSD"],
+            )
+            .unwrap();
+
+        // Vérifier le statut
+        let is_online: bool = db
+            .connection()
+            .query_row(
+                "SELECT is_online FROM folders WHERE volume_name = ?",
+                ["WORK_SSD"],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert!(!is_online);
+    }
+
+    #[test]
+    fn test_get_folder_tree_empty() {
+        let db = setup_test_db();
+
+        // Vérifier qu'il n'y a pas de dossiers
+        let mut stmt = db
+            .connection()
+            .prepare("SELECT COUNT(*) FROM folders")
+            .unwrap();
+
+        let count: i64 = stmt.query_row([], |row| row.get(0)).unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_get_folder_tree_with_images() {
+        let db = setup_test_db();
+
+        // Créer un dossier
+        db.connection()
+            .execute(
+                "INSERT INTO folders (name, path, volume_name, is_online) VALUES (?, ?, ?, ?)",
+                rusqlite::params!["Photos2024", "/volumes/SSD/Photos2024", "SSD_PRIMARY", true],
+            )
+            .unwrap();
+        let folder_id = db.connection().last_insert_rowid();
+
+        // Créer des images dans ce dossier
+        for i in 0..5 {
+            db.connection()
+                .execute(
+                    "INSERT INTO images (blake3_hash, filename, extension, imported_at, folder_id) VALUES (?, ?, ?, ?, ?)",
+                    rusqlite::params![
+                        format!("hash_{}", i),
+                        format!("IMG_{:04}.CR3", i),
+                        "CR3",
+                        "2024-01-01T00:00:00Z",
+                        folder_id
+                    ],
+                )
+                .unwrap();
+        }
+
+        // Vérifier le comptage d'images
+        let count: i64 = db
+            .connection()
+            .query_row(
+                "SELECT COUNT(*) FROM images WHERE folder_id = ?",
+                [folder_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(count, 5);
+    }
+
+    #[test]
+    fn test_get_folder_images_direct() {
+        let db = setup_test_db();
+
+        // Créer un dossier parent et un sous-dossier
+        db.connection()
+            .execute(
+                "INSERT INTO folders (name, path, volume_name, is_online) VALUES (?, ?, ?, ?)",
+                rusqlite::params!["Parent", "/volumes/SSD/Parent", "SSD", true],
+            )
+            .unwrap();
+        let parent_folder_id = db.connection().last_insert_rowid();
+
+        db.connection()
+            .execute(
+                "INSERT INTO folders (name, path, volume_name, is_online) VALUES (?, ?, ?, ?)",
+                rusqlite::params!["Child", "/volumes/SSD/Parent/Child", "SSD", true],
+            )
+            .unwrap();
+        let child_folder_id = db.connection().last_insert_rowid();
+
+        // Images dans le parent
+        db.connection()
+            .execute(
+                "INSERT INTO images (blake3_hash, filename, extension, imported_at, folder_id) VALUES (?, ?, ?, ?, ?)",
+                rusqlite::params!["hash_parent", "parent.CR3", "CR3", "2024-01-01T00:00:00Z", parent_folder_id],
+            )
+            .unwrap();
+
+        // Images dans le child
+        db.connection()
+            .execute(
+                "INSERT INTO images (blake3_hash, filename, extension, imported_at, folder_id) VALUES (?, ?, ?, ?, ?)",
+                rusqlite::params!["hash_child", "child.CR3", "CR3", "2024-01-01T00:00:00Z", child_folder_id],
+            )
+            .unwrap();
+
+        // Récupérer uniquement les images directes du parent
+        let count: i64 = db
+            .connection()
+            .query_row(
+                "SELECT COUNT(*) FROM images WHERE folder_id = ?",
+                [parent_folder_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn test_get_folder_images_recursive() {
+        let db = setup_test_db();
+
+        // Créer une hiérarchie de dossiers
+        db.connection()
+            .execute(
+                "INSERT INTO folders (name, path, volume_name, is_online) VALUES (?, ?, ?, ?)",
+                rusqlite::params!["Root", "/volumes/SSD/Root", "SSD", true],
+            )
+            .unwrap();
+        let root_id = db.connection().last_insert_rowid();
+
+        db.connection()
+            .execute(
+                "INSERT INTO folders (name, path, volume_name, is_online) VALUES (?, ?, ?, ?)",
+                rusqlite::params!["Sub", "/volumes/SSD/Root/Sub", "SSD", true],
+            )
+            .unwrap();
+        let sub_id = db.connection().last_insert_rowid();
+
+        // Images dans root et sub
+        db.connection()
+            .execute(
+                "INSERT INTO images (blake3_hash, filename, extension, imported_at, folder_id) VALUES (?, ?, ?, ?, ?)",
+                rusqlite::params!["hash_root", "root.RAF", "RAF", "2024-01-01T00:00:00Z", root_id],
+            )
+            .unwrap();
+
+        db.connection()
+            .execute(
+                "INSERT INTO images (blake3_hash, filename, extension, imported_at, folder_id) VALUES (?, ?, ?, ?, ?)",
+                rusqlite::params!["hash_sub", "sub.RAF", "RAF", "2024-01-01T00:00:00Z", sub_id],
+            )
+            .unwrap();
+
+        // Test récursif : récupérer toutes les images commençant par le path Root
+        let count: i64 = db
+            .connection()
+            .query_row(
+                "SELECT COUNT(*) FROM images i
+                 INNER JOIN folders f ON i.folder_id = f.id
+                 WHERE f.path LIKE '/volumes/SSD/Root%'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(count, 2);
     }
 }

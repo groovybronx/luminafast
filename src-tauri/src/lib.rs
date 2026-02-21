@@ -85,6 +85,9 @@ pub fn run() {
             commands::catalog::create_smart_collection,
             commands::catalog::get_smart_collection_results,
             commands::catalog::update_smart_collection,
+            commands::catalog::get_folder_tree,
+            commands::catalog::get_folder_images,
+            commands::catalog::update_volume_status,
             // EXIF commands
             commands::exif::extract_exif,
             commands::exif::extract_exif_batch,

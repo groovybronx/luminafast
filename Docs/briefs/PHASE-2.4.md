@@ -1,5 +1,7 @@
 # Phase 2.4 — UI d'Import Connectée
 
+> **Statut** : ✅ **Complétée** — Import connecté bout-en-bout : dialogue natif → scan → ingestion SQLite → grille avec vraies previews (`assetProtocol` activé).
+
 ## Objectif
 Connecter l'interface utilisateur d'import (`ImportModal`) aux services Rust (`DiscoveryService`, `IngestionService`) via le wrapper TypeScript `discoveryService`. Remplacer les mocks actuels par des appels réels pour permettre la sélection de dossiers, le scan de fichiers RAW, et leur ingestion en base de données.
 
@@ -41,9 +43,9 @@ Connecter l'interface utilisateur d'import (`ImportModal`) aux services Rust (`D
 - [x] Le dialogue natif de sélection de dossier s'ouvre et retourne un chemin valide.
 - [x] Le scan démarre et la progression s'affiche correctement (X fichiers trouvés).
 - [x] L'ingestion se lance et peuple la base de données SQLite.
-- [ ] Les images importées apparaissent dans la grille (via `catalogStore`).
-- [ ] Les erreurs sont gérées gracieusement (toast ou log).
-- [ ] Aucun blocage de l'UI pendant le scan (async).
+- [x] Les images importées apparaissent dans la grille (via `useCatalog` + `assetProtocol`).
+- [x] Les erreurs sont gérées gracieusement (logs système + console).
+- [x] Aucun blocage de l'UI pendant le scan (async).
 
 ## Risques et Mitigations
 - **Performance UI** : Trop d'événements de progression peuvent laguer l'UI.

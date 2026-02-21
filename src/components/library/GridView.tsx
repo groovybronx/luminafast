@@ -28,6 +28,10 @@ export const GridView = ({
   onToggleSelection, 
   onSetActiveView 
 }: GridViewProps) => {
+  // Opt out of React Compiler memoization: useVirtualizer returns functions
+  // that cannot be safely memoized (stale UI risk).
+  "use no memo";
+
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Track container width to recalculate columns on resize
@@ -83,8 +87,7 @@ export const GridView = ({
   return (
     <div 
       ref={containerRef}
-      className="h-full overflow-y-auto custom-scrollbar"
-      style={{ contain: 'strict' }}
+      className="h-full overflow-y-auto custom-scrollbar grid-virtual-container"
     >
       <div className="p-4">
         <div

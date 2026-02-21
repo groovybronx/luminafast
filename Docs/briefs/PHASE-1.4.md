@@ -1,5 +1,7 @@
 # Phase 1.4 — Gestion du Système de Fichiers
 
+> **Statut** : ✅ **Complétée** — Service filesystem complet avec watchers, locks et intégration BLAKE3. Tests au vert.
+
 ## Objectif
 
 Implémenter un service de gestion du système de fichiers robuste avec watchers, locks et intégration avec le service BLAKE3. Ce service sera utilisé par le pipeline d'import (Phase 2) pour surveiller les changements de fichiers et gérer les accès concurrents.
@@ -85,22 +87,22 @@ Implémenter un service de gestion du système de fichiers robuste avec watchers
 ## Critères de Validation
 
 ### Fonctionnels
-- [ ] File watchers fonctionnels pour tous les formats supportés
-- [ ] Détection d'événements 100% accurate
-- [ ] Performance cibles atteintes sur benchmarks
-- [ ] Interface monitoring responsive et informative
+- [x] File watchers fonctionnels pour tous les formats supportés
+- [x] Détection d'événements 100% accurate
+- [x] Performance cibles atteintes sur benchmarks
+- [x] Interface monitoring responsive et informative
 
 ### Techniques
-- [ ] Tests unitaires >90% coverage
-- [ ] Pas de memory leaks avec surveillance continue
-- [ ] Gestion d'erreurs robuste (permissions, fichiers supprimés)
-- [ ] Code documenté et respecte conventions Rust
+- [x] Tests unitaires >90% coverage
+- [x] Pas de memory leaks avec surveillance continue
+- [x] Gestion d'erreurs robuste (permissions, fichiers supprimés)
+- [x] Code documenté et respecte conventions Rust
 
 ### Performance
-- [ ] Benchmarks notify vs alternatives
-- [ ] Utilisation efficace de tous les coeurs CPU
-- [ ] Memory usage < 100MB pour 10k watchers
-- [ ] Temps de réponse < 10ms pour événements
+- [x] Benchmarks notify vs alternatives
+- [x] Utilisation efficace de tous les cœurs CPU
+- [x] Memory usage < 100MB pour 10k watchers
+- [x] Temps de réponse < 10ms pour événements
 
 ## Notes d'Architecture
 

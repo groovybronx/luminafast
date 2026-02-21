@@ -31,6 +31,8 @@
 | Maintenance | — | Correction Pipeline Import (DB + SQL + Init) | ✅ Complétée | 2026-02-20 | Cascade |
 | 3 | 3.1 | Grille d'Images Réelle | ✅ Complétée | 2026-02-20 | Copilot |
 | Maintenance | — | Corrections Critiques Phases 0→3.1 (BLOC 1-4) | ✅ Complétée | 2026-02-21 | Copilot |
+| Infra | — | Agents IA dédiés (code-review, pr-verification, phase-implementation, documentation-sync) | ✅ Complétée | 2026-02-20 | Copilot |
+| 3 | 3.1 | Grille d'Images Réelle | ⬜ En attente | — | — |
 | 3 | 3.2 | Collections Statiques (CRUD) | ⬜ En attente | — | — |
 | 3 | 3.3 | Smart Collections | ⬜ En attente | — | — |
 | 3 | 3.4 | Navigateur de Dossiers | ⬜ En attente | — | — |

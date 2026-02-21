@@ -220,10 +220,7 @@ export class CatalogService {
    * @param collectionId - ID of the smart collection
    * @param smartQuery - JSON string with rules and combinator
    */
-  static async updateSmartCollection(
-    collectionId: number,
-    smartQuery: string,
-  ): Promise<void> {
+  static async updateSmartCollection(collectionId: number, smartQuery: string): Promise<void> {
     try {
       const invoke = this.getInvoke();
       await invoke('update_smart_collection', { collectionId, smartQuery });

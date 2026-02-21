@@ -45,6 +45,9 @@ export const Toolbar = ({
           <button
             onClick={onToggleBeforeAfter}
             className={`p-2 rounded border border-zinc-800 transition-colors ${showBeforeAfter ? 'bg-blue-600 text-white border-blue-500' : 'text-zinc-500 hover:text-zinc-300'}`}
+            title="Afficher avant/après"
+            aria-label="Afficher avant/après"
+            type="button"
           >
             <SplitSquareVertical size={16} />
           </button>
@@ -81,6 +84,8 @@ export const Toolbar = ({
           value={thumbnailSize}
           onChange={(e) => onSetThumbnailSize(parseInt(e.target.value))}
           className="flex-1 accent-zinc-500"
+          title="Taille des vignettes"
+          placeholder="Taille des vignettes"
         />
         <ImageIcon size={16} className="text-zinc-600" />
       </div>

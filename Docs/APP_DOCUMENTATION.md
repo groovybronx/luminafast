@@ -51,6 +51,7 @@ Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructiv
 
 ```
 LuminaFast/
+├── AGENTS.md                       # Directives obligatoires pour agents IA
 ├── .github/
 │   └── workflows/
 │       └── ci.yml                    # Pipeline CI/CD GitHub Actions
@@ -60,19 +61,27 @@ LuminaFast/
 ├── Docs/
 │   ├── archives/
 │   │   ├── Lightroomtechnique.md   # Analyse architecture Lightroom Classic
-│   │   └── recommendations.md      # Stack moderne recommandée
+│   │   ├── recommendations.md      # Stack moderne recommandée
+│   │   └── luminafast_developement_plan.md # Plan détaillé du projet
+│   ├── briefs/                       # Briefs des phases de développement
+│   │   ├── PHASE-0.1.md → PHASE-3.2.md # Briefs implémentées
+│   │   └── PHASE-3.3.md → ...      # Briefs futures
 │   ├── AI_INSTRUCTIONS.md          # Directives pour agents IA
 │   ├── CHANGELOG.md                # Suivi d'avancement par sous-phase
-│   ├── TESTING_STRATEGY.md         # Stratégie de tests
+│   ├── TESTING_STRATEGY.md         # Stratégie de tests (Vitest + Rust)
 │   ├── GOVERNANCE.md               # Règles de gouvernance
 │   └── APP_DOCUMENTATION.md        # Ce fichier
 ├── public/
 │   └── vite.svg
+├── scripts/                        # Utilitaires scripts
+│   └── test-workflow.sh            # Script test workflow
 ├── src/
 │   ├── App.tsx                     # Orchestrateur (152 lignes, pas de useState)
 │   ├── main.tsx                    # Point d'entrée React
 │   ├── vite-env.d.ts               # Déclarations d'environnement Vite
 │   ├── index.css                   # Styles globaux + TailwindCSS
+│   ├── assets/                     # Ressources statiques
+│   │   └── react.svg               # Logo React
 │   ├── stores/                     # Stores Zustand (state management)
 │   │   ├── index.ts                # Re-export central
 │   │   ├── catalogStore.ts         # Images, sélection, filtres
@@ -83,22 +92,27 @@ LuminaFast/
 │   ├── lib/                        # Utilitaires et données mock
 │   │   ├── helpers.ts              # safeID()
 │   │   └── mockData.ts             # generateImages, INITIAL_IMAGES (MockEvent supprimé)
-│   ├── services/                   # Services TypeScript (Phase 1.2 + 2.2)
-│   │   ├── catalogService.ts       # Wrapper Tauri avec gestion d'erreurs
+│   ├── services/                   # Services TypeScript (Phase 1.2 + 2.2 + 3.3)
+│   │   ├── catalogService.ts       # Wrapper Tauri avec gestion d'erreurs collections CRUD
 │   │   ├── exifService.ts           # Service EXIF/IPTC avec invoke direct
 │   │   ├── discoveryService.ts     # Service discovery/ingestion
 │   │   ├── filesystemService.ts     # Service système de fichiers
-│   │   └── hashingService.ts        # Service BLAKE3 hashing
+│   │   ├── hashingService.ts        # Service BLAKE3 hashing
+│   │   ├── previewService.ts        # Service génération previews RAW + event listeners (Phase 3.3)
+│   │   └── __tests__/             # Tests unitaires services
 │   ├── types/                      # Types TypeScript du domaine
 │   │   ├── index.ts                # Re-export central
 │   │   ├── image.ts                # CatalogImage, ExifData, EditState
-│   │   ├── collection.ts           # Collection, SmartQuery
+│   │   ├── collection.ts           # Collection, SmartQuery, CollectionType (Phase 3.2)
 │   │   ├── events.ts               # CatalogEvent, EventType
 │   │   ├── ui.ts                   # ActiveView, LogEntry
 │   │   ├── dto.ts                  # DTOs Tauri (Phase 1.2)
 │   │   ├── exif.ts                 # Types EXIF/IPTC complets (Phase 2.2)
 │   │   ├── discovery.ts            # Types discovery/ingestion (Phase 2.1)
-│   │   └── filesystem.ts           # Types système de fichiers
+│   │   ├── filesystem.ts           # Types système de fichiers
+│   │   ├── preview.ts              # Types génération previews (Phase 3.3)
+│   │   ├── hashing.ts              # Types BLAKE3 hashing
+│   │   └── __tests__/             # Tests types (types.test.ts, hashing.test.ts, etc.)
 │   ├── components/
 │   │   ├── layout/                 # Structure de la page
 │   │   │   ├── TopNav.tsx          # Navigation supérieure
@@ -107,13 +121,15 @@ LuminaFast/
 │   │   │   ├── Toolbar.tsx         # Mode, recherche, taille
 │   │   │   └── Filmstrip.tsx       # Bande défilante
 │   │   ├── library/                # Mode bibliothèque
-│   │   │   └── GridView.tsx        # Grille d'images
+│   │   │   ├── GridView.tsx        # Grille d'images virtualisée (@tanstack/react-virtual)
+│   │   │   ├── ImageCard.tsx       # Carte image avec métadonnées
+│   │   │   └── __tests__/         # Tests GridView et ImageCard
 │   │   ├── develop/                # Mode développement
 │   │   │   ├── DevelopView.tsx     # Vue développement + avant/après
 │   │   │   ├── DevelopSliders.tsx  # Sliders de réglage
 │   │   │   └── HistoryPanel.tsx    # Historique des events
 │   │   ├── metadata/               # Métadonnées et EXIF
-│   │   │   ├── Histogram.tsx       # Histogramme
+│   │   │   ├── Histogram.tsx       # Histogramme simulé
 │   │   │   ├── ExifGrid.tsx        # Grille EXIF compacte
 │   │   │   └── MetadataPanel.tsx   # Fiche technique + tags
 │   │   └── shared/                 # Composants partagés
@@ -121,12 +137,21 @@ LuminaFast/
 │   │       ├── ArchitectureMonitor.tsx # Console monitoring
 │   │       ├── ImportModal.tsx     # Modal d'import
 │   │       ├── BatchBar.tsx        # Actions batch : pick, favoris, ajout collection (FolderPlus popover), clear
-│   │       └── SearchBar.tsx        # Barre de recherche
+│   │       ├── KeyboardOverlay.tsx # Indicateurs raccourcis clavier
+│   │       └── __tests__/         # Tests composants partagés
 │   └── hooks/                       # Hooks React personnalisés
 │       ├── useCatalog.ts           # Hook principal catalogue (mapping DTO→CatalogImage + EXIF)
 │       ├── useDiscovery.ts         # Hook discovery/ingestion
-│       ├── useKeyboardShortcuts.ts # Raccourcis clavier
 │       └── __tests__/             # Tests hooks (useCatalog.test.ts, useDiscovery.test.ts)
+│   ├── test/                       # Infrastructure tests et mocks
+│   │   ├── setup.ts                # Configuration tests globale
+│   │   ├── storeUtils.ts           # Utilitaires stores tests
+│   │   ├── mocks/
+│   │   │   ├── tauri-api.ts        # Mock API Tauri principal
+│   │   │   └── tauri-api/
+│   │   │       ├── core.ts         # Mocks core Tauri
+│   │   │       └── tauri.ts        # Mocks invoke Tauri
+│   │   └── __tests__/             # Tests infrastructure
 ├── src-tauri/                         # Backend Rust Tauri
 │   ├── Cargo.toml                    # Dépendances Rust (rusqlite, etc.)
 │   ├── tauri.conf.json              # Configuration Tauri
@@ -137,21 +162,43 @@ LuminaFast/
 │   │   ├── main.rs                 # Point d'entrée Rust
 │   │   ├── lib.rs                  # Module library + plugins + init DB + commandes
 │   │   ├── database.rs               # Gestion SQLite, migrations, PRAGMA
-│   │   ├── commands/                 # Commandes Tauri CRUD (Phase 1.2 + 2.2)
-│   │   │   ├── catalog.rs           # 11 commandes CRUD (+ delete/rename/remove/get_collection_images — Phase 3.2)
-│   │   │   ├── exif.rs              # Commandes EXIF/IPTC (Phase 2.2)
+│   │   ├── commands/                 # Commandes Tauri CRUD (Phase 1.2 + 2.2 + 3.3)
+│   │   │   ├── mod.rs               # Export et enregistrement des commandes
+│   │   │   ├── catalog.rs           # 17 commandes CRUD images+collections (Phase 3.2)
+│   │   │   ├── exif.rs              # Commandes EXIF/IPTC extraction (Phase 2.2)
 │   │   │   ├── filesystem.rs        # Commandes système de fichiers
-│   │   │   └── mod.rs               # Export des commandes
-│   │   ├── models/                   # Types Rust du domaine
-│   │   │   ├── catalog.rs           # Image, Collection, Folder, etc.
-│   │   │   ├── exif.rs              # Modèles EXIF/IPTC complets (Phase 2.2)
-│   │   │   ├── discovery.rs         # Modèles discovery/ingestion (Phase 2.1)
-│   │   │   ├── filesystem.rs        # Modèles système de fichiers
-│   │   │   ├── hashing.rs           # Modèles BLAKE3
-│   │   │   ├── dto.rs                # DTOs Tauri avec serde (Phase 1.2)
-│   │   │   └── mod.rs               # Export des modèles
-│   │   └── migrations/               # Scripts de migration SQL
-│   │       └── 001_initial.sql      # Schéma complet du catalogue
+│   │   │   ├── discovery.rs         # Commandes ingestion + découverte (Phase 2.1)
+│   │   │   ├── hashing.rs           # Commandes BLAKE3 batch
+│   │   │   ├── preview.rs           # Commandes génération previews RAW (Phase 3.3)
+│   │   │   └── types.rs             # Types réponse partagés
+│   │   ├── models/                   # Types Rust du domaine (sérializables)
+│   │   │   ├── mod.rs               # Export des modèles
+│   │   │   ├── catalog.rs           # Image, Folder, CollectionType (base)
+│   │   │   ├── collection.rs        # Collection CRUD models (Phase 3.2)
+│   │   │   ├── image.rs             # Image détails, metadata (Phase 3.3)
+│   │   │   ├── event.rs             # CatalogEvent, EventType (Phase 4.3)
+│   │   │   ├── exif.rs              # ExifMetadata, IptcMetadata (Phase 2.2)
+│   │   │   ├── iptc.rs              # IptcMetadata détails (skeleton Phase 5.4)
+│   │   │   ├── discovery.rs         # DiscoveredFile, DiscoverySession (Phase 2.1)
+│   │   │   ├── filesystem.rs        # FileEvent, FileLock, WatcherConfig
+│   │   │   ├── hashing.rs           # HashResult, BatchHashResult
+│   │   │   ├── preview.rs           # PreviewData, PreviewFormat (Phase 3.3)
+│   │   │   ├── dto.rs                # DTOs Tauri avec serde pour invoke
+│   │   │   └── __tests__/           # Tests unitaires models
+│   │   ├── migrations/               # Scripts de migration SQL
+│   │   │   └── 001_initial.sql      # Schéma complet du catalogue
+│   │   ├── services/                 # Services métier (Layer logique entre DB et commandes)
+│   │   │   ├── mod.rs               # Export des services
+│   │   │   ├── blake3.rs            # Service BLAKE3 hashing (Phase 1.3)
+│   │   │   ├── exif.rs              # Service extraction EXIF kamadak-exif (Phase 2.2)
+│   │   │   ├── iptc.rs              # Service IPTC skeleton (reporté Phase 5.4)
+│   │   │   ├── discovery.rs         # Service découverte fichiers récursive
+│   │   │   │   └── tests.rs         # Tests discovery
+│   │   │   ├── ingestion.rs         # Service ingestion batch (discovery + hashing + EXIF)
+│   │   │   │   └── tests.rs         # Tests ingestion
+│   │   │   ├── filesystem.rs        # Service système de fichiers (watcher, lock)
+│   │   │   ├── preview.rs           # Service génération previews RAW (Phase 3.3)
+│   │   │   └── __tests__/           # Tests integration services
 │   └── icons/                      # Icônes d'application (16 fichiers)
 ├── index.html                      # HTML racine
 ├── package.json                    # Dépendances npm + scripts tauri
@@ -183,7 +230,8 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 | `RightSidebar` | `layout/RightSidebar.tsx` | 36 | Panneau droit (orchestrateur) |
 | `Toolbar` | `layout/Toolbar.tsx` | 54 | Mode, recherche, taille thumbnails |
 | `Filmstrip` | `layout/Filmstrip.tsx` | 36 | Bande défilante |
-| `GridView` | `library/GridView.tsx` | 46 | Grille d'images responsive |
+| `GridView` | `library/GridView.tsx` | 46 | Grille d'images virtualisée (@tanstack/react-virtual) |
+| `ImageCard` | `library/ImageCard.tsx` | — | Carte image avec métadonnées, sélection |
 | `DevelopView` | `develop/DevelopView.tsx` | 38 | Image + mode avant/après |
 | `DevelopSliders` | `develop/DevelopSliders.tsx` | 37 | Sliders de réglage |
 | `HistoryPanel` | `develop/HistoryPanel.tsx` | 25 | Historique des events |

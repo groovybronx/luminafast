@@ -285,12 +285,9 @@ impl IngestionService {
         // Mark session as completed
         self.complete_session(request.session_id).await?;
 
-        // Finalize result with timing
+        // Finalize result with timing and statistics
         result.total_processing_time_ms = start_time.elapsed().as_millis() as u64;
-        if result.total_requested > 0 {
-            result.avg_processing_time_ms =
-                result.total_processing_time_ms as f64 / result.total_requested as f64;
-        }
+        result.finalize();
 
         Ok(result)
     }
@@ -680,14 +677,14 @@ impl IngestionService {
         let mut stmt = db
             .prepare(
                 "
-                SELECT 
+                SELECT
                     total_files,
                     ingested_files,
                     failed_files,
                     skipped_files,
                     total_size_bytes,
                     avg_processing_time_ms
-                FROM ingestion_sessions 
+                FROM ingestion_sessions
                 WHERE id = ?
             ",
             )
@@ -719,10 +716,10 @@ impl IngestionService {
             let mut stmt = db
                 .prepare(
                     "
-                    SELECT 
+                    SELECT
                         COUNT(*) as total_files,
                         SUM(file_size_bytes) as total_size
-                    FROM images 
+                    FROM images
                     WHERE imported_at >= datetime('now', '-1 hour')
                 ",
                 )
@@ -786,12 +783,12 @@ impl IngestionService {
             .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
 
         db.execute(
-            "UPDATE ingestion_sessions SET 
-                    total_files = ?, 
-                    ingested_files = ?, 
-                    failed_files = ?, 
-                    skipped_files = ?, 
-                    total_size_bytes = ?, 
+            "UPDATE ingestion_sessions SET
+                    total_files = ?,
+                    ingested_files = ?,
+                    failed_files = ?,
+                    skipped_files = ?,
+                    total_size_bytes = ?,
                     avg_processing_time_ms = ?
                 WHERE id = ?",
             rusqlite::params![
@@ -817,9 +814,9 @@ impl IngestionService {
             .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
 
         db.execute(
-            "UPDATE ingestion_sessions SET 
-                    status = 'completed', 
-                    completed_at = ? 
+            "UPDATE ingestion_sessions SET
+                    status = 'completed',
+                    completed_at = ?
                 WHERE id = ?",
             rusqlite::params![chrono::Utc::now().to_rfc3339(), session_id.to_string()],
         )

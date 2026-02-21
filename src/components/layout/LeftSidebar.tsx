@@ -105,6 +105,7 @@ function CollectionItem({
             }
           }}
           onBlur={commitRename}
+          title="Renommer la collection"
           className="w-full text-[11px] bg-zinc-800 text-zinc-200 rounded px-2 py-1 outline-none border border-blue-600"
         />
       </div>
@@ -137,7 +138,7 @@ function CollectionItem({
           e.stopPropagation();
           setIsEditing(true);
         }}
-        className="p-1 opacity-0 group-hover:opacity-50 hover:!opacity-100 text-zinc-500 hover:text-zinc-200 transition-all"
+        className="p-1 opacity-0 group-hover:opacity-50 hover:opacity-100! text-zinc-500 hover:text-zinc-200 transition-all"
         aria-label={`Renommer ${collection.name}`}
       >
         <Pencil size={10} />
@@ -147,7 +148,7 @@ function CollectionItem({
           e.stopPropagation();
           onDelete(collection.id);
         }}
-        className="p-1 opacity-0 group-hover:opacity-50 hover:!opacity-100 text-zinc-500 hover:text-red-400 transition-all"
+        className="p-1 opacity-0 group-hover:opacity-50 hover:opacity-100! text-zinc-500 hover:text-red-400 transition-all"
         aria-label={`Supprimer ${collection.name}`}
       >
         <Trash2 size={10} />

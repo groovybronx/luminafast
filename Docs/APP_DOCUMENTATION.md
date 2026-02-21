@@ -830,3 +830,29 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 | 2026-02-11 | Phase 0.3 | Décomposition modulaire : 17 composants + 2 modules utilitaires |
 | 2026-02-11 | Phase 0.4 | State Management Zustand : 4 stores, élimination props drilling |
 | 2026-02-11 | Phase 0.5 | Pipeline CI & Linting : ESLint, Clippy, GitHub Actions, coverage 98.93% |
+
+## Smart Collections : Logique SQL et compatibilité parser
+
+La commande Tauri `get_smart_collection_results` génère désormais une requête SQL sans alias pour garantir la compatibilité avec le parser `smart_query_parser`. Les noms de tables utilisés dans la clause WHERE sont toujours explicites (`images`, `image_state`, `exif_metadata`).
+
+### Exemple de requête générée :
+
+SELECT images.id, images.blake3_hash, images.filename, images.extension,
+       images.width, images.height, images.file_size_bytes, images.orientation,
+       images.captured_at, images.imported_at, images.folder_id,
+       image_state.rating, image_state.flag, image_state.color_label,
+       exif_metadata.iso, exif_metadata.aperture, exif_metadata.shutter_speed, exif_metadata.focal_length,
+       exif_metadata.lens, exif_metadata.camera_make, exif_metadata.camera_model
+FROM images
+LEFT JOIN image_state ON images.id = image_state.image_id
+LEFT JOIN exif_metadata ON images.id = exif_metadata.image_id
+WHERE <clause dynamique générée par smart_query_parser>
+ORDER BY images.imported_at DESC
+
+### Mapping DTO TypeScript/Rust
+
+Le mapping des champs EXIF, rating, flag, etc. est synchronisé entre Rust et TypeScript. Les tests unitaires valident le filtrage dynamique des smart collections.
+
+### Tests
+
+Les tests unitaires Rust et TypeScript pour le filtrage des smart collections sont présents et passants (voir CHANGELOG).

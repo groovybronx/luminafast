@@ -610,7 +610,10 @@ pub async fn create_smart_collection(
     // Validate smart_query is valid JSON
     let _parsed: serde_json::Value = serde_json::from_str(&smart_query)
         .map_err(|e| format!("Invalid smart_query JSON: {}", e))?;
-
+        // Additionally validate that smart_query is structurally supported by the backend
+        if let Err(e) = crate::services::smart_query_parser::parse_smart_query(&smart_query) {
+            return Err(format!("Invalid smart_query structure: {}", e));
+        }
     let db = state
         .db
         .lock()
@@ -684,19 +687,19 @@ pub async fn get_smart_collection_results(
     let where_clause = crate::services::smart_query_parser::parse_smart_query(&smart_query)
         .map_err(|e| format!("Failed to parse smart query: {}", e))?;
 
-    // Build the SQL query dynamically
+    // Build the SQL query dynamically (sans alias pour compatibilité parser)
     let query_str = format!(
-        "SELECT i.id, i.blake3_hash, i.filename, i.extension,
-                i.width, i.height, i.file_size_bytes, i.orientation,
-                i.captured_at, i.imported_at, i.folder_id,
-                ist.rating, ist.flag, ist.color_label,
-                e.iso, e.aperture, e.shutter_speed, e.focal_length,
-                e.lens, e.camera_make, e.camera_model
-         FROM images i
-         LEFT JOIN image_state ist ON i.id = ist.image_id
-         LEFT JOIN exif_metadata e ON i.id = e.image_id
+        "SELECT images.id, images.blake3_hash, images.filename, images.extension,
+                images.width, images.height, images.file_size_bytes, images.orientation,
+                images.captured_at, images.imported_at, images.folder_id,
+                image_state.rating, image_state.flag, image_state.color_label,
+                exif_metadata.iso, exif_metadata.aperture, exif_metadata.shutter_speed, exif_metadata.focal_length,
+                exif_metadata.lens, exif_metadata.camera_make, exif_metadata.camera_model
+         FROM images
+         LEFT JOIN image_state ON images.id = image_state.image_id
+         LEFT JOIN exif_metadata ON images.id = exif_metadata.image_id
          WHERE {}
-         ORDER BY i.imported_at DESC",
+         ORDER BY images.imported_at DESC",
         where_clause
     );
 

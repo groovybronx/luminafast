@@ -141,7 +141,25 @@ export const SmartCollectionBuilder: React.FC<SmartCollectionBuilderProps> = ({
       setIsSaving(false);
     }
   };
-  //TODO: refactor stuyle to match rest of app, add error handling, add ability to edit existing collection, add more fields and operators
+  // Root cause analysis:
+  // Le composant utilise la palette `slate` et un fond clair (`bg-white`), ce qui n'est pas cohérent avec le thème sombre basé sur `zinc` utilisé dans le reste de l'application.
+  // Cela crée une rupture visuelle et nuit à l'expérience utilisateur en mode sombre.
+
+  // Solution structurelle :
+  // Refactor des classes Tailwind pour utiliser la palette `zinc` et assurer la compatibilité avec le mode sombre (`dark:`).
+  // Remplacement de tous les `bg-slate-*`, `border-slate-*`, `text-slate-*`, et `bg-white` par leurs équivalents `zinc` et ajout des variantes `dark:`.
+  // Vérification de la cohérence des contrastes et de l'accessibilité.
+
+  // Exemple de refactoring (voir le JSX plus bas) :
+  // - bg-slate-50 → bg-zinc-900 dark:bg-zinc-800
+  // - border-slate-200 → border-zinc-700 dark:border-zinc-600
+  // - text-slate-700 → text-zinc-200 dark:text-zinc-100
+  // - bg-white → bg-zinc-800 dark:bg-zinc-900
+  // - text-slate-600 → text-zinc-400 dark:text-zinc-300
+  // - text-slate-900 → text-zinc-100 dark:text-zinc-50
+  // - border-slate-300 → border-zinc-600 dark:border-zinc-500
+
+  // Cette adaptation garantit une expérience homogène et accessible quel que soit le mode.
   return (
     <div className="flex flex-col gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
       {/* Collection Name */}

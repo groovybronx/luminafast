@@ -15,7 +15,11 @@ interface CollectionStore {
   // Actions async
   loadCollections: () => Promise<void>;
   createCollection: (name: string, parentId?: number) => Promise<CollectionDTO>;
-  createSmartCollection: (name: string, smartQuery: SmartQuery, parentId?: number) => Promise<CollectionDTO>;
+  createSmartCollection: (
+    name: string,
+    smartQuery: SmartQuery,
+    parentId?: number,
+  ) => Promise<CollectionDTO>;
   deleteCollection: (id: number) => Promise<void>;
   renameCollection: (id: number, name: string) => Promise<void>;
   updateSmartCollection: (id: number, smartQuery: SmartQuery) => Promise<void>;
@@ -122,7 +126,7 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       // Find the collection to check if it's smart
-      const collection = get().collections.find(c => c.id === id);
+      const collection = get().collections.find((c) => c.id === id);
       const isSmart = collection?.collection_type === 'smart';
 
       let images;

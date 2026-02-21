@@ -111,10 +111,28 @@ fn build_string_clause(
     match operator {
         "=" | "==" | "eq" => Ok(format!("{} = '{}'", field, escaped)),
         "!=" | "<>" | "ne" => Ok(format!("{} != '{}'", field, escaped)),
-        "contains" => Ok(format!("{} LIKE '%{}%'", field, escaped)),
-        "not_contains" => Ok(format!("{} NOT LIKE '%{}%'", field, escaped)),
-        "starts_with" => Ok(format!("{} LIKE '{}%'", field, escaped)),
-        "ends_with" => Ok(format!("{} LIKE '%{}'", field, escaped)),
+        // Escape % and _ for LIKE pattern matching
+        // Use \ as ESCAPE character
+        "contains" => Ok(format!(
+            "{} LIKE '%{}%' ESCAPE '\\'",
+            field,
+            escaped.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        )),
+        "not_contains" => Ok(format!(
+            "{} NOT LIKE '%{}%' ESCAPE '\\'",
+            field,
+            escaped.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        )),
+        "starts_with" => Ok(format!(
+            "{} LIKE '{}%' ESCAPE '\\'",
+            field,
+            escaped.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        )),
+        "ends_with" => Ok(format!(
+            "{} LIKE '%{}' ESCAPE '\\'",
+            field,
+            escaped.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        )),
         _ => Err(format!("Unsupported operator for string field: {}", operator).into()),
     }
 }

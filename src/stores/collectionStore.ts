@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { CollectionDTO } from '../types/dto';
+import type { SmartCriteria } from '../types/collection';
 import { CatalogService } from '../services/catalogService';
 
 interface CollectionStore {
@@ -14,11 +15,13 @@ interface CollectionStore {
   // Actions async
   loadCollections: () => Promise<void>;
   createCollection: (name: string, parentId?: number) => Promise<CollectionDTO>;
+  createSmartCollection: (name: string, criteria: SmartCriteria) => Promise<CollectionDTO>;
+  updateSmartCriteria: (collectionId: number, criteria: SmartCriteria) => Promise<void>;
   deleteCollection: (id: number) => Promise<void>;
   renameCollection: (id: number, name: string) => Promise<void>;
   addImagesToCollection: (collectionId: number, imageIds: number[]) => Promise<void>;
   removeImagesFromCollection: (collectionId: number, imageIds: number[]) => Promise<void>;
-  /** Sélectionne une collection et charge ses image IDs depuis SQLite */
+  /** Sélectionne une collection — évalue automatiquement si smart */
   setActiveCollection: (id: number) => Promise<void>;
   /** Revient à "Toutes les photos" */
   clearActiveCollection: () => void;
@@ -45,11 +48,25 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
 
   createCollection: async (name: string, parentId?: number) => {
     const dto = await CatalogService.createCollection(name, 'static', parentId);
-    // Ajouter la nouvelle collection à la liste locale
-    set((state) => ({
-      collections: [...state.collections, dto],
-    }));
+    set((state) => ({ collections: [...state.collections, dto] }));
     return dto;
+  },
+
+  createSmartCollection: async (name: string, criteria: SmartCriteria) => {
+    const criteriaJson = JSON.stringify(criteria);
+    const dto = await CatalogService.createSmartCollection(name, criteriaJson);
+    set((state) => ({ collections: [...state.collections, dto] }));
+    return dto;
+  },
+
+  updateSmartCriteria: async (collectionId: number, criteria: SmartCriteria) => {
+    const criteriaJson = JSON.stringify(criteria);
+    await CatalogService.updateSmartCriteria(collectionId, criteriaJson);
+    // Si la collection modifiée est active, re-évaluer
+    if (get().activeCollectionId === collectionId) {
+      const images = await CatalogService.evaluateSmartCollection(collectionId);
+      set({ activeCollectionImageIds: images.map((img) => img.id) });
+    }
   },
 
   deleteCollection: async (id: number) => {
@@ -100,7 +117,11 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
   setActiveCollection: async (id: number) => {
     set({ isLoading: true, error: null });
     try {
-      const images = await CatalogService.getCollectionImages(id);
+      // Déterminer le type de la collection pour choisir la stratégie de chargement
+      const collection = get().collections.find((c) => c.id === id);
+      const images = collection?.collection_type === 'smart'
+        ? await CatalogService.evaluateSmartCollection(id)
+        : await CatalogService.getCollectionImages(id);
       set({
         activeCollectionId: id,
         activeCollectionImageIds: images.map((img) => img.id),

@@ -199,18 +199,62 @@ export class CatalogService {
   }
   
   /**
-   * Search images by text query
+   * Create a new smart collection with JSON criteria
    */
-  static async searchImages(query: string, filters?: ImageFilter): Promise<ImageDTO[]> {
+  static async createSmartCollection(
+    name: string,
+    criteriaJson: string
+  ): Promise<CollectionDTO> {
     try {
       const invoke = this.getInvoke();
-      const result = await invoke('search_images', { query, filters });
+      const result = await invoke('create_smart_collection', { name, criteriaJson });
+      return result as CollectionDTO;
+    } catch (error) {
+      throw this.parseError(error);
+    }
+  }
+
+  /**
+   * Evaluate a smart collection and return matching images
+   */
+  static async evaluateSmartCollection(collectionId: number): Promise<ImageDTO[]> {
+    try {
+      const invoke = this.getInvoke();
+      const result = await invoke('evaluate_smart_collection', { collectionId });
       return result as ImageDTO[];
     } catch (error) {
       throw this.parseError(error);
     }
   }
-  
+
+  /**
+   * Update smart criteria for an existing smart collection
+   */
+  static async updateSmartCriteria(
+    collectionId: number,
+    criteriaJson: string
+  ): Promise<void> {
+    try {
+      const invoke = this.getInvoke();
+      await invoke('update_smart_criteria', { collectionId, criteriaJson });
+    } catch (error) {
+      throw this.parseError(error);
+    }
+  }
+
+  /**
+   * Search images by text query
+   */
+  static async searchImages(query: string, _filters?: ImageFilter): Promise<ImageDTO[]> {
+    try {
+      const invoke = this.getInvoke();
+      const result = await invoke('search_images', { query });
+      return result as ImageDTO[];
+    } catch (error) {
+      throw this.parseError(error);
+    }
+  }
+
   /**
    * Utility method to check if a result is an error
    */

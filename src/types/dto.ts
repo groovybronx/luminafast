@@ -45,6 +45,8 @@ export interface CollectionDTO {
   collection_type: 'static' | 'smart' | 'quick';
   parent_id?: number;
   image_count: number;
+  /** JSON string of smart criteria (undefined for static/quick collections) */
+  smart_criteria?: string;
 }
 
 export interface CreateCollectionDTO {

@@ -34,7 +34,7 @@
 | Infra | — | Agents IA dédiés (code-review, pr-verification, phase-implementation, documentation-sync) | ✅ Complétée | 2026-02-20 | Copilot |
 | 3 | 3.1 | Grille d'Images Réelle | ⬜ En attente | — | — |
 | 3 | 3.2 | Collections Statiques (CRUD) | ✅ Complétée | 2026-02-21 | Copilot |
-| 3 | 3.3 | Smart Collections | ⬜ En attente | — | — |
+| 3 | 3.3 | Smart Collections | ✅ Complétée | 2026-02-24 | Copilot |
 | 3 | 3.4 | Navigateur de Dossiers | ⬜ En attente | — | — |
 | 3 | 3.5 | Recherche & Filtrage | ⬜ En attente | — | — |
 | 4 | 4.1 | Event Sourcing Engine | ⬜ En attente | — | — |
@@ -69,7 +69,7 @@
 
 ## En Cours
 
-> _Phase 3.2 Collections Statiques (CRUD) complétée. Prêt pour Phase 3.3 - Smart Collections._
+> _Phase 3.3 Smart Collections complétée. Prêt pour Phase 3.4 - Navigateur de Dossiers._
 
 ---
 
@@ -78,6 +78,52 @@
 > _Les entrées ci-dessous sont ajoutées chronologiquement par l'agent IA après chaque sous-phase._
 
 ---
+
+### 2026-02-24 — Phase 3.3 : Smart Collections — Moteur de Règles Dynamiques (Complétée)
+
+**Statut** : ✅ **Complétée**
+**Agent** : LuminaFast Phase Implementation
+**Branche** : `phase/3.3-smart-collections`
+**Type** : Feature
+
+#### Résumé
+**Objectif** : Implémenter un moteur de smart collections dont le contenu est évalué dynamiquement via des règles configurables (champ, opérateur, valeur) sur les métadonnées des images (note, flag, extension, appareil, objectif, ISO, etc.).
+
+**Solution** : Migration SQL 004 pour stocker `smart_criteria` (JSON) dans la table `collections` ; 3 commandes Tauri Rust (`create_smart_collection`, `evaluate_smart_collection`, `update_smart_criteria`) avec whitelist de sécurité anti-injection ; 2 nouvelles actions store avec dispatch conditionnel (`setActiveCollection` appelle `evaluateSmartCollection` pour les smart, `getCollectionImages` pour les statiques) ; UI LeftSidebar avec formulaire inline de création smart.
+
+#### Fichiers créés
+- `src-tauri/migrations/004_smart_collections.sql` — `ALTER TABLE collections ADD COLUMN smart_criteria TEXT` + index sur `type`
+- `Docs/briefs/PHASE-3.3.md` — Brief complet de la sous-phase
+
+#### Fichiers modifiés
+- `src-tauri/src/commands/catalog.rs` — `SmartRuleDto`, `SmartCriteriaDto`, `build_smart_conditions()` (whitelist), 3 commandes Tauri, 11 tests
+- `src-tauri/src/database.rs` — Migration 004 enregistrée + compteur test idempotence mis à jour (3→4)
+- `src-tauri/src/models/dto.rs` — `pub smart_criteria: Option<String>` dans `CollectionDTO` + `smart_criteria: None` dans `From<Collection>`
+- `src-tauri/src/lib.rs` — 3 nouvelles commandes enregistrées
+- `src/types/dto.ts` — `smart_criteria?: string` dans `CollectionDTO`
+- `src/types/collection.ts` — `SmartRuleField`, `SmartRuleOp`, `SmartRule`, `SmartCriteria` interfaces
+- `src/services/catalogService.ts` — `createSmartCollection`, `evaluateSmartCollection`, `updateSmartCriteria` + correction stub `searchImages`
+- `src/stores/collectionStore.ts` — `createSmartCollection`, `updateSmartCriteria` actions + `setActiveCollection` conditionnel smart/static
+- `src/components/layout/LeftSidebar.tsx` — Section Smart Collections réelle (SQLite) ; `NewSmartCollectionForm` composant inline ; icône `Zap` ; import `SmartCriteria`
+- `src/services/__tests__/catalogService.test.ts` — +8 tests Phase 3.3 (createSmartCollection, evaluateSmartCollection, updateSmartCriteria)
+- `src/stores/__tests__/collectionStore.test.ts` — +7 tests Phase 3.3 (createSmartCollection, setActiveCollection smart/static no-regression, updateSmartCriteria avec re-évaluation)
+
+#### Critères de validation remplis
+- [x] `cargo check` : 0 erreurs
+- [x] `cargo test --lib` : 138 tests passants ✅ (11 nouveaux tests Phase 3.3)
+- [x] `tsc --noEmit` : 0 erreurs
+- [x] `npm test` : 340 tests passants ✅ (+15 nouveaux tests Phase 3.3)
+- [x] Migration 004 appliquée sans erreur
+- [x] `build_smart_conditions` : whitelist anti-injection opérationnelle
+- [x] `setActiveCollection` : dispatch conditionnel smart vs static vérifié par tests
+- [x] `updateSmartCriteria` : re-évaluation auto si collection active
+- [x] `LeftSidebar` : smart collections depuis SQLite (code hardcodé supprimé)
+- [x] `NewSmartCollectionForm` : formulaire inline création smart collection
+
+#### Impact
+- Les smart collections sont stockées et évaluées en temps réel depuis SQLite
+- Aucune régression sur les collections statiques (test de non-régression inclus)
+- Base prête pour Phase 3.4 Navigateur de Dossiers
 
 ### 2026-02-21 — Maintenance : Corrections Critiques Phases 0→3.1 (BLOC 1 à 4)
 

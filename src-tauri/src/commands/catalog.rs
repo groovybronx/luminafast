@@ -1,6 +1,8 @@
 use crate::database::Database;
 use crate::database::DatabaseError;
 use crate::models::dto::*;
+use serde::{Deserialize, Serialize};
+use serde_json;
 use std::sync::{Arc, Mutex};
 use tauri::State;
 
@@ -266,6 +268,7 @@ pub async fn create_collection(
                     .map_err(|e| format!("Failed to retrieve collection type: {}", e))?,
                 parent_id,
                 image_count: 0, // New collection starts empty
+                smart_criteria: None,
             })
         }
         Err(e) => Err(format!("Failed to create collection: {}", e)),
@@ -328,10 +331,10 @@ pub async fn get_collections(state: State<'_, AppState>) -> CommandResult<Vec<Co
     let mut stmt = db
         .connection()
         .prepare(
-            "SELECT c.id, c.name, c.type, c.parent_id, COUNT(ci.image_id) as image_count
+            "SELECT c.id, c.name, c.type, c.parent_id, COUNT(ci.image_id) as image_count, c.smart_criteria
          FROM collections c
          LEFT JOIN collection_images ci ON c.id = ci.collection_id
-         GROUP BY c.id, c.name, c.type, c.parent_id
+         GROUP BY c.id, c.name, c.type, c.parent_id, c.smart_criteria
          ORDER BY c.name",
         )
         .map_err(|e| format!("Database error: {}", e))?;
@@ -344,6 +347,7 @@ pub async fn get_collections(state: State<'_, AppState>) -> CommandResult<Vec<Co
                 collection_type: row.get(2)?,
                 parent_id: row.get(3)?,
                 image_count: row.get::<_, i64>(4)? as u32,
+                smart_criteria: row.get(5)?,
             })
         })
         .map_err(|e| format!("Query error: {}", e))?;
@@ -592,9 +596,264 @@ pub async fn get_collection_images(
     Ok(images)
 }
 
+// ─── Phase 3.3: Smart Collections ─────────────────────────────────────────────
+
+/// DTO for a single smart rule (deserialized from criteria JSON)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SmartRuleDto {
+    pub field: String,
+    pub op: String,
+    pub value: serde_json::Value,
+}
+
+/// DTO for smart criteria stored in the `smart_criteria` column
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SmartCriteriaDto {
+    pub rules: Vec<SmartRuleDto>,
+    /// "all" = AND, "any" = OR
+    #[serde(rename = "match")]
+    pub match_type: String,
+}
+
+/// Validate criteria and build (SQL conditions, bound params) from a SmartCriteriaDto.
+/// Uses a whitelist for field names and operators to prevent SQL injection.
+pub fn build_smart_conditions(
+    criteria: &SmartCriteriaDto,
+) -> Result<(Vec<String>, Vec<String>), String> {
+    const VALID_FIELDS: &[&str] = &[
+        "rating",
+        "flag",
+        "camera_make",
+        "camera_model",
+        "lens",
+        "extension",
+        "iso",
+        "aperture",
+        "shutter_speed",
+    ];
+    const VALID_OPS: &[&str] = &["eq", "neq", "gte", "lte", "contains"];
+
+    if !["all", "any"].contains(&criteria.match_type.as_str()) {
+        return Err("Invalid match type. Must be 'all' or 'any'".to_string());
+    }
+
+    let mut conditions: Vec<String> = Vec::new();
+    let mut params: Vec<String> = Vec::new();
+
+    for rule in &criteria.rules {
+        if !VALID_FIELDS.contains(&rule.field.as_str()) {
+            return Err(format!("Invalid field: '{}'. Allowed: {:?}", rule.field, VALID_FIELDS));
+        }
+        if !VALID_OPS.contains(&rule.op.as_str()) {
+            return Err(format!("Invalid operator: '{}'. Allowed: {:?}", rule.op, VALID_OPS));
+        }
+
+        // Map logical field name → aliased SQL column (safe whitelist)
+        let col = match rule.field.as_str() {
+            "rating" => "ist.rating",
+            "flag" => "ist.flag",
+            "camera_make" => "e.camera_make",
+            "camera_model" => "e.camera_model",
+            "lens" => "e.lens",
+            "extension" => "i.extension",
+            "iso" => "e.iso",
+            "aperture" => "e.aperture",
+            "shutter_speed" => "e.shutter_speed",
+            _ => unreachable!("field already validated above"),
+        };
+
+        // Convert JSON value → string for rusqlite params_from_iter
+        let param_value = match &rule.value {
+            serde_json::Value::String(s) => s.clone(),
+            serde_json::Value::Number(n) => n.to_string(),
+            other => return Err(format!("Unsupported value type: {}", other)),
+        };
+
+        let (condition, param) = match rule.op.as_str() {
+            "eq" => (format!("{} = ?", col), param_value),
+            "neq" => (format!("{} != ?", col), param_value),
+            "gte" => (format!("{} >= ?", col), param_value),
+            "lte" => (format!("{} <= ?", col), param_value),
+            "contains" => (format!("{} LIKE ?", col), format!("%{}%", param_value)),
+            _ => unreachable!("op already validated above"),
+        };
+
+        conditions.push(condition);
+        params.push(param);
+    }
+
+    Ok((conditions, params))
+}
+
+/// Create a new smart collection with JSON criteria
+#[tauri::command]
+pub async fn create_smart_collection(
+    name: String,
+    criteria_json: String,
+    state: State<'_, AppState>,
+) -> CommandResult<CollectionDTO> {
+    if name.trim().is_empty() {
+        return Err("Collection name cannot be empty".to_string());
+    }
+
+    // Validate JSON structure
+    let criteria: SmartCriteriaDto = serde_json::from_str(&criteria_json)
+        .map_err(|e| format!("Invalid criteria JSON: {}", e))?;
+
+    // Validate rules (whitelist check)
+    build_smart_conditions(&criteria)?;
+
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+
+    db.connection()
+        .execute(
+            "INSERT INTO collections (name, type, smart_criteria) VALUES (?, 'smart', ?)",
+            rusqlite::params![name, criteria_json],
+        )
+        .map_err(|e| format!("Failed to create smart collection: {}", e))?;
+
+    let id = db.connection().last_insert_rowid() as u32;
+
+    Ok(CollectionDTO {
+        id,
+        name,
+        collection_type: "smart".to_string(),
+        parent_id: None,
+        image_count: 0,
+        smart_criteria: Some(criteria_json),
+    })
+}
+
+/// Evaluate a smart collection and return all matching images
+#[tauri::command]
+pub async fn evaluate_smart_collection(
+    collection_id: u32,
+    state: State<'_, AppState>,
+) -> CommandResult<Vec<ImageDTO>> {
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+
+    // Fetch collection type + criteria
+    let result: Result<(String, String), _> = db.connection().query_row(
+        "SELECT type, smart_criteria FROM collections WHERE id = ?",
+        [collection_id],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    );
+
+    let (collection_type, criteria_json) =
+        result.map_err(|_| "Collection not found".to_string())?;
+
+    if collection_type != "smart" {
+        return Err("Collection is not a smart collection".to_string());
+    }
+
+    // Parse criteria
+    let criteria: SmartCriteriaDto = serde_json::from_str(&criteria_json)
+        .map_err(|e| format!("Invalid criteria stored in collection: {}", e))?;
+
+    if criteria.rules.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    // Build safe parameterized query
+    let (conditions, params) = build_smart_conditions(&criteria)?;
+    let joiner = if criteria.match_type == "all" { " AND " } else { " OR " };
+    let where_clause = conditions.join(joiner);
+
+    let query = format!(
+        "SELECT i.id, i.blake3_hash, i.filename, i.extension,
+                i.width, i.height, i.file_size_bytes, i.orientation,
+                i.captured_at, i.imported_at, i.folder_id,
+                ist.rating, ist.flag, ist.color_label,
+                e.iso, e.aperture, e.shutter_speed, e.focal_length,
+                e.lens, e.camera_make, e.camera_model
+         FROM images i
+         LEFT JOIN image_state ist ON i.id = ist.image_id
+         LEFT JOIN exif_metadata e ON i.id = e.image_id
+         WHERE {}
+         ORDER BY i.imported_at DESC",
+        where_clause
+    );
+
+    let mut stmt = db
+        .connection()
+        .prepare(&query)
+        .map_err(|e| format!("Database prepare error: {}", e))?;
+
+    let images_iter = stmt
+        .query_map(rusqlite::params_from_iter(params), |row| {
+            Ok(ImageDTO {
+                id: row.get(0)?,
+                blake3_hash: row.get(1)?,
+                filename: row.get(2)?,
+                extension: row.get(3)?,
+                width: row.get(4)?,
+                height: row.get(5)?,
+                rating: row.get(11)?,
+                flag: row.get(12)?,
+                captured_at: row.get(8)?,
+                imported_at: row.get(9)?,
+                iso: row.get(14)?,
+                aperture: row.get(15)?,
+                shutter_speed: row.get(16)?,
+                focal_length: row.get(17)?,
+                lens: row.get(18)?,
+                camera_make: row.get(19)?,
+                camera_model: row.get(20)?,
+            })
+        })
+        .map_err(|e| format!("Query error: {}", e))?;
+
+    let mut images = Vec::new();
+    for image in images_iter {
+        images.push(image.map_err(|e| format!("Row error: {}", e))?);
+    }
+
+    Ok(images)
+}
+
+/// Update smart criteria for an existing smart collection
+#[tauri::command]
+pub async fn update_smart_criteria(
+    collection_id: u32,
+    criteria_json: String,
+    state: State<'_, AppState>,
+) -> CommandResult<()> {
+    // Validate JSON structure
+    let criteria: SmartCriteriaDto = serde_json::from_str(&criteria_json)
+        .map_err(|e| format!("Invalid criteria JSON: {}", e))?;
+
+    // Validate rules
+    build_smart_conditions(&criteria)?;
+
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+
+    let rows_affected = db
+        .connection()
+        .execute(
+            "UPDATE collections SET smart_criteria = ? WHERE id = ? AND type = 'smart'",
+            rusqlite::params![criteria_json, collection_id],
+        )
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    if rows_affected == 0 {
+        return Err("Smart collection not found or is not a smart collection".to_string());
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
-    // use super::*;
+    use super::{SmartCriteriaDto, SmartRuleDto, build_smart_conditions};
     use crate::database::Database;
     use tempfile::tempdir;
 
@@ -1096,5 +1355,309 @@ mod tests {
             )
             .unwrap();
         assert_eq!(count, 2, "Collection should contain 2 images");
+    }
+
+    // ─── Phase 3.3: Tests for Smart Collections ──────────────────────────────
+
+    #[test]
+    fn test_create_smart_collection_valid_json() {
+        let db = setup_test_db();
+
+        let criteria = r#"{"rules":[{"field":"rating","op":"gte","value":4}],"match":"all"}"#;
+
+        db.connection()
+            .execute(
+                "INSERT INTO collections (name, type, smart_criteria) VALUES (?, 'smart', ?)",
+                ["GFX Keepers", criteria],
+            )
+            .unwrap();
+
+        let id = db.connection().last_insert_rowid();
+
+        let (name, col_type, stored): (String, String, String) = db
+            .connection()
+            .query_row(
+                "SELECT name, type, smart_criteria FROM collections WHERE id = ?",
+                [id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+
+        assert_eq!(name, "GFX Keepers");
+        assert_eq!(col_type, "smart");
+        assert_eq!(stored, criteria);
+    }
+
+    #[test]
+    fn test_create_smart_collection_invalid_json() {
+        let invalid = "not_valid_json";
+        let result: Result<SmartCriteriaDto, _> = serde_json::from_str(invalid);
+        assert!(result.is_err(), "Invalid JSON should fail to parse");
+    }
+
+    #[test]
+    fn test_evaluate_smart_collection_rating_gte() {
+        let db = setup_test_db();
+
+        for (hash, rating) in [("hash_r1", 2i32), ("hash_r2", 4i32), ("hash_r3", 5i32)] {
+            db.connection()
+                .execute(
+                    "INSERT INTO images (blake3_hash, filename, extension, imported_at) VALUES (?, ?, ?, ?)",
+                    [hash, &format!("{}.CR3", hash), "CR3", "2026-01-01T00:00:00Z"],
+                )
+                .unwrap();
+            let img_id = db.connection().last_insert_rowid();
+            db.connection()
+                .execute(
+                    "INSERT INTO image_state (image_id, rating) VALUES (?, ?)",
+                    rusqlite::params![img_id, rating],
+                )
+                .unwrap();
+        }
+
+        let count: i64 = db
+            .connection()
+            .query_row(
+                "SELECT COUNT(*) FROM images i \
+                 LEFT JOIN image_state ist ON i.id = ist.image_id \
+                 WHERE ist.rating >= ?",
+                ["4"],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(count, 2, "Should find 2 images with rating >= 4");
+    }
+
+    #[test]
+    fn test_evaluate_smart_collection_flag_eq() {
+        let db = setup_test_db();
+
+        let entries = [("hash_f1", Some("pick")), ("hash_f2", Some("reject")), ("hash_f3", None)];
+        for (hash, flag) in entries {
+            db.connection()
+                .execute(
+                    "INSERT INTO images (blake3_hash, filename, extension, imported_at) VALUES (?, ?, ?, ?)",
+                    [hash, &format!("{}.RAF", hash), "RAF", "2026-01-01T00:00:00Z"],
+                )
+                .unwrap();
+            let img_id = db.connection().last_insert_rowid();
+            if let Some(f) = flag {
+                db.connection()
+                    .execute(
+                        "INSERT INTO image_state (image_id, flag) VALUES (?, ?)",
+                        rusqlite::params![img_id, f],
+                    )
+                    .unwrap();
+            }
+        }
+
+        let count: i64 = db
+            .connection()
+            .query_row(
+                "SELECT COUNT(*) FROM images i \
+                 LEFT JOIN image_state ist ON i.id = ist.image_id \
+                 WHERE ist.flag = ?",
+                ["pick"],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(count, 1, "Should find 1 picked image");
+    }
+
+    #[test]
+    fn test_evaluate_smart_collection_and_rules() {
+        let db = setup_test_db();
+
+        // Image 1: rating=5, flag='pick'   → matches AND (both)
+        // Image 2: rating=5, flag='reject' → matches only rating
+        // Image 3: rating=2, flag='pick'   → matches only flag
+        for (hash, rating, flag) in [
+            ("hash_and1", 5i32, "pick"),
+            ("hash_and2", 5i32, "reject"),
+            ("hash_and3", 2i32, "pick"),
+        ] {
+            db.connection()
+                .execute(
+                    "INSERT INTO images (blake3_hash, filename, extension, imported_at) VALUES (?, ?, ?, ?)",
+                    [hash, &format!("{}.CR3", hash), "CR3", "2026-01-01T00:00:00Z"],
+                )
+                .unwrap();
+            let img_id = db.connection().last_insert_rowid();
+            db.connection()
+                .execute(
+                    "INSERT INTO image_state (image_id, rating, flag) VALUES (?, ?, ?)",
+                    rusqlite::params![img_id, rating, flag],
+                )
+                .unwrap();
+        }
+
+        let count: i64 = db
+            .connection()
+            .query_row(
+                "SELECT COUNT(*) FROM images i \
+                 LEFT JOIN image_state ist ON i.id = ist.image_id \
+                 WHERE ist.rating >= ? AND ist.flag = ?",
+                ["5", "pick"],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(count, 1, "AND match: only 1 image should match both conditions");
+    }
+
+    #[test]
+    fn test_evaluate_smart_collection_or_rules() {
+        let db = setup_test_db();
+
+        // Image 1: rating=5, flag='reject' → matches rating
+        // Image 2: rating=2, flag='pick'   → matches flag
+        // Image 3: rating=2, flag='reject' → matches neither
+        for (hash, rating, flag) in [
+            ("hash_or1", 5i32, "reject"),
+            ("hash_or2", 2i32, "pick"),
+            ("hash_or3", 2i32, "reject"),
+        ] {
+            db.connection()
+                .execute(
+                    "INSERT INTO images (blake3_hash, filename, extension, imported_at) VALUES (?, ?, ?, ?)",
+                    [hash, &format!("{}.RAF", hash), "RAF", "2026-01-01T00:00:00Z"],
+                )
+                .unwrap();
+            let img_id = db.connection().last_insert_rowid();
+            db.connection()
+                .execute(
+                    "INSERT INTO image_state (image_id, rating, flag) VALUES (?, ?, ?)",
+                    rusqlite::params![img_id, rating, flag],
+                )
+                .unwrap();
+        }
+
+        let count: i64 = db
+            .connection()
+            .query_row(
+                "SELECT COUNT(*) FROM images i \
+                 LEFT JOIN image_state ist ON i.id = ist.image_id \
+                 WHERE ist.rating >= ? OR ist.flag = ?",
+                ["5", "pick"],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(count, 2, "OR match: 2 images should satisfy at least one condition");
+    }
+
+    #[test]
+    fn test_update_smart_criteria() {
+        let db = setup_test_db();
+
+        let initial = r#"{"rules":[{"field":"rating","op":"gte","value":3}],"match":"all"}"#;
+        let updated = r#"{"rules":[{"field":"rating","op":"gte","value":5}],"match":"all"}"#;
+
+        db.connection()
+            .execute(
+                "INSERT INTO collections (name, type, smart_criteria) VALUES (?, 'smart', ?)",
+                ["Smart Test", initial],
+            )
+            .unwrap();
+        let col_id = db.connection().last_insert_rowid() as u32;
+
+        let rows = db
+            .connection()
+            .execute(
+                "UPDATE collections SET smart_criteria = ? WHERE id = ? AND type = 'smart'",
+                rusqlite::params![updated, col_id],
+            )
+            .unwrap();
+
+        assert_eq!(rows, 1, "Should update 1 row");
+
+        let stored: String = db
+            .connection()
+            .query_row(
+                "SELECT smart_criteria FROM collections WHERE id = ?",
+                [col_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(stored, updated, "Stored criteria should be updated");
+    }
+
+    #[test]
+    fn test_evaluate_smart_collection_not_found() {
+        let db = setup_test_db();
+
+        let exists: Result<i32, _> = db.connection().query_row(
+            "SELECT 1 FROM collections WHERE id = ?",
+            [9999u32],
+            |row| row.get(0),
+        );
+
+        assert!(exists.is_err(), "Collection 9999 should not exist");
+    }
+
+    #[test]
+    fn test_build_smart_conditions_valid() {
+        let criteria = SmartCriteriaDto {
+            rules: vec![
+                SmartRuleDto {
+                    field: "rating".to_string(),
+                    op: "gte".to_string(),
+                    value: serde_json::Value::Number(4.into()),
+                },
+                SmartRuleDto {
+                    field: "extension".to_string(),
+                    op: "eq".to_string(),
+                    value: serde_json::Value::String("RAF".to_string()),
+                },
+            ],
+            match_type: "all".to_string(),
+        };
+
+        let result = build_smart_conditions(&criteria);
+        assert!(result.is_ok(), "Valid criteria should succeed");
+
+        let (conditions, params) = result.unwrap();
+        assert_eq!(conditions.len(), 2);
+        assert_eq!(params.len(), 2);
+        assert!(conditions[0].contains("ist.rating"), "rating maps to ist.rating");
+        assert!(conditions[1].contains("i.extension"), "extension maps to i.extension");
+        assert_eq!(params[1], "RAF");
+    }
+
+    #[test]
+    fn test_build_smart_conditions_invalid_field() {
+        let criteria = SmartCriteriaDto {
+            rules: vec![SmartRuleDto {
+                field: "nonexistent_field".to_string(),
+                op: "eq".to_string(),
+                value: serde_json::Value::String("x".to_string()),
+            }],
+            match_type: "all".to_string(),
+        };
+
+        let result = build_smart_conditions(&criteria);
+        assert!(result.is_err(), "Invalid field should fail");
+    }
+
+    #[test]
+    fn test_build_smart_conditions_contains_wraps_value() {
+        let criteria = SmartCriteriaDto {
+            rules: vec![SmartRuleDto {
+                field: "camera_model".to_string(),
+                op: "contains".to_string(),
+                value: serde_json::Value::String("GFX".to_string()),
+            }],
+            match_type: "any".to_string(),
+        };
+
+        let result = build_smart_conditions(&criteria);
+        assert!(result.is_ok());
+
+        let (conditions, params) = result.unwrap();
+        assert!(conditions[0].contains("LIKE"), "contains uses LIKE");
+        assert_eq!(params[0], "%GFX%", "value should be wrapped with %");
     }
 }

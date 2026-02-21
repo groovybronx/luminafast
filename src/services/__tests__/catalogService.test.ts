@@ -103,3 +103,92 @@ describe('CatalogService — Collection Methods (Phase 3.2)', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 3.3 — Smart Collections
+// ---------------------------------------------------------------------------
+describe('CatalogService — Smart Collection Methods (Phase 3.3)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // --- createSmartCollection ---
+  describe('createSmartCollection', () => {
+    it('should invoke create_smart_collection with camelCase keys', async () => {
+      const mockDto = { id: 99, name: 'Best shots', collection_type: 'smart', image_count: 0 };
+      mockTauriInvoke.mockResolvedValue(mockDto);
+
+      const criteria = '{"rules":[{"field":"rating","op":"gte","value":4}],"match":"all"}';
+      const result = await CatalogService.createSmartCollection('Best shots', criteria);
+
+      expect(mockTauriInvoke).toHaveBeenCalledWith('create_smart_collection', {
+        name: 'Best shots',
+        criteriaJson: criteria,
+      });
+      expect(result.id).toBe(99);
+      expect(result.collection_type).toBe('smart');
+    });
+
+    it('should throw when backend rejects invalid criteria JSON', async () => {
+      mockTauriInvoke.mockRejectedValue(new Error('Invalid criteria JSON'));
+
+      await expect(
+        CatalogService.createSmartCollection('Bad', 'NOT_JSON'),
+      ).rejects.toThrow('Invalid criteria JSON');
+    });
+  });
+
+  // --- evaluateSmartCollection ---
+  describe('evaluateSmartCollection', () => {
+    it('should invoke evaluate_smart_collection with collectionId and return images', async () => {
+      const mockImages = [
+        { id: 1, filename: 'a.jpg', blake3_hash: 'x', extension: 'jpg', imported_at: '2026-01-01T00:00:00Z' },
+        { id: 2, filename: 'b.jpg', blake3_hash: 'y', extension: 'jpg', imported_at: '2026-01-02T00:00:00Z' },
+      ];
+      mockTauriInvoke.mockResolvedValue(mockImages);
+
+      const result = await CatalogService.evaluateSmartCollection(12);
+
+      expect(mockTauriInvoke).toHaveBeenCalledWith('evaluate_smart_collection', { collectionId: 12 });
+      expect(result).toHaveLength(2);
+      expect(result[0]!.id).toBe(1);
+    });
+
+    it('should return empty array when no image matches criteria', async () => {
+      mockTauriInvoke.mockResolvedValue([]);
+
+      const result = await CatalogService.evaluateSmartCollection(55);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should throw when collection is not found', async () => {
+      mockTauriInvoke.mockRejectedValue(new Error('Collection not found'));
+
+      await expect(CatalogService.evaluateSmartCollection(999)).rejects.toThrow('Collection not found');
+    });
+  });
+
+  // --- updateSmartCriteria ---
+  describe('updateSmartCriteria', () => {
+    it('should invoke update_smart_criteria with camelCase keys', async () => {
+      mockTauriInvoke.mockResolvedValue(null);
+
+      const criteria = '{"rules":[{"field":"iso","op":"gte","value":1600}],"match":"all"}';
+      await CatalogService.updateSmartCriteria(7, criteria);
+
+      expect(mockTauriInvoke).toHaveBeenCalledWith('update_smart_criteria', {
+        collectionId: 7,
+        criteriaJson: criteria,
+      });
+    });
+
+    it('should throw when collection is not of type smart', async () => {
+      mockTauriInvoke.mockRejectedValue(new Error('Collection is not a smart collection'));
+
+      await expect(
+        CatalogService.updateSmartCriteria(3, '{}'),
+      ).rejects.toThrow('Collection is not a smart collection');
+    });
+  });
+});

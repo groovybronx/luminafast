@@ -63,6 +63,8 @@ pub struct CollectionDTO {
     pub collection_type: String,
     pub parent_id: Option<u32>,
     pub image_count: u32,
+    /// JSON string of smart criteria (None for static/quick collections)
+    pub smart_criteria: Option<String>,
 }
 
 /// DTO for creating collections
@@ -127,6 +129,7 @@ impl From<crate::models::catalog::Collection> for CollectionDTO {
             },
             parent_id: collection.parent_id.map(|id| id as u32),
             image_count: 0, // Will be calculated with a separate query
+            smart_criteria: None,
         }
     }
 }

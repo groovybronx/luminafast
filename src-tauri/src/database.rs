@@ -85,6 +85,9 @@ impl Database {
         // Run previews migration (tables + triggers)
         self.run_migration("003_previews")?;
 
+        // Run smart collections migration (smart_criteria column)
+        self.run_migration("004_smart_collections")?;
+
         Ok(())
     }
 
@@ -126,6 +129,7 @@ impl Database {
             "001_initial" => include_str!("../migrations/001_initial.sql"),
             "002_ingestion_sessions" => include_str!("../migrations/002_ingestion_sessions.sql"),
             "003_previews" => include_str!("../migrations/003_previews.sql"),
+            "004_smart_collections" => include_str!("../migrations/004_smart_collections.sql"),
             _ => {
                 return Err(DatabaseError::MigrationFailed(format!(
                     "Unknown migration version: {}",
@@ -328,13 +332,13 @@ mod tests {
         db.initialize()?;
         db.initialize()?;
 
-        // 3 migrations: 001_initial, 002_ingestion_sessions, 003_previews
+        // 4 migrations: 001_initial, 002_ingestion_sessions, 003_previews, 004_smart_collections
         let migration_count: i64 = db
             .connection()
             .prepare("SELECT COUNT(*) FROM migrations")?
             .query_row([], |row| row.get(0))?;
 
-        assert_eq!(migration_count, 3);
+        assert_eq!(migration_count, 4);
 
         Ok(())
     }

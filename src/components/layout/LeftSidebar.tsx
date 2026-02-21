@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Database, Star, Check, Zap, HardDrive, Import, Trash2, Pencil, X } from 'lucide-react';
+import { Database, Star, Check, Zap, HardDrive, Import, Trash2, Pencil, X, FolderPlus } from 'lucide-react';
 import { useCollectionStore } from '../../stores/collectionStore';
 import type { CollectionDTO } from '../../types/dto';
+import type { SmartCriteria } from '../../types/collection';
 
 interface LeftSidebarProps {
   sidebarOpen: boolean;
@@ -40,7 +41,67 @@ function NewCollectionInput({ onConfirm, onCancel }: NewCollectionInputProps) {
   );
 }
 
-// --- Sous-composant : Item de collection ---
+// --- Sous-composant : Formulaire création Smart Collection ---
+interface NewSmartCollectionFormProps {
+  onConfirm: (name: string, criteria: SmartCriteria) => void;
+  onCancel: () => void;
+}
+
+function NewSmartCollectionForm({ onConfirm, onCancel }: NewSmartCollectionFormProps) {
+  const [name, setName] = useState('');
+  const [field, setField] = useState<SmartCriteria['rules'][number]['field']>('rating');
+  const [op, setOp] = useState<SmartCriteria['rules'][number]['op']>('gte');
+  const [value, setValue] = useState('3');
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const handleSubmit = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const parsed = parseFloat(value);
+    const ruleValue = isNaN(parsed) ? value : parsed;
+    onConfirm(trimmed, { rules: [{ field, op, value: ruleValue }], match: 'all' });
+  };
+
+  return (
+    <div className="bg-zinc-800/60 rounded p-2 space-y-1.5 border border-zinc-700">
+      <input ref={inputRef} type="text" value={name} onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); if (e.key === 'Escape') onCancel(); }}
+        placeholder="Nom de la smart collection..." maxLength={80}
+        className="w-full text-[11px] bg-zinc-900 text-zinc-200 rounded px-2 py-1 outline-none border border-zinc-600" />
+      <div className="flex gap-1">
+        <select value={field} onChange={(e) => setField(e.target.value as SmartCriteria['rules'][number]['field'])}
+          className="flex-1 text-[10px] bg-zinc-900 text-zinc-300 rounded px-1 py-1 border border-zinc-700 outline-none">
+          <option value="rating">Note</option>
+          <option value="flag">Flag</option>
+          <option value="extension">Format</option>
+          <option value="camera_model">Caméra</option>
+          <option value="lens">Optique</option>
+          <option value="iso">ISO</option>
+        </select>
+        <select value={op} onChange={(e) => setOp(e.target.value as SmartCriteria['rules'][number]['op'])}
+          className="w-14 text-[10px] bg-zinc-900 text-zinc-300 rounded px-1 py-1 border border-zinc-700 outline-none">
+          <option value="eq">=</option>
+          <option value="gte">&gt;=</option>
+          <option value="lte">&lt;=</option>
+          <option value="contains">~</option>
+          <option value="neq">≠</option>
+        </select>
+        <input type="text" value={value} onChange={(e) => setValue(e.target.value)}
+          className="w-14 text-[10px] bg-zinc-900 text-zinc-300 rounded px-1 py-1 border border-zinc-700 outline-none" />
+      </div>
+      <div className="flex gap-1 justify-end">
+        <button onClick={onCancel} className="text-[10px] text-zinc-500 hover:text-zinc-300 px-2 py-1">Annuler</button>
+        <button onClick={handleSubmit} disabled={!name.trim()}
+          className="text-[10px] text-amber-400 hover:text-amber-300 disabled:opacity-30 px-2 py-1 font-bold">
+          Créer
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// --- Sous-composant : Item de collection (static ou smart) ---
 interface CollectionItemProps {
   collection: CollectionDTO;
   isActive: boolean;
@@ -54,6 +115,8 @@ function CollectionItem({ collection, isActive, onSelect, onDelete, onRename }: 
   const [editValue, setEditValue] = useState(collection.name);
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => { if (isEditing) inputRef.current?.focus(); }, [isEditing]);
+
+  const isSmart = collection.collection_type === 'smart';
 
   const commitRename = () => {
     const trimmed = editValue.trim();
@@ -77,7 +140,9 @@ function CollectionItem({ collection, isActive, onSelect, onDelete, onRename }: 
     <div className={`flex items-center gap-1 text-[11px] rounded group transition-colors ${
       isActive ? 'bg-blue-600/25 text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'}`}>
       <button className="flex-1 flex items-center gap-2 p-1.5 min-w-0 text-left" onClick={() => onSelect(collection.id)}>
-        <Database size={11} className={`${isActive ? 'text-blue-400' : 'text-zinc-600'} shrink-0`} />
+        {isSmart
+          ? <Zap size={11} className={`${isActive ? 'text-amber-400' : 'text-zinc-600'} shrink-0`} />
+          : <Database size={11} className={`${isActive ? 'text-blue-400' : 'text-zinc-600'} shrink-0`} />}
         <span className="truncate">{collection.name}</span>
         <span className="ml-auto opacity-30 text-[9px] font-mono shrink-0">{collection.image_count}</span>
       </button>
@@ -96,7 +161,8 @@ function CollectionItem({ collection, isActive, onSelect, onDelete, onRename }: 
 // --- Composant principal ---
 export const LeftSidebar = ({ sidebarOpen, imageCount, onSetFilterText, onShowImport }: LeftSidebarProps) => {
   const [showNewInput, setShowNewInput] = useState(false);
-  const { collections, activeCollectionId, loadCollections, createCollection, deleteCollection, renameCollection, setActiveCollection, clearActiveCollection } = useCollectionStore();
+  const [showNewSmartInput, setShowNewSmartInput] = useState(false);
+  const { collections, activeCollectionId, loadCollections, createCollection, createSmartCollection, deleteCollection, renameCollection, setActiveCollection, clearActiveCollection } = useCollectionStore();
 
   useEffect(() => { void loadCollections(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -105,11 +171,17 @@ export const LeftSidebar = ({ sidebarOpen, imageCount, onSetFilterText, onShowIm
     try { await createCollection(name); } catch { /* erreur gérée dans le store */ }
   };
 
+  const handleCreateSmart = async (name: string, criteria: SmartCriteria) => {
+    setShowNewSmartInput(false);
+    try { await createSmartCollection(name, criteria); } catch { /* erreur gérée dans le store */ }
+  };
+
   const handleSelect = async (id: number) => { onSetFilterText(''); await setActiveCollection(id); };
 
   const handleClear = () => { onSetFilterText(''); clearActiveCollection(); };
 
   const staticCollections = collections.filter((c) => c.collection_type === 'static');
+  const smartCollections = collections.filter((c) => c.collection_type === 'smart');
 
   return (
     <div className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-zinc-900 border-r border-black flex flex-col shrink-0 transition-all duration-300 overflow-hidden`}>
@@ -154,15 +226,29 @@ export const LeftSidebar = ({ sidebarOpen, imageCount, onSetFilterText, onShowIm
         </section>
 
         <section className="mb-8">
-          <div className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4 px-2 flex justify-between items-center">
+          <div className="flex justify-between items-center text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-3 px-2">
             Smart Collections <Zap size={10} className="text-amber-600" />
+            <button onClick={() => setShowNewSmartInput(true)}
+              className="w-4 h-4 rounded-full border border-zinc-700 flex items-center justify-center text-[10px] text-zinc-500 hover:bg-zinc-800 hover:text-amber-400 transition-colors"
+              aria-label="Créer une smart collection">
+              <FolderPlus size={9} />
+            </button>
           </div>
-          <div className="space-y-1 px-1">
-            {['Moyen Format GFX', 'ISO Élevés (>1600)', 'Optiques 35mm', 'Importations 24h'].map((item) => (
-              <div key={item} className="flex items-center gap-2 text-[11px] text-zinc-500 hover:text-zinc-200 p-1.5 cursor-pointer rounded hover:bg-zinc-800/50">
-                <Zap size={10} className="text-zinc-700" /> {item}
-              </div>
+          <div className="space-y-0.5">
+            {smartCollections.map((c) => (
+              <CollectionItem key={c.id} collection={c} isActive={activeCollectionId === c.id}
+                onSelect={(id) => void handleSelect(id)}
+                onDelete={(id) => void deleteCollection(id)}
+                onRename={(id, name) => void renameCollection(id, name)} />
             ))}
+            {showNewSmartInput && (
+              <NewSmartCollectionForm
+                onConfirm={(name, criteria) => void handleCreateSmart(name, criteria)}
+                onCancel={() => setShowNewSmartInput(false)} />
+            )}
+            {smartCollections.length === 0 && !showNewSmartInput && (
+              <p className="text-[10px] text-zinc-700 italic px-2 py-1">Cliquez pour créer une smart collection</p>
+            )}
           </div>
         </section>
 

@@ -3,24 +3,28 @@ import { act } from '@testing-library/react';
 import { useCollectionStore } from '../collectionStore';
 import { CatalogService } from '../../services/catalogService';
 import type { CollectionDTO } from '../../types/dto';
+import type { SmartCriteria } from '../../types/collection';
 
 // Mock CatalogService
 vi.mock('../../services/catalogService', () => ({
   CatalogService: {
     getCollections: vi.fn(),
     createCollection: vi.fn(),
+    createSmartCollection: vi.fn(),
+    updateSmartCriteria: vi.fn(),
     deleteCollection: vi.fn(),
     renameCollection: vi.fn(),
     addImagesToCollection: vi.fn(),
     removeImagesFromCollection: vi.fn(),
     getCollectionImages: vi.fn(),
+    evaluateSmartCollection: vi.fn(),
   },
 }));
 
-const mockCollection = (id: number, name: string, imageCount = 0): CollectionDTO => ({
+const mockCollection = (id: number, name: string, imageCount = 0, collectionType: CollectionDTO['collection_type'] = 'static'): CollectionDTO => ({
   id,
   name,
-  collection_type: 'static',
+  collection_type: collectionType,
   image_count: imageCount,
 });
 
@@ -226,6 +230,100 @@ describe('collectionStore', () => {
 
       expect(useCollectionStore.getState().activeCollectionId).toBeNull();
       expect(useCollectionStore.getState().activeCollectionImageIds).toBeNull();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Phase 3.3 — Smart Collections
+  // ---------------------------------------------------------------------------
+  describe('createSmartCollection', () => {
+    it('should add the new smart collection to the store', async () => {
+      const smartDto = mockCollection(20, 'Top rated', 0, 'smart');
+      vi.mocked(CatalogService.createSmartCollection).mockResolvedValue(smartDto);
+
+      const criteria: SmartCriteria = { rules: [{ field: 'rating', op: 'gte', value: 4 }], match: 'all' };
+      await act(async () => {
+        await useCollectionStore.getState().createSmartCollection('Top rated', criteria);
+      });
+
+      expect(CatalogService.createSmartCollection).toHaveBeenCalledWith(
+        'Top rated',
+        JSON.stringify(criteria),
+      );
+      const state = useCollectionStore.getState();
+      expect(state.collections.find((c) => c.id === 20)).toBeDefined();
+      expect(state.collections.find((c) => c.id === 20)?.collection_type).toBe('smart');
+    });
+  });
+
+  describe('setActiveCollection — smart branch', () => {
+    it('should call evaluateSmartCollection for smart collections', async () => {
+      const smartCol = mockCollection(30, 'ISO 1600+', 5, 'smart');
+      act(() => { useCollectionStore.setState({ collections: [smartCol] }); });
+
+      const mockImages = [
+        { id: 101, filename: 'a.jpg', blake3_hash: 'h1', extension: 'jpg', imported_at: '2026-01-01T00:00:00Z' },
+        { id: 102, filename: 'b.jpg', blake3_hash: 'h2', extension: 'jpg', imported_at: '2026-01-02T00:00:00Z' },
+      ];
+      vi.mocked(CatalogService.evaluateSmartCollection).mockResolvedValue(mockImages);
+
+      await act(async () => {
+        await useCollectionStore.getState().setActiveCollection(30);
+      });
+
+      expect(CatalogService.evaluateSmartCollection).toHaveBeenCalledWith(30);
+      expect(CatalogService.getCollectionImages).not.toHaveBeenCalled();
+      expect(useCollectionStore.getState().activeCollectionImageIds).toEqual([101, 102]);
+    });
+
+    it('should call getCollectionImages for static collections (no regression)', async () => {
+      const staticCol = mockCollection(5, 'Portraits', 3, 'static');
+      act(() => { useCollectionStore.setState({ collections: [staticCol] }); });
+
+      const mockImages = [
+        { id: 50, filename: 'p1.jpg', blake3_hash: 'hh', extension: 'jpg', imported_at: '2026-01-01T00:00:00Z' },
+      ];
+      vi.mocked(CatalogService.getCollectionImages).mockResolvedValue(mockImages);
+
+      await act(async () => {
+        await useCollectionStore.getState().setActiveCollection(5);
+      });
+
+      expect(CatalogService.getCollectionImages).toHaveBeenCalledWith(5);
+      expect(CatalogService.evaluateSmartCollection).not.toHaveBeenCalled();
+      expect(useCollectionStore.getState().activeCollectionImageIds).toEqual([50]);
+    });
+  });
+
+  describe('updateSmartCriteria', () => {
+    it('should call updateSmartCriteria with serialised criteria', async () => {
+      vi.mocked(CatalogService.updateSmartCriteria).mockResolvedValue(undefined);
+      // Collection non-active : pas de re-évaluation
+      act(() => { useCollectionStore.setState({ activeCollectionId: 99 }); });
+
+      const criteria: SmartCriteria = { rules: [{ field: 'flag', op: 'eq', value: 1 }], match: 'all' };
+      await act(async () => {
+        await useCollectionStore.getState().updateSmartCriteria(7, criteria);
+      });
+
+      expect(CatalogService.updateSmartCriteria).toHaveBeenCalledWith(7, JSON.stringify(criteria));
+    });
+
+    it('should re-evaluate when updated collection is the active one', async () => {
+      vi.mocked(CatalogService.updateSmartCriteria).mockResolvedValue(undefined);
+      const mockImages = [
+        { id: 5, filename: 'x.jpg', blake3_hash: 'hx', extension: 'jpg', imported_at: '2026-01-01T00:00:00Z' },
+      ];
+      vi.mocked(CatalogService.evaluateSmartCollection).mockResolvedValue(mockImages);
+      act(() => { useCollectionStore.setState({ activeCollectionId: 7 }); });
+
+      const criteria: SmartCriteria = { rules: [{ field: 'rating', op: 'gte', value: 3 }], match: 'all' };
+      await act(async () => {
+        await useCollectionStore.getState().updateSmartCriteria(7, criteria);
+      });
+
+      expect(CatalogService.evaluateSmartCollection).toHaveBeenCalledWith(7);
+      expect(useCollectionStore.getState().activeCollectionImageIds).toEqual([5]);
     });
   });
 });

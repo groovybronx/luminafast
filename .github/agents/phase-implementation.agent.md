@@ -36,7 +36,7 @@ Avant de coder une seule ligne :
 
 - [ ] Toutes les sous-phases dépendantes sont ✅ dans `Docs/CHANGELOG.md`
 - [ ] Les tests des phases précédentes passent (`npm test` + `cargo test`)
-- [ ] Le brief de la sous-phase est lu et compris intégralement
+- [ ] Le brief de la sous-phase est lu et compris intégralement, si il n'esiste pas , créé le 
 - [ ] Les interfaces existantes à préserver sont identifiées
 
 ### 3. Analyse de la cause racine (si bug fix ou correction)

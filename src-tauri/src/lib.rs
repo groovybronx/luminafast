@@ -78,6 +78,10 @@ pub fn run() {
             commands::catalog::update_image_state,
             commands::catalog::create_collection,
             commands::catalog::add_images_to_collection,
+            commands::catalog::delete_collection,
+            commands::catalog::rename_collection,
+            commands::catalog::remove_images_from_collection,
+            commands::catalog::get_collection_images,
             // EXIF commands
             commands::exif::extract_exif,
             commands::exif::extract_exif_batch,

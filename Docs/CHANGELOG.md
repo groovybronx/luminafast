@@ -33,7 +33,7 @@
 | Maintenance | — | Corrections Critiques Phases 0→3.1 (BLOC 1-4) | ✅ Complétée | 2026-02-21 | Copilot |
 | Infra | — | Agents IA dédiés (code-review, pr-verification, phase-implementation, documentation-sync) | ✅ Complétée | 2026-02-20 | Copilot |
 | 3 | 3.1 | Grille d'Images Réelle | ⬜ En attente | — | — |
-| 3 | 3.2 | Collections Statiques (CRUD) | ⬜ En attente | — | — |
+| 3 | 3.2 | Collections Statiques (CRUD) | ✅ Complétée | 2026-02-21 | Copilot |
 | 3 | 3.3 | Smart Collections | ⬜ En attente | — | — |
 | 3 | 3.4 | Navigateur de Dossiers | ⬜ En attente | — | — |
 | 3 | 3.5 | Recherche & Filtrage | ⬜ En attente | — | — |
@@ -69,7 +69,7 @@
 
 ## En Cours
 
-> _Toutes les phases jusqu'à 3.1 sont complétées + corrections critiques appliquées. Prêt pour Phase 3.2 - Collections Statiques._
+> _Phase 3.2 Collections Statiques (CRUD) complétée. Prêt pour Phase 3.3 - Smart Collections._
 
 ---
 
@@ -308,9 +308,78 @@ u avec Math.round(pixelSize / 1.5)
 #### Prochaines Étapes (Phase 3.2+)
 - [ ] Phase 3.2 : Collections statiques (créer, renommer, supprimer collections)
 - [ ] Ajouter sorting/filtering options (date, name, rating, ISO)
-- [ ] Lazy loading avec blur-hash previews
-- [ ] Infinite scroll vs défilement standard
-- [ ] Drag-drop pour re-ordering (si voulu)
+
+---
+
+### 2026-02-21 — Phase 3.2 : Collections Statiques (CRUD) (Complétée)
+
+**Statut** : ✅ **Complétée**
+**Agent** : LuminaFast Phase Implementation (Copilot)
+**Branche** : `develop`
+**Type** : Feature
+
+#### Résumé
+Implémentation complète du CRUD des collections statiques : création, renommage, suppression et filtrage par collection. La sidebar gauche est désormais connectée aux collections SQLite réelles via un store Zustand dédié (`collectionStore`).
+
+#### Fichiers Créés
+- `Docs/briefs/PHASE-3.2.md` — Brief de la sous-phase
+- `src/stores/collectionStore.ts` — Store Zustand CRUD collections (loadCollections, createCollection, deleteCollection, renameCollection, setActiveCollection, clearActiveCollection)
+- `src/stores/__tests__/collectionStore.test.ts` — 12 tests unitaires du store
+- `src/services/__tests__/catalogService.test.ts` — 10 tests unitaires des méthodes collection
+
+#### Fichiers Modifiés
+- `src-tauri/src/commands/catalog.rs` — 4 nouvelles commandes Tauri + 9 nouveaux tests Rust :
+  - `delete_collection(collection_id)` — suppression transaction cascade
+  - `rename_collection(collection_id, name)` — renommage avec validation
+  - `remove_images_from_collection(collection_id, image_ids)` — suppression liens idempotente
+  - `get_collection_images(collection_id)` — images avec JOIN exif + état
+- `src-tauri/src/lib.rs` — enregistrement des 4 nouvelles commandes dans `generate_handler!`
+- `src/services/catalogService.ts` — 5 nouvelles méthodes : `deleteCollection`, `renameCollection`, `removeImagesFromCollection`, `getCollectionImages` (+ l'existant `addImagesToCollection`)
+- `src/stores/index.ts` — export `useCollectionStore`
+- `src/components/layout/LeftSidebar.tsx` — Refactor complet : collections réelles, formulaire inline de création, renommage inline (double-clic), bouton suppression (hover), indicateur collection active
+- `src/App.tsx` — Import `useCollectionStore`, filtrage `filteredImages` par `activeCollectionImageIds` puis par `filterText`
+
+#### Critères de Validation Remplis
+- [x] `cargo check` : 0 erreurs (3 warnings pré-existants)
+- [x] `cargo test` : 127 tests passants ✅ (9 nouveaux tests Phase 3.2)
+- [x] `tsc --noEmit` : 0 erreurs
+- [x] `npm test` : 455 tests passants ✅ (22 nouveaux tests Phase 3.2, +105 suite corrections)
+- [x] 4 commandes Tauri CRUD collections implémentées et enregistrées
+- [x] Store Zustand `collectionStore` avec 7 actions asynchrones
+- [x] LeftSidebar connectée aux collections SQLite réelles
+- [x] Filtrage par collection active dans la grille (App.tsx)
+- [x] Aucun `any` TypeScript ajouté
+- [x] Aucun `unwrap()` Rust en production
+
+#### Impact
+- Collections SQLite affichées et modifiables depuis la sidebar
+- Filtre par collection dans la grille fonctionne en temps réel
+- Base solide pour Phase 3.3 (Smart Collections) et Phase 3.4 (Navigateur de Dossiers)
+- Tests : 127 Rust ✅ + 455 frontend ✅
+
+---
+
+### 2026-02-21 — Corrections Post-Phase 3.2 (Complétées)
+
+**Statut** : ✅ **Complétée**
+**Agent** : LuminaFast Documentation Sync (Copilot)
+**Branche** : `develop`
+**Type** : Bug Fix + Feature
+
+#### Résumé
+**Cause racine (bug)** : Tauri v2 sérialise les paramètres Rust en camelCase côté frontend. Les appels `invoke` dans `catalogService.ts` utilisaient du snake_case (`collection_id`, `image_ids`, `collection_type` …), provoquant l'erreur `missing required key collectionType`.
+**Solution bug** : Correction des 6 clés snake_case → camelCase dans les appels `invoke` + alignement des assertions dans les tests.
+**Feature additionnelle** : Ajout d'un bouton `FolderPlus` dans la `BatchBar` avec un popover listant les collections SQLite, permettant d'ajouter les images sélectionnées (Cmd+clic) à une collection directement depuis la grille.
+
+#### Fichiers Modifiés
+- `src/services/catalogService.ts` — 6 clés invoke corrigées snake_case → camelCase
+- `src/services/__tests__/catalogService.test.ts` — assertions mises à jour (camelCase)
+- `src/components/shared/BatchBar.tsx` — bouton `FolderPlus` + popover collections (useCollectionStore + useCatalogStore)
+
+#### Impact
+- Les commandes Tauri collection fonctionnent correctement en runtime
+- 455 tests frontend passants ✅
+- L'utilisateur peut ajouter N images sélectionnées à une collection depuis la BatchBar
 
 ---
 

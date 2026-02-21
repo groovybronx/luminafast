@@ -49,6 +49,13 @@ fn create_test_database() -> Arc<std::sync::Mutex<rusqlite::Connection>> {
             color_space TEXT,
             FOREIGN KEY (image_id) REFERENCES images (id)
         );
+        CREATE TABLE image_state (
+            image_id INTEGER PRIMARY KEY,
+            rating INTEGER DEFAULT 0 CHECK(rating BETWEEN 0 AND 5),
+            flag TEXT CHECK(flag IN ('pick','reject',NULL)),
+            color_label TEXT,
+            FOREIGN KEY (image_id) REFERENCES images (id)
+        );
         CREATE TABLE ingestion_sessions (
             id TEXT PRIMARY KEY,
             started_at TEXT,

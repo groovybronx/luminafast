@@ -1,3 +1,5 @@
+#![allow(dead_code)] // Modèles preview planifiés pour la Phase 2.3
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;

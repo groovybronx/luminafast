@@ -26,6 +26,11 @@
   grid-auto-flow: row;
 }
 
+/* Virtualizer scroll container — contain:strict requis pour les performances */
+.grid-virtual-container {
+  contain: strict;
+}
+
 /* Classes dynamiques pour la taille des vignettes */
 /* Générer dynamiquement via JS ou ajouter quelques tailles courantes */
 .thumbnail-size-2 {

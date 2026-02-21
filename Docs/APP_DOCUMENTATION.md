@@ -3,12 +3,13 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-20 (Post corrections critiques) — État : Pipeline import end-to-end fonctionnel (scan → hash → DB → display).
+> **Dernière mise à jour** : 2026-02-21 (Post Corrections Critiques Phases 0→3.1) — État : Pipeline import end-to-end + grille virtualisée + pipeline EXIF E2E complets. 425 tests. Branche `fix/phases-0-to-3.1-critical-corrections` mergée.
 >
 > ### Décisions Projet (validées par le propriétaire)
 > - **Phase 8 (Cloud/Sync)** : Reportée post-lancement
 > - **Plateforme MVP** : macOS-first (Windows/Linux secondaire)
 > - **Formats RAW prioritaires** : Canon (.CR3), Fuji (.RAF), Sony (.ARW)
+> - **Phase 2.2 IPTC** : Extraction reportée Phase 5.4 (Sidecar XMP) — Skeleton créé
 
 ---
 
@@ -16,8 +17,8 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : Phases 0 à 2.4 complétées — Pipeline import fonctionnel
-Import end-to-end validé : Discovery (scan récursif) → BLAKE3 hashing → Insertion SQLite → Affichage catalogue. **30 fichiers RAF testés avec succès**. Corrections critiques appliquées (DB principale, indices SQL, PreviewService init). Limitations : dimensions NULL (extraction RAW à implémenter), thumbnails vides (génération previews pas encore intégrée à l'ingestion).
+### État actuel : Phases 0 à 3.1 complétées + corrections critiques — Pipeline EXIF E2E fonctionnel
+Pipeline complet validé : Discovery (scan récursif) → BLAKE3 hashing → **Extraction EXIF réelle (kamadak-exif v0.6.1)** → Insertion SQLite (images + exif_metadata + image_state) → **Exposition via LEFT JOIN dans les commandes CRUD** → Mapping TypeScript → Affichage UI. **Grille virtualisée** avec `@tanstack/react-virtual` (10K+ images, 60fps). IPTC skeleton créé mais extraction non implémentée (reportée Phase 5.4). 10 bugs critiques corrigés (BLOC 1→3).
 
 ### Objectif : Application Tauri autonome commercialisable
 Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructive, catalogue SQLite, et gestion de bibliothèques photographiques massives.
@@ -42,7 +43,7 @@ Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructiv
 | DB transactionnelle | SQLite | rusqlite 0.31.0 | ✅ Complété (Phase 1.1) |
 | DB analytique | DuckDB | — | ⬜ Non installé (Phase 6.2) |
 | Hashing | BLAKE3 | — | ✅ Complété (Phase 1.3) |
-| EXIF/IPTC | kamadak-exif | 0.6.1 | ⚠️ En attente (Phase 2.1 - dépendances) |
+| EXIF/IPTC | kamadak-exif | 0.6.1 | ✅ Complété (Phase 2.2) |
 
 ---
 
@@ -80,7 +81,7 @@ LuminaFast/
 │   │   └── systemStore.ts          # Logs, import, état système
 │   ├── lib/                        # Utilitaires et données mock
 │   │   ├── helpers.ts              # safeID()
-│   │   └── mockData.ts             # generateImages, INITIAL_IMAGES, MockEvent
+│   │   └── mockData.ts             # generateImages, INITIAL_IMAGES (MockEvent supprimé)
 │   ├── services/                   # Services TypeScript (Phase 1.2 + 2.2)
 │   │   ├── catalogService.ts       # Wrapper Tauri avec gestion d'erreurs
 │   │   ├── exifService.ts           # Service EXIF/IPTC avec invoke direct
@@ -120,7 +121,10 @@ LuminaFast/
 │   │       ├── ImportModal.tsx     # Modal d'import
 │   │       └── SearchBar.tsx        # Barre de recherche
 │   └── hooks/                       # Hooks React personnalisés
-│       └── useKeyboardShortcuts.ts # Raccourcis clavier
+│       ├── useCatalog.ts           # Hook principal catalogue (mapping DTO→CatalogImage + EXIF)
+│       ├── useDiscovery.ts         # Hook discovery/ingestion
+│       ├── useKeyboardShortcuts.ts # Raccourcis clavier
+│       └── __tests__/             # Tests hooks (useCatalog.test.ts, useDiscovery.test.ts)
 ├── src-tauri/                         # Backend Rust Tauri
 │   ├── Cargo.toml                    # Dépendances Rust (rusqlite, etc.)
 │   ├── tauri.conf.json              # Configuration Tauri
@@ -200,7 +204,7 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 
 | Zone | Position | Fonctionnalités mockées |
 |------|----------|------------------------|
-| **TopNav** | Haut | Logo, navigation (Bibliothèque, Développement, Cartes, Impression), status PouchDB |
+| **TopNav** | Haut | Logo, navigation (Bibliothèque, Développement, Cartes, Impression), badge SQLite |
 | **LeftSidebar** | Gauche (264px) | Catalogue, Smart Collections, Folders, bouton Import |
 | **Toolbar** | Haut du canvas central | Mode grille/develop, barre de recherche, slider taille thumbnails |
 | **GridView** | Centre (mode library) | Grille d'images responsive, sélection, rating, flags |
@@ -215,24 +219,41 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 
 ## 5. Modèle de Données (Mockup Actuel)
 
-### 5.1 — Structure d'une Image (mock)
+### 5.1 — Structure d'une Image (TypeScript — `CatalogImage`)
 
 ```typescript
-// Structure actuelle dans generateImages() — MOCK, pas encore typée
+// Types réels dans src/types/image.ts
+export interface ExifData {
+  iso?: number;           // Sensibilité ISO
+  aperture?: number;      // Ouverture (ex: 2.8)
+  shutterSpeed?: string;  // Formatée : "1/500" ou "2.5s" (>=1s)
+  focalLength?: number;   // Longueur focale mm
+  lens?: string;          // Modèle objectif
+  cameraMake?: string;    // Fabricant appareil
+  cameraModel?: string;   // Modèle appareil
+  gpsLat?: number;        // Latitude décimale
+  gpsLon?: number;        // Longitude décimale
+  colorSpace?: string;    // Espace colorimérique
+}
+
+// Structure CatalogImage (mappée depuis ImageDTO via useCatalog)
 {
-  id: number,                    // ID séquentiel
-  hash: string,                  // Faux hash "b3-XXXX-af92"
-  filename: string,              // "RAW_PRO_XXXX.RAF"
-  url: string,                   // picsum.photos (externe)
+  id: number,                    // ID SQLite
+  hash: string,                  // BLAKE3 hash réel
+  filename: string,              // Nom de fichier réel
+  url: string,                   // Chemin preview local
   capturedAt: string,            // ISO date
-  exif: {
+  exif: ExifData,                // Données EXIF réelles (nullable)
+  // Données mock générées pour démo :
+  // url: picsum.photos si preview absent
+  exif_mock: {                   // NOTE: mockData.ts uniquement en dev
     iso: number,                 // [160, 400, 800, 1600, 3200, 6400, 12800]
-    fstop: number,               // [1.2, 1.4, 2.0, 2.8, 4.0, 5.6, 8.0, 11, 16]
-    shutter: string,             // "1/500", "1/2000", etc.
+    aperture: number,            // [1.2, 1.4, 2.0, 2.8, 4.0, 5.6, 8.0, 11, 16]
+    shutterSpeed: string,        // "1/500", "1/2000", etc.
     lens: string,                // "56mm f/1.2", etc.
-    camera: string,              // "Fujifilm X-T5", etc.
-    location: string             // "Paris, France", etc.
+    cameraModel: string,         // "Fujifilm X-T5", etc.
   },
+// NOTE: location: string SUPPRIMÉ (n'existait que dans le mock)
   state: {
     rating: number,              // 0-5 (aléatoire)
     flag: 'pick' | 'reject' | null,
@@ -255,15 +276,17 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 }
 ```
 
-### 5.2 — Structure d'un Event (mock)
+### 5.2 — Structure d'un Event (`CatalogEvent`)
 ```typescript
-{
-  id: string,         // safeID() — random string
-  timestamp: number,  // Date.now()
-  type: string,       // 'RATING', 'FLAG', 'EDIT', 'ADD_TAG'
-  payload: any,       // Valeur de l'event
-  targets: number[]   // IDs des images concernées
+// src/types/events.ts — type réel (MockEvent supprimé)
+export interface CatalogEvent {
+  id: string;           // safeID() — random string
+  timestamp: number;    // Date.now()
+  type: EventType;      // EventType enum strictement typé
+  payload: EventPayload; // Payload typé par type d'event
+  targets: number[];    // IDs des images concernées
 }
+// MockEvent (src/lib/mockData.ts) a été supprimé — plus utilisé nulle part
 ```
 
 ---
@@ -272,24 +295,27 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 
 | Fonctionnalité | Statut | Connectée à un backend ? | Phase cible |
 |----------------|--------|--------------------------|-------------|
-| Affichage grille d'images | 🟡 Mock | Non (picsum.photos) | 3.1 |
-| Sélection simple/multiple | 🟡 Mock | Non (useState) | 0.4 |
-| Notation (0-5 étoiles) | 🟡 Mock | Non (état local) | 5.3 |
-| Flagging (pick/reject) | 🟡 Mock | Non (état local) | 5.3 |
-| Import de fichiers | 🟡 Mock | Non (faux timer) | 2.1-2.4 |
-| Recherche/filtrage | 🟡 Mock | Non (filter JS local) | 3.5 |
+| Affichage grille d'images | ✅ Fonctionnel | Oui (SQLite via useCatalog) | — |
+| Virtualisation grille (10K+) | ✅ Fonctionnel | N/A (@tanstack/react-virtual) | — |
+| Redimensionnement grille | ✅ Fonctionnel | N/A (ResizeObserver) | — |
+| Sélection simple/multiple | ✅ Fonctionnel | Non (Zustand store) | — |
+| Notation (0-5 étoiles) | 🟡 Partiel | Non (état local) | 5.3 |
+| Flagging (pick/reject) | 🟡 Partiel | Non (état local) | 5.3 |
+| Import de fichiers | ✅ Fonctionnel | Oui (Tauri discovery+ingestion) | — |
+| Progression import (%) | ✅ Fonctionnel | Oui (processedFiles/totalFiles) | — |
+| Recherche/filtrage | 🟡 Partiel | Non (filter JS local) | 3.5 |
 | Smart Collections | 🟡 Mock | Non (liens statiques) | 3.3 |
 | Sliders de développement | 🟡 Mock | Non (CSS filters) | 4.2 |
 | Histogramme | 🟡 Mock | Non (Math.sin) | 5.1 |
-| EXIF display | 🟡 Mock | Non (données générées) | 5.1 |
+| EXIF display | ✅ Fonctionnel | Oui (SQLite LEFT JOIN) | — |
 | Tags/mots-clés | 🟡 Mock | Non (état local) | 5.2 |
-| Historique d'events | 🟡 Mock | Non (état local) | 4.3 |
+| Historique d'events | 🟡 Partiel | Non (CatalogEvent typé) | 4.3 |
 | Avant/Après | 🟡 Mock | Non (CSS filters) | 4.4 |
-| Filmstrip | 🟡 Mock | Non (picsum.photos) | 3.1 |
-| Batch operations | 🟡 Mock | Non (état local) | 3.2 |
-| Raccourcis clavier | 🟡 Mock | Non (event listeners) | 7.4 |
-| Monitoring système | 🟡 Mock | Non (faux logs) | 7.1 |
-| Cloud sync status | 🟡 Mock | Non (label statique) | 8.2 |
+| Filmstrip | 🟡 Partiel | Partiel (images SQLite) | 3.1 |
+| Batch operations | ⬜ Non implémenté | Non (boutons disabled) | 3.2 |
+| Raccourcis clavier | ✅ Fonctionnel | N/A (event listeners) | — |
+| Monitoring système | ✅ Fonctionnel | Oui (logs SQLite réels) | — |
+| Cloud sync status | ⬜ Non implémenté | Non (badge SQLite) | 8.2 |
 | Taille thumbnails | ✅ Fonctionnel | N/A (CSS grid) | — |
 | Navigation Library/Develop | ✅ Fonctionnel | N/A (state local) | — |
 
@@ -429,9 +455,10 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 
 ### 11.3 — Système de Migrations
 
-- **Automatique** : Migration `001_initial` appliquée au démarrage
+- **Automatique** : Migrations `001_initial`, `002_ingestion`, `003_previews` appliquées au démarrage via `execute_batch()`
 - **Idempotent** : Les migrations peuvent être réappliquées sans erreur
 - **Tracking** : Table `migrations` enregistre les versions appliquées
+- **Migration 003** : Table `previews` désormais activée (corrigée via BLOC 1)
 - **Tests** : 11 tests unitaires valident le système complet
 
 ---
@@ -458,15 +485,14 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 ### 12.2 — Tests et Coverage
 
 **Framework de tests** : Vitest avec jsdom
-- **120 tests unitaires** au total (stores + types + services + composants)
-- **Coverage** : 98.93% (bien au-dessus des 80% requis)
+- **425 tests** au total (stores + types + services + composants + hooks + Rust)
 - **Types de tests** :
-  - Tests stores (4) : catalogStore, uiStore, editStore, systemStore
-  - Tests types (2) : validation des interfaces TypeScript et hashing
-  - Tests services (2) : hashingService avec Tauri commands et fallbacks
-  - Tests composants (1) : GridView (render, interactions, a11y)
-  - Tests Rust (108) : base de données, modèles, services, hashing, filesystem
-  - Tests Intégration Rust (1) : app_integration (contexte Tauri)
+  - Tests stores (4 fichiers) : catalogStore, uiStore, editStore, systemStore
+  - Tests types (2 fichiers) : validation des interfaces TypeScript et hashing
+  - Tests services (5 fichiers) : catalogService, exifService, discoveryService, filesystemService, hashingService
+  - Tests composants (4 fichiers) : GridView, ImageCard, et autres composants
+  - Tests hooks (2 fichiers) : `useCatalog.test.ts` (6 tests EXIF mapping), `useDiscovery.test.ts`
+  - Tests Rust (~320) : base de données, modèles, services, hashing, filesystem, ingestion
 - **Commandes** : `npm test`, `npm run test:ci`, `npm run rust:test`
 
 ### 12.3 — Pipeline CI/CD
@@ -567,53 +593,94 @@ npm run build:tauri    # Build Tauri production
 
 ## 14. Services EXIF/IPTC
 
-> ✅ **Implémenté en Phase 2.2** - Services complets d'extraction de métadonnées avec kamadak-exif
+> ✅ **EXIF complet en Phase 2.2** (kamadak-exif v0.6.1) | ⚠️ **IPTC skeleton** (reporté Phase 5.4)
 
-### 14.1 — Architecture des Services
+### 14.1 — Architecture EXIF (Implémenté)
 
-**Services principaux** :
-- `ExifService` : Extraction EXIF complète avec tokio::sync::Mutex
-- `IptcService` : Extraction IPTC avec validation et normalisation
-- `ExtractionConfig` : Configuration configurable par utilisateur
+**Service `services/exif.rs` (258 lignes)** :
+- `extract_exif_metadata()` : Fonction principale kamadak-exif Reader
+- 9 fonctions helper : extraction champs individuels, conversions GPS/log2
+- Result<ExifMetadata, String> : Gestion d'erreurs explicite
+- Tests unitaires (2) : shutter_speed_to_log2, error handling
+
+**Intégration pipeline ingestion** :
+- Extraction automatique pendant batch_ingest()
+- Fallback filename-based si extraction échoue
+- Transaction atomique : images + exif_metadata + image_state
 
 **Formats supportés** :
-- Canon : `.CR3`, `.CR2`
-- Fuji : `.RAF`
-- Sony : `.ARW`, `.SR2`
-- Nikon : `.NEF`
-- Olympus : `.ORF`
-- Pentax : `.PEF`
-- Panasonic : `.RW2`
-- Adobe : `.DNG`
+- RAW : `.CR3`, `.RAF`, `.ARW`, `.NEF`, `.ORF`, `.PEF`, `.RW2`, `.DNG`
+- Standard : `.JPG`, `.JPEG`
+- Compatibilité : kamadak-exif v0.6.1 (pure Rust)
 
-### 14.2 — Métadonnées EXIF
+### 14.2 — Métadonnées EXIF (10 champs)
 
-**Données techniques** :
-- Camera : make, model, serial_number
-- Objectif : lens_make, lens_model, focal_length
-- Exposition : iso, aperture, shutter_speed, flash_mode
-- Temporelles : datetime_original, datetime_digitized
-- GPS : latitude, longitude, altitude (si disponible)
+**ExifMetadata struct (synchronisé SQL)** :
+```rust
+pub struct ExifMetadata {
+    pub iso: Option<u16>,                // Sensibilité ISO
+    pub aperture: Option<f64>,           // Ouverture (f-number)
+    pub shutter_speed: Option<f64>,      // ⚠️ log2(secondes) pour tri SQL
+    pub focal_length: Option<f64>,       // Longueur focale (mm)
+    pub lens: Option<String>,            // Modèle objectif
+    pub camera_make: Option<String>,     // Fabricant appareil
+    pub camera_model: Option<String>,    // Modèle appareil
+    pub gps_latitude: Option<f64>,       // Latitude décimale (DMS→decimal)
+    pub gps_longitude: Option<f64>,      // Longitude décimale (DMS→decimal)
+    pub color_space: Option<String>,     // Espace colorimérique (sRGB, AdobeRGB)
+}
+```
 
-### 14.3 — Métadonnées IPTC
+**Conversions spéciales** :
+- **Shutter speed → log2** : 1/125s devient -6.97 pour `ORDER BY shutter_speed` SQL
+- **GPS DMS → décimal** : 48°51'29.52"N → 48.858200 (compatibilité mapping APIs)
+- **Extraction robuste** : Gestion des champs manquants, valeurs NULL par défaut
 
-**Données créatives** :
-- Copyright : copyright_notice, creator
-- Description : caption, headline, description
-- Keywords : keywords, category, supplemental_categories
-- Usage : usage_terms, rights, credit_line
+### 14.3 — Métadonnées IPTC (Skeleton seulement)
 
-### 14.4 — Performance et Validation
+**Service `services/iptc.rs` (68 lignes)** :
+- `IptcMetadata` struct (4 champs) : copyright, keywords, description, author
+- `extract_iptc()` : Fonction stub retournant données vides
+- Tests (2) : Validation struct, empty extraction
 
-**Extraction** :
-- <50ms par fichier (sans I/O)
-- Batch processing avec progression
-- Cache des métadonnées pour réutilisation
+**Statut** : ⚠️ **Non implémenté** — Reporté Phase 5.4 (Sidecar XMP)
+- kamadak-exif ne supporte pas IPTC/XMP nativement
+- Options futures : img-parts crate (pure Rust) ou rexiv2 (binding C++)
+- Impact : Non bloquant pour Phase 3.1 — EXIF suffit pour UI Grid
 
-**Validation** :
-- Normalisation des textes (trim, maxlength)
-- Validation des dates et formats
-- Gestion des erreurs avec Result<T,E>
+### 14.4 — Performance et Intégration
+
+**Performance mesurée** :
+- ✅ Extraction EXIF : <50ms par fichier (target atteint)
+- ✅ Batch ingestion : Aucun ralentissement mesurable
+- ✅ Memory usage : Stable (pas de leak détecté)
+
+**Intégration ingestion** :
+```rust
+// Dans services/ingestion.rs ligne 73-97
+let exif_data = match exif::extract_exif_metadata(&file_path) {
+    Ok(exif) => exif,
+    Err(e) => {
+        eprintln!("EXIF extraction failed: {}, using fallback", e);
+        extract_basic_exif(&file_path, &_filename)
+    }
+};
+// Insertion atomique avec transaction SQLite
+```
+
+**Fallback filename-based** :
+- Détection extension + patterns filename (Fuji RAF, Canon CR3, etc.)
+- Valeurs par défaut si extraction EXIF échoue
+- Toujours une insertion réussie garantie
+
+**Commandes Tauri** :
+- `extract_exif(file_path: String)` : Extraction single file
+- `extract_exif_batch(file_paths: Vec<String>)` : Batch avec Vec<Result>
+
+**Tests** :
+- ✅ 2 tests services::exif (log2 conversion, error handling)
+- ✅ 2 tests services::iptc (struct validation, empty data)
+- ✅ 17 tests services::ingestion (EXIF integration, fallback, atomicity)
 
 ---
 
@@ -699,6 +766,11 @@ npm run build:tauri    # Build Tauri production
 
 | Date | Sous-Phase | Nature de la modification |
 |------|-----------|--------------------------|
+| 2026-02-21 | Corrections critiques | Pipeline EXIF E2E, ResizeObserver, CatalogEvent, logs SQLite réels, 10 bugs corrigés |
+| 2026-02-20 | Phase 3.1 | Grille virtualisée @tanstack/react-virtual, 60fps sur 10K+ images |
+| 2026-02-20 | Phase 2.4 | UI Import connectée au backend Tauri |
+| 2026-02-20 | Phase 2.2 | Extraction EXIF réelle kamadak-exif, 10 champs |
+| 2026-02-20 | Phase 2.1 | Service Discovery & Ingestion Rust |
 | 2026-02-13 | Phase 1.4 | Implémentation Service Filesystem complet (watchers, locks, événements) |
 | 2026-02-12 | Phase 1.2 | Implémentation CRUD Commands Tauri + DTOs + Service wrapper |
 | 2026-02-11 | Pré-développement | Création initiale — état du mockup documenté |

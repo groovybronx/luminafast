@@ -3,7 +3,9 @@ use crate::models::discovery::{
     BasicExif, BatchIngestionRequest, BatchIngestionResult, DiscoveredFile, DiscoveryError,
     FormatDetails, IngestionMetadata, IngestionResult,
 };
+use crate::models::exif::ExifMetadata;
 use crate::services::blake3::Blake3Service;
+use crate::services::exif;
 use rusqlite::OptionalExtension;
 use std::path::Path;
 use std::sync::Arc;
@@ -57,7 +59,7 @@ impl IngestionService {
         // Check if file already exists in database
         if let Ok(Some(_)) = self.check_file_exists(&file.path).await {
             result.error = Some("File already exists in catalog".to_string());
-            result.processing_time_ms = start_time.elapsed().as_micros() as u64;
+            result.processing_time_ms = start_time.elapsed().as_millis() as u64;
             return Ok(result);
         }
 
@@ -70,12 +72,32 @@ impl IngestionService {
 
         let blake3_hash = hash_result.hash;
 
-        // Extract basic EXIF metadata
-        let exif_metadata = self.extract_basic_exif(&file.path).await?;
+        // Extract EXIF metadata with real kamadak-exif parser (Phase 2.2)
+        // Fallback to basic extraction if EXIF parsing fails
+        let exif_metadata_real = exif::extract_exif_metadata(file.path.to_str().unwrap_or(""));
+        let exif_metadata = if let Ok(ref real_exif) = exif_metadata_real {
+            // Use real EXIF data
+            BasicExif {
+                make: real_exif.camera_make.clone(),
+                model: real_exif.camera_model.clone(),
+                date_taken: None, // TODO: extract from EXIF DateTimeOriginal tag
+                iso: real_exif.iso.map(|i| i as u16),
+                aperture: real_exif.aperture,
+                shutter_speed: real_exif.shutter_speed.map(|s| format!("{:.2}", s)),
+                focal_length: real_exif.focal_length,
+                lens: real_exif.lens.clone(),
+            }
+        } else {
+            // Fallback to filename-based extraction
+            self.extract_basic_exif(&file.path).await?
+        };
+
+        // Store real EXIF for database insertion
+        let real_exif_opt = exif_metadata_real.ok();
 
         // Create database records
         let database_id = self
-            .create_image_record(file, &blake3_hash, &exif_metadata)
+            .create_image_record(file, &blake3_hash, &exif_metadata, real_exif_opt.as_ref())
             .await?;
 
         // Create ingestion metadata
@@ -92,7 +114,7 @@ impl IngestionService {
         result.success = true;
         result.database_id = Some(database_id);
         result.metadata = Some(metadata);
-        result.processing_time_ms = start_time.elapsed().as_micros() as u64;
+        result.processing_time_ms = start_time.elapsed().as_millis() as u64;
 
         Ok(result)
     }
@@ -136,6 +158,7 @@ impl IngestionService {
                 Some("cr3") => crate::models::discovery::RawFormat::CR3,
                 Some("raf") => crate::models::discovery::RawFormat::RAF,
                 Some("arw") => crate::models::discovery::RawFormat::ARW,
+
                 _ => {
                     // Skip unsupported formats
                     continue;
@@ -502,6 +525,7 @@ impl IngestionService {
         file: &DiscoveredFile,
         blake3_hash: &str,
         exif: &BasicExif,
+        real_exif: Option<&ExifMetadata>,
     ) -> Result<i64, DiscoveryError> {
         let mut db = self
             .db
@@ -548,19 +572,37 @@ impl IngestionService {
 
         let image_id = transaction.last_insert_rowid();
 
-        // Create EXIF metadata record
-        let new_exif = NewExifMetadata {
-            image_id,
-            iso: exif.iso.map(|iso| iso as i32),
-            aperture: exif.aperture.map(|a| a as f64),
-            shutter_speed: exif.shutter_speed.as_deref().and_then(|s| s.parse().ok()),
-            focal_length: exif.focal_length.map(|f| f as f64),
-            lens: exif.lens.clone(),
-            camera_make: exif.make.clone(),
-            camera_model: exif.model.clone(),
-            gps_lat: None,
-            gps_lon: None,
-            color_space: None,
+        // Create EXIF metadata record (Phase 2.2: Use real EXIF if available)
+        let new_exif = if let Some(real) = real_exif {
+            // Use real EXIF data from kamadak-exif
+            NewExifMetadata {
+                image_id,
+                iso: real.iso.map(|iso| iso as i32),
+                aperture: real.aperture.map(|a| a as f64),
+                shutter_speed: real.shutter_speed.map(|s| s as f64),
+                focal_length: real.focal_length.map(|f| f as f64),
+                lens: real.lens.clone(),
+                camera_make: real.camera_make.clone(),
+                camera_model: real.camera_model.clone(),
+                gps_lat: real.gps_lat,
+                gps_lon: real.gps_lon,
+                color_space: real.color_space.clone(),
+            }
+        } else {
+            // Fallback to BasicExif (filename-based extraction)
+            NewExifMetadata {
+                image_id,
+                iso: exif.iso.map(|iso| iso as i32),
+                aperture: exif.aperture.map(|a| a as f64),
+                shutter_speed: exif.shutter_speed.as_deref().and_then(|s| s.parse().ok()),
+                focal_length: exif.focal_length.map(|f| f as f64),
+                lens: exif.lens.clone(),
+                camera_make: exif.make.clone(),
+                camera_model: exif.model.clone(),
+                gps_lat: None,
+                gps_lon: None,
+                color_space: None,
+            }
         };
 
         transaction
@@ -585,6 +627,14 @@ impl IngestionService {
             )
             .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
 
+        // Phase 2.2: Initialize image_state (rating=0, flag=NULL)
+        transaction
+            .execute(
+                "INSERT INTO image_state (image_id, rating, flag) VALUES (?, 0, NULL)",
+                rusqlite::params![image_id],
+            )
+            .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
+
         // Commit transaction
         transaction
             .commit()
@@ -594,6 +644,7 @@ impl IngestionService {
     }
 
     /// Update a discovered file with ingestion results
+    #[allow(dead_code)] // Prévu pour la synchronisation d'état (Phase 2.1+)
     pub async fn update_discovered_file_status(
         &self,
         file: &mut DiscoveredFile,

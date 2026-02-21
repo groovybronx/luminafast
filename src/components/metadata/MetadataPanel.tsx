@@ -30,7 +30,7 @@ export const MetadataPanel = ({ activeImg, onDispatchEvent }: MetadataPanelProps
         <span className="text-zinc-400">{activeImg.sizeOnDisk}</span>
 
         <span className="text-zinc-600 font-black uppercase text-[8px]">Fichier Physique</span> 
-        <span className="text-zinc-500 truncate italic">/Volumes/WORK/RAW_2025/{activeImg.filename}</span>
+        <span className="text-zinc-500 truncate italic">{activeImg.filename}</span>
       </div>
     </div>
 

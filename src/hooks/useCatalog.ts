@@ -68,10 +68,13 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
         try {
           const preview = await previewService.getPreviewPath(img.blake3_hash, PreviewType.Thumbnail);
           if (preview && typeof preview === 'string') {
-            thumbnailUrl = convertFileSrc(preview);
+            // Convert file path to URL that navigator can load (asset:// URL in Tauri v2)
+            const assetUrl = convertFileSrc(preview);
+            console.warn(`[useCatalog] Preview URL for ${img.filename}: ${assetUrl}`);
+            thumbnailUrl = assetUrl;
           }
         } catch (error) {
-          // Preview not available yet, will be generated later
+          // Preview not available yet, will be generated during ingestion
           console.warn(`Thumbnail not available for ${img.filename}:`, error);
         }
 
@@ -82,12 +85,17 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
           url: thumbnailUrl, // Use real thumbnail URL or empty
           capturedAt: img.captured_at || '',
           exif: {
-            iso: 0,
-            fstop: 0,
-            shutter: '',
-            lens: '',
-            camera: '',
-            location: '',
+            iso: img.iso,
+            aperture: img.aperture,
+            shutterSpeed: img.shutter_speed != null
+              ? (img.shutter_speed >= 1
+                ? `${img.shutter_speed}s`
+                : `1/${Math.round(1 / img.shutter_speed)}`)
+              : undefined,
+            focalLength: img.focal_length,
+            lens: img.lens,
+            cameraMake: img.camera_make,
+            cameraModel: img.camera_model,
           },
           state: {
             rating: img.rating || 0,
@@ -144,11 +152,13 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
         try {
           const preview = await previewService.getPreviewPath(img.blake3_hash, PreviewType.Thumbnail);
           if (preview && typeof preview === 'string') {
-            thumbnailUrl = convertFileSrc(preview);
+            const assetUrl = convertFileSrc(preview);
+            console.warn(`[useCatalog] Sync preview URL for ${img.filename}: ${assetUrl}`);
+            thumbnailUrl = assetUrl;
           }
         } catch (error) {
-          // Preview not available yet, will be generated later
-          console.warn(`Thumbnail not available for ${img.filename}:`, error);
+          // Preview not available yet, will be generated during ingestion
+          console.warn(`Thumbnail sync error for ${img.filename}:`, error);
         }
 
         return {
@@ -158,12 +168,17 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
           url: thumbnailUrl, // Use real thumbnail URL or empty
           capturedAt: img.captured_at || '',
           exif: {
-            iso: 0,
-            fstop: 0,
-            shutter: '',
-            lens: '',
-            camera: '',
-            location: '',
+            iso: img.iso,
+            aperture: img.aperture,
+            shutterSpeed: img.shutter_speed != null
+              ? (img.shutter_speed >= 1
+                ? `${img.shutter_speed}s`
+                : `1/${Math.round(1 / img.shutter_speed)}`)
+              : undefined,
+            focalLength: img.focal_length,
+            lens: img.lens,
+            cameraMake: img.camera_make,
+            cameraModel: img.camera_model,
           },
           state: {
             rating: img.rating || 0,

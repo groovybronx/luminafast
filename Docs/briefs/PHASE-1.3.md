@@ -1,5 +1,7 @@
 # Phase 1.3 — Service BLAKE3 (Content Addressable Storage)
 
+> **Statut** : ✅ **Complétée** — Hachage BLAKE3 opérationnel, détection de doublons fonctionnelle, tests au vert.
+
 ## Objectif
 
 Implémenter un service de hachage BLAKE3 haute performance pour la détection de doublons et le stockage addressable par contenu. Ce service sera utilisé par le pipeline d'import (Phase 2) pour identifier les fichiers uniques et optimiser l'espace de stockage.
@@ -85,22 +87,22 @@ Implémenter un service de hachage BLAKE3 haute performance pour la détection d
 ## Critères de Validation
 
 ### Fonctionnels
-- [ ] Hachage BLAKE3 fonctionnel pour tous les formats supportés
-- [ ] Détection de doublons 100% accurate
-- [ ] Performance cibles atteintes sur benchmarks
-- [ ] Interface monitoring responsive et informative
+- [x] Hachage BLAKE3 fonctionnel pour tous les formats supportés
+- [x] Détection de doublons 100% accurate
+- [x] Performance cibles atteintes sur benchmarks
+- [x] Interface monitoring responsive et informative
 
 ### Techniques
-- [ ] Tests unitaires >90% coverage
-- [ ] Pas de memory leaks avec gros fichiers
-- [ ] Gestion d'erreurs robuste (fichiers corrompus, permissions)
-- [ ] Code documenté et respecte conventions Rust
+- [x] Tests unitaires >90% coverage
+- [x] Pas de memory leaks avec gros fichiers
+- [x] Gestion d'erreurs robuste (fichiers corrompus, permissions)
+- [x] Code documenté et respecte conventions Rust
 
 ### Performance
-- [ ] Benchmarks BLAKE3 vs SHA256 (2-3x plus rapide)
-- [ ] Utilisation efficace de tous les coeurs CPU
-- [ ] Memory usage < 1GB pour 10GB de fichiers
-- [ ] Temps de réponse < 100ms pour < 50MB
+- [x] Benchmarks BLAKE3 vs SHA256 (2-3x plus rapide)
+- [x] Utilisation efficace de tous les cœurs CPU
+- [x] Memory usage < 1GB pour 10GB de fichiers
+- [x] Temps de réponse < 100ms pour < 50MB
 
 ## Notes d'Architecture
 

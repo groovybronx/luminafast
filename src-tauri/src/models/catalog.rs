@@ -1,3 +1,5 @@
+#![allow(dead_code)] // Modèles planifiés pour les phases 2+ non encore utilisés
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 

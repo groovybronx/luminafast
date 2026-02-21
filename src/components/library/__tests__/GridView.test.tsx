@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { GridView } from '../GridView';
 import type { CatalogImage} from '../../../types';
@@ -8,7 +8,31 @@ import { DEFAULT_EDIT_STATE } from '../../../types';
 vi.mock('lucide-react', () => ({
   Cloud: () => <div data-testid="icon-cloud" />,
   RefreshCw: () => <div data-testid="icon-refresh" />,
+  Image: () => <div data-testid="icon-image" />,
 }));
+
+// Mock @tanstack/react-virtual to simplify testing
+// The virtualizer's absolute positioning makes standard testing harder,
+// so we mock it to render items in a simpler grid layout for testing
+vi.mock('@tanstack/react-virtual', () => {
+  return {
+    useVirtualizer: vi.fn((config) => {
+      const count = config.count;
+      const estimateSize = config.estimateSize;
+      const items = Array.from({ length: count }, (_, i) => ({
+        key: i,
+        index: i,
+        start: estimateSize() * i,
+      }));
+
+      return {
+        getTotalSize: () => estimateSize() * count,
+        getVirtualItems: () => items,
+        measure: vi.fn(),
+      };
+    }),
+  };
+});
 
 const mockImages: CatalogImage[] = [
   {
@@ -17,7 +41,7 @@ const mockImages: CatalogImage[] = [
     filename: 'IMG_001.JPG',
     url: 'file://img1.jpg',
     capturedAt: '2023-01-01',
-    exif: { iso: 100, fstop: 2.8, shutter: '1/100', lens: '50mm', camera: 'Sony', location: '' },
+    exif: { iso: 100, aperture: 2.8, shutterSpeed: '1/100', lens: '50mm', cameraModel: 'Sony' },
     state: { rating: 3, flag: null, edits: DEFAULT_EDIT_STATE, isSynced: true, revision: '1', tags: [] },
     sizeOnDisk: '10MB'
   },
@@ -27,13 +51,25 @@ const mockImages: CatalogImage[] = [
     filename: 'IMG_002.JPG',
     url: 'file://img2.jpg',
     capturedAt: '2023-01-02',
-    exif: { iso: 200, fstop: 4.0, shutter: '1/200', lens: '85mm', camera: 'Sony', location: '' },
+    exif: { iso: 200, aperture: 4.0, shutterSpeed: '1/200', lens: '85mm', cameraModel: 'Sony' },
     state: { rating: 5, flag: 'pick', edits: DEFAULT_EDIT_STATE, isSynced: false, revision: '1', tags: [] },
     sizeOnDisk: '12MB'
   }
 ];
 
 describe('GridView Component', () => {
+  beforeEach(() => {
+    // Mock clientWidth/clientHeight for dimension calculations (no longer needed with mocked virtualizer)
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      value: 800,
+    });
+    Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
+      configurable: true,
+      value: 600,
+    });
+  });
+
   it('renders correct number of images', () => {
     const onToggle = vi.fn();
     const onSetView = vi.fn();

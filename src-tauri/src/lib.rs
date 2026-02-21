@@ -48,15 +48,21 @@ pub fn run() {
             // Initialize filesystem service for Phase 1.4
             commands::filesystem::initialize_filesystem_service();
 
+            // Exposer le chemin DB réel pour l'IngestionService (OnceLock statique)
+            // Doit être défini AVANT initialize_discovery_services() qui initialise la static
+            std::env::set_var(
+                "TAURI_APP_DATA_DIR",
+                app_data_dir.to_string_lossy().as_ref(),
+            );
+
             // Initialize discovery services for Phase 2.1
             commands::discovery::initialize_discovery_services();
 
             log::info!("Hashing, filesystem and discovery services initialized");
 
             // Initialize preview service for Phase 2.3
-            let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = commands::preview::init_preview_service(&handle).await {
+                if let Err(e) = commands::preview::init_preview_service().await {
                     eprintln!("Failed to initialize preview service: {}", e);
                 }
             });
@@ -68,6 +74,13 @@ pub fn run() {
             commands::catalog::get_all_images,
             commands::catalog::get_collections,
             commands::catalog::search_images,
+            commands::catalog::get_image_detail,
+            commands::catalog::update_image_state,
+            commands::catalog::create_collection,
+            commands::catalog::add_images_to_collection,
+            // EXIF commands
+            commands::exif::extract_exif,
+            commands::exif::extract_exif_batch,
             // Hashing commands
             commands::hashing::hash_file,
             commands::hashing::hash_files_batch,
@@ -111,13 +124,18 @@ pub fn run() {
             commands::discovery::cleanup_discovery_sessions,
             commands::discovery::get_discovery_stats,
             // Preview commands
+            commands::preview::init_preview_service,
             commands::preview::generate_preview,
-            commands::preview::generate_preview_pyramid,
             commands::preview::generate_batch_previews,
-            commands::preview::generate_previews_with_progress,
+            commands::preview::generate_preview_pyramid,
+            commands::preview::is_preview_cached,
             commands::preview::get_preview_cache_info,
             commands::preview::cleanup_preview_cache,
             commands::preview::remove_preview,
+            commands::preview::get_preview_path,
+            commands::preview::generate_previews_with_progress,
+            commands::preview::benchmark_preview_generation,
+            commands::preview::get_preview_config,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

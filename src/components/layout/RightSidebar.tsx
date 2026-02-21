@@ -3,13 +3,12 @@ import { ExifGrid } from '../metadata/ExifGrid';
 import { DevelopSliders } from '../develop/DevelopSliders';
 import { HistoryPanel } from '../develop/HistoryPanel';
 import { MetadataPanel } from '../metadata/MetadataPanel';
-import type { CatalogImage, ActiveView, FlagType, EditState } from '../../types';
-import type { MockEvent } from '../../lib/mockData';
+import type { CatalogImage, ActiveView, FlagType, EditState, CatalogEvent } from '../../types';
 
 interface RightSidebarProps {
   activeView: ActiveView;
   activeImg: CatalogImage;
-  eventLog: MockEvent[];
+  eventLog: CatalogEvent[];
   onDispatchEvent: (eventType: string, payload: number | string | FlagType | Partial<EditState>) => void;
 }
 

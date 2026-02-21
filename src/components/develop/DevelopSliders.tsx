@@ -27,7 +27,8 @@ export const DevelopSliders = ({ activeImg, onDispatchEvent }: DevelopSlidersPro
           <span className="flex items-center gap-2"><param.icon size={10} className="text-zinc-600"/> {param.label}</span>
           <span className="font-mono text-blue-500 font-bold">{activeImg.state.edits[param.key] > 0 ? '+' : ''}{activeImg.state.edits[param.key]}</span>
         </div>
-        <input type="range" min="-100" max="100" 
+        <input type="range" min="-100" max="100"
+               aria-label={param.label}
                value={activeImg.state.edits[param.key]}
                onChange={(e) => onDispatchEvent('EDIT', { [param.key]: parseInt(e.target.value) })}
                className="w-full h-1 bg-black rounded appearance-none accent-blue-600 cursor-pointer" />

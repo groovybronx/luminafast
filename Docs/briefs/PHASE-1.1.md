@@ -1,5 +1,7 @@
 # Phase 1.1 — Schéma SQLite du Catalogue
 
+> **Statut** : ✅ **Complétée** — Schéma de base de données complet, migrations actives (001+002+003), 425 tests au vert.
+
 ---
 
 ## Objectif
@@ -79,21 +81,21 @@ Créer le schéma de base de données SQLite pour le catalogue d'images LuminaFa
 ## Critères de Validation
 
 ### Backend
-- [ ] `cargo check` passe sans erreur
-- [ ] `cargo test` passe (tests unitaires DB)
-- [ ] La base de données se crée automatiquement au premier lancement
-- [ ] Les commandes Tauri retournent des `Result<T, E>` corrects
+- [x] `cargo check` passe sans erreur
+- [x] `cargo test` passe (tests unitaires DB)
+- [x] La base de données se crée automatiquement au premier lancement
+- [x] Les commandes Tauri retournent des `Result<T, E>` corrects
 
 ### Frontend  
-- [ ] `tsc --noEmit` passe sans erreur
-- [ ] `npm test` passe (tests adaptés)
-- [ ] L'interface frontend fonctionne identiquement (pas de régression)
-- [ ] Les données mockées sont remplacées par des données réelles
+- [x] `tsc --noEmit` passe sans erreur
+- [x] `npm test` passe (tests adaptés)
+- [x] L'interface frontend fonctionne identiquement (pas de régression)
+- [x] Les données mockées sont remplacées par des données réelles
 
 ### Integration
-- [ ] Le frontend peut récupérer les images depuis SQLite
-- [ ] L'ajout d'images persiste dans la base de données
-- [ ] Les erreurs backend sont correctement propagées au frontend
+- [x] Le frontend peut récupérer les images depuis SQLite
+- [x] L'ajout d'images persiste dans la base de données
+- [x] Les erreurs backend sont correctement propagées au frontend
 
 ---
 

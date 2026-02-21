@@ -4,6 +4,7 @@ use std::path::Path;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+#[allow(dead_code)] // NotInitialized et NotFound prévus pour la gestion d'erreurs élargie
 pub enum DatabaseError {
     #[error("SQLite error: {0}")]
     Sqlite(#[from] rusqlite::Error),
@@ -52,6 +53,7 @@ impl Database {
     }
 
     /// Execute a transaction with the given function
+    #[allow(dead_code)] // Prévu pour les opérations transactionnelles (Phase 1.2+)
     pub fn execute_transaction<F, R>(&mut self, f: F) -> DatabaseResult<R>
     where
         F: FnOnce(&rusqlite::Transaction) -> DatabaseResult<R>,
@@ -80,8 +82,8 @@ impl Database {
         // Run ingestion sessions migration
         self.run_migration("002_ingestion_sessions")?;
 
-        // TODO: Fix 003_previews migration parsing (triggers with BEGIN...END)
-        // self.run_migration("003_previews")?;
+        // Run previews migration (tables + triggers)
+        self.run_migration("003_previews")?;
 
         Ok(())
     }
@@ -123,7 +125,7 @@ impl Database {
         let migration_sql = match version {
             "001_initial" => include_str!("../migrations/001_initial.sql"),
             "002_ingestion_sessions" => include_str!("../migrations/002_ingestion_sessions.sql"),
-            // "003_previews" => include_str!("../migrations/003_previews.sql"),  // TODO: Fix trigger parsing
+            "003_previews" => include_str!("../migrations/003_previews.sql"),
             _ => {
                 return Err(DatabaseError::MigrationFailed(format!(
                     "Unknown migration version: {}",
@@ -133,56 +135,21 @@ impl Database {
         };
 
         log::info!(
-            "Migration SQL loaded, length: {} chars",
+            "Migration SQL loaded: {} ({} chars)",
+            version,
             migration_sql.len()
         );
 
-        // Execute migration directly (without transaction for now)
-        let mut statements_executed = 0;
+        // execute_batch handles multi-statement SQL including triggers with BEGIN...END
+        self.connection.execute_batch(migration_sql).map_err(|e| {
+            DatabaseError::MigrationFailed(format!("Migration {} failed: {}", version, e))
+        })?;
 
-        // Split by semicolon and filter out empty statements and comments
-        for statement in migration_sql.split(';') {
-            let statement = statement.trim();
-
-            // Skip empty statements and pure comments
-            if statement.is_empty() || statement.lines().all(|line| line.trim().starts_with("--")) {
-                continue;
-            }
-
-            // Remove inline comments and create owned string
-            let clean_statement: String = statement
-                .lines()
-                .map(|line| {
-                    if let Some(comment_pos) = line.find("--") {
-                        &line[..comment_pos]
-                    } else {
-                        line
-                    }
-                })
-                .collect::<Vec<&str>>()
-                .join("\n")
-                .trim()
-                .to_string();
-
-            if !clean_statement.is_empty() {
-                log::debug!(
-                    "Executing: {}",
-                    &clean_statement[..100.min(clean_statement.len())]
-                );
-                self.connection.execute(&clean_statement, [])?;
-                statements_executed += 1;
-            }
-        }
-
-        // Record migration
+        // Record migration as applied
         self.connection
             .execute("INSERT INTO migrations (version) VALUES (?)", [version])?;
 
-        log::info!(
-            "Applied migration: {} ({} statements)",
-            version,
-            statements_executed
-        );
+        log::info!("Applied migration: {}", version);
         Ok(())
     }
 }
@@ -311,7 +278,7 @@ mod tests {
         let temp_dir = tempdir()?;
         let db_path = temp_dir.path().join("test.db");
 
-        let db = Database::new(&db_path)?;
+        let _db = Database::new(&db_path)?;
         assert!(db_path.exists());
 
         Ok(())
@@ -332,7 +299,7 @@ mod tests {
             .query_map([], |row| row.get(0))?
             .collect::<Result<_, _>>()?;
 
-        // Verify all tables from plan exist
+        // Verify all tables from 001_initial
         assert!(tables.contains(&"images".to_string()));
         assert!(tables.contains(&"folders".to_string()));
         assert!(tables.contains(&"exif_metadata".to_string()));
@@ -342,6 +309,10 @@ mod tests {
         assert!(tables.contains(&"tags".to_string()));
         assert!(tables.contains(&"image_tags".to_string()));
         assert!(tables.contains(&"migrations".to_string()));
+        // Verify tables from 003_previews
+        assert!(tables.contains(&"previews".to_string()));
+        assert!(tables.contains(&"preview_cache_metadata".to_string()));
+        assert!(tables.contains(&"preview_generation_log".to_string()));
 
         Ok(())
     }
@@ -357,13 +328,13 @@ mod tests {
         db.initialize()?;
         db.initialize()?;
 
-        // Should not fail and migrations should only be applied once
+        // 3 migrations: 001_initial, 002_ingestion_sessions, 003_previews
         let migration_count: i64 = db
             .connection()
             .prepare("SELECT COUNT(*) FROM migrations")?
             .query_row([], |row| row.get(0))?;
 
-        assert_eq!(migration_count, 2);
+        assert_eq!(migration_count, 3);
 
         Ok(())
     }

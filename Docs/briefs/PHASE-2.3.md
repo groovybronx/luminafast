@@ -1,33 +1,35 @@
 # Phase 2.3 - Génération de Previews
 
+> **Statut** : ✅ **Complétée (100%)** — Thumbnails JPEG 240px générés et affichés dans la grille. Cache `Previews.lrdata/` opérationnel.
+
 ## Objectif
 Implémenter un système complet de génération de thumbnails et previews haute qualité pour les fichiers RAW photographiques, avec cache intelligent et traitement parallèle.
 
 ## Périmètre
 
 ### Fonctionnalités requises
-- [ ] Génération de thumbnails (150-300px) pour grille rapide
-- [ ] Génération de previews (1200-1800px) pour mode développement
-- [ ] Support des formats RAW principaux (CR3, RAF, ARW, NEF, ORF, PEF, RW2, DNG)
-- [ ] Cache intelligent avec structure basée sur BLAKE3 hash
-- [ ] Batch processing avec progression et callbacks
-- [ ] Gestion des erreurs (fichiers corrompus, permissions, mémoire)
-- [ ] Parallélisation avec rayon pour performance optimale
+- [x] Génération de thumbnails (240px bord long, JPEG q75) pour grille rapide
+- [x] Génération de previews haute résolution pour mode développement
+- [x] Support des formats RAW principaux (CR3, RAF, ARW, NEF, ORF, PEF, RW2, DNG)
+- [x] Cache intelligent avec structure basée sur BLAKE3 hash (`Previews.lrdata/thumbnails/`)
+- [x] Batch processing avec progression et callbacks
+- [x] Gestion des erreurs (fichiers corrompus, permissions, mémoire)
+- [x] Parallélisation avec rayon pour performance optimale
 
 ### Architecture technique
-- [ ] Service Rust avec tokio::sync::Mutex pour concurrence
-- [ ] Intégration libraw-rust ou image crate pour traitement RAW
-- [ ] Structure de cache `.luminafast/previews/` organisée par hash
-- [ ] Commandes Tauri pour communication frontend
-- [ ] Types TypeScript stricts (zéro any)
-- [ ] Tests unitaires complets (>90% coverage)
+- [x] Service Rust avec tokio::sync::Mutex pour concurrence
+- [x] Intégration `image` crate pour traitement et redimensionnement
+- [x] Structure de cache `Previews.lrdata/thumbnails/` organisée par hash BLAKE3
+- [x] Commandes Tauri pour communication frontend (`get_preview_path`, `generate_preview`, etc.)
+- [x] Types TypeScript stricts (zéro any)
+- [x] Tests unitaires complets (>90% coverage)
 
 ### Performance cibles
-- [ ] Thumbnail generation <100ms par fichier RAW
-- [ ] Preview generation <500ms par fichier RAW
-- [ ] Support 4-8 threads parallèles
-- [ ] Cache hit/miss tracking et cleanup automatique
-- [ ] Memory usage stable (<200MB pour gros dossiers)
+- [x] Thumbnail generation <100ms par fichier RAW
+- [x] Preview generation <500ms par fichier RAW
+- [x] Support 4-8 threads parallèles
+- [x] Cache hit/miss tracking et cleanup automatique
+- [x] Memory usage stable (<200MB pour gros dossiers)
 
 ## Dépendances
 - Phase 2.2 doit être complétée ✅

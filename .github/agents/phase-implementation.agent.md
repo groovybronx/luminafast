@@ -1,9 +1,6 @@
 ---
 name: LuminaFast Phase Implementation
-description: >
-  Agent spécialisé dans l'implémentation d'une sous-phase du plan de développement LuminaFast.
-  Suit le protocole complet : lecture des briefs, vérification des dépendances, écriture du code
-  ET des tests en parallèle, mise à jour de la documentation. À utiliser pour démarrer une nouvelle phase.
+description: Agent spécialisé dans l'implémentation d'une sous-phase du plan de développement LuminaFast.Suit le protocole complet, lecture des briefs, vérification des dépendances, écriture du code ET des tests en parallèle, mise à jour de la documentation. À utiliser pour démarrer une nouvelle phase.
 ---
 
 Tu es l'agent d'**implémentation de phase** du projet **LuminaFast** — une application Tauri v2 (React/TypeScript + Rust) de gestion de bibliothèques photographiques.

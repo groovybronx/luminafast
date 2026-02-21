@@ -27,11 +27,10 @@ describe('Type Definitions', () => {
         capturedAt: '2026-02-11T10:00:00Z',
         exif: {
           iso: 400,
-          fstop: 2.8,
-          shutter: '1/500',
+          aperture: 2.8,
+          shutterSpeed: '1/500',
           lens: 'XF 35mm F2 R WR',
-          camera: 'FUJIFILM GFX 100S',
-          location: 'Paris, France',
+          cameraModel: 'FUJIFILM GFX 100S',
         },
         state: {
           rating: 3,
@@ -66,11 +65,10 @@ describe('Type Definitions', () => {
         capturedAt: '2026-02-11T10:00:00Z',
         exif: {
           iso: 100,
-          fstop: 2.0,
-          shutter: '1/125',
+          aperture: 2.0,
+          shutterSpeed: '1/125',
           lens: 'XF 23mm F2 R WR',
-          camera: 'FUJIFILM X-T5',
-          location: 'Tokyo, Japan',
+          cameraModel: 'FUJIFILM X-T5',
         },
         state: {
           rating: 0,
@@ -102,15 +100,14 @@ describe('Type Definitions', () => {
     it('should accept valid EXIF structure', () => {
       const exif: ExifData = {
         iso: 800,
-        fstop: 1.4,
-        shutter: '1/1000',
+        aperture: 1.4,
+        shutterSpeed: '1/1000',
         lens: 'XF 85mm F1.4 R WR',
-        camera: 'FUJIFILM GFX 100S',
-        location: 'New York, USA',
+        cameraModel: 'FUJIFILM GFX 100S',
       };
 
       expect(exif.iso).toBe(800);
-      expect(exif.fstop).toBe(1.4);
+      expect(exif.aperture).toBe(1.4);
     });
   });
 
@@ -399,11 +396,10 @@ describe('Type Definitions', () => {
           capturedAt: '2026-02-11T15:30:00Z',
           exif: {
             iso: 200,
-            fstop: 2.0,
-            shutter: '1/250',
+            aperture: 2.0,
+            shutterSpeed: '1/250',
             lens: 'XF 56mm F1.2 R WR',
-            camera: 'FUJIFILM X-T5',
-            location: 'Studio, Paris',
+            cameraModel: 'FUJIFILM X-T5',
           },
           state: {
             rating: 5,

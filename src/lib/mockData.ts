@@ -17,9 +17,8 @@ export const IMAGE_THEMES: ImageTheme[] = [
 ];
 
 const ISO_VALUES = [160, 400, 800, 1600, 3200, 6400, 12800] as const;
-const FSTOP_VALUES = [1.2, 1.4, 2.0, 2.8, 4.0, 5.6, 8.0, 11, 16] as const;
+const APERTURE_VALUES = [1.2, 1.4, 2.0, 2.8, 4.0, 5.6, 8.0, 11, 16] as const;
 const SHUTTER_VALUES = ['1/500', '1/2000', '1/4000', '1/125', '1/60', '1/30', '2.5s'] as const;
-const LOCATION_VALUES = ['Paris, France', 'Tokyo, Japan', 'Reykjavík, Iceland', 'New York, USA'] as const;
 
 export const generateImages = (count: number, startId = 0): CatalogImage[] => {
   return Array.from({ length: count }, (_, i) => {
@@ -36,11 +35,10 @@ export const generateImages = (count: number, startId = 0): CatalogImage[] => {
       capturedAt: new Date(2025, 1, Math.max(1, (id % 28))).toISOString(),
       exif: {
         iso: ISO_VALUES[id % ISO_VALUES.length] ?? 160,
-        fstop: FSTOP_VALUES[id % FSTOP_VALUES.length] ?? 2.8,
-        shutter: SHUTTER_VALUES[id % SHUTTER_VALUES.length] ?? '1/500',
+        aperture: APERTURE_VALUES[id % APERTURE_VALUES.length] ?? 2.8,
+        shutterSpeed: SHUTTER_VALUES[id % SHUTTER_VALUES.length] ?? '1/500',
         lens: theme.lens,
-        camera: theme.camera,
-        location: LOCATION_VALUES[id % LOCATION_VALUES.length] ?? 'Paris, France'
+        cameraModel: theme.camera,
       },
       state: {
         rating: Math.floor(Math.random() * 6),

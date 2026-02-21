@@ -17,11 +17,13 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 // Mock de ResizeObserver
-(globalThis as { ResizeObserver?: unknown }).ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
+class MockResizeObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+
+(globalThis as { ResizeObserver: unknown }).ResizeObserver = MockResizeObserver;
 
 // Mock Tauri API
 vi.mock('@tauri-apps/api/core', () => ({

@@ -15,15 +15,21 @@ pub async fn get_all_images(
     filter: Option<ImageFilter>,
     state: State<'_, AppState>,
 ) -> CommandResult<Vec<ImageDTO>> {
-    let db = state.db.lock().unwrap();
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
     let mut query = String::from(
-        "SELECT i.id, i.blake3_hash, i.filename, i.extension, 
+        "SELECT i.id, i.blake3_hash, i.filename, i.extension,
                 i.width, i.height, i.file_size_bytes, i.orientation,
                 i.captured_at, i.imported_at, i.folder_id,
-                image_state.rating, image_state.flag, image_state.color_label
+                ist.rating, ist.flag, ist.color_label,
+                e.iso, e.aperture, e.shutter_speed, e.focal_length,
+                e.lens, e.camera_make, e.camera_model
          FROM images i
-         LEFT JOIN image_state image_state ON i.id = image_state.image_id",
+         LEFT JOIN image_state ist ON i.id = ist.image_id
+         LEFT JOIN exif_metadata e ON i.id = e.image_id",
     );
 
     let mut params = Vec::new();
@@ -75,16 +81,23 @@ pub async fn get_all_images(
     let images_iter = stmt
         .query_map(rusqlite::params_from_iter(params), |row| {
             Ok(ImageDTO {
-                id: row.get(0)?,          // i.id
-                blake3_hash: row.get(1)?, // i.blake3_hash
-                filename: row.get(2)?,    // i.filename
-                extension: row.get(3)?,   // i.extension
-                width: row.get(4)?,       // i.width
-                height: row.get(5)?,      // i.height
-                rating: row.get(11)?,     // image_state.rating
-                flag: row.get(12)?,       // image_state.flag
-                captured_at: row.get(8)?, // i.captured_at
-                imported_at: row.get(9)?, // i.imported_at
+                id: row.get(0)?,
+                blake3_hash: row.get(1)?,
+                filename: row.get(2)?,
+                extension: row.get(3)?,
+                width: row.get(4)?,
+                height: row.get(5)?,
+                rating: row.get(11)?,
+                flag: row.get(12)?,
+                captured_at: row.get(8)?,
+                imported_at: row.get(9)?,
+                iso: row.get(14)?,
+                aperture: row.get(15)?,
+                shutter_speed: row.get(16)?,
+                focal_length: row.get(17)?,
+                lens: row.get(18)?,
+                camera_make: row.get(19)?,
+                camera_model: row.get(20)?,
             })
         })
         .map_err(|e| format!("Query error: {}", e))?;
@@ -103,7 +116,10 @@ pub async fn get_image_detail(
     id: u32,
     state: State<'_, AppState>,
 ) -> CommandResult<ImageDetailDTO> {
-    let db = state.db.lock().unwrap();
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
     let mut stmt = db.connection().prepare(
         "SELECT i.id, i.blake3_hash, i.filename, i.extension, 
@@ -167,7 +183,10 @@ pub async fn update_image_state(
     flag: Option<String>,
     state: State<'_, AppState>,
 ) -> CommandResult<()> {
-    let db = state.db.lock().unwrap();
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
     // Check if image exists
     let exists: Result<i32, _> =
@@ -178,16 +197,16 @@ pub async fn update_image_state(
         return Err("Image not found".to_string());
     }
 
-    // Update or insert image_state
+    // Utiliser Option<T> directement — None → SQL NULL → COALESCE conserve la valeur existante
+    // Évite l'insertion de la chaîne littérale "NULL" qui violerait CHECK(flag IN ('pick','reject',NULL))
     let result = db.connection().execute(
         "INSERT OR REPLACE INTO image_state (image_id, rating, flag)
-         VALUES (?, COALESCE(?, (SELECT rating FROM image_state WHERE image_id = ?)), 
+         VALUES (?,
+                 COALESCE(?, (SELECT rating FROM image_state WHERE image_id = ?)),
                  COALESCE(?, (SELECT flag FROM image_state WHERE image_id = ?)))",
         rusqlite::params![
-            id,
-            rating.unwrap_or(0),
-            id,
-            flag.as_deref().unwrap_or("NULL"),
+            id, rating, // Option<u8>   — None → SQL NULL
+            id, flag, // Option<String> — None → SQL NULL
             id
         ],
     );
@@ -206,7 +225,10 @@ pub async fn create_collection(
     parent_id: Option<u32>,
     state: State<'_, AppState>,
 ) -> CommandResult<CollectionDTO> {
-    let db = state.db.lock().unwrap();
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
     // Validate collection type
     if !["static", "smart", "quick"].contains(&collection_type.as_str()) {
@@ -257,7 +279,10 @@ pub async fn add_images_to_collection(
     image_ids: Vec<u32>,
     state: State<'_, AppState>,
 ) -> CommandResult<()> {
-    let mut db = state.db.lock().unwrap();
+    let mut db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
     // Verify collection exists first
     let collection_exists: Result<i32, _> = db.connection().query_row(
@@ -295,7 +320,10 @@ pub async fn add_images_to_collection(
 /// Get all collections
 #[tauri::command]
 pub async fn get_collections(state: State<'_, AppState>) -> CommandResult<Vec<CollectionDTO>> {
-    let db = state.db.lock().unwrap();
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
     let mut stmt = db
         .connection()
@@ -334,19 +362,25 @@ pub async fn search_images(
     query: String,
     state: State<'_, AppState>,
 ) -> CommandResult<Vec<ImageDTO>> {
-    let db = state.db.lock().unwrap();
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
     let search_pattern = format!("%{}%", query);
 
     let mut stmt = db
         .connection()
         .prepare(
-            "SELECT i.id, i.blake3_hash, i.filename, i.extension, 
+            "SELECT i.id, i.blake3_hash, i.filename, i.extension,
                 i.width, i.height, i.file_size_bytes, i.orientation,
                 i.captured_at, i.imported_at, i.folder_id,
-                image_state.rating, image_state.flag, image_state.color_label
+                ist.rating, ist.flag, ist.color_label,
+                e.iso, e.aperture, e.shutter_speed, e.focal_length,
+                e.lens, e.camera_make, e.camera_model
          FROM images i
-         LEFT JOIN image_state image_state ON i.id = image_state.image_id
+         LEFT JOIN image_state ist ON i.id = ist.image_id
+         LEFT JOIN exif_metadata e ON i.id = e.image_id
          WHERE i.filename LIKE ? OR i.blake3_hash LIKE ?
          ORDER BY i.imported_at DESC",
         )
@@ -355,16 +389,23 @@ pub async fn search_images(
     let images_iter = stmt
         .query_map([&search_pattern, &search_pattern], |row| {
             Ok(ImageDTO {
-                id: row.get(0)?,          // i.id
-                blake3_hash: row.get(1)?, // i.blake3_hash
-                filename: row.get(2)?,    // i.filename
-                extension: row.get(3)?,   // i.extension
-                width: row.get(4)?,       // i.width
-                height: row.get(5)?,      // i.height
-                rating: row.get(11)?,     // image_state.rating
-                flag: row.get(12)?,       // image_state.flag
-                captured_at: row.get(8)?, // i.captured_at
-                imported_at: row.get(9)?, // i.imported_at
+                id: row.get(0)?,
+                blake3_hash: row.get(1)?,
+                filename: row.get(2)?,
+                extension: row.get(3)?,
+                width: row.get(4)?,
+                height: row.get(5)?,
+                rating: row.get(11)?,
+                flag: row.get(12)?,
+                captured_at: row.get(8)?,
+                imported_at: row.get(9)?,
+                iso: row.get(14)?,
+                aperture: row.get(15)?,
+                shutter_speed: row.get(16)?,
+                focal_length: row.get(17)?,
+                lens: row.get(18)?,
+                camera_make: row.get(19)?,
+                camera_model: row.get(20)?,
             })
         })
         .map_err(|e| format!("Query error: {}", e))?;
@@ -474,6 +515,61 @@ mod tests {
             .unwrap();
 
         assert_eq!(rating, 5);
+    }
+
+    #[test]
+    fn test_update_image_state_null_values() {
+        let db = setup_test_db();
+
+        // Créer une image
+        db.connection().execute(
+            "INSERT INTO images (blake3_hash, filename, extension, imported_at) VALUES (?, ?, ?, ?)",
+            ["hash_null_test", "null_test.RAF", "RAF", "2026-01-01T00:00:00Z"],
+        ).unwrap();
+        let image_id = db.connection().last_insert_rowid() as u32;
+
+        // Insérer l'état initial (rating=3, flag='pick')
+        db.connection()
+            .execute(
+                "INSERT INTO image_state (image_id, rating, flag) VALUES (?, ?, ?)",
+                rusqlite::params![image_id, 3i32, "pick"],
+            )
+            .unwrap();
+
+        // Mettre à jour avec rating=None, flag=None → doit CONSERVER les valeurs existantes
+        // (et ne pas insérer la chaîne "NULL" qui violerait le CHECK constraint)
+        let result = db.connection().execute(
+            "INSERT OR REPLACE INTO image_state (image_id, rating, flag)
+             VALUES (?,
+                     COALESCE(?, (SELECT rating FROM image_state WHERE image_id = ?)),
+                     COALESCE(?, (SELECT flag FROM image_state WHERE image_id = ?)))",
+            rusqlite::params![
+                image_id,
+                Option::<u8>::None,
+                image_id,
+                Option::<String>::None,
+                image_id
+            ],
+        );
+
+        assert!(
+            result.is_ok(),
+            "update avec None ne doit pas échouer: {:?}",
+            result
+        );
+
+        // Vérifier que les valeurs initiales sont conservées
+        let (rating, flag): (i32, String) = db
+            .connection()
+            .query_row(
+                "SELECT rating, flag FROM image_state WHERE image_id = ?",
+                [image_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+
+        assert_eq!(rating, 3, "rating doit être conservé à 3");
+        assert_eq!(flag, "pick", "flag doit être conservé à 'pick'");
     }
 
     #[test]

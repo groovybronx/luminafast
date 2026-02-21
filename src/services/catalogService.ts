@@ -176,6 +176,63 @@ export class CatalogService {
   }
 
   /**
+   * Create a new smart collection with a query
+   * @param name - Collection name
+   * @param smartQuery - JSON string with rules and combinator
+   * @param parentId - Optional parent collection ID
+   */
+  static async createSmartCollection(
+    name: string,
+    smartQuery: string,
+    parentId?: number,
+  ): Promise<CollectionDTO> {
+    try {
+      const invoke = this.getInvoke();
+      const result = await invoke('create_smart_collection', {
+        name,
+        smartQuery,
+        parentId,
+      });
+      return result as CollectionDTO;
+    } catch (error) {
+      throw this.parseError(error);
+    }
+  }
+
+  /**
+   * Get results for a smart collection's query
+   * @param collectionId - ID of the smart collection
+   */
+  static async getSmartCollectionResults(
+    collectionId: number,
+  ): Promise<import('../types/dto').ImageDTO[]> {
+    try {
+      const invoke = this.getInvoke();
+      const result = await invoke('get_smart_collection_results', { collectionId });
+      return result as import('../types/dto').ImageDTO[];
+    } catch (error) {
+      throw this.parseError(error);
+    }
+  }
+
+  /**
+   * Update a smart collection's query
+   * @param collectionId - ID of the smart collection
+   * @param smartQuery - JSON string with rules and combinator
+   */
+  static async updateSmartCollection(
+    collectionId: number,
+    smartQuery: string,
+  ): Promise<void> {
+    try {
+      const invoke = this.getInvoke();
+      await invoke('update_smart_collection', { collectionId, smartQuery });
+    } catch (error) {
+      throw this.parseError(error);
+    }
+  }
+
+  /**
    * Get all collections
    */
   static async getCollections(): Promise<CollectionDTO[]> {

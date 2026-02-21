@@ -8,7 +8,7 @@
 ## 1. RÈGLES ABSOLUES (NON NÉGOCIABLES)
 
 ### 1.1 — Intégrité du Plan
-- **Le plan de développement (`Docs/briefs/` + plan principal) ne peut PAS être modifié** sans l'approbation explicite du propriétaire du projet.
+- **Le plan de développement (`Docs/briefs/` + `Docs/archives/luminafast_developement_plan.md` ) ne peut PAS être modifié** sans l'approbation explicite du propriétaire du projet.
 - Si une modification du plan est nécessaire, l'agent DOIT :
   1. Expliquer la raison avec une justification technique détaillée
   2. Proposer l'alternative
@@ -40,12 +40,13 @@
 ## 2. PROTOCOLE DE TRAVAIL PAR SOUS-PHASE
 
 ### Avant de commencer une sous-phase :
-1. **Lire** le brief correspondant : `Docs/briefs/PHASE-X.Y.md`
+1. **Lire** le brief correspondant : `Docs/briefs/PHASE-X.Y.md` ci il n existe pas encore, créer le brief en suivant le template de `DOCS/briefs/BRIEF_TEMPLATE.md`
 2. **Lire** ce fichier (`AI_INSTRUCTIONS.md`) en entier
 3. **Lire** `Docs/CHANGELOG.md` pour comprendre l'état actuel du projet
 4. **Lire** `Docs/APP_DOCUMENTATION.md` pour l'architecture en place
 5. **Vérifier** que toutes les sous-phases dépendantes sont marquées ✅ dans le CHANGELOG
 6. **Vérifier** que les tests des phases précédentes passent toujours
+7. **Créer une branche Git** dédiée à la sous-phase (ex: `phase/3.2-collections`)
 
 ### Pendant le travail :
 1. Respecter strictement le périmètre défini dans le brief (pas de modifications hors scope)
@@ -61,7 +62,8 @@
 3. **Mettre à jour** `Docs/APP_DOCUMENTATION.md` pour refléter les changements
 4. **Vérifier** que la documentation est cohérente avec l'état réel de l'application
 5. **Lister** les fichiers créés/modifiés dans le CHANGELOG
-6. **Créer** le brief de la sous-phase suivante si non existant
+6. **Créer** le brief de la sous-phase suivante si non existant en suivant le template de `Docs/briefs/BRIEF_TEMPLATE.md`
+
 
 ---
 
@@ -172,21 +174,7 @@ Avant chaque commit, l'agent DOIT vérifier :
 - [ ] **Stats réelles** : Utilisées dans les services (pas de fallback temporel)
 
 ---
-
-## 8. AGENTS SPÉCIALISÉS DISPONIBLES
-
-Des agents dédiés au projet sont disponibles dans `.github/agents/`. **Utilise-les en priorité** pour les tâches correspondantes.
-
-| Agent | Fichier | Quand l'utiliser |
-|-------|---------|-----------------|
-| **LuminaFast Code Review** | `code-review.agent.md` | Avant tout merge — review d'un diff ou d'une PR |
-| **LuminaFast PR Verification** | `pr-verification.agent.md` | Avant tout merge — vérifier la conformité PR vs brief |
-| **LuminaFast Phase Implementation** | `phase-implementation.agent.md` | Pour implémenter une nouvelle sous-phase |
-| **LuminaFast Documentation Sync** | `documentation-sync.agent.md` | Après chaque sous-phase — mettre à jour CHANGELOG + APP_DOCUMENTATION |
-
----
-
-## 9. RAPPEL FINAL
+## 8. RAPPEL FINAL
 
 > **L'objectif est de produire une application de qualité commerciale.**
 > La rapidité d'exécution ne justifie JAMAIS de sacrifier la qualité, la robustesse ou la cohérence architecturale.

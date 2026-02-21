@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Database, Star, Check, Zap, HardDrive, Import, Trash2, Pencil, X } from 'lucide-react';
 import { useCollectionStore } from '../../stores/collectionStore';
+import { SmartCollectionBuilder } from '../library/SmartCollectionBuilder';
 import type { CollectionDTO } from '../../types/dto';
+import type { SmartQuery } from '../../types/collection';
 
 interface LeftSidebarProps {
   sidebarOpen: boolean;
@@ -165,11 +167,13 @@ export const LeftSidebar = ({
   onShowImport,
 }: LeftSidebarProps) => {
   const [showNewInput, setShowNewInput] = useState(false);
+  const [showSmartBuilder, setShowSmartBuilder] = useState(false);
   const {
     collections,
     activeCollectionId,
     loadCollections,
     createCollection,
+    createSmartCollection,
     deleteCollection,
     renameCollection,
     setActiveCollection,
@@ -200,6 +204,16 @@ export const LeftSidebar = ({
   };
 
   const staticCollections = collections.filter((c) => c.collection_type === 'static');
+  const smartCollections = collections.filter((c) => c.collection_type === 'smart');
+
+  const handleCreateSmartCollection = async (name: string, smartQuery: SmartQuery) => {
+    setShowSmartBuilder(false);
+    try {
+      await createSmartCollection(name, smartQuery);
+    } catch {
+      /* erreur gérée dans le store */
+    }
+  };
 
   return (
     <div
@@ -280,19 +294,59 @@ export const LeftSidebar = ({
         </section>
 
         <section className="mb-8">
-          <div className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4 px-2 flex justify-between items-center">
-            Smart Collections <Zap size={10} className="text-amber-600" />
+          <div className="flex justify-between items-center text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-3 px-2">
+            <span className="flex items-center gap-1">
+              Smart Collections <Zap size={10} className="text-amber-600" />
+            </span>
+            <button
+              onClick={() => setShowSmartBuilder(true)}
+              className="w-4 h-4 rounded-full border border-zinc-700 flex items-center justify-center text-[10px] text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors"
+              aria-label="Créer une smart collection"
+            >
+              +
+            </button>
           </div>
-          <div className="space-y-1 px-1">
-            {['Moyen Format GFX', 'ISO Élevés (>1600)', 'Optiques 35mm', 'Importations 24h'].map(
-              (item) => (
-                <div
-                  key={item}
-                  className="flex items-center gap-2 text-[11px] text-zinc-500 hover:text-zinc-200 p-1.5 cursor-pointer rounded hover:bg-zinc-800/50"
+          <div className="space-y-0.5">
+            {smartCollections.map((c) => (
+              <div
+                key={c.id}
+                className={`flex items-center gap-1 text-[11px] rounded group transition-colors ${
+                  activeCollectionId === c.id
+                    ? 'bg-blue-600/25 text-white'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+                }`}
+              >
+                <button
+                  className="flex-1 flex items-center gap-2 p-1.5 min-w-0 text-left"
+                  onClick={() => void handleSelect(c.id)}
                 >
-                  <Zap size={10} className="text-zinc-700" /> {item}
-                </div>
-              ),
+                  <Zap
+                    size={11}
+                    className={`${
+                      activeCollectionId === c.id ? 'text-amber-400' : 'text-zinc-600'
+                    } shrink-0`}
+                  />
+                  <span className="truncate">{c.name}</span>
+                  <span className="ml-auto opacity-30 text-[9px] font-mono shrink-0">
+                    {c.image_count}
+                  </span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void deleteCollection(c.id);
+                  }}
+                  className="p-1 opacity-0 group-hover:opacity-50 hover:opacity-100! text-zinc-500 hover:text-red-400 transition-all"
+                  aria-label={`Supprimer ${c.name}`}
+                >
+                  <Trash2 size={10} />
+                </button>
+              </div>
+            ))}
+            {smartCollections.length === 0 && !showSmartBuilder && (
+              <p className="text-[10px] text-zinc-700 italic px-2 py-1">
+                Cliquez « + » pour créer une smart collection
+              </p>
             )}
           </div>
         </section>
@@ -323,6 +377,31 @@ export const LeftSidebar = ({
           <Import size={16} className="inline mr-2 mb-0.5" /> Importer RAW
         </button>
       </div>
+      {/* Smart Collection Builder Modal */}
+      {showSmartBuilder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 sticky top-0 bg-white">
+              <h2 className="text-lg font-semibold text-slate-900">Créer une Smart Collection</h2>
+              <button
+                onClick={() => setShowSmartBuilder(false)}
+                className="text-slate-500 hover:text-slate-700 transition-colors"
+                aria-label="Fermer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4">
+              <SmartCollectionBuilder
+                onSave={async (query: SmartQuery, name: string) => {
+                  await handleCreateSmartCollection(name, query);
+                  setShowSmartBuilder(false);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

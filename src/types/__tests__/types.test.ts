@@ -215,17 +215,17 @@ describe('Type Definitions', () => {
 
     it('should accept valid smart collection', () => {
       const smartQuery: SmartQuery = {
-        conjunction: 'AND',
+        combinator: 'AND',
         rules: [
           {
             field: 'rating',
-            operator: 'greaterThan',
+            operator: '>=',
             value: 3,
           },
           {
-            field: 'tags',
+            field: 'camera_make',
             operator: 'contains',
-            value: 'portrait',
+            value: 'Canon',
           },
         ],
       };
@@ -250,24 +250,23 @@ describe('Type Definitions', () => {
       const rules: SmartQueryRule[] = [
         {
           field: 'rating',
-          operator: 'equals',
+          operator: '=',
           value: 5,
         },
         {
           field: 'iso',
-          operator: 'lessThan',
+          operator: '<',
           value: 800,
         },
         {
-          field: 'fstop',
-          operator: 'between',
+          field: 'aperture',
+          operator: '>=',
           value: 1.4,
-          valueTo: 2.8,
         },
       ];
 
       expect(rules).toHaveLength(3);
-      expect(rules[2]?.valueTo).toBe(2.8);
+      expect(rules[2]?.value).toBe(1.4);
     });
   });
 

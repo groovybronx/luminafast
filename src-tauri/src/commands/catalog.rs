@@ -122,7 +122,7 @@ pub async fn get_image_detail(
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
     let mut stmt = db.connection().prepare(
-        "SELECT i.id, i.blake3_hash, i.filename, i.extension, 
+        "SELECT i.id, i.blake3_hash, i.filename, i.extension,
                 i.width, i.height, i.file_size_bytes, i.orientation,
                 i.captured_at, i.imported_at, i.folder_id,
                 image_state.rating, image_state.flag, image_state.color_label,
@@ -590,6 +590,229 @@ pub async fn get_collection_images(
     }
 
     Ok(images)
+}
+
+// --- Phase 3.3: Smart Collections Commands ---
+
+/// Create a new smart collection with a query
+#[tauri::command]
+pub async fn create_smart_collection(
+    name: String,
+    smart_query: String,
+    parent_id: Option<u32>,
+    state: State<'_, AppState>,
+) -> CommandResult<CollectionDTO> {
+    // Validate collection name
+    if name.trim().is_empty() {
+        return Err("Collection name cannot be empty".to_string());
+    }
+
+    // Validate smart_query is valid JSON
+    let _parsed: serde_json::Value = serde_json::from_str(&smart_query)
+        .map_err(|e| format!("Invalid smart_query JSON: {}", e))?;
+
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+
+    let result = if let Some(parent_id) = parent_id {
+        db.connection().execute(
+            "INSERT INTO collections (name, type, parent_id, smart_query) VALUES (?, ?, ?, ?)",
+            rusqlite::params![name, "smart", parent_id, smart_query],
+        )
+    } else {
+        db.connection().execute(
+            "INSERT INTO collections (name, type, smart_query) VALUES (?, ?, ?)",
+            rusqlite::params![name, "smart", smart_query],
+        )
+    };
+
+    match result {
+        Ok(_) => {
+            let id = db.connection().last_insert_rowid() as u32;
+
+            // Get image count for this smart collection
+            let image_count = get_smart_collection_image_count(&db, id).unwrap_or(0);
+
+            Ok(CollectionDTO {
+                id,
+                name: db
+                    .connection()
+                    .query_row("SELECT name FROM collections WHERE id = ?", [id], |row| {
+                        row.get(0)
+                    })
+                    .map_err(|e| format!("Failed to retrieve collection name: {}", e))?,
+                collection_type: "smart".to_string(),
+                parent_id,
+                image_count,
+            })
+        }
+        Err(e) => Err(format!("Failed to create smart collection: {}", e)),
+    }
+}
+
+/// Get results for a smart collection's query
+#[tauri::command]
+pub async fn get_smart_collection_results(
+    collection_id: u32,
+    state: State<'_, AppState>,
+) -> CommandResult<Vec<ImageDTO>> {
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+
+    // Get the collection and verify it's smart type
+    let (smart_query, col_type): (String, String) = db
+        .connection()
+        .query_row(
+            "SELECT smart_query, type FROM collections WHERE id = ?",
+            [collection_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .map_err(|_| "Collection not found or has no smart_query".to_string())?;
+
+    if col_type != "smart" {
+        return Err(format!(
+            "Collection {} is not a smart collection (type: {})",
+            collection_id, col_type
+        ));
+    }
+
+    // Parse the smart query to SQL
+    let where_clause = crate::services::smart_query_parser::parse_smart_query(&smart_query)
+        .map_err(|e| format!("Failed to parse smart query: {}", e))?;
+
+    // Build the SQL query dynamically
+    let query_str = format!(
+        "SELECT i.id, i.blake3_hash, i.filename, i.extension,
+                i.width, i.height, i.file_size_bytes, i.orientation,
+                i.captured_at, i.imported_at, i.folder_id,
+                ist.rating, ist.flag, ist.color_label,
+                e.iso, e.aperture, e.shutter_speed, e.focal_length,
+                e.lens, e.camera_make, e.camera_model
+         FROM images i
+         LEFT JOIN image_state ist ON i.id = ist.image_id
+         LEFT JOIN exif_metadata e ON i.id = e.image_id
+         WHERE {}
+         ORDER BY i.imported_at DESC",
+        where_clause
+    );
+
+    let mut stmt = db
+        .connection()
+        .prepare(&query_str)
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    let images_iter = stmt
+        .query_map([], |row| {
+            Ok(ImageDTO {
+                id: row.get(0)?,
+                blake3_hash: row.get(1)?,
+                filename: row.get(2)?,
+                extension: row.get(3)?,
+                width: row.get(4)?,
+                height: row.get(5)?,
+                rating: row.get(11)?,
+                flag: row.get(12)?,
+                captured_at: row.get(8)?,
+                imported_at: row.get(9)?,
+                iso: row.get(14)?,
+                aperture: row.get(15)?,
+                shutter_speed: row.get(16)?,
+                focal_length: row.get(17)?,
+                lens: row.get(18)?,
+                camera_make: row.get(19)?,
+                camera_model: row.get(20)?,
+            })
+        })
+        .map_err(|e| format!("Query error: {}", e))?;
+
+    let mut images = Vec::new();
+    for image in images_iter {
+        images.push(image.map_err(|e| format!("Row error: {}", e))?);
+    }
+
+    Ok(images)
+}
+
+/// Update a smart collection's query
+#[tauri::command]
+pub async fn update_smart_collection(
+    collection_id: u32,
+    smart_query: String,
+    state: State<'_, AppState>,
+) -> CommandResult<()> {
+    // Validate smart_query is valid JSON
+    let _parsed: serde_json::Value = serde_json::from_str(&smart_query)
+        .map_err(|e| format!("Invalid smart_query JSON: {}", e))?;
+
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+
+    // Verify collection exists and is smart type
+    let col_type: String = db
+        .connection()
+        .query_row(
+            "SELECT type FROM collections WHERE id = ?",
+            [collection_id],
+            |row| row.get(0),
+        )
+        .map_err(|_| "Collection not found".to_string())?;
+
+    if col_type != "smart" {
+        return Err(format!(
+            "Collection {} is not a smart collection (type: {})",
+            collection_id, col_type
+        ));
+    }
+
+    let rows_affected = db
+        .connection()
+        .execute(
+            "UPDATE collections SET smart_query = ? WHERE id = ?",
+            rusqlite::params![smart_query, collection_id],
+        )
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    if rows_affected == 0 {
+        return Err("Collection not found".to_string());
+    }
+
+    Ok(())
+}
+
+/// Helper: Get image count for a smart collection
+fn get_smart_collection_image_count(db: &crate::database::Database, collection_id: u32) -> Result<u32, String> {
+    let smart_query: String = db
+        .connection()
+        .query_row(
+            "SELECT smart_query FROM collections WHERE id = ?",
+            [collection_id],
+            |row| row.get(0),
+        )
+        .map_err(|_| "Collection not found".to_string())?;
+
+    let where_clause = crate::services::smart_query_parser::parse_smart_query(&smart_query)
+        .map_err(|e| format!("Failed to parse smart query: {}", e))?;
+
+    let query_str = format!(
+        "SELECT COUNT(*) FROM images
+         LEFT JOIN image_state ON images.id = image_state.image_id
+         LEFT JOIN exif_metadata ON images.id = exif_metadata.image_id
+         WHERE {}",
+        where_clause
+    );
+
+    let count: i64 = db
+        .connection()
+        .query_row(&query_str, [], |row| row.get(0))
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    Ok(count as u32)
 }
 
 #[cfg(test)]
@@ -1096,5 +1319,241 @@ mod tests {
             )
             .unwrap();
         assert_eq!(count, 2, "Collection should contain 2 images");
+    }
+
+    // --- Phase 3.3: Tests for Smart Collections ---
+
+    #[test]
+    fn test_create_smart_collection_success() {
+        let db = setup_test_db();
+
+        // Create some test images with EXIF data
+        db.connection()
+            .execute(
+                "INSERT INTO images (blake3_hash, filename, extension, imported_at) VALUES (?, ?, ?, ?)",
+                ["hash_sc_1", "img1.CR3", "CR3", "2026-01-01T00:00:00Z"],
+            )
+            .unwrap();
+        let img1 = db.connection().last_insert_rowid() as u32;
+
+        // Add EXIF data
+        db.connection()
+            .execute(
+                "INSERT INTO exif_metadata (image_id, iso, aperture, focal_length) VALUES (?, ?, ?, ?)",
+                rusqlite::params![img1, 3200, 2.8, 50.0],
+            )
+            .unwrap();
+
+        // Add image state with high rating
+        db.connection()
+            .execute(
+                "INSERT INTO image_state (image_id, rating) VALUES (?, ?)",
+                [img1, 5],
+            )
+            .unwrap();
+
+        // Create smart collection query
+        let query = r#"{"rules":[{"field":"rating","operator":">=","value":4},{"field":"iso","operator":">","value":1600}],"combinator":"AND"}"#;
+
+        let result = db.connection().execute(
+            "INSERT INTO collections (name, type, smart_query) VALUES (?, ?, ?)",
+            rusqlite::params!["High ISO Quality Photos", "smart", query],
+        );
+
+        assert!(result.is_ok());
+        let collection_id = db.connection().last_insert_rowid() as u32;
+
+        // Verify collection was created
+        let (name, col_type, stored_query): (String, String, String) = db
+            .connection()
+            .query_row(
+                "SELECT name, type, smart_query FROM collections WHERE id = ?",
+                [collection_id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+
+        assert_eq!(name, "High ISO Quality Photos");
+        assert_eq!(col_type, "smart");
+        assert_eq!(stored_query, query);
+    }
+
+    #[test]
+    fn test_create_smart_collection_invalid_json() {
+        let db = setup_test_db();
+        let invalid_query = "{ invalid json }";
+
+        let result = db.connection().execute(
+            "INSERT INTO collections (name, type, smart_query) VALUES (?, ?, ?)",
+            rusqlite::params!["Invalid Collection", "smart", invalid_query],
+        );
+
+        // SQLite doesn't validate JSON automatically, so this would succeed
+        // The validation happens in the Tauri command handler
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_smart_collection_results_filters_correctly() {
+        let db = setup_test_db();
+
+        // Create multiple test images with different ratings and ISO
+        for i in 1..=5 {
+            let hash = format!("hash_smart_{}", i);
+            db.connection()
+                .execute(
+                    "INSERT INTO images (blake3_hash, filename, extension, imported_at) VALUES (?, ?, ?, ?)",
+                    rusqlite::params![hash, format!("img{}.CR3", i), "CR3", "2026-01-01T00:00:00Z"],
+                )
+                .unwrap();
+            let img_id = db.connection().last_insert_rowid() as u32;
+
+            // Add EXIF: alternating ISO values
+            let iso = if i % 2 == 0 { 3200 } else { 400 };
+            db.connection()
+                .execute(
+                    "INSERT INTO exif_metadata (image_id, iso) VALUES (?, ?)",
+                    rusqlite::params![img_id, iso],
+                )
+                .unwrap();
+
+            // Add image state: alternating ratings
+            let rating = if i % 2 == 0 { 5 } else { 2 };
+            db.connection()
+                .execute(
+                    "INSERT INTO image_state (image_id, rating) VALUES (?, ?)",
+                    rusqlite::params![img_id, rating],
+                )
+                .unwrap();
+        }
+
+        // Create smart collection: Rating >= 4 AND ISO > 1600
+        let query = r#"{"rules":[{"field":"rating","operator":">=","value":4},{"field":"iso","operator":">","value":1600}],"combinator":"AND"}"#;
+
+        db.connection()
+            .execute(
+                "INSERT INTO collections (name, type, smart_query) VALUES (?, ?, ?)",
+                rusqlite::params!["Test Smart Collection", "smart", query],
+            )
+            .unwrap();
+        let _col_id = db.connection().last_insert_rowid() as u32;
+
+        // Execute query through parser
+        let where_clause = crate::services::smart_query_parser::parse_smart_query(query).unwrap();
+        let sql = format!(
+            "SELECT COUNT(*) FROM images
+             LEFT JOIN image_state ON images.id = image_state.image_id
+             LEFT JOIN exif_metadata ON images.id = exif_metadata.image_id
+             WHERE {}",
+            where_clause
+        );
+
+        let count: i64 = db
+            .connection()
+            .query_row(&sql, [], |row| row.get(0))
+            .unwrap();
+
+        // Should match images 2, 4 (rating >= 4 AND iso > 1600)
+        assert_eq!(count, 2, "Should find 2 images matching the criteria");
+    }
+
+    #[test]
+    fn test_get_smart_collection_results_wrong_type() {
+        let db = setup_test_db();
+
+        // Create a STATIC collection (not smart)
+        db.connection()
+            .execute(
+                "INSERT INTO collections (name, type) VALUES (?, ?)",
+                rusqlite::params!["Static Collection", "static"],
+            )
+            .unwrap();
+        let col_id = db.connection().last_insert_rowid() as u32;
+
+        // Try to get results as if it was a smart collection
+        let col_type: String = db
+            .connection()
+            .query_row(
+                "SELECT type FROM collections WHERE id = ?",
+                [col_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(col_type, "static");
+    }
+
+    #[test]
+    fn test_update_smart_collection_success() {
+        let db = setup_test_db();
+
+        // Create initial smart collection
+        let initial_query = r#"{"rules":[{"field":"rating","operator":">=","value":3}],"combinator":"AND"}"#;
+        db.connection()
+            .execute(
+                "INSERT INTO collections (name, type, smart_query) VALUES (?, ?, ?)",
+                rusqlite::params!["Test Collection", "smart", initial_query],
+            )
+            .unwrap();
+        let col_id = db.connection().last_insert_rowid() as u32;
+
+        // Update the query
+        let new_query = r#"{"rules":[{"field":"rating","operator":">=","value":5}],"combinator":"AND"}"#;
+        let result = db.connection().execute(
+            "UPDATE collections SET smart_query = ? WHERE id = ?",
+            rusqlite::params![new_query, col_id],
+        );
+
+        assert!(result.is_ok());
+
+        // Verify the update
+        let stored_query: String = db
+            .connection()
+            .query_row(
+                "SELECT smart_query FROM collections WHERE id = ?",
+                [col_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(stored_query, new_query);
+    }
+
+    #[test]
+    fn test_smart_query_parser_or_combinator() {
+        let query = r#"{"rules":[{"field":"rating","operator":"=","value":5},{"field":"iso","operator":">","value":3200}],"combinator":"OR"}"#;
+        let result = crate::services::smart_query_parser::parse_smart_query(query);
+        assert!(result.is_ok());
+        let sql = result.unwrap();
+        assert!(sql.contains(" OR "));
+        assert!(sql.contains("image_state.rating = 5"));
+        assert!(sql.contains("exif_metadata.iso > 3200"));
+    }
+
+    #[test]
+    fn test_smart_query_parser_aperture() {
+        let query = r#"{"rules":[{"field":"aperture","operator":"<=","value":2.8}],"combinator":"AND"}"#;
+        let result = crate::services::smart_query_parser::parse_smart_query(query);
+        assert!(result.is_ok());
+        let sql = result.unwrap();
+        assert!(sql.contains("exif_metadata.aperture <= 2.8"));
+    }
+
+    #[test]
+    fn test_smart_query_parser_focal_length() {
+        let query = r#"{"rules":[{"field":"focal_length","operator":">=","value":50}],"combinator":"AND"}"#;
+        let result = crate::services::smart_query_parser::parse_smart_query(query);
+        assert!(result.is_ok());
+        let sql = result.unwrap();
+        assert!(sql.contains("exif_metadata.focal_length >= 50"));
+    }
+
+    #[test]
+    fn test_smart_query_parser_camera_model_contains() {
+        let query = r#"{"rules":[{"field":"camera_model","operator":"contains","value":"EOS"}],"combinator":"AND"}"#;
+        let result = crate::services::smart_query_parser::parse_smart_query(query);
+        assert!(result.is_ok());
+        let sql = result.unwrap();
+        assert!(sql.contains("exif_metadata.camera_model LIKE '%EOS%'"));
     }
 }

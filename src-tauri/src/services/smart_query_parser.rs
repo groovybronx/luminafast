@@ -27,7 +27,7 @@ pub struct SmartQuery {
 /// # Example
 /// ```
 /// let json = r#"{"rules":[{"field":"rating","operator":">=","value":3}],"combinator":"AND"}"#;
-/// let sql = parse_smart_query(json).unwrap();
+/// let sql = luminafast_lib::services::smart_query_parser::parse_smart_query(json).unwrap();
 /// assert!(sql.contains("image_state.rating"));
 /// ```
 pub fn parse_smart_query(json: &str) -> Result<String, Box<dyn Error>> {

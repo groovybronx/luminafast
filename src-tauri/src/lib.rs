@@ -1,7 +1,7 @@
 mod commands;
 mod database;
 mod models;
-mod services;
+pub mod services;
 
 use commands::catalog::AppState;
 use database::Database;

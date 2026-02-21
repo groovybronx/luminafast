@@ -70,7 +70,7 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
           if (preview && typeof preview === 'string') {
             // Convert file path to URL that navigator can load (asset:// URL in Tauri v2)
             const assetUrl = convertFileSrc(preview);
-            console.debug(`[useCatalog] Preview URL for ${img.filename}: ${assetUrl}`);
+            console.warn(`[useCatalog] Preview URL for ${img.filename}: ${assetUrl}`);
             thumbnailUrl = assetUrl;
           }
         } catch (error) {
@@ -153,7 +153,7 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
           const preview = await previewService.getPreviewPath(img.blake3_hash, PreviewType.Thumbnail);
           if (preview && typeof preview === 'string') {
             const assetUrl = convertFileSrc(preview);
-            console.debug(`[useCatalog] Sync preview URL for ${img.filename}: ${assetUrl}`);
+            console.warn(`[useCatalog] Sync preview URL for ${img.filename}: ${assetUrl}`);
             thumbnailUrl = assetUrl;
           }
         } catch (error) {

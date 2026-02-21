@@ -75,6 +75,7 @@ export const GridView = ({
   // Calculate virtual row/column layout
   const rowCount = Math.ceil(images.length / columnCount);
   
+  // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
     count: rowCount,
     getScrollElement: () => containerRef.current,

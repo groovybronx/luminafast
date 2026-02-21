@@ -252,9 +252,7 @@ Implémentation d'une grille virtualisée performante pour afficher des catalogu
   - Scrolling fluide (60fps démontrable)
 
 - ✅ Sizing dynamique intelligent
-  - thumbnailSize prop (1-10) → 120px - 600px
-  - Calcul colonnes = Math.floor((containerWidth - padding) / (itemWidth + gap))
-  - Aspect ratio 3:2 mainten
+u
 
 u avec Math.round(pixelSize / 1.5)
 

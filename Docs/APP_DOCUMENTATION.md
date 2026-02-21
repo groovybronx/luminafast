@@ -652,7 +652,7 @@ pub struct ExifMetadata {
 
 **Performance mesurée** :
 - ✅ Extraction EXIF : <50ms par fichier (target atteint)
-- ✅ Batch ingestion : Aucun ralentissement measurable
+- ✅ Batch ingestion : Aucun ralentissement mesurable
 - ✅ Memory usage : Stable (pas de leak détecté)
 
 **Intégration ingestion** :
@@ -765,7 +765,7 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 | 2026-02-11 | 0.5 | Mise à jour après complétion Phase 0.5 | CI/CD implémenté et fonctionnel |
 
 | Date | Sous-Phase | Nature de la modification |
-|------|-----------|-------------------------| 
+|------|-----------|--------------------------|
 | 2026-02-21 | Corrections critiques | Pipeline EXIF E2E, ResizeObserver, CatalogEvent, logs SQLite réels, 10 bugs corrigés |
 | 2026-02-20 | Phase 3.1 | Grille virtualisée @tanstack/react-virtual, 60fps sur 10K+ images |
 | 2026-02-20 | Phase 2.4 | UI Import connectée au backend Tauri |

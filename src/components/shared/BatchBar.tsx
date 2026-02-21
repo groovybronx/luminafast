@@ -12,7 +12,7 @@ export const BatchBar = ({ selectionCount, onDispatchEvent, onClearSelection }: 
   if (selectionCount <= 1) return null;
 
   return (
-    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-zinc-900/95 border border-blue-500/50 rounded-full px-8 py-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl flex items-center gap-8 z-[60] animate-in slide-in-from-bottom-6 duration-300">
+    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-zinc-900/95 border border-blue-500/50 rounded-full px-8 py-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl flex items-center gap-8 z-60 animate-in slide-in-from-bottom-6 duration-300">
       <div className="flex flex-col">
         <span className="text-[12px] font-black text-blue-400 uppercase tracking-widest">{selectionCount} ASSETS</span>
         <span className="text-[9px] text-zinc-600 font-mono uppercase">Batch Processing</span>

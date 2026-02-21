@@ -1,0 +1,218 @@
+# Phase 3.4 — Navigateur de Dossiers (Folder Navigator)
+
+## Objectif
+
+Implémenter une arborescence des dossiers dans la sidebar gauche, affichant les volumes/dossiers réels importés avec compteurs d'images par dossier et indicateurs de disponibilité en ligne/hors ligne.
+
+## État Actuel (pré-3.4)
+
+### ✅ Déjà implémenté
+- Tables SQLite `folders` + `images.folder_id` avec FOREIGN KEY (Phase 1.1)
+- Discovery & ingestion récursive (Phase 2.1) — fichiers importés avec `folder_id`
+- Collections statiques CRUD (Phase 3.2)
+- Smart Collections (Phase 3.3)
+- LeftSidebar structure existante avec Collections
+
+### ⚠️ À implémenter
+1. **Backend** : Command `get_folder_tree()` retournant hiérarchie complète avec counts
+2. **Backend** : Command `get_folder_images(folder_id)` (filtrage par dossier)
+3. **Backend** : Command `update_volume_status(volume_name, is_online)` (détection en ligne/hors ligne)
+4. **Frontend** : Service methods pour wrapper les commandes
+5. **Frontend** : Store `folderStore` pour gérer l'état du navigateur de dossiers
+6. **Frontend** : UI dans LeftSidebar : nouvel onglet/section "Dossiers" avec arborescence interactive
+7. **Frontend** : Filtrage par dossier dans `App.tsx` (similaire à collections)
+
+---
+
+## Périmètre de la Phase 3.4
+
+### 1. Backend Rust — Nouvelles commandes Tauri
+
+#### `get_folder_tree() → CommandResult<Vec<FolderTreeNode>>`
+Type résultat :
+```rust
+pub struct FolderTreeNode {
+    pub id: u32,
+    pub name: String,
+    pub path: String,
+    pub volume_name: String,
+    pub is_online: bool,
+    pub image_count: u32,           // images directement dans ce dossier
+    pub total_image_count: u32,     // images récursives (ce dossier + enfants)
+    pub children: Vec<FolderTreeNode>,
+}
+```
+- Requête SQL : SELECT `folders.id, name, path, volume_name, (SELECT COUNT(*) FROM images WHERE folder_id = folders.id) as count`
+- Construit récursivement l'arborescence en Rust (structure parent-enfant)
+- Retourne uniquement les dossiers qui contiennent au moins 1 image (ou qui ont des enfants avec images)
+
+#### `get_folder_images(folder_id: u32, recursive: bool) → CommandResult<Vec<ImageDTO>>`
+- Si `recursive=true` : retourne images de ce dossier ET tous les sous-dossiers
+- Si `recursive=false` : images de ce dossier uniquement
+- Même structure `ImageDTO` que `get_all_images` (LEFT JOIN exif_metadata + image_state)
+- ORDER BY `filename` ASC
+
+#### `update_volume_status(volume_name: String, is_online: bool) → CommandResult<()>`
+- UPDATE `folders` SET `is_online` = ? WHERE `volume_name` = ?
+- Utilisé lors de la scan/découverte pour marquer les volumes hors ligne
+
+### 2. Backend : Nouveau champ `folders` table
+Ajouter colonne `is_online` à la table `folders` (migration 004) :
+```sql
+ALTER TABLE folders ADD COLUMN is_online BOOLEAN DEFAULT 1;
+```
+
+### 3. Front Frontend : `src/services/catalogService.ts`
+Ajouter 3 méthodes :
+```typescript
+getFolderTree(): Promise<FolderTreeNode[]>
+getFolderImages(folderId: number, recursive: boolean): Promise<ImageDTO[]>
+updateVolumeStatus(volumeName: string, isOnline: boolean): Promise<void>
+```
+
+### 4. Frontend : `src/types/folder.ts` (nouveau)
+```typescript
+export interface FolderTreeNode {
+  id: number;
+  name: string;
+  path: string;
+  volumeName: string;
+  isOnline: boolean;
+  imageCount: number;        // direct
+  totalImageCount: number;   // recursive
+  children: FolderTreeNode[];
+}
+
+export interface FolderFilter {
+  folderId: number | null;
+  recursive: boolean;
+}
+```
+
+### 5. Frontend : `src/stores/folderStore.ts` (nouveau)
+```typescript
+interface FolderStore {
+  folderTree: FolderTreeNode[];
+  activeFolderId: number | null;
+  activeFolderImageIds: number[] | null;
+  expandedFolderIds: Set<number>;  // pour l'arborescence UI
+  isLoading: boolean;
+  error: string | null;
+
+  // Actions async
+  loadFolderTree: () => Promise<void>;
+  setActiveFolder: (id: number, recursive: boolean) => Promise<void>;
+  clearActiveFolder: () => void;
+  toggleFolderExpanded: (id: number) => void;
+  checkVolumeStatus: () => Promise<void>;  // scan volumes en ligne/hors ligne
+}
+```
+
+### 6. Frontend : `src/stores/index.ts`
+Exporter `useFolderStore`.
+
+### 7. Frontend : Update `src/components/layout/LeftSidebar.tsx`
+Ajouter un nouvel onglet/section "Dossiers" (après Collections) :
+- Arborescence récursive des dossiers via `folderTree`
+- Icône dossier avec compteur d'images : "Documents (42 images)"
+- Icône disque pour les volumes avec statut en ligne/hors ligne 🟢 / 🟡
+- Click sur dossier : `setActiveFolder(id, recursive=true)`
+- Flèche expands/collapse : `toggleFolderExpanded(id)`
+- Indent visual basé sur profondeur (similaire à Finder macOS)
+- Filtrage parallèle : si dossier actif + filtre texte, combiner les deux
+
+### 8. Frontend : Update `src/App.tsx`
+- Importer `useFolderStore`
+- Priorité filtrage : `collection > folder > text search`
+- Si `activeFolderId !== null` : charger images du dossier (recursive), puis appliquer collection et texte
+- Conserver l'ordre de priorité : collections avant folders
+
+---
+
+## Livrables Techniques
+
+### Fichiers créés
+- `src/types/folder.ts`
+- `src/stores/folderStore.ts`
+- `src/stores/__tests__/folderStore.test.ts`
+- Migration SQL `004_add_folder_online_status.sql`
+
+### Fichiers modifiés
+- `src-tauri/src/commands/catalog.rs` — 3 nouvelles commandes + tests
+- `src-tauri/src/lib.rs` — enregistrement 3 commandes
+- `src-tauri/src/models/dto.rs` — ajouter `FolderTreeNode` DTO
+- `src/services/catalogService.ts` — 3 nouvelles méthodes
+- `src/services/__tests__/catalogService.test.ts` — tests folder methods
+- `src/stores/index.ts` — export `useFolderStore`
+- `src/components/layout/LeftSidebar.tsx` — nouvel onglet/section Dossiers
+- `src/App.tsx` — filtrage par folder + priorité
+
+---
+
+## Tests Requis
+
+### Backend Rust
+
+- `test_get_folder_tree_structure` : vérifier hiérarchie complète
+- `test_get_folder_tree_counts_correct` : vérifier image_count et total_image_count
+- `test_get_folder_tree_filters_empty_folders` : dossiers sans images exclus
+- `test_get_folder_images_direct` : images du dossier uniquement
+- `test_get_folder_images_recursive` : images + descendants
+- `test_update_volume_status_online` : marquer volume en ligne
+- `test_update_volume_status_offline` : marquer volume hors ligne
+
+### Frontend
+
+- `src/stores/__tests__/folderStore.test.ts` (12+ tests) :
+  - `should initialize with empty tree`
+  - `should load folder tree`
+  - `should set active folder and load images`
+  - `should get folder recursive images`
+  - `should toggle folder expansion state`
+  - `should clear active folder`
+
+---
+
+## Dépendances & Blocages
+
+### Dépendances
+- ✅ Phase 1.1 (schéma `folders` + FK)
+- ✅ Phase 2.1 (ingestion réelle avec `folder_id`)
+- ✅ Phase 3.2 (Collections CRUD — patterns similaires)
+
+### Pas de blocages identifiés
+
+---
+
+## Contexte Architectural
+
+### Schéma Filtrage Multi-Niveaux
+L'app doit supporter :
+1. **Filtre par collection** : `where image_id IN (select image_id from collection_images where collection_id = ?)`
+2. **Filtre par dossier** : `where folder_id IN (folder_id, child_ids...)`  si recursive
+3. **Filtre texte** : `where filename LIKE '%query%'`
+
+Ordre d'application (priorité descendante) :
+- **Collection active** (exclut tout le reste)
+- **Folder active** (peut être combinée avec collection)
+- **Search/filter text** (le plus spécifique)
+
+### Gestion des Volumes Hors Ligne
+- Volumes monitorés par file watcher (Phase 1.4)
+- Statut persiste dans DB (`folders.is_online`)
+- UI affiche 🟢 online / 🟡 offline avec visual feedback (opacity-50)
+- Images de dossiers hors ligne restent accessibles (en cache/preview)
+
+---
+
+## Critères de Validation Finaux
+
+- [ ] `cargo check` : 0 erreurs
+- [ ] `cargo test --lib` : Nouveaux tests + tous les anciens passants (150+ tests)
+- [ ] `tsc --noEmit` : 0 erreurs
+- [ ] `npm run test:run` : 340+ tests frontend passants
+- [ ] LeftSidebar affiche arborescence dossiers complète avec compteurs
+- [ ] Click dossier → filtrage images en temps réel
+- [ ] Volumes en ligne/hors ligne affordés visuellement
+- [ ] Aucun `any` TypeScript ajouté
+- [ ] Aucun `unwrap()` Rust en production

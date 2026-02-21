@@ -8,7 +8,7 @@
 ## 1. RÈGLES ABSOLUES (NON NÉGOCIABLES)
 
 ### 1.1 — Intégrité du Plan
-- **Le plan de développement (`Docs/briefs/` + plan principal) ne peut PAS être modifié** sans l'approbation explicite du propriétaire du projet.
+- **Le plan de développement (`Docs/briefs/` + `Docs/archives/luminafast_developement_plan.md` ) ne peut PAS être modifié** sans l'approbation explicite du propriétaire du projet.
 - Si une modification du plan est nécessaire, l'agent DOIT :
   1. Expliquer la raison avec une justification technique détaillée
   2. Proposer l'alternative

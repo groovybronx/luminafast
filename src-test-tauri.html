@@ -1,19 +1,21 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tauri API Test</title>
 </head>
 <body>
     <h1>Tauri API Test</h1>
     <div id="result"></div>
-    
+
     <script>
         console.log('Testing Tauri API...');
         console.log('window.__TAURI__:', window.__TAURI__);
-        
+
         if (window.__TAURI__) {
             document.getElementById('result').innerHTML = '✅ Tauri API Available!';
-            
+
             window.__TAURI__.invoke('get_all_images', { filter: null })
                 .then(result => {
                     console.log('Command result:', result);

@@ -147,7 +147,11 @@ describe('PreviewService', () => {
 
       mockTauriInvoke.mockResolvedValue(mockResult);
 
-      const result = await service.generatePreview('/path/to/image.jpg', PreviewType.Thumbnail, 'abc123');
+      const result = await service.generatePreview(
+        '/path/to/image.jpg',
+        PreviewType.Thumbnail,
+        'abc123',
+      );
 
       expect(mockTauriInvoke).toHaveBeenCalledWith('generate_preview', {
         filePath: '/path/to/image.jpg',
@@ -159,63 +163,69 @@ describe('PreviewService', () => {
 
     it('should throw error when service not initialized', async () => {
       const uninitializedService = new (PreviewService as any)();
-      
-      await expect(uninitializedService.generatePreview('/path/to/image.jpg', PreviewType.Thumbnail, 'abc123'))
-        .rejects.toThrow('PreviewService non initialisé');
+
+      await expect(
+        uninitializedService.generatePreview('/path/to/image.jpg', PreviewType.Thumbnail, 'abc123'),
+      ).rejects.toThrow('PreviewService non initialisé');
     });
 
     it('should handle unsupported format error', async () => {
       const error = new Error('Unsupported format: RAW');
       mockTauriInvoke.mockRejectedValue(error);
 
-      await expect(service.generatePreview('/path/to/image.raw', PreviewType.Thumbnail, 'abc123'))
-        .rejects.toMatchObject({
-          type: 'unsupported_format',
-          format: 'Unsupported format: RAW',
-        });
+      await expect(
+        service.generatePreview('/path/to/image.raw', PreviewType.Thumbnail, 'abc123'),
+      ).rejects.toMatchObject({
+        type: 'unsupported_format',
+        format: 'Unsupported format: RAW',
+      });
     });
 
     it('should handle corrupted file error', async () => {
       const error = new Error('File corrupted or not found');
       mockTauriInvoke.mockRejectedValue(error);
 
-      await expect(service.generatePreview('/path/to/corrupted.jpg', PreviewType.Thumbnail, 'abc123'))
-        .rejects.toMatchObject({
-          type: 'corrupted_file',
-          path: 'File corrupted or not found',
-        });
+      await expect(
+        service.generatePreview('/path/to/corrupted.jpg', PreviewType.Thumbnail, 'abc123'),
+      ).rejects.toMatchObject({
+        type: 'corrupted_file',
+        path: 'File corrupted or not found',
+      });
     });
 
     it('should handle timeout error', async () => {
       const error = new Error('Generation timeout');
       mockTauriInvoke.mockRejectedValue(error);
 
-      await expect(service.generatePreview('/path/to/large.jpg', PreviewType.OneToOne, 'abc123'))
-        .rejects.toMatchObject({
-          type: 'generation_timeout',
-          timeout: 30,
-        });
+      await expect(
+        service.generatePreview('/path/to/large.jpg', PreviewType.OneToOne, 'abc123'),
+      ).rejects.toMatchObject({
+        type: 'generation_timeout',
+        timeout: 30,
+      });
     });
 
     it('should handle out of memory error', async () => {
       const error = new Error('Out of memory');
       mockTauriInvoke.mockRejectedValue(error);
 
-      await expect(service.generatePreview('/path/to/huge.jpg', PreviewType.OneToOne, 'abc123'))
-        .rejects.toMatchObject({
-          type: 'out_of_memory',
-        });
+      await expect(
+        service.generatePreview('/path/to/huge.jpg', PreviewType.OneToOne, 'abc123'),
+      ).rejects.toMatchObject({
+        type: 'out_of_memory',
+      });
     });
 
     it('should handle IO error', async () => {
       const error = new Error('IO error: Permission denied');
       mockTauriInvoke.mockRejectedValue(error);
 
-      await expect(service.generatePreview('/protected/image.jpg', PreviewType.Thumbnail, 'abc123'))
-        .rejects.toMatchObject({
-          type: 'io_error',
-          message: 'IO error: Permission denied',
-        });
+      await expect(
+        service.generatePreview('/protected/image.jpg', PreviewType.Thumbnail, 'abc123'),
+      ).rejects.toMatchObject({
+        type: 'io_error',
+        message: 'IO error: Permission denied',
+      });
     });
   });
 
@@ -248,7 +258,10 @@ describe('PreviewService', () => {
       const result = await service.generateBatchPreviews(files, PreviewType.Thumbnail);
 
       expect(mockTauriInvoke).toHaveBeenCalledWith('generate_batch_previews', {
-        files: [['/path/to/image1.jpg', 'hash1'], ['/path/to/image2.jpg', 'hash2']],
+        files: [
+          ['/path/to/image1.jpg', 'hash1'],
+          ['/path/to/image2.jpg', 'hash2'],
+        ],
         previewType: PreviewType.Thumbnail,
       });
       expect(result).toEqual(mockStats);
@@ -509,13 +522,16 @@ describe('PreviewService', () => {
 
       mockTauriInvoke.mockResolvedValue(mockStats);
 
-      const result = await service.generatePreviewsWithProgress(
-        files,
-        [PreviewType.Thumbnail, PreviewType.Standard]
-      );
+      const result = await service.generatePreviewsWithProgress(files, [
+        PreviewType.Thumbnail,
+        PreviewType.Standard,
+      ]);
 
       expect(mockTauriInvoke).toHaveBeenCalledWith('generate_previews_with_progress', {
-        files: [['/path/to/image1.jpg', 'hash1'], ['/path/to/image2.jpg', 'hash2']],
+        files: [
+          ['/path/to/image1.jpg', 'hash1'],
+          ['/path/to/image2.jpg', 'hash2'],
+        ],
         previewTypes: [PreviewType.Thumbnail, PreviewType.Standard],
       });
       expect(result).toEqual(mockStats);
@@ -643,12 +659,12 @@ describe('PreviewService', () => {
     it('should setup event listeners on construction', async () => {
       // Create new service instance
       const newService = PreviewService.getInstance();
-      
+
       // Wait for async event listener setup
       await vi.waitFor(() => {
         expect(mockListen).toHaveBeenCalledWith('preview_progress', expect.any(Function));
       });
-      
+
       // Verify unlisten function is stored
       expect(newService['unlistenFunctions'].length).toBeGreaterThan(0);
     });
@@ -669,7 +685,9 @@ describe('PreviewService', () => {
 
       // Get the event handler that was registered (using any to handle mock typing)
       const mockCalls = mockListen.mock.calls as unknown[][];
-      const eventHandler = mockCalls[0]?.[1] as ((event: { payload: PreviewProgressEvent }) => void) | undefined;
+      const eventHandler = mockCalls[0]?.[1] as
+        | ((event: { payload: PreviewProgressEvent }) => void)
+        | undefined;
       expect(eventHandler).toBeDefined();
 
       // Simulate event from Tauri
@@ -706,7 +724,9 @@ describe('PreviewService', () => {
 
       // Get the event handler (using any to handle mock typing)
       const mockCalls = mockListen.mock.calls as unknown[][];
-      const eventHandler = mockCalls[0]?.[1] as ((event: { payload: PreviewProgressEvent }) => void) | undefined;
+      const eventHandler = mockCalls[0]?.[1] as
+        | ((event: { payload: PreviewProgressEvent }) => void)
+        | undefined;
       expect(eventHandler).toBeDefined();
 
       // Simulate event - should not throw even if callback errors
@@ -874,7 +894,8 @@ describe('PreviewService', () => {
     });
 
     it('should handle very long file paths', async () => {
-      const longPath = '/very/long/path/that/exceeds/normal/filesystem/limits/and/contains/many/directories/and/long/filename/with/extension.jpg';
+      const longPath =
+        '/very/long/path/that/exceeds/normal/filesystem/limits/and/contains/many/directories/and/long/filename/with/extension.jpg';
       const mockResult = {
         path: '/path/to/preview.jpg',
         preview_type: PreviewType.Thumbnail,

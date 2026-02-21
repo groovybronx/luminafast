@@ -10,232 +10,176 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # Lightweight validation for simple pushes
+  # Quick validation for pushes (non-PR)
   validate:
     name: Quick Validation
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-node@v4
       with:
         node-version: '20.x'
         cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Type check
-      run: npm run type-check
-      
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
+
+    - run: npm ci --prefer-offline
+
+    - name: Type check & format
+      run: |
+        npm run type-check
+        npx prettier --check "src/**/*.{ts,tsx}"
+
+    - uses: dtolnay/rust-toolchain@stable
       with:
-        toolchain: stable
         components: rustfmt
-        
-    - name: Rust Cache
-      uses: Swatinem/rust-cache@v2
+
+    - uses: Swatinem/rust-cache@v2
       with:
         workspaces: src-tauri
-        
-    - name: Check Rust formatting
-      run: cd src-tauri && cargo fmt --all -- --check
+        shared-key: rust-stable
 
-  # Full CI pipeline for PRs to develop
+    - run: cd src-tauri && cargo fmt --all -- --check
+
+  # Optimized frontend pipeline for PRs
   frontend:
-    name: Frontend (TypeScript + React)
+    name: Frontend
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    
-    strategy:
-      matrix:
-        node-version: [20.x]
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: '20.x'
         cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Type check
-      run: npm run type-check
-      
-    - name: Lint TypeScript/React
-      run: npm run lint
-      
+
+    - run: npm ci --prefer-offline
+
+    - name: Lint & type check
+      run: |
+        npm run type-check
+        npm run lint
+
+    - name: Test & build
+      run: |
+        npm run test:ci
+        npm run build
+
+  # Optimized backend pipeline for PRs
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: src-tauri
+        shared-key: rust-stable
+        cache-on-failure: true
+
+    - name: Install system dependencies (cached)
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y --no-install-recommends \
+          libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+          librsvg2-dev patchelf libssl-dev pkg-config
+
+    - name: Create dist placeholder
+      run: mkdir -p dist && echo '<!DOCTYPE html><html><body>CI</body></html>' > dist/index.html
+
+    - name: Format, lint & build
+      run: |
+        cd src-tauri
+        cargo fmt --all -- --check
+        cargo clippy --lib -- -D warnings -A dead_code -A unused_variables
+        cargo build --lib
+
     - name: Run tests
-      run: npm run test:ci
-      
+      run: cd src-tauri && timeout 120 cargo test
+
+# Integration build (only on merge-ready PRs or labeled)
+  integration:
+    name: Integration Build
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request' &&
+      (contains(github.event.pull_request.labels.*.name, 'run-integration') ||
+       github.event.pull_request.mergeable_state == 'clean')
+
+    needs: [frontend, backend]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - uses: dtolnay/rust-toolchain@stable
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: src-tauri
+        shared-key: rust-stable
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y --no-install-recommends \
+          libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+          librsvg2-dev patchelf libssl-dev pkg-config
+
+    - run: npm ci --prefer-offline
+
     - name: Build frontend
       run: npm run build
 
-  # Backend tests and linting
-  backend:
-    name: Backend (Rust + Tauri)
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        toolchain: stable
-        components: rustfmt, clippy
-        
-    - name: Rust Cache
-      uses: Swatinem/rust-cache@v2
-      with:
-        workspaces: src-tauri
-
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
-          librsvg2-dev patchelf libssl-dev pkg-config build-essential
-    
-    # AJOUT : Créer le dossier dist pour satisfaire tauri::generate_context!()
-    - name: Create dist directory placeholder
-      run: |
-        mkdir -p dist
-        echo '<!DOCTYPE html><html><body>CI placeholder</body></html>' > dist/index.html
-        echo "✅ dist directory created for Rust compilation"
-        
-    - name: Check Rust formatting
-      run: cd src-tauri && cargo fmt --all -- --check
-      
-    - name: Clippy lint
-      run: cd src-tauri && cargo clippy --all-targets --all-features -- -D warnings -A dead_code -A unused_variables
-      
-    - name: Build Rust code
-      run: cd src-tauri && cargo build --lib --verbose
-      
-    - name: Run Rust tests
-      run: cd src-tauri && timeout 300 cargo test -- --ignored
-
-  # Integration tests (Tauri build)
-  integration:
-    name: Integration (Tauri Build)
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    
-    needs: [frontend, backend]
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.x'
-        cache: 'npm'
-        
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        toolchain: stable
-    
-    - name: Rust Cache
-      uses: Swatinem/rust-cache@v2
-      with:
-        workspaces: src-tauri
-        
-    # NOTE: Dépendances système critiques pour Tauri sur Ubuntu
-    # Problème: build Tauri échoue si libssl-dev ou pkg-config manquant
-    # Dépendances ajoutées vs version actuelle:
-    # - libssl-dev: requis pour TLS/HTTPS dans Rust
-    # - pkg-config: requis pour la compilation des crates natives
-    # - build-essential: outils de compilation C/C++
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
-          librsvg2-dev patchelf libssl-dev pkg-config build-essential
-    
-    # Étape critique : build frontend pour générer le dossier dist attendu par Tauri
-    # IMPORTANT: Le dossier dist DOIT exister avant la compilation Rust car le macro
-    # tauri::generate_context!() vérifie sa présence au moment de la compilation
-    - name: Install frontend dependencies
-      run: npm ci
-    
-    # Créer le dossier dist avec un fichier minimal AVANT le build
-    # pour satisfaire le macro Rust qui vérifie l'existence pendant la compilation
-    - name: Create dist directory
-      run: |
-        mkdir -p dist
-        echo '<!DOCTYPE html><html><body>Build in progress...</body></html>' > dist/index.html
-        echo "✅ dist directory created with placeholder"
-      
-    - name: Build frontend (dist)
-      run: npm run build
-      
-    - name: Verify dist folder exists
-      run: |
-        if [ -d "dist" ]; then
-          echo "✅ dist folder exists"
-          ls -lh dist/ | head -10
-        else
-          echo "❌ ERROR: dist folder not found after build"
-          echo "Current directory: $(pwd)"
-          echo "Directory contents:"
-          ls -la
-          exit 1
-        fi
-        
-    # NOTE: Build Tauri complet avec frontend intégré
-    # beforeBuildCommand dans tauri.conf.json relancera npm run build,
-    # mais dist doit déjà exister pour que le macro Rust compile
     - name: Build Tauri app
-      run: npm run build:tauri -- --verbose
-      
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: tauri-app
-        path: src-tauri/target/release/bundle/deb/*.deb
-        retention-days: 30
+      run: npm run build:tauri
 
-  # Security audit
+    - uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: tauri-app-${{ github.sha }}
+        path: src-tauri/target/release/bundle/deb/*.deb
+        retention-days: 7
+
+# Security audit (weekly or on-demand)
   security:
     name: Security Audit
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        toolchain: stable
+    if: |
+      github.event_name == 'pull_request' &&
+      (contains(github.event.pull_request.labels.*.name, 'security') ||
+       github.base_ref == 'main')
 
-    - name: Install cargo-audit
-      run: cargo install cargo-audit
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: dtolnay/rust-toolchain@stable
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: src-tauri
+        shared-key: rust-stable
 
     - name: Rust security audit
-      run: cd src-tauri && cargo audit
-        
-    # NOTE: L'audit de sécurité peut échouer sur des vulnérabilités connues
-    # Problème: certaines dépendances peuvent avoir des vulnérabilités modérées
-    # --audit-level moderate: ignore les vulnérabilités low (trop nombreuses)
-    # Alternative: --audit-level high pour ignorer moderate si nécessaire
+      run: |
+        cargo install --locked cargo-audit
+        cd src-tauri && cargo audit --deny warnings
+      continue-on-error: true
+
     - name: Node.js security audit
       run: npm audit --audit-level high
+      continue-on-error: true

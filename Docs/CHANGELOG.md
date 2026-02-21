@@ -34,7 +34,7 @@
 | Infra | — | Agents IA dédiés (code-review, pr-verification, phase-implementation, documentation-sync) | ✅ Complétée | 2026-02-20 | Copilot |
 | 3 | 3.1 | Grille d'Images Réelle | ⬜ En attente | — | — |
 | 3 | 3.2 | Collections Statiques (CRUD) | ✅ Complétée | 2026-02-21 | Copilot |
-| 3 | 3.3 | Smart Collections | ⬜ En attente | — | — |
+| 3 | 3.3 | Smart Collections | ✅ Complétée | 2026-02-21 | Copilot |
 | 3 | 3.4 | Navigateur de Dossiers | ⬜ En attente | — | — |
 | 3 | 3.5 | Recherche & Filtrage | ⬜ En attente | — | — |
 | 4 | 4.1 | Event Sourcing Engine | ⬜ En attente | — | — |
@@ -214,7 +214,7 @@ Session d'audit et de corrections critiques sur l'ensemble des phases 0 à 3.1. 
 **Durée** : ~1 session
 
 #### Résumé
-Implémentation d'une grille virtualisée performante pour afficher des catalogues de 10K+ images avec fluidité (60fps). Utilisation de `@tanstack/react-virtual` pour virtualiser les rangées, calculant dynamiquement le nombre de colonnes basé sur la largeur du conteneur. 
+Implémentation d'une grille virtualisée performante pour afficher des catalogues de 10K+ images avec fluidité (60fps). Utilisation de `@tanstack/react-virtual` pour virtualiser les rangées, calculant dynamiquement le nombre de colonnes basé sur la largeur du conteneur.
 
 **Découverte** : App.tsx utilise déjà `useCatalog()` et GridView est déjà connectée aux vraies images SQLite. Phase 3.1 était donc principalement une optimisation de performance.
 
@@ -356,6 +356,48 @@ Implémentation complète du CRUD des collections statiques : création, renomma
 - Filtre par collection dans la grille fonctionne en temps réel
 - Base solide pour Phase 3.3 (Smart Collections) et Phase 3.4 (Navigateur de Dossiers)
 - Tests : 127 Rust ✅ + 455 frontend ✅
+
+---
+
+### 2026-02-21 — Phase 3.3 : Smart Collections (Complétée)
+
+**Statut** : ✅ **Complétée**
+**Agent** : GitHub Copilot
+**Branche** : `phase/3.3-smart-collections`
+**Type** : Feature / Bug Fix
+
+#### Résumé
+**Cause racine** : Le parser `smart_query_parser` ne supportait pas les alias SQL dans les requêtes générées pour les smart collections, provoquant des erreurs de parsing et des résultats incorrects lors de l'exécution des requêtes dynamiques.
+**Correction structurelle** : Suppression systématique des alias dans la requête SQL générée par `get_smart_collection_results` pour garantir la compatibilité avec le parser. La requête utilise désormais les noms de tables explicites (`images`, `image_state`, `exif_metadata`) sans alias, ce qui permet au parser d'appliquer correctement les filtres dynamiques.
+
+#### Fichiers modifiés
+- `src-tauri/src/commands/catalog.rs` — Correction requête SQL sans alias, adaptation mapping DTO
+- `src-tauri/src/services/smart_query_parser.rs` — Validation parsing sans alias
+- `src-tauri/src/models/dto.rs` — Synchronisation champs DTO
+- `src/hooks/__tests__/useCatalog.test.ts` — Tests mapping EXIF + smart collections
+- `src/components/library/__tests__/GridView.test.tsx` — Tests filtrage smart collections
+- `Docs/APP_DOCUMENTATION.md` — Mise à jour logique requête smart collections
+- `Docs/CHANGELOG.md` — Synchronisation documentation
+
+#### Résolutions de commentaires PR 19
+- Correction du conflit d'alias SQL (voir ci-dessus)
+- Validation du mapping DTO TypeScript/Rust pour les champs EXIF
+- Correction du test de filtrage smart collections (test_get_smart_collection_results_filters_correctly)
+- Documentation synchronisée sur la logique de requête SQL
+- Ajout de tests unitaires pour la fonction parser
+- Correction du mapping dans les tests GridView pour les smart collections
+
+#### Critères de validation remplis
+- [x] Requêtes SQL compatibles parser (sans alias)
+- [x] Tests unitaires Rust et TypeScript passants
+- [x] Mapping DTO synchronisé
+- [x] Documentation à jour
+
+#### Impact
+- Les smart collections filtrent désormais correctement les images selon les règles dynamiques JSON.
+- Aucun alias SQL ne subsiste dans les requêtes dynamiques, garantissant la compatibilité parser.
+- Tests : 492/492 tests passants ✅
+- Comportement observable : L'utilisateur peut créer des smart collections avec filtres complexes, et obtenir des résultats fiables.
 
 ---
 
@@ -608,7 +650,7 @@ Suite des corrections critiques pour rendre le pipeline d'import end-to-end fonc
   - Ajout `get_db_path()` helper
   - Modification `batch_ingest()` et `ingest_file()` pour ouvrir connexion vers DB réelle
   - Modification `get_discovery_stats()` (removed get_ingestion_service call)
-  
+
 - `src-tauri/src/commands/catalog.rs` :
   - Ligne 76-89 : Correction indices colonnes (rating 9→11, flag 10→12) dans `get_all_images`
   - Ligne 356-369 : Correction indices colonnes dans `search_images`
@@ -617,7 +659,7 @@ Suite des corrections critiques pour rendre le pipeline d'import end-to-end fonc
   - Ligne 7 : Import `previewService`
   - Ligne 78-88 : Initialisation `previewService.initialize()` avant `refreshCatalog()`
 
-- Autres fichiers mineurs : 
+- Autres fichiers mineurs :
   - `src-tauri/src/database.rs` (ligne 80-86, 123) - Ajout migration 002
   - `src-tauri/src/services/discovery.rs` - HashMap discovered_files
   - `src/hooks/useDiscovery.ts` - useRef pattern
@@ -1437,7 +1479,7 @@ Implémentation complète du service de gestion du système de fichiers avec wat
 
 ### Fichiers créés/modifiés
 - `src-tauri/src/models/filesystem.rs` (302 lignes)
-- `src-tauri/src/services/filesystem.rs` (476 lignes)  
+- `src-tauri/src/services/filesystem.rs` (476 lignes)
 - `src-tauri/src/commands/filesystem.rs` (502 lignes)
 - `src/types/filesystem.ts` (412 lignes)
 - `src/services/filesystemService.ts` (628 lignes)

@@ -3,7 +3,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-21 (Phase 3.2 Collections Statiques CRUD + corrections camelCase Tauri + BatchBar collection picker) — État : Pipeline import + grille virtualisée + collections CRUD connectées + ajout en collection depuis la sélection. 455 tests frontend, 127 tests Rust. Branche `develop`.
+> **Dernière mise à jour** : 2026-02-21 (Phase 3.3 Smart Collections) — État : Pipeline import + grille virtualisée + collections CRUD + smart collections avec parser JSON→SQL. 339 tests frontend, 153 tests Rust, **492/492 tests ✅**. Branche `phase/3.3-smart-collections`.
 >
 > ### Décisions Projet (validées par le propriétaire)
 > - **Phase 8 (Cloud/Sync)** : Reportée post-lancement
@@ -17,8 +17,8 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : Phases 0 à 3.2 complétées — Collections statiques CRUD opérationnelles + sélection batch vers collection
-Pipeline complet validé : Discovery (scan récursif) → BLAKE3 hashing → **Extraction EXIF réelle (kamadak-exif v0.6.1)** → Insertion SQLite (images + exif_metadata + image_state) → **Exposition via LEFT JOIN dans les commandes CRUD** → Mapping TypeScript → Affichage UI. **Grille virtualisée** avec `@tanstack/react-virtual` (10K+ images, 60fps). **Collections statiques CRUD** : création, renommage, suppression, filtrage via `collectionStore` Zustand et 4 commandes Tauri dédiées. **Ajout batch à une collection** : bouton `FolderPlus` dans la `BatchBar` (popover collections, Cmd+clic multi-sélection). IPTC skeleton créé mais extraction non implémentée (reportée Phase 5.4).
+### État actuel : Phases 0 à 3.3 complétées — Collections statiques CRUD + Smart Collections avec parser JSON→SQL
+Pipeline complet validé : Discovery (scan récursif) → BLAKE3 hashing → **Extraction EXIF réelle (kamadak-exif v0.6.1)** → Insertion SQLite (images + exif_metadata + image_state) → **Exposition via LEFT JOIN dans les commandes CRUD** → Mapping TypeScript → Affichage UI. **Grille virtualisée** avec `@tanstack/react-virtual` (10K+ images, 60fps). **Collections statiques CRUD** : création, renommage, suppression, filtrage via `collectionStore` Zustand et 4 commandes Tauri dédiées. **Smart Collections** : Parser `smart_query_parser.rs` converti JSON→SQL, 10 champs supportés (rating, ISO, aperture, focal_length, camera, lens, flag, color_label, filename), 8 opérateurs (=, !=, >, >=, <, <=, contains, starts_with). UI `SmartCollectionBuilder.tsx` avec preview live. IPTC skeleton créé mais extraction non implémentée (reportée Phase 5.4).
 
 ### Objectif : Application Tauri autonome commercialisable
 Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructive, catalogue SQLite, et gestion de bibliothèques photographiques massives.
@@ -51,6 +51,7 @@ Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructiv
 
 ```
 LuminaFast/
+├── AGENTS.md                       # Directives obligatoires pour agents IA
 ├── .github/
 │   └── workflows/
 │       └── ci.yml                    # Pipeline CI/CD GitHub Actions
@@ -60,19 +61,27 @@ LuminaFast/
 ├── Docs/
 │   ├── archives/
 │   │   ├── Lightroomtechnique.md   # Analyse architecture Lightroom Classic
-│   │   └── recommendations.md      # Stack moderne recommandée
+│   │   ├── recommendations.md      # Stack moderne recommandée
+│   │   └── luminafast_developement_plan.md # Plan détaillé du projet
+│   ├── briefs/                       # Briefs des phases de développement
+│   │   ├── PHASE-0.1.md → PHASE-3.2.md # Briefs implémentées
+│   │   └── PHASE-3.3.md → ...      # Briefs futures
 │   ├── AI_INSTRUCTIONS.md          # Directives pour agents IA
 │   ├── CHANGELOG.md                # Suivi d'avancement par sous-phase
-│   ├── TESTING_STRATEGY.md         # Stratégie de tests
+│   ├── TESTING_STRATEGY.md         # Stratégie de tests (Vitest + Rust)
 │   ├── GOVERNANCE.md               # Règles de gouvernance
 │   └── APP_DOCUMENTATION.md        # Ce fichier
 ├── public/
 │   └── vite.svg
+├── scripts/                        # Utilitaires scripts
+│   └── test-workflow.sh            # Script test workflow
 ├── src/
 │   ├── App.tsx                     # Orchestrateur (152 lignes, pas de useState)
 │   ├── main.tsx                    # Point d'entrée React
 │   ├── vite-env.d.ts               # Déclarations d'environnement Vite
 │   ├── index.css                   # Styles globaux + TailwindCSS
+│   ├── assets/                     # Ressources statiques
+│   │   └── react.svg               # Logo React
 │   ├── stores/                     # Stores Zustand (state management)
 │   │   ├── index.ts                # Re-export central
 │   │   ├── catalogStore.ts         # Images, sélection, filtres
@@ -83,22 +92,27 @@ LuminaFast/
 │   ├── lib/                        # Utilitaires et données mock
 │   │   ├── helpers.ts              # safeID()
 │   │   └── mockData.ts             # generateImages, INITIAL_IMAGES (MockEvent supprimé)
-│   ├── services/                   # Services TypeScript (Phase 1.2 + 2.2)
-│   │   ├── catalogService.ts       # Wrapper Tauri avec gestion d'erreurs
+│   ├── services/                   # Services TypeScript (Phase 1.2 + 2.2 + 3.3)
+│   │   ├── catalogService.ts       # Wrapper Tauri avec gestion d'erreurs collections CRUD
 │   │   ├── exifService.ts           # Service EXIF/IPTC avec invoke direct
 │   │   ├── discoveryService.ts     # Service discovery/ingestion
 │   │   ├── filesystemService.ts     # Service système de fichiers
-│   │   └── hashingService.ts        # Service BLAKE3 hashing
+│   │   ├── hashingService.ts        # Service BLAKE3 hashing
+│   │   ├── previewService.ts        # Service génération previews RAW + event listeners (Phase 3.3)
+│   │   └── __tests__/             # Tests unitaires services
 │   ├── types/                      # Types TypeScript du domaine
 │   │   ├── index.ts                # Re-export central
 │   │   ├── image.ts                # CatalogImage, ExifData, EditState
-│   │   ├── collection.ts           # Collection, SmartQuery
+│   │   ├── collection.ts           # Collection, SmartQuery, CollectionType (Phase 3.2)
 │   │   ├── events.ts               # CatalogEvent, EventType
 │   │   ├── ui.ts                   # ActiveView, LogEntry
 │   │   ├── dto.ts                  # DTOs Tauri (Phase 1.2)
 │   │   ├── exif.ts                 # Types EXIF/IPTC complets (Phase 2.2)
 │   │   ├── discovery.ts            # Types discovery/ingestion (Phase 2.1)
-│   │   └── filesystem.ts           # Types système de fichiers
+│   │   ├── filesystem.ts           # Types système de fichiers
+│   │   ├── preview.ts              # Types génération previews (Phase 3.3)
+│   │   ├── hashing.ts              # Types BLAKE3 hashing
+│   │   └── __tests__/             # Tests types (types.test.ts, hashing.test.ts, etc.)
 │   ├── components/
 │   │   ├── layout/                 # Structure de la page
 │   │   │   ├── TopNav.tsx          # Navigation supérieure
@@ -107,13 +121,15 @@ LuminaFast/
 │   │   │   ├── Toolbar.tsx         # Mode, recherche, taille
 │   │   │   └── Filmstrip.tsx       # Bande défilante
 │   │   ├── library/                # Mode bibliothèque
-│   │   │   └── GridView.tsx        # Grille d'images
+│   │   │   ├── GridView.tsx        # Grille d'images virtualisée (@tanstack/react-virtual)
+│   │   │   ├── ImageCard.tsx       # Carte image avec métadonnées
+│   │   │   └── __tests__/         # Tests GridView et ImageCard
 │   │   ├── develop/                # Mode développement
 │   │   │   ├── DevelopView.tsx     # Vue développement + avant/après
 │   │   │   ├── DevelopSliders.tsx  # Sliders de réglage
 │   │   │   └── HistoryPanel.tsx    # Historique des events
 │   │   ├── metadata/               # Métadonnées et EXIF
-│   │   │   ├── Histogram.tsx       # Histogramme
+│   │   │   ├── Histogram.tsx       # Histogramme simulé
 │   │   │   ├── ExifGrid.tsx        # Grille EXIF compacte
 │   │   │   └── MetadataPanel.tsx   # Fiche technique + tags
 │   │   └── shared/                 # Composants partagés
@@ -121,12 +137,21 @@ LuminaFast/
 │   │       ├── ArchitectureMonitor.tsx # Console monitoring
 │   │       ├── ImportModal.tsx     # Modal d'import
 │   │       ├── BatchBar.tsx        # Actions batch : pick, favoris, ajout collection (FolderPlus popover), clear
-│   │       └── SearchBar.tsx        # Barre de recherche
+│   │       ├── KeyboardOverlay.tsx # Indicateurs raccourcis clavier
+│   │       └── __tests__/         # Tests composants partagés
 │   └── hooks/                       # Hooks React personnalisés
 │       ├── useCatalog.ts           # Hook principal catalogue (mapping DTO→CatalogImage + EXIF)
 │       ├── useDiscovery.ts         # Hook discovery/ingestion
-│       ├── useKeyboardShortcuts.ts # Raccourcis clavier
 │       └── __tests__/             # Tests hooks (useCatalog.test.ts, useDiscovery.test.ts)
+│   ├── test/                       # Infrastructure tests et mocks
+│   │   ├── setup.ts                # Configuration tests globale
+│   │   ├── storeUtils.ts           # Utilitaires stores tests
+│   │   ├── mocks/
+│   │   │   ├── tauri-api.ts        # Mock API Tauri principal
+│   │   │   └── tauri-api/
+│   │   │       ├── core.ts         # Mocks core Tauri
+│   │   │       └── tauri.ts        # Mocks invoke Tauri
+│   │   └── __tests__/             # Tests infrastructure
 ├── src-tauri/                         # Backend Rust Tauri
 │   ├── Cargo.toml                    # Dépendances Rust (rusqlite, etc.)
 │   ├── tauri.conf.json              # Configuration Tauri
@@ -137,21 +162,43 @@ LuminaFast/
 │   │   ├── main.rs                 # Point d'entrée Rust
 │   │   ├── lib.rs                  # Module library + plugins + init DB + commandes
 │   │   ├── database.rs               # Gestion SQLite, migrations, PRAGMA
-│   │   ├── commands/                 # Commandes Tauri CRUD (Phase 1.2 + 2.2)
-│   │   │   ├── catalog.rs           # 11 commandes CRUD (+ delete/rename/remove/get_collection_images — Phase 3.2)
-│   │   │   ├── exif.rs              # Commandes EXIF/IPTC (Phase 2.2)
+│   │   ├── commands/                 # Commandes Tauri CRUD (Phase 1.2 + 2.2 + 3.3)
+│   │   │   ├── mod.rs               # Export et enregistrement des commandes
+│   │   │   ├── catalog.rs           # 17 commandes CRUD images+collections (Phase 3.2)
+│   │   │   ├── exif.rs              # Commandes EXIF/IPTC extraction (Phase 2.2)
 │   │   │   ├── filesystem.rs        # Commandes système de fichiers
-│   │   │   └── mod.rs               # Export des commandes
-│   │   ├── models/                   # Types Rust du domaine
-│   │   │   ├── catalog.rs           # Image, Collection, Folder, etc.
-│   │   │   ├── exif.rs              # Modèles EXIF/IPTC complets (Phase 2.2)
-│   │   │   ├── discovery.rs         # Modèles discovery/ingestion (Phase 2.1)
-│   │   │   ├── filesystem.rs        # Modèles système de fichiers
-│   │   │   ├── hashing.rs           # Modèles BLAKE3
-│   │   │   ├── dto.rs                # DTOs Tauri avec serde (Phase 1.2)
-│   │   │   └── mod.rs               # Export des modèles
-│   │   └── migrations/               # Scripts de migration SQL
-│   │       └── 001_initial.sql      # Schéma complet du catalogue
+│   │   │   ├── discovery.rs         # Commandes ingestion + découverte (Phase 2.1)
+│   │   │   ├── hashing.rs           # Commandes BLAKE3 batch
+│   │   │   ├── preview.rs           # Commandes génération previews RAW (Phase 3.3)
+│   │   │   └── types.rs             # Types réponse partagés
+│   │   ├── models/                   # Types Rust du domaine (sérializables)
+│   │   │   ├── mod.rs               # Export des modèles
+│   │   │   ├── catalog.rs           # Image, Folder, CollectionType (base)
+│   │   │   ├── collection.rs        # Collection CRUD models (Phase 3.2)
+│   │   │   ├── image.rs             # Image détails, metadata (Phase 3.3)
+│   │   │   ├── event.rs             # CatalogEvent, EventType (Phase 4.3)
+│   │   │   ├── exif.rs              # ExifMetadata, IptcMetadata (Phase 2.2)
+│   │   │   ├── iptc.rs              # IptcMetadata détails (skeleton Phase 5.4)
+│   │   │   ├── discovery.rs         # DiscoveredFile, DiscoverySession (Phase 2.1)
+│   │   │   ├── filesystem.rs        # FileEvent, FileLock, WatcherConfig
+│   │   │   ├── hashing.rs           # HashResult, BatchHashResult
+│   │   │   ├── preview.rs           # PreviewData, PreviewFormat (Phase 3.3)
+│   │   │   ├── dto.rs                # DTOs Tauri avec serde pour invoke
+│   │   │   └── __tests__/           # Tests unitaires models
+│   │   ├── migrations/               # Scripts de migration SQL
+│   │   │   └── 001_initial.sql      # Schéma complet du catalogue
+│   │   ├── services/                 # Services métier (Layer logique entre DB et commandes)
+│   │   │   ├── mod.rs               # Export des services
+│   │   │   ├── blake3.rs            # Service BLAKE3 hashing (Phase 1.3)
+│   │   │   ├── exif.rs              # Service extraction EXIF kamadak-exif (Phase 2.2)
+│   │   │   ├── iptc.rs              # Service IPTC skeleton (reporté Phase 5.4)
+│   │   │   ├── discovery.rs         # Service découverte fichiers récursive
+│   │   │   │   └── tests.rs         # Tests discovery
+│   │   │   ├── ingestion.rs         # Service ingestion batch (discovery + hashing + EXIF)
+│   │   │   │   └── tests.rs         # Tests ingestion
+│   │   │   ├── filesystem.rs        # Service système de fichiers (watcher, lock)
+│   │   │   ├── preview.rs           # Service génération previews RAW (Phase 3.3)
+│   │   │   └── __tests__/           # Tests integration services
 │   └── icons/                      # Icônes d'application (16 fichiers)
 ├── index.html                      # HTML racine
 ├── package.json                    # Dépendances npm + scripts tauri
@@ -183,7 +230,8 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 | `RightSidebar` | `layout/RightSidebar.tsx` | 36 | Panneau droit (orchestrateur) |
 | `Toolbar` | `layout/Toolbar.tsx` | 54 | Mode, recherche, taille thumbnails |
 | `Filmstrip` | `layout/Filmstrip.tsx` | 36 | Bande défilante |
-| `GridView` | `library/GridView.tsx` | 46 | Grille d'images responsive |
+| `GridView` | `library/GridView.tsx` | 46 | Grille d'images virtualisée (@tanstack/react-virtual) |
+| `ImageCard` | `library/ImageCard.tsx` | — | Carte image avec métadonnées, sélection |
 | `DevelopView` | `develop/DevelopView.tsx` | 38 | Image + mode avant/après |
 | `DevelopSliders` | `develop/DevelopSliders.tsx` | 37 | Sliders de réglage |
 | `HistoryPanel` | `develop/HistoryPanel.tsx` | 25 | Historique des events |
@@ -782,3 +830,29 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 | 2026-02-11 | Phase 0.3 | Décomposition modulaire : 17 composants + 2 modules utilitaires |
 | 2026-02-11 | Phase 0.4 | State Management Zustand : 4 stores, élimination props drilling |
 | 2026-02-11 | Phase 0.5 | Pipeline CI & Linting : ESLint, Clippy, GitHub Actions, coverage 98.93% |
+
+## Smart Collections : Logique SQL et compatibilité parser
+
+La commande Tauri `get_smart_collection_results` génère désormais une requête SQL sans alias pour garantir la compatibilité avec le parser `smart_query_parser`. Les noms de tables utilisés dans la clause WHERE sont toujours explicites (`images`, `image_state`, `exif_metadata`).
+
+### Exemple de requête générée :
+
+SELECT images.id, images.blake3_hash, images.filename, images.extension,
+       images.width, images.height, images.file_size_bytes, images.orientation,
+       images.captured_at, images.imported_at, images.folder_id,
+       image_state.rating, image_state.flag, image_state.color_label,
+       exif_metadata.iso, exif_metadata.aperture, exif_metadata.shutter_speed, exif_metadata.focal_length,
+       exif_metadata.lens, exif_metadata.camera_make, exif_metadata.camera_model
+FROM images
+LEFT JOIN image_state ON images.id = image_state.image_id
+LEFT JOIN exif_metadata ON images.id = exif_metadata.image_id
+WHERE <clause dynamique générée par smart_query_parser>
+ORDER BY images.imported_at DESC
+
+### Mapping DTO TypeScript/Rust
+
+Le mapping des champs EXIF, rating, flag, etc. est synchronisé entre Rust et TypeScript. Les tests unitaires valident le filtrage dynamique des smart collections.
+
+### Tests
+
+Les tests unitaires Rust et TypeScript pour le filtrage des smart collections sont présents et passants (voir CHANGELOG).

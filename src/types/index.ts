@@ -9,18 +9,9 @@ export * from './hashing';
 export * from './filesystem';
 export * from './preview';
 
-export type {
-  EventType,
-  EventPayload,
-  CatalogEvent,
-} from './events';
+export type { EventType, EventPayload, CatalogEvent } from './events';
 
-export type {
-  ActiveView,
-  LogType,
-  LogEntry,
-  SliderParam,
-} from './ui';
+export type { ActiveView, LogType, LogEntry, SliderParam } from './ui';
 
 // --- Phase 1.2: Tauri Command DTOs ---
 export type {

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { GridView } from '../GridView';
-import type { CatalogImage} from '../../../types';
+import type { CatalogImage } from '../../../types';
 import { DEFAULT_EDIT_STATE } from '../../../types';
 
 // Mock Lucide icons to avoid rendering issues
@@ -42,8 +42,15 @@ const mockImages: CatalogImage[] = [
     url: 'file://img1.jpg',
     capturedAt: '2023-01-01',
     exif: { iso: 100, aperture: 2.8, shutterSpeed: '1/100', lens: '50mm', cameraModel: 'Sony' },
-    state: { rating: 3, flag: null, edits: DEFAULT_EDIT_STATE, isSynced: true, revision: '1', tags: [] },
-    sizeOnDisk: '10MB'
+    state: {
+      rating: 3,
+      flag: null,
+      edits: DEFAULT_EDIT_STATE,
+      isSynced: true,
+      revision: '1',
+      tags: [],
+    },
+    sizeOnDisk: '10MB',
   },
   {
     id: 2,
@@ -52,9 +59,16 @@ const mockImages: CatalogImage[] = [
     url: 'file://img2.jpg',
     capturedAt: '2023-01-02',
     exif: { iso: 200, aperture: 4.0, shutterSpeed: '1/200', lens: '85mm', cameraModel: 'Sony' },
-    state: { rating: 5, flag: 'pick', edits: DEFAULT_EDIT_STATE, isSynced: false, revision: '1', tags: [] },
-    sizeOnDisk: '12MB'
-  }
+    state: {
+      rating: 5,
+      flag: 'pick',
+      edits: DEFAULT_EDIT_STATE,
+      isSynced: false,
+      revision: '1',
+      tags: [],
+    },
+    sizeOnDisk: '12MB',
+  },
 ];
 
 describe('GridView Component', () => {
@@ -75,13 +89,13 @@ describe('GridView Component', () => {
     const onSetView = vi.fn();
 
     render(
-      <GridView 
-        images={mockImages} 
-        selection={[]} 
-        thumbnailSize={200} 
+      <GridView
+        images={mockImages}
+        selection={[]}
+        thumbnailSize={200}
         onToggleSelection={onToggle}
         onSetActiveView={onSetView}
-      />
+      />,
     );
 
     const images = screen.getAllByRole('img', { hidden: true });
@@ -93,13 +107,13 @@ describe('GridView Component', () => {
     const onSetView = vi.fn();
 
     render(
-      <GridView 
-        images={mockImages} 
-        selection={[]} 
-        thumbnailSize={200} 
+      <GridView
+        images={mockImages}
+        selection={[]}
+        thumbnailSize={200}
         onToggleSelection={onToggle}
         onSetActiveView={onSetView}
-      />
+      />,
     );
 
     expect(screen.getByText('IMG_001.JPG')).toBeInTheDocument();
@@ -111,18 +125,18 @@ describe('GridView Component', () => {
     const onSetView = vi.fn();
 
     render(
-      <GridView 
-        images={mockImages} 
-        selection={[]} 
-        thumbnailSize={200} 
+      <GridView
+        images={mockImages}
+        selection={[]}
+        thumbnailSize={200}
         onToggleSelection={onToggle}
         onSetActiveView={onSetView}
-      />
+      />,
     );
 
-    // Note: The structure is a bit complex, let's target the click handler div directly if possible, 
+    // Note: The structure is a bit complex, let's target the click handler div directly if possible,
     // or just click the image which bubbles up.
-    
+
     // Using the filename text to find the container
     fireEvent.click(screen.getByText('IMG_001.JPG'));
 
@@ -136,13 +150,13 @@ describe('GridView Component', () => {
     const onSetView = vi.fn();
 
     render(
-      <GridView 
-        images={mockImages} 
-        selection={[]} 
-        thumbnailSize={200} 
+      <GridView
+        images={mockImages}
+        selection={[]}
+        thumbnailSize={200}
         onToggleSelection={onToggle}
         onSetActiveView={onSetView}
-      />
+      />,
     );
 
     fireEvent.doubleClick(screen.getByText('IMG_001.JPG'));
@@ -156,20 +170,20 @@ describe('GridView Component', () => {
     const onSetView = vi.fn();
 
     render(
-      <GridView 
-        images={mockImages} 
+      <GridView
+        images={mockImages}
         selection={[1]} // Select the first image
-        thumbnailSize={200} 
+        thumbnailSize={200}
         onToggleSelection={onToggle}
         onSetActiveView={onSetView}
-      />
+      />,
     );
 
     // Finding the selected item by looking for the border class or similar
     // This is a bit brittle to CSS class names but validates the logic
     const selectedItemName = screen.getByText('IMG_001.JPG');
     const selectedContainer = selectedItemName.closest('.group');
-    
+
     expect(selectedContainer).toHaveClass('border-blue-500');
   });
 });

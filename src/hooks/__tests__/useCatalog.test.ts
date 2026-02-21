@@ -127,7 +127,7 @@ describe('useCatalog', () => {
     expect(img.exif.shutterSpeed).toBe('2.5s');
   });
 
-  it('devrait gérer l\'erreur et mettre à jour error state', async () => {
+  it("devrait gérer l'erreur et mettre à jour error state", async () => {
     mockGetAllImages.mockRejectedValue(new Error('DB connection failed'));
 
     const { result } = renderHook(() => useCatalog());
@@ -140,7 +140,7 @@ describe('useCatalog', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
-  it('devrait réinitialiser l\'erreur avec clearError', async () => {
+  it("devrait réinitialiser l'erreur avec clearError", async () => {
     mockGetAllImages.mockRejectedValue(new Error('Some error'));
 
     const { result } = renderHook(() => useCatalog());

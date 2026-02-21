@@ -1,7 +1,7 @@
 mod commands;
 mod database;
 mod models;
-mod services;
+pub mod services;
 
 use commands::catalog::AppState;
 use database::Database;
@@ -82,6 +82,9 @@ pub fn run() {
             commands::catalog::rename_collection,
             commands::catalog::remove_images_from_collection,
             commands::catalog::get_collection_images,
+            commands::catalog::create_smart_collection,
+            commands::catalog::get_smart_collection_results,
+            commands::catalog::update_smart_collection,
             // EXIF commands
             commands::exif::extract_exif,
             commands::exif::extract_exif_batch,

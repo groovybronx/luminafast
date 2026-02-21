@@ -1,6 +1,6 @@
 /**
  * Discovery and Ingestion Types for LuminaFast
- * 
+ *
  * This file contains TypeScript types that mirror the Rust discovery models
  * for seamless communication between frontend and backend.
  */
@@ -11,9 +11,9 @@
 
 /** Supported RAW file formats */
 export enum RawFormat {
-  CR3 = 'cr3',  // Canon
-  RAF = 'raf',  // Fuji
-  ARW = 'arw',  // Sony
+  CR3 = 'cr3', // Canon
+  RAF = 'raf', // Fuji
+  ARW = 'arw', // Sony
 }
 
 /** RAW format metadata */
@@ -469,7 +469,7 @@ export function getRawFormatInfo(format: RawFormat): RawFormatInfo {
       extension: 'raf',
       mimeType: 'image/x-fuji-raf',
       description: 'Fujifilm RAW',
-      signature: [0x46, 0x55, 0x4A, 0x49],
+      signature: [0x46, 0x55, 0x4a, 0x49],
       minSize: 1024 * 1024, // 1MB
       maxSize: 1024 * 1024 * 1024, // 1GB
     },
@@ -483,7 +483,7 @@ export function getRawFormatInfo(format: RawFormat): RawFormatInfo {
       maxSize: 1024 * 1024 * 1024, // 1GB
     },
   };
-  
+
   return formatMap[format];
 }
 
@@ -492,12 +492,12 @@ export function formatFileSize(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   let size = bytes;
   let unitIndex = 0;
-  
+
   while (size >= 1024 && unitIndex < units.length - 1) {
     size /= 1024;
     unitIndex++;
   }
-  
+
   return `${size.toFixed(1)} ${units[unitIndex]}`;
 }
 
@@ -506,7 +506,7 @@ export function formatDuration(ms: number): string {
   const seconds = Math.floor(ms / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
-  
+
   if (hours > 0) {
     return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
   } else if (minutes > 0) {
@@ -519,11 +519,11 @@ export function formatDuration(ms: number): string {
 /** Calculate session duration */
 export function calculateSessionDuration(session: DiscoverySession): SessionDuration | null {
   if (!session.completedAt) return null;
-  
+
   const started = new Date(session.startedAt).getTime();
   const completed = new Date(session.completedAt).getTime();
   const totalMs = completed - started;
-  
+
   return {
     totalMs,
     formatted: formatDuration(totalMs),

@@ -181,22 +181,22 @@ describe('FilesystemService', () => {
   describe('Event Listeners', () => {
     it('should add and remove event listeners', () => {
       const callback = vi.fn();
-      
+
       const removeListener = service.addEventListener('watcher_started', callback);
       expect(typeof removeListener).toBe('function');
-      
+
       // Test that listener was added
       expect(callback).not.toHaveBeenCalled();
-      
+
       // Remove listener
       removeListener();
     });
 
     it('should handle event notifications', () => {
       const callback = vi.fn();
-      
+
       service.addEventListener('test-event', callback);
-      
+
       // Simulate event notification (internal test)
       expect(() => {
         service['notifyListeners']('watcher_started', {

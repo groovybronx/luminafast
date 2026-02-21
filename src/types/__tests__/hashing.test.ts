@@ -26,7 +26,9 @@ describe('Hashing Types', () => {
         hashed_at: '2026-02-13T00:00:00Z',
       };
 
-      expect(fileHash.hash).toBe('b3a2416c7c8a9b0f1e2d3c4b5a6f7e8d9c0b1a2f3e4d5c6b7a8f9e0d1c2b3a44');
+      expect(fileHash.hash).toBe(
+        'b3a2416c7c8a9b0f1e2d3c4b5a6f7e8d9c0b1a2f3e4d5c6b7a8f9e0d1c2b3a44',
+      );
       expect(fileHash.hash_type).toBe(HashType.Blake3);
       expect(fileHash.file_size).toBe(1024);
       expect(fileHash.hashed_at).toBe('2026-02-13T00:00:00Z');
@@ -47,7 +49,9 @@ describe('Hashing Types', () => {
         first_detected: '2026-02-13T00:00:00Z',
       };
 
-      expect(duplicateInfo.hash).toBe('b3a2416c7c8a9b0f1e2d3c4b5a6f7e8d9c0b1a2f3e4d5c6b7a8f9e0d1c2b3a44');
+      expect(duplicateInfo.hash).toBe(
+        'b3a2416c7c8a9b0f1e2d3c4b5a6f7e8d9c0b1a2f3e4d5c6b7a8f9e0d1c2b3a44',
+      );
       expect(duplicateInfo.file_paths).toHaveLength(2);
       expect(duplicateInfo.file_size).toBe(2048);
       expect(duplicateInfo.first_detected).toBe('2026-02-13T00:00:00Z');
@@ -99,7 +103,7 @@ describe('Hashing Types', () => {
 
       // 3 fichiers de 1024 bytes = 2048 bytes gaspillés (2 copies en trop)
       const expectedWastedSpace = 1024 * (3 - 1);
-      
+
       const analysis: DuplicateAnalysis = {
         total_files: 3,
         duplicate_groups: 1,
@@ -209,15 +213,17 @@ describe('Hashing Types', () => {
       expect(benchmark.avg_time_per_hash_ms).toBe(50);
       expect(benchmark.throughput_mbps).toBe(20.48);
       expect(benchmark.all_hashes_identical).toBe(true);
-      expect(benchmark.sample_hash).toBe('b3a2416c7c8a9b0f1e2d3c4b5a6f7e8d9c0b1a2f3e4d5c6b7a8f9e0d1c2b3a44');
+      expect(benchmark.sample_hash).toBe(
+        'b3a2416c7c8a9b0f1e2d3c4b5a6f7e8d9c0b1a2f3e4d5c6b7a8f9e0d1c2b3a44',
+      );
     });
 
     it('should calculate throughput correctly', () => {
       // 1MB file in 50ms = 20MB/s
       const fileSize = 1048576; // 1MB
       const timeMs = 50;
-      const expectedThroughput = (fileSize / (timeMs / 1000)) / (1024 * 1024); // MB/s
-      
+      const expectedThroughput = fileSize / (timeMs / 1000) / (1024 * 1024); // MB/s
+
       const benchmark: HashBenchmarkResult = {
         file_path: '/path/to/test.jpg',
         file_size: fileSize,
@@ -241,7 +247,7 @@ describe('Hashing Types', () => {
         'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
       ];
 
-      validHashes.forEach(hash => {
+      validHashes.forEach((hash) => {
         expect(hash).toMatch(/^[a-f0-9]{64}$/i);
       });
     });
@@ -259,8 +265,8 @@ describe('Hashing Types', () => {
 
     it('should validate progress is within bounds', () => {
       const validProgressValues = [0, 0.25, 0.5, 0.75, 1.0];
-      
-      validProgressValues.forEach(progress => {
+
+      validProgressValues.forEach((progress) => {
         expect(progress).toBeGreaterThanOrEqual(0);
         expect(progress).toBeLessThanOrEqual(1);
       });

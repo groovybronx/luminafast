@@ -83,7 +83,11 @@ describe('collectionStore', () => {
         await useCollectionStore.getState().createCollection('New Collection');
       });
 
-      expect(CatalogService.createCollection).toHaveBeenCalledWith('New Collection', 'static', undefined);
+      expect(CatalogService.createCollection).toHaveBeenCalledWith(
+        'New Collection',
+        'static',
+        undefined,
+      );
       const collections = useCollectionStore.getState().collections;
       expect(collections).toHaveLength(1);
       expect(collections[0]).toEqual(newCollection);
@@ -104,7 +108,9 @@ describe('collectionStore', () => {
   describe('deleteCollection', () => {
     it('should delete a collection and remove from list', async () => {
       const collections = [mockCollection(1, 'Keep'), mockCollection(2, 'Delete Me')];
-      act(() => { useCollectionStore.setState({ collections }); });
+      act(() => {
+        useCollectionStore.setState({ collections });
+      });
       vi.mocked(CatalogService.deleteCollection).mockResolvedValue(undefined);
 
       await act(async () => {
@@ -159,7 +165,9 @@ describe('collectionStore', () => {
   describe('renameCollection', () => {
     it('should rename a collection in the list', async () => {
       const collections = [mockCollection(1, 'Old Name'), mockCollection(2, 'Other')];
-      act(() => { useCollectionStore.setState({ collections }); });
+      act(() => {
+        useCollectionStore.setState({ collections });
+      });
       vi.mocked(CatalogService.renameCollection).mockResolvedValue(undefined);
 
       await act(async () => {
@@ -173,7 +181,9 @@ describe('collectionStore', () => {
 
     it('should not modify other collections during rename', async () => {
       const collections = [mockCollection(1, 'First'), mockCollection(2, 'Second')];
-      act(() => { useCollectionStore.setState({ collections }); });
+      act(() => {
+        useCollectionStore.setState({ collections });
+      });
       vi.mocked(CatalogService.renameCollection).mockResolvedValue(undefined);
 
       await act(async () => {
@@ -188,8 +198,20 @@ describe('collectionStore', () => {
   describe('setActiveCollection', () => {
     it('should set active collection and load image ids', async () => {
       const mockImages = [
-        { id: 10, filename: 'img1.CR3', blake3_hash: 'abc', extension: 'CR3', imported_at: '2026-01-01T00:00:00Z' },
-        { id: 20, filename: 'img2.RAF', blake3_hash: 'def', extension: 'RAF', imported_at: '2026-01-02T00:00:00Z' },
+        {
+          id: 10,
+          filename: 'img1.CR3',
+          blake3_hash: 'abc',
+          extension: 'CR3',
+          imported_at: '2026-01-01T00:00:00Z',
+        },
+        {
+          id: 20,
+          filename: 'img2.RAF',
+          blake3_hash: 'def',
+          extension: 'RAF',
+          imported_at: '2026-01-02T00:00:00Z',
+        },
       ];
       vi.mocked(CatalogService.getCollectionImages).mockResolvedValue(mockImages);
 
@@ -203,7 +225,9 @@ describe('collectionStore', () => {
     });
 
     it('should set error on failure', async () => {
-      vi.mocked(CatalogService.getCollectionImages).mockRejectedValue(new Error('Collection not found'));
+      vi.mocked(CatalogService.getCollectionImages).mockRejectedValue(
+        new Error('Collection not found'),
+      );
 
       await act(async () => {
         await useCollectionStore.getState().setActiveCollection(999);
@@ -222,7 +246,9 @@ describe('collectionStore', () => {
         });
       });
 
-      act(() => { useCollectionStore.getState().clearActiveCollection(); });
+      act(() => {
+        useCollectionStore.getState().clearActiveCollection();
+      });
 
       expect(useCollectionStore.getState().activeCollectionId).toBeNull();
       expect(useCollectionStore.getState().activeCollectionImageIds).toBeNull();

@@ -1,13 +1,11 @@
 /**
  * Discovery Service - Frontend wrapper for Rust discovery commands
- * 
+ *
  * This service provides a TypeScript interface to the Rust discovery functionality
  * with proper error handling, fallbacks, and type safety.
  */
 
-import {
-  DiscoveryStatus,
-} from '../types/discovery';
+import { DiscoveryStatus } from '../types/discovery';
 import type {
   DiscoveryConfig,
   DiscoverySession,
@@ -73,7 +71,7 @@ export class ServiceError extends Error {
     public type: ServiceErrorType,
     message: string,
     public originalError?: Error | unknown,
-    public context?: Record<string, unknown>
+    public context?: Record<string, unknown>,
   ) {
     super(message);
     this.name = 'ServiceError';
@@ -97,20 +95,10 @@ export class ServiceError extends Error {
     }
 
     if (error instanceof Error) {
-      return new ServiceError(
-        ServiceErrorType.UNKNOWN_ERROR,
-        error.message,
-        error,
-        context
-      );
+      return new ServiceError(ServiceErrorType.UNKNOWN_ERROR, error.message, error, context);
     }
 
-    return new ServiceError(
-      ServiceErrorType.UNKNOWN_ERROR,
-      'Unknown error',
-      undefined,
-      context
-    );
+    return new ServiceError(ServiceErrorType.UNKNOWN_ERROR, 'Unknown error', undefined, context);
   }
 }
 
@@ -136,10 +124,14 @@ export class DiscoveryService {
     if (typeof window !== 'undefined') {
       // Try __TAURI__ first (normal case)
       const tauriWindow = window as unknown as {
-        __TAURI__?: { invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown> };
-        __TAURI_INTERNALS__?: { invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown> };
+        __TAURI__?: {
+          invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>;
+        };
+        __TAURI_INTERNALS__?: {
+          invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>;
+        };
       };
-      
+
       if (tauriWindow.__TAURI__?.invoke) {
         return tauriWindow.__TAURI__.invoke;
       }
@@ -148,11 +140,13 @@ export class DiscoveryService {
         return tauriWindow.__TAURI_INTERNALS__.invoke;
       }
     }
-    
+
     // Mock fallback for tests
     return async (command: string, args?: Record<string, unknown>) => {
       if (import.meta.env.DEV) {
-        console.warn(`[DiscoveryService] Tauri not available, mocking command: ${command}`, { args });
+        console.warn(`[DiscoveryService] Tauri not available, mocking command: ${command}`, {
+          args,
+        });
       }
       throw new Error(`Tauri not available: ${command}`);
     };
@@ -176,36 +170,35 @@ export class DiscoveryService {
 
   /** Delay for retry */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /** Execute command with retry logic */
   private async executeCommand<T>(
     command: string,
     args?: Record<string, unknown>,
-    retries = 0
+    retries = 0,
   ): Promise<T> {
     try {
       this.log(`Executing command: ${command}`, { args, retries });
-      
+
       const invoke = DiscoveryService.getInvoke();
-      
+
       // Pass args directly as object for Tauri named arguments
-      const result = await invoke(command, args) as T;
-      
+      const result = (await invoke(command, args)) as T;
+
       this.log(`Command succeeded: ${command}`, { result });
       return result;
-      
     } catch (error) {
       this.logError(`Command failed: ${command}`, error);
-      
+
       // Check if we should retry
       if (retries < this.config.maxRetries && this.shouldRetry(error)) {
         this.log(`Retrying command: ${command}`, { retries: retries + 1 });
         await this.delay(this.config.retryDelay);
         return this.executeCommand<T>(command, args, retries + 1);
       }
-      
+
       throw ServiceError.fromUnknown(error, { command, args, retries });
     }
   }
@@ -214,7 +207,7 @@ export class DiscoveryService {
   private shouldRetry(error: unknown): boolean {
     if (error instanceof Error) {
       const message = error.message.toLowerCase();
-      
+
       // Retry on network errors, timeouts, and temporary failures
       return (
         message.includes('network') ||
@@ -224,7 +217,7 @@ export class DiscoveryService {
         message.includes('busy')
       );
     }
-    
+
     return false;
   }
 
@@ -252,7 +245,7 @@ export class DiscoveryService {
       processingRate: this.calculateProcessingRate(session),
     };
 
-    listeners.forEach(listener => {
+    listeners.forEach((listener) => {
       try {
         listener(progress);
       } catch (error) {
@@ -300,7 +293,7 @@ export class DiscoveryService {
   async startDiscovery(config: DiscoveryConfig): Promise<DiscoverySession> {
     try {
       this.log('Starting discovery', { config });
-      
+
       // Validate configuration
       const validation = this.validateConfig(config);
       if (!validation.valid) {
@@ -308,20 +301,16 @@ export class DiscoveryService {
           ServiceErrorType.INVALID_PARAMS,
           'Invalid discovery configuration',
           undefined,
-          { errors: validation.errors }
+          { errors: validation.errors },
         );
       }
 
-      const session = await this.executeCommand<DiscoverySession>(
-        'start_discovery',
-        { config }
-      );
+      const session = await this.executeCommand<DiscoverySession>('start_discovery', { config });
 
       this.updateSession(session);
       this.log('Discovery started', { sessionId: session.sessionId });
-      
+
       return session;
-      
     } catch (error) {
       this.logError('Failed to start discovery', error);
       throw error;
@@ -334,9 +323,9 @@ export class DiscoveryService {
   async stopDiscovery(sessionId: string): Promise<void> {
     try {
       this.log('Stopping discovery', { sessionId });
-      
+
       await this.executeCommand<void>('stop_discovery', { sessionId });
-      
+
       // Update local cache
       const session = this.activeSessions.get(sessionId);
       if (session) {
@@ -344,9 +333,8 @@ export class DiscoveryService {
         session.completedAt = new Date().toISOString();
         this.updateSession(session);
       }
-      
+
       this.log('Discovery stopped', { sessionId });
-      
     } catch (error) {
       this.logError('Failed to stop discovery', error);
       throw error;
@@ -359,15 +347,13 @@ export class DiscoveryService {
   async getDiscoveryStatus(sessionId: string): Promise<DiscoverySession> {
     try {
       this.log('Getting discovery status', { sessionId });
-      
-      const session = await this.executeCommand<DiscoverySession>(
-        'get_discovery_status',
-        { sessionId }
-      );
+
+      const session = await this.executeCommand<DiscoverySession>('get_discovery_status', {
+        sessionId,
+      });
 
       this.updateSession(session);
       return session;
-      
     } catch (error) {
       this.logError('Failed to get discovery status', error);
       throw error;
@@ -380,16 +366,13 @@ export class DiscoveryService {
   async getAllDiscoverySessions(): Promise<DiscoverySession[]> {
     try {
       this.log('Getting all discovery sessions');
-      
-      const sessions = await this.executeCommand<DiscoverySession[]>(
-        'get_all_discovery_sessions'
-      );
+
+      const sessions = await this.executeCommand<DiscoverySession[]>('get_all_discovery_sessions');
 
       // Update local cache
-      sessions.forEach(session => this.updateSession(session));
-      
+      sessions.forEach((session) => this.updateSession(session));
+
       return sessions;
-      
     } catch (error) {
       this.logError('Failed to get all discovery sessions', error);
       throw error;
@@ -402,15 +385,13 @@ export class DiscoveryService {
   async getDiscoveredFiles(sessionId: string): Promise<DiscoveredFile[]> {
     try {
       this.log('Getting discovered files', { sessionId });
-      
-      const files = await this.executeCommand<DiscoveredFile[]>(
-        'get_discovered_files',
-        { sessionId }
-      );
+
+      const files = await this.executeCommand<DiscoveredFile[]>('get_discovered_files', {
+        sessionId,
+      });
 
       this.log('Retrieved discovered files', { sessionId, count: files.length });
       return files;
-      
     } catch (error) {
       this.logError('Failed to get discovered files', error);
       throw error;
@@ -427,20 +408,16 @@ export class DiscoveryService {
   async ingestFile(file: DiscoveredFile): Promise<IngestionResult> {
     try {
       this.log('Ingesting file', { fileId: file.id, filename: file.filename });
-      
-      const result = await this.executeCommand<IngestionResult>(
-        'ingest_file',
-        { file }
-      );
 
-      this.log('File ingested', { 
-        fileId: file.id, 
+      const result = await this.executeCommand<IngestionResult>('ingest_file', { file });
+
+      this.log('File ingested', {
+        fileId: file.id,
         success: result.success,
-        processingTime: result.processingTimeMs 
+        processingTime: result.processingTimeMs,
       });
-      
+
       return result;
-      
     } catch (error) {
       this.logError('Failed to ingest file', error);
       throw error;
@@ -452,24 +429,20 @@ export class DiscoveryService {
    */
   async batchIngest(request: BatchIngestionRequest): Promise<BatchIngestionResult> {
     try {
-      this.log('Starting batch ingestion', { 
+      this.log('Starting batch ingestion', {
         sessionId: request.sessionId,
-        fileCount: request.filePaths.length 
+        fileCount: request.filePaths.length,
       });
-      
-      const result = await this.executeCommand<BatchIngestionResult>(
-        'batch_ingest',
-        { request }
-      );
+
+      const result = await this.executeCommand<BatchIngestionResult>('batch_ingest', { request });
 
       this.log('Batch ingestion completed', {
         sessionId: request.sessionId,
         successRate: result.successRate,
-        totalProcessed: result.successful.length + result.failed.length + result.skipped.length
+        totalProcessed: result.successful.length + result.failed.length + result.skipped.length,
       });
-      
+
       return result;
-      
     } catch (error) {
       this.logError('Failed to batch ingest', error);
       throw error;
@@ -487,31 +460,27 @@ export class DiscoveryService {
     rootPath: string,
     recursive?: boolean,
     maxDepth?: number,
-    maxFiles?: number
+    maxFiles?: number,
   ): Promise<DiscoveryConfig> {
     try {
       this.log('Creating discovery config', { rootPath, recursive, maxDepth, maxFiles });
-      
+
       // Try camelCase as suggested by the error message
       const args: Record<string, unknown> = {
         rootPath: rootPath,
         recursive: recursive,
         maxDepth: maxDepth,
-        maxFiles: maxFiles
+        maxFiles: maxFiles,
       };
-      
+
       if (import.meta.env.DEV) {
         console.warn('DEBUG: Full args object:', JSON.stringify(args, null, 2));
       }
       this.log('Sending args to create_discovery_config', args);
-      
-      const config = await this.executeCommand<DiscoveryConfig>(
-        'create_discovery_config',
-        args
-      );
+
+      const config = await this.executeCommand<DiscoveryConfig>('create_discovery_config', args);
 
       return config;
-      
     } catch (error) {
       this.logError('Failed to create discovery config', error);
       throw error;
@@ -524,12 +493,11 @@ export class DiscoveryService {
   async getSupportedFormats(): Promise<string[]> {
     try {
       this.log('Getting supported formats');
-      
+
       const formats = await this.executeCommand<string[]>('get_supported_formats');
-      
+
       this.log('Retrieved supported formats', { formats });
       return formats;
-      
     } catch (error) {
       this.logError('Failed to get supported formats', error);
       throw error;
@@ -542,9 +510,9 @@ export class DiscoveryService {
   async validateDiscoveryPath(path: string): Promise<PathValidationResult> {
     try {
       this.log('Validating discovery path', { path });
-      
+
       const valid = await this.executeCommand<boolean>('validate_discovery_path', { path });
-      
+
       const result: PathValidationResult = {
         valid,
         type: valid ? 'directory' : 'nonexistent',
@@ -555,7 +523,6 @@ export class DiscoveryService {
 
       this.log('Path validation completed', { path, result });
       return result;
-      
     } catch (error) {
       this.logError('Failed to validate path', error);
       throw error;
@@ -568,13 +535,10 @@ export class DiscoveryService {
   async getDefaultDiscoveryConfig(): Promise<DiscoveryConfig> {
     try {
       this.log('Getting default discovery config');
-      
-      const config = await this.executeCommand<DiscoveryConfig>(
-        'get_default_discovery_config'
-      );
+
+      const config = await this.executeCommand<DiscoveryConfig>('get_default_discovery_config');
 
       return config;
-      
     } catch (error) {
       this.logError('Failed to get default discovery config', error);
       throw error;
@@ -587,15 +551,13 @@ export class DiscoveryService {
   async cleanupDiscoverySessions(maxAgeHours: number): Promise<number> {
     try {
       this.log('Cleaning up discovery sessions', { maxAgeHours });
-      
-      const cleaned = await this.executeCommand<number>(
-        'cleanup_discovery_sessions',
-        { max_age_hours: maxAgeHours }
-      );
+
+      const cleaned = await this.executeCommand<number>('cleanup_discovery_sessions', {
+        max_age_hours: maxAgeHours,
+      });
 
       this.log('Sessions cleaned up', { cleaned });
       return cleaned;
-      
     } catch (error) {
       this.logError('Failed to cleanup sessions', error);
       throw error;
@@ -608,15 +570,11 @@ export class DiscoveryService {
   async getDiscoveryStats(sessionId: string): Promise<DiscoveryStats> {
     try {
       this.log('Getting discovery stats', { sessionId });
-      
-      const stats = await this.executeCommand<DiscoveryStats>(
-        'get_discovery_stats',
-        { sessionId }
-      );
+
+      const stats = await this.executeCommand<DiscoveryStats>('get_discovery_stats', { sessionId });
 
       this.log('Retrieved discovery stats', { sessionId });
       return stats;
-      
     } catch (error) {
       this.logError('Failed to get discovery stats', error);
       throw error;
@@ -679,7 +637,7 @@ export class DiscoveryService {
    */
   addProgressListener(
     sessionId: string,
-    listener: (progress: DiscoveryProgress) => void
+    listener: (progress: DiscoveryProgress) => void,
   ): () => void {
     if (!this.eventListeners.has(sessionId)) {
       this.eventListeners.set(sessionId, new Set());
@@ -691,7 +649,7 @@ export class DiscoveryService {
         ServiceErrorType.UNKNOWN_ERROR,
         'Session listeners not found',
         undefined,
-        { sessionId }
+        { sessionId },
       );
     }
     listeners.add(listener);
@@ -772,9 +730,7 @@ export class DiscoveryService {
   }> {
     const available = await this.isAvailable();
     const activeSessions = this.activeSessions.size;
-    const supportedFormats = available 
-      ? await this.getSupportedFormats() 
-      : [];
+    const supportedFormats = available ? await this.getSupportedFormats() : [];
 
     return {
       available,

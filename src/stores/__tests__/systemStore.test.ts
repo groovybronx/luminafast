@@ -19,7 +19,7 @@ describe('systemStore', () => {
       },
       appReady: false,
     });
-    
+
     // Mock Date.now for consistent timestamps
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-02-11T12:00:00'));
@@ -49,7 +49,7 @@ describe('systemStore', () => {
     act(() => {
       useSystemStore.getState().addLog('Test message');
     });
-    
+
     const logs = useSystemStore.getState().logs;
     expect(logs).toHaveLength(1);
     expect(logs[0]?.message).toBe('Test message');
@@ -65,7 +65,7 @@ describe('systemStore', () => {
       useSystemStore.getState().addLog('Sync operation', 'sync');
       useSystemStore.getState().addLog('Custom message', 'custom');
     });
-    
+
     const logs = useSystemStore.getState().logs;
     expect(logs).toHaveLength(5);
     // Logs are chronological (oldest first)
@@ -83,14 +83,14 @@ describe('systemStore', () => {
         useSystemStore.getState().addLog(`Message ${i}`);
       }
     });
-    
+
     const logs = useSystemStore.getState().logs;
     expect(logs).toHaveLength(15);
     // Logs are kept chronologically, but sliced to keep last 15.
     // So logs[0] should be Message 6, and logs[14] should be Message 20.
     expect(logs[0]?.message).toBe('Message 6'); // Oldest kept
     expect(logs[14]?.message).toBe('Message 20'); // Most recent
-    expect(logs.find(log => log.message === 'Message 5')).toBeUndefined();
+    expect(logs.find((log) => log.message === 'Message 5')).toBeUndefined();
   });
 
   it('should clear all logs', () => {
@@ -99,13 +99,13 @@ describe('systemStore', () => {
       useSystemStore.getState().addLog('Message 2');
       useSystemStore.getState().addLog('Message 3');
     });
-    
+
     expect(useSystemStore.getState().logs).toHaveLength(3);
-    
+
     act(() => {
       useSystemStore.getState().clearLogs();
     });
-    
+
     expect(useSystemStore.getState().logs).toEqual([]);
   });
 
@@ -114,7 +114,7 @@ describe('systemStore', () => {
     act(() => {
       useSystemStore.getState().setImportState({ isImporting: true });
     });
-    
+
     expect(useSystemStore.getState().importState).toEqual({
       isImporting: true,
       progress: 0,
@@ -125,18 +125,18 @@ describe('systemStore', () => {
       stage: 'idle',
       error: null,
     });
-    
+
     // Update progress and current file
     act(() => {
-      useSystemStore.getState().setImportState({ 
-        progress: 45, 
+      useSystemStore.getState().setImportState({
+        progress: 45,
         currentFile: 'IMG_1234.CR3',
         stage: 'ingesting',
         processedFiles: 45,
-        totalFiles: 100
+        totalFiles: 100,
       });
     });
-    
+
     expect(useSystemStore.getState().importState).toEqual({
       isImporting: true,
       progress: 45,
@@ -147,12 +147,12 @@ describe('systemStore', () => {
       stage: 'ingesting',
       error: null,
     });
-    
+
     // Reset importing flag
     act(() => {
       useSystemStore.getState().setImportState({ isImporting: false, stage: 'completed' });
     });
-    
+
     expect(useSystemStore.getState().importState).toEqual({
       isImporting: false,
       progress: 45,
@@ -167,12 +167,12 @@ describe('systemStore', () => {
 
   it('should set app ready state', () => {
     expect(useSystemStore.getState().appReady).toBe(false);
-    
+
     act(() => {
       useSystemStore.getState().setAppReady(true);
     });
     expect(useSystemStore.getState().appReady).toBe(true);
-    
+
     act(() => {
       useSystemStore.getState().setAppReady(false);
     });
@@ -182,46 +182,46 @@ describe('systemStore', () => {
   it('should handle complex import scenario', () => {
     // Start import
     act(() => {
-      useSystemStore.getState().setImportState({ 
-        isImporting: true, 
+      useSystemStore.getState().setImportState({
+        isImporting: true,
         currentFile: 'IMG_0001.CR3',
         sessionId: 'sess_123',
         stage: 'scanning',
-        totalFiles: 0
+        totalFiles: 0,
       });
-      
+
       // Add progress logs
       useSystemStore.getState().addLog('Import started', 'io');
       useSystemStore.getState().addLog('Processing IMG_0001.CR3', 'duckdb');
-      
+
       // Update progress
-      useSystemStore.getState().setImportState({ 
+      useSystemStore.getState().setImportState({
         progress: 25,
         stage: 'ingesting',
         totalFiles: 10,
-        processedFiles: 2
+        processedFiles: 2,
       });
-      
+
       // Continue with more files
-      useSystemStore.getState().setImportState({ 
+      useSystemStore.getState().setImportState({
         currentFile: 'IMG_0002.CR3',
-        processedFiles: 5
+        processedFiles: 5,
       });
       useSystemStore.getState().addLog('Processing IMG_0002.CR3', 'duckdb');
-      
+
       useSystemStore.getState().setImportState({ progress: 50 });
-      
+
       // Complete import
-      useSystemStore.getState().setImportState({ 
-        isImporting: false, 
-        progress: 100, 
+      useSystemStore.getState().setImportState({
+        isImporting: false,
+        progress: 100,
         currentFile: '',
         stage: 'completed',
-        processedFiles: 10
+        processedFiles: 10,
       });
       useSystemStore.getState().addLog('Import completed successfully', 'sync');
     });
-    
+
     // Verify final state
     expect(useSystemStore.getState().importState).toEqual({
       isImporting: false,
@@ -231,7 +231,7 @@ describe('systemStore', () => {
       totalFiles: 10,
       processedFiles: 10,
       stage: 'completed',
-      error: null
+      error: null,
     });
     const logs = useSystemStore.getState().logs;
     expect(logs).toHaveLength(4);
@@ -247,12 +247,12 @@ describe('systemStore', () => {
       useSystemStore.getState().addLog('Application starting...', 'info');
       useSystemStore.getState().addLog('Loading configuration', 'io');
       useSystemStore.getState().addLog('Database initialized', 'sqlite');
-      
+
       // Mark app as ready
       useSystemStore.getState().setAppReady(true);
       useSystemStore.getState().addLog('Application ready', 'sync');
     });
-    
+
     expect(useSystemStore.getState().appReady).toBe(true);
     const logs = useSystemStore.getState().logs;
     expect(logs).toHaveLength(4);
@@ -267,14 +267,14 @@ describe('systemStore', () => {
     act(() => {
       vi.setSystemTime(new Date('2026-02-11T09:15:30'));
       useSystemStore.getState().addLog('Morning message');
-      
+
       vi.setSystemTime(new Date('2026-02-11T23:59:59'));
       useSystemStore.getState().addLog('Night message');
-      
+
       vi.setSystemTime(new Date('2026-02-11T00:00:01'));
       useSystemStore.getState().addLog('Midnight message');
     });
-    
+
     const logs = useSystemStore.getState().logs;
     // Logs are chronological (oldest first)
     expect(logs[0]?.time).toBe('09:15:30'); // Morning

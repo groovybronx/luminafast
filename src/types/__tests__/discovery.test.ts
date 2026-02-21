@@ -1,6 +1,6 @@
 /**
  * Unit Tests for Discovery Types
- * 
+ *
  * These tests ensure all discovery types work correctly with proper type safety,
  * serialization, and utility functions.
  */
@@ -102,7 +102,7 @@ describe('Discovery Types', () => {
       expect(rafInfo.extension).toBe('raf');
       expect(rafInfo.mimeType).toBe('image/x-fuji-raf');
       expect(rafInfo.description).toBe('Fujifilm RAW');
-      expect(rafInfo.signature).toEqual([0x46, 0x55, 0x4A, 0x49]);
+      expect(rafInfo.signature).toEqual([0x46, 0x55, 0x4a, 0x49]);
 
       const arwInfo = getRawFormatInfo(RawFormat.ARW);
       expect(arwInfo.format).toBe(RawFormat.ARW);
@@ -149,7 +149,11 @@ describe('Discovery Types', () => {
     it('should have correct default configuration', () => {
       expect(DEFAULT_DISCOVERY_CONFIG.rootPath).toBe('');
       expect(DEFAULT_DISCOVERY_CONFIG.recursive).toBe(true);
-      expect(DEFAULT_DISCOVERY_CONFIG.formats).toEqual([RawFormat.CR3, RawFormat.RAF, RawFormat.ARW]);
+      expect(DEFAULT_DISCOVERY_CONFIG.formats).toEqual([
+        RawFormat.CR3,
+        RawFormat.RAF,
+        RawFormat.ARW,
+      ]);
       expect(DEFAULT_DISCOVERY_CONFIG.excludeDirs).toContain('.DS_Store');
       expect(DEFAULT_DISCOVERY_CONFIG.excludeDirs).toContain('.git');
       expect(DEFAULT_DISCOVERY_CONFIG.maxDepth).toBeNull();

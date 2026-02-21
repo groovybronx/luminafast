@@ -1,13 +1,23 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import tseslint from 'typescript-eslint'
-import { defineConfig, globalIgnores } from 'eslint/config'
+import js from '@eslint/js';
+import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+import tseslint from 'typescript-eslint';
+import prettier from 'eslint-config-prettier';
+import prettierPlugin from 'eslint-plugin-prettier';
+import { defineConfig, globalIgnores } from 'eslint/config';
 
 export default defineConfig([
-  globalIgnores(['dist', 'build', 'node_modules', 'src-tauri/target', 'coverage', '*.local.ts', '*.config.local.ts']),
-  
+  globalIgnores([
+    'dist',
+    'build',
+    'node_modules',
+    'src-tauri/target',
+    'coverage',
+    '*.local.ts',
+    '*.config.local.ts',
+  ]),
+
   // JavaScript/JSX files
   {
     files: ['**/*.{js,jsx}'],
@@ -15,7 +25,11 @@ export default defineConfig([
       js.configs.recommended,
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
+      prettier,
     ],
+    plugins: {
+      prettier: prettierPlugin,
+    },
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
@@ -27,6 +41,7 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      'prettier/prettier': 'error',
     },
   },
 
@@ -38,7 +53,11 @@ export default defineConfig([
       ...tseslint.configs.recommended,
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
+      prettier,
     ],
+    plugins: {
+      prettier: prettierPlugin,
+    },
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
@@ -59,17 +78,18 @@ export default defineConfig([
       '@typescript-eslint/no-var-requires': 'error',
       '@typescript-eslint/no-empty-function': 'warn',
       '@typescript-eslint/no-inferrable-types': 'warn',
-      
+
       // React specific rules
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
-      
+
       // General rules
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'no-debugger': 'error',
       'prefer-const': 'error',
       'no-var': 'error',
+      'prettier/prettier': 'error',
     },
     settings: {
       react: {
@@ -131,4 +151,4 @@ export default defineConfig([
       '@typescript-eslint/no-var-requires': 'off',
     },
   },
-])
+]);

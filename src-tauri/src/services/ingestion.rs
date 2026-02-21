@@ -59,7 +59,8 @@ impl IngestionService {
         // Check if file already exists in database
         if let Ok(Some(_)) = self.check_file_exists(&file.path).await {
             result.error = Some("File already exists in catalog".to_string());
-            result.processing_time_ms = start_time.elapsed().as_millis() as u64;
+            result.processing_time_ms =
+                std::cmp::max(1, start_time.elapsed().as_micros() / 1000) as u64;
             return Ok(result);
         }
 
@@ -114,7 +115,8 @@ impl IngestionService {
         result.success = true;
         result.database_id = Some(database_id);
         result.metadata = Some(metadata);
-        result.processing_time_ms = start_time.elapsed().as_millis() as u64;
+        result.processing_time_ms =
+            std::cmp::max(1, start_time.elapsed().as_micros() / 1000) as u64;
 
         Ok(result)
     }
@@ -285,12 +287,10 @@ impl IngestionService {
         // Mark session as completed
         self.complete_session(request.session_id).await?;
 
-        // Finalize result with timing
-        result.total_processing_time_ms = start_time.elapsed().as_millis() as u64;
-        if result.total_requested > 0 {
-            result.avg_processing_time_ms =
-                result.total_processing_time_ms as f64 / result.total_requested as f64;
-        }
+        // Finalize result with timing and statistics
+        result.total_processing_time_ms =
+            std::cmp::max(1, start_time.elapsed().as_micros() / 1000) as u64;
+        result.finalize();
 
         Ok(result)
     }
@@ -680,14 +680,14 @@ impl IngestionService {
         let mut stmt = db
             .prepare(
                 "
-                SELECT 
+                SELECT
                     total_files,
                     ingested_files,
                     failed_files,
                     skipped_files,
                     total_size_bytes,
                     avg_processing_time_ms
-                FROM ingestion_sessions 
+                FROM ingestion_sessions
                 WHERE id = ?
             ",
             )
@@ -719,10 +719,10 @@ impl IngestionService {
             let mut stmt = db
                 .prepare(
                     "
-                    SELECT 
+                    SELECT
                         COUNT(*) as total_files,
                         SUM(file_size_bytes) as total_size
-                    FROM images 
+                    FROM images
                     WHERE imported_at >= datetime('now', '-1 hour')
                 ",
                 )
@@ -786,12 +786,12 @@ impl IngestionService {
             .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
 
         db.execute(
-            "UPDATE ingestion_sessions SET 
-                    total_files = ?, 
-                    ingested_files = ?, 
-                    failed_files = ?, 
-                    skipped_files = ?, 
-                    total_size_bytes = ?, 
+            "UPDATE ingestion_sessions SET
+                    total_files = ?,
+                    ingested_files = ?,
+                    failed_files = ?,
+                    skipped_files = ?,
+                    total_size_bytes = ?,
                     avg_processing_time_ms = ?
                 WHERE id = ?",
             rusqlite::params![
@@ -817,9 +817,9 @@ impl IngestionService {
             .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
 
         db.execute(
-            "UPDATE ingestion_sessions SET 
-                    status = 'completed', 
-                    completed_at = ? 
+            "UPDATE ingestion_sessions SET
+                    status = 'completed',
+                    completed_at = ?
                 WHERE id = ?",
             rusqlite::params![chrono::Utc::now().to_rfc3339(), session_id.to_string()],
         )

@@ -1,11 +1,11 @@
 export const Histogram = () => (
   <div className="h-24 bg-zinc-900 rounded border border-zinc-800 relative overflow-hidden flex items-end px-1 gap-[1px]">
     {Array.from({ length: 40 }).map((_, i) => {
-      const height = ((Math.sin(i * 0.3) + 1) * 40) + 10;
+      const height = (Math.sin(i * 0.3) + 1) * 40 + 10;
       return (
-        <div 
-          key={i} 
-          className="flex-1 bg-zinc-700 opacity-50 hover:opacity-80 transition-opacity" 
+        <div
+          key={i}
+          className="flex-1 bg-zinc-700 opacity-50 hover:opacity-80 transition-opacity"
           style={{ height: `${height}%` }}
         ></div>
       );

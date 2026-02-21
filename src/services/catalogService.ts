@@ -1,16 +1,10 @@
-import type { 
-  ImageDTO, 
-  ImageDetailDTO, 
-  CollectionDTO, 
-  ImageFilter 
-} from '../types/dto';
+import type { ImageDTO, ImageDetailDTO, CollectionDTO, ImageFilter } from '../types/dto';
 
 /**
  * Service for catalog operations - Phase 1.2
  * Wraps Tauri commands for frontend-backend communication
  */
 export class CatalogService {
-  
   /**
    * Get Tauri invoke function (handle both __TAURI__ and __TAURI_INTERNALS__)
    */
@@ -18,10 +12,14 @@ export class CatalogService {
     if (typeof window !== 'undefined') {
       // Try __TAURI__ first (normal case)
       const tauriWindow = window as unknown as {
-        __TAURI__?: { invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown> };
-        __TAURI_INTERNALS__?: { invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown> };
+        __TAURI__?: {
+          invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>;
+        };
+        __TAURI_INTERNALS__?: {
+          invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>;
+        };
       };
-      
+
       if (tauriWindow.__TAURI__?.invoke) {
         return tauriWindow.__TAURI__.invoke;
       }
@@ -32,7 +30,7 @@ export class CatalogService {
     }
     throw new Error('Tauri API not available');
   }
-  
+
   /**
    * Get all images with optional filtering
    */
@@ -40,18 +38,18 @@ export class CatalogService {
     try {
       const invoke = this.getInvoke();
       const result = await invoke('get_all_images', { filter });
-      
+
       if (typeof result === 'string') {
         throw new Error(result);
       }
-      
+
       return result as ImageDTO[];
     } catch (error) {
       console.error('Failed to get all images:', error);
       throw error;
     }
   }
-  
+
   /**
    * Get detailed information for a single image
    */
@@ -59,71 +57,64 @@ export class CatalogService {
     try {
       const invoke = this.getInvoke();
       const result = await invoke('get_image_detail', { id });
-      
+
       if (typeof result === 'string') {
         throw new Error(result);
       }
-      
+
       return result as ImageDetailDTO;
     } catch (error) {
       console.error(`Failed to get image detail for ID ${id}:`, error);
       throw error;
     }
   }
-  
+
   /**
    * Update image state (rating, flag, color_label)
    */
-  static async updateImageState(
-    id: number, 
-    rating?: number, 
-    flag?: string
-  ): Promise<void> {
+  static async updateImageState(id: number, rating?: number, flag?: string): Promise<void> {
     try {
       const invoke = this.getInvoke();
-      await invoke('update_image_state', { 
-        id, 
-        rating, 
-        flag 
+      await invoke('update_image_state', {
+        id,
+        rating,
+        flag,
       });
     } catch (error) {
       throw this.parseError(error);
     }
   }
-  
+
   /**
    * Create a new collection
    */
   static async createCollection(
     name: string,
     collectionType: 'static' | 'smart' | 'quick',
-    parentId?: number
+    parentId?: number,
   ): Promise<CollectionDTO> {
     try {
       const invoke = this.getInvoke();
       const result = await invoke('create_collection', {
         name,
         collectionType,
-        parentId
+        parentId,
       });
       return result as CollectionDTO;
     } catch (error) {
       throw this.parseError(error);
     }
   }
-  
+
   /**
    * Add images to a collection
    */
-  static async addImagesToCollection(
-    collectionId: number,
-    imageIds: number[]
-  ): Promise<void> {
+  static async addImagesToCollection(collectionId: number, imageIds: number[]): Promise<void> {
     try {
       const invoke = this.getInvoke();
       await invoke('add_images_to_collection', {
         collectionId,
-        imageIds
+        imageIds,
       });
     } catch (error) {
       throw this.parseError(error);
@@ -157,15 +148,12 @@ export class CatalogService {
   /**
    * Remove specific images from a collection (does not delete images from catalogue)
    */
-  static async removeImagesFromCollection(
-    collectionId: number,
-    imageIds: number[]
-  ): Promise<void> {
+  static async removeImagesFromCollection(collectionId: number, imageIds: number[]): Promise<void> {
     try {
       const invoke = this.getInvoke();
       await invoke('remove_images_from_collection', {
         collectionId,
-        imageIds
+        imageIds,
       });
     } catch (error) {
       throw this.parseError(error);
@@ -175,7 +163,9 @@ export class CatalogService {
   /**
    * Get all images belonging to a specific collection
    */
-  static async getCollectionImages(collectionId: number): Promise<import('../types/dto').ImageDTO[]> {
+  static async getCollectionImages(
+    collectionId: number,
+  ): Promise<import('../types/dto').ImageDTO[]> {
     try {
       const invoke = this.getInvoke();
       const result = await invoke('get_collection_images', { collectionId });
@@ -184,7 +174,61 @@ export class CatalogService {
       throw this.parseError(error);
     }
   }
-  
+
+  /**
+   * Create a new smart collection with a query
+   * @param name - Collection name
+   * @param smartQuery - JSON string with rules and combinator
+   * @param parentId - Optional parent collection ID
+   */
+  static async createSmartCollection(
+    name: string,
+    smartQuery: string,
+    parentId?: number,
+  ): Promise<CollectionDTO> {
+    try {
+      const invoke = this.getInvoke();
+      const result = await invoke('create_smart_collection', {
+        name,
+        smartQuery,
+        parentId,
+      });
+      return result as CollectionDTO;
+    } catch (error) {
+      throw this.parseError(error);
+    }
+  }
+
+  /**
+   * Get results for a smart collection's query
+   * @param collectionId - ID of the smart collection
+   */
+  static async getSmartCollectionResults(
+    collectionId: number,
+  ): Promise<import('../types/dto').ImageDTO[]> {
+    try {
+      const invoke = this.getInvoke();
+      const result = await invoke('get_smart_collection_results', { collectionId });
+      return result as import('../types/dto').ImageDTO[];
+    } catch (error) {
+      throw this.parseError(error);
+    }
+  }
+
+  /**
+   * Update a smart collection's query
+   * @param collectionId - ID of the smart collection
+   * @param smartQuery - JSON string with rules and combinator
+   */
+  static async updateSmartCollection(collectionId: number, smartQuery: string): Promise<void> {
+    try {
+      const invoke = this.getInvoke();
+      await invoke('update_smart_collection', { collectionId, smartQuery });
+    } catch (error) {
+      throw this.parseError(error);
+    }
+  }
+
   /**
    * Get all collections
    */
@@ -197,7 +241,7 @@ export class CatalogService {
       throw this.parseError(error);
     }
   }
-  
+
   /**
    * Search images by text query
    */
@@ -210,14 +254,14 @@ export class CatalogService {
       throw this.parseError(error);
     }
   }
-  
+
   /**
    * Utility method to check if a result is an error
    */
   static isError<T>(result: T | string): result is string {
     return typeof result === 'string';
   }
-  
+
   /**
    * Parse error from Tauri command
    */
@@ -230,7 +274,7 @@ export class CatalogService {
     }
     return new Error('Unknown error occurred');
   }
-  
+
   /**
    * Utility method to handle command results consistently
    */

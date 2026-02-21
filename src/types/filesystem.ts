@@ -161,14 +161,16 @@ export enum FilesystemError {
 /**
  * Résultat d'opération filesystem
  */
-export type FilesystemResult<T> = {
-  success: true;
-  data: T;
-} | {
-  success: false;
-  error: FilesystemError;
-  message: string;
-};
+export type FilesystemResult<T> =
+  | {
+      success: true;
+      data: T;
+    }
+  | {
+      success: false;
+      error: FilesystemError;
+      message: string;
+    };
 
 /**
  * Options pour l'acquisition de verrou
@@ -276,7 +278,7 @@ export interface FilesystemServiceStats {
  */
 export function isValidPath(path: string): boolean {
   if (!path || path.trim().length === 0) return false;
-  
+
   // Validation basique pour Phase 1.4
   // TODO: Implémenter validation plus robuste
   return !path.includes('..') && !path.includes('\0');
@@ -287,23 +289,23 @@ export function isValidPath(path: string): boolean {
  */
 export function validateWatcherConfig(config: WatcherConfig): string[] {
   const errors: string[] = [];
-  
+
   if (!isValidPath(config.path)) {
     errors.push('Invalid path');
   }
-  
+
   if (config.debounce_timeout < 0) {
     errors.push('Debounce timeout must be positive');
   }
-  
+
   if (config.max_file_size && config.max_file_size <= 0) {
     errors.push('Max file size must be positive');
   }
-  
+
   if (config.watch_events.length === 0) {
     errors.push('At least one event type must be specified');
   }
-  
+
   return errors;
 }
 
@@ -312,15 +314,15 @@ export function validateWatcherConfig(config: WatcherConfig): string[] {
  */
 export function validateLockOptions(options: AcquireLockOptions): string[] {
   const errors: string[] = [];
-  
+
   if (!Object.values(FileLockType).includes(options.lock_type)) {
     errors.push('Invalid lock type');
   }
-  
+
   if (options.timeout && options.timeout <= 0) {
     errors.push('Timeout must be positive');
   }
-  
+
   return errors;
 }
 
@@ -356,7 +358,7 @@ export function isVideoEvent(event: FileEvent): boolean {
  */
 export function filterEventsByType<T extends FileEvent>(
   events: T[],
-  filter: 'image' | 'video' | 'document' | 'all'
+  filter: 'image' | 'video' | 'document' | 'all',
 ): T[] {
   switch (filter) {
     case 'image':
@@ -364,7 +366,7 @@ export function filterEventsByType<T extends FileEvent>(
     case 'video':
       return events.filter(isVideoEvent) as T[];
     case 'document':
-      return events.filter(event => {
+      return events.filter((event) => {
         const extension = event.metadata.extension?.toLowerCase();
         const docExtensions = ['pdf', 'doc', 'docx', 'txt', 'rtf'];
         return extension ? docExtensions.includes(extension) : false;
@@ -380,7 +382,7 @@ export function filterEventsByType<T extends FileEvent>(
  */
 export function sortEventsByTimestamp<T extends FileEvent>(
   events: T[],
-  order: 'asc' | 'desc' = 'desc'
+  order: 'asc' | 'desc' = 'desc',
 ): T[] {
   return [...events].sort((a, b) => {
     const dateA = new Date(a.timestamp).getTime();
@@ -392,20 +394,18 @@ export function sortEventsByTimestamp<T extends FileEvent>(
 /**
  * Groupe les événements par type
  */
-export function groupEventsByType<T extends FileEvent>(
-  events: T[]
-): Record<FileEventType, T[]> {
+export function groupEventsByType<T extends FileEvent>(events: T[]): Record<FileEventType, T[]> {
   const groups = {} as Record<FileEventType, T[]>;
-  
+
   // Initialisation de tous les types
-  Object.values(FileEventType).forEach(type => {
+  Object.values(FileEventType).forEach((type) => {
     groups[type] = [];
   });
-  
+
   // Groupement
-  events.forEach(event => {
+  events.forEach((event) => {
     groups[event.event_type].push(event);
   });
-  
+
   return groups;
 }

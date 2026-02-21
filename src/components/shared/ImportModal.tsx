@@ -10,7 +10,7 @@ interface ImportModalProps {
 export const ImportModal = ({ onClose, onImportComplete }: ImportModalProps) => {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [isStarted, setIsStarted] = useState(false);
-  
+
   const {
     progress,
     totalFiles,
@@ -35,7 +35,7 @@ export const ImportModal = ({ onClose, onImportComplete }: ImportModalProps) => 
 
   const handleStartImport = async () => {
     if (!selectedPath) return;
-    
+
     setIsStarted(true);
     await startScan(selectedPath);
   };
@@ -91,10 +91,9 @@ export const ImportModal = ({ onClose, onImportComplete }: ImportModalProps) => 
             {isComplete ? 'Import Réussi' : 'Ingestion Haute Performance'}
           </h3>
           <p className="text-zinc-500 text-xs">
-            {isComplete 
+            {isComplete
               ? `${totalFiles} fichiers importés avec succès`
-              : 'Traitement parallèle de 12 flux RAW simultanés'
-            }
+              : 'Traitement parallèle de 12 flux RAW simultanés'}
           </p>
         </div>
 
@@ -146,11 +145,11 @@ export const ImportModal = ({ onClose, onImportComplete }: ImportModalProps) => 
                 <span>{progress}%</span>
               </div>
               <div className="h-2 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
-                <div 
+                <div
                   className={`h-full transition-all duration-100 ${
                     hasError ? 'bg-red-600' : isComplete ? 'bg-emerald-600' : 'bg-blue-600'
-                  } shadow-[0_0_10px_rgba(37,99,235,0.5)]`} 
-                  style={{ width: `${progress}%` }} 
+                  } shadow-[0_0_10px_rgba(37,99,235,0.5)]`}
+                  style={{ width: `${progress}%` }}
                 />
               </div>
             </div>
@@ -158,10 +157,14 @@ export const ImportModal = ({ onClose, onImportComplete }: ImportModalProps) => 
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4 text-[10px] font-mono border-t border-zinc-900 pt-4 text-zinc-600 uppercase">
               <div>
-                Fichiers: <span className="text-zinc-400">{processedFiles}/{totalFiles}</span>
+                Fichiers:{' '}
+                <span className="text-zinc-400">
+                  {processedFiles}/{totalFiles}
+                </span>
               </div>
               <div className="text-right">
-                Vitesse: <span className="text-emerald-500">
+                Vitesse:{' '}
+                <span className="text-emerald-500">
                   {isActive ? `${((processedFiles / totalFiles) * 100).toFixed(1)} %` : '--'}
                 </span>
               </div>
@@ -179,7 +182,7 @@ export const ImportModal = ({ onClose, onImportComplete }: ImportModalProps) => 
               Annuler
             </button>
           )}
-          
+
           {!isActive && (
             <button
               onClick={onClose}

@@ -2,20 +2,20 @@
 //! Utilise kamadak-exif pour extraire les métadonnées des fichiers image
 //! Conforme aux spécifications de Phase 2.2 du plan de développement
 
-use exif::{Reader, In, Tag, Value, Exif};
 use crate::models::exif::ExifMetadata;
+use exif::{Exif, In, Reader, Tag, Value};
 use std::fs::File;
 use std::io::BufReader;
 
 /// Extrait les métadonnées EXIF d'un fichier image
-/// 
+///
 /// # Arguments
 /// * `path` - Chemin absolu vers le fichier image
-/// 
+///
 /// # Returns
 /// * `Ok(ExifMetadata)` - Métadonnées extraites avec succès
 /// * `Err(String)` - Erreur lors de l'ouverture du fichier ou du parsing EXIF
-/// 
+///
 /// # Exemple
 /// ```no_run
 /* /// let exif = extract_exif_metadata("/path/to/image.jpg")?;
@@ -23,16 +23,15 @@ use std::io::BufReader;
 /// ```
 pub fn extract_exif_metadata(path: &str) -> Result<ExifMetadata, String> {
     // Ouvrir le fichier
-    let file = File::open(path)
-        .map_err(|e| format!("Cannot open file {}: {}", path, e))?;
-    
+    let file = File::open(path).map_err(|e| format!("Cannot open file {}: {}", path, e))?;
+
     let mut bufreader = BufReader::new(&file);
-    
+
     // Parser les données EXIF
     let exif = Reader::new()
         .read_from_container(&mut bufreader)
         .map_err(|e| format!("EXIF parse error for {}: {}", path, e))?;
-    
+
     // Extraire tous les champs EXIF requis
     Ok(ExifMetadata {
         iso: get_field_u32(&exif, Tag::PhotographicSensitivity),
@@ -49,11 +48,11 @@ pub fn extract_exif_metadata(path: &str) -> Result<ExifMetadata, String> {
 }
 
 /// Convertit une vitesse d'obturation en log2(seconds) pour tri SQL efficace
-/// 
+///
 /// # Arguments
 /// * `numerator` - Numérateur de la fraction (ex: 1 pour 1/125)
 /// * `denominator` - Dénominateur de la fraction (ex: 125 pour 1/125)
-/// 
+///
 /// # Returns
 /// Valeur log2(seconds). Exemples :
 /// - 1/125s → log2(1/125) ≈ -6.97
@@ -138,15 +137,15 @@ fn get_field_string(exif: &Exif, tag: Tag) -> Option<String> {
 
 /// Extrait la latitude GPS en degrés décimaux
 fn get_gps_latitude(exif: &Exif) -> Option<f64> {
-    let lat_ref = exif.get_field(Tag::GPSLatitudeRef, In::PRIMARY)
+    let lat_ref = exif
+        .get_field(Tag::GPSLatitudeRef, In::PRIMARY)
         .and_then(|field| match field.value {
-            Value::Ascii(ref v) if !v.is_empty() => {
-                String::from_utf8(v[0].clone()).ok()
-            }
+            Value::Ascii(ref v) if !v.is_empty() => String::from_utf8(v[0].clone()).ok(),
             _ => None,
         })?;
-    
-    let lat = exif.get_field(Tag::GPSLatitude, In::PRIMARY)
+
+    let lat = exif
+        .get_field(Tag::GPSLatitude, In::PRIMARY)
         .and_then(|field| match field.value {
             Value::Rational(ref v) if v.len() >= 3 => {
                 let degrees = v[0].num as f64 / v[0].denom as f64;
@@ -157,21 +156,21 @@ fn get_gps_latitude(exif: &Exif) -> Option<f64> {
             }
             _ => None,
         });
-    
+
     lat
 }
 
 /// Extrait la longitude GPS en degrés décimaux
 fn get_gps_longitude(exif: &Exif) -> Option<f64> {
-    let lon_ref = exif.get_field(Tag::GPSLongitudeRef, In::PRIMARY)
-        .and_then(|field| match field.value {
-            Value::Ascii(ref v) if !v.is_empty() => {
-                String::from_utf8(v[0].clone()).ok()
-            }
-            _ => None,
-        })?;
-    
-    let lon = exif.get_field(Tag::GPSLongitude, In::PRIMARY)
+    let lon_ref =
+        exif.get_field(Tag::GPSLongitudeRef, In::PRIMARY)
+            .and_then(|field| match field.value {
+                Value::Ascii(ref v) if !v.is_empty() => String::from_utf8(v[0].clone()).ok(),
+                _ => None,
+            })?;
+
+    let lon = exif
+        .get_field(Tag::GPSLongitude, In::PRIMARY)
         .and_then(|field| match field.value {
             Value::Rational(ref v) if v.len() >= 3 => {
                 let degrees = v[0].num as f64 / v[0].denom as f64;
@@ -182,7 +181,7 @@ fn get_gps_longitude(exif: &Exif) -> Option<f64> {
             }
             _ => None,
         });
-    
+
     lon
 }
 
@@ -190,13 +189,11 @@ fn get_gps_longitude(exif: &Exif) -> Option<f64> {
 fn get_color_space(exif: &Exif) -> Option<String> {
     exif.get_field(Tag::ColorSpace, In::PRIMARY)
         .and_then(|field| match field.value {
-            Value::Short(ref v) if !v.is_empty() => {
-                match v[0] {
-                    1 => Some("sRGB".to_string()),
-                    65535 => Some("Uncalibrated".to_string()),
-                    _ => Some(format!("Unknown({})", v[0])),
-                }
-            }
+            Value::Short(ref v) if !v.is_empty() => match v[0] {
+                1 => Some("sRGB".to_string()),
+                65535 => Some("Uncalibrated".to_string()),
+                _ => Some(format!("Unknown({})", v[0])),
+            },
             _ => None,
         })
 }
@@ -209,15 +206,23 @@ mod tests {
     fn test_shutter_speed_log2_conversion() {
         // 1/125s → log2(1/125) ≈ -6.97
         let result = shutter_speed_to_log2(1, 125);
-        assert!((result + 6.97).abs() < 0.01, "Expected ~-6.97, got {}", result);
-        
+        assert!(
+            (result + 6.97).abs() < 0.01,
+            "Expected ~-6.97, got {}",
+            result
+        );
+
         // 1s → log2(1) = 0
         assert_eq!(shutter_speed_to_log2(1, 1), 0.0);
-        
+
         // 30s → log2(30) ≈ 4.91
         let result = shutter_speed_to_log2(30, 1);
-        assert!((result - 4.91).abs() < 0.01, "Expected ~4.91, got {}", result);
-        
+        assert!(
+            (result - 4.91).abs() < 0.01,
+            "Expected ~4.91, got {}",
+            result
+        );
+
         // Edge case: denominator zero
         assert_eq!(shutter_speed_to_log2(1, 0), 0.0);
     }

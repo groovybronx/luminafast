@@ -16,7 +16,7 @@ pub async fn init_preview_service() -> Result<(), String> {
         log::debug!("Service preview déjà initialisé");
         return Ok(());
     }
-    
+
     let config = PreviewConfig::default();
     let service = PreviewService::new(config)
         .map_err(|e| format!("Impossible d'initialiser le service preview: {}", e))?;

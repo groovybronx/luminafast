@@ -1,15 +1,15 @@
 //! Modèle EXIF pour LuminaFast
 //! Correspond exactement au schéma SQL de la table exif_metadata (migration 001_initial.sql)
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExifMetadata {
     pub iso: Option<u32>,
-    pub aperture: Option<f32>,        // f-number
+    pub aperture: Option<f32>, // f-number
     /// Shutter speed stored as log2(seconds) for efficient SQL sorting
     /// Example: 1/125s → log2(1/125) ≈ -6.97, 1s → 0, 30s → 4.91
-    pub shutter_speed: Option<f32>,   // log2(seconds)
-    pub focal_length: Option<f32>,    // mm
+    pub shutter_speed: Option<f32>, // log2(seconds)
+    pub focal_length: Option<f32>, // mm
     pub lens: Option<String>,
     pub camera_make: Option<String>,
     pub camera_model: Option<String>,

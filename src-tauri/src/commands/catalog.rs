@@ -15,7 +15,10 @@ pub async fn get_all_images(
     filter: Option<ImageFilter>,
     state: State<'_, AppState>,
 ) -> CommandResult<Vec<ImageDTO>> {
-    let db = state.db.lock().map_err(|e| format!("Database lock poisoned: {}", e))?;
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
     let mut query = String::from(
         "SELECT i.id, i.blake3_hash, i.filename, i.extension,
@@ -113,7 +116,10 @@ pub async fn get_image_detail(
     id: u32,
     state: State<'_, AppState>,
 ) -> CommandResult<ImageDetailDTO> {
-    let db = state.db.lock().map_err(|e| format!("Database lock poisoned: {}", e))?;
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
     let mut stmt = db.connection().prepare(
         "SELECT i.id, i.blake3_hash, i.filename, i.extension, 
@@ -177,7 +183,10 @@ pub async fn update_image_state(
     flag: Option<String>,
     state: State<'_, AppState>,
 ) -> CommandResult<()> {
-    let db = state.db.lock().map_err(|e| format!("Database lock poisoned: {}", e))?;
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
     // Check if image exists
     let exists: Result<i32, _> =
@@ -196,10 +205,8 @@ pub async fn update_image_state(
                  COALESCE(?, (SELECT rating FROM image_state WHERE image_id = ?)),
                  COALESCE(?, (SELECT flag FROM image_state WHERE image_id = ?)))",
         rusqlite::params![
-            id,
-            rating,   // Option<u8>   — None → SQL NULL
-            id,
-            flag,     // Option<String> — None → SQL NULL
+            id, rating, // Option<u8>   — None → SQL NULL
+            id, flag, // Option<String> — None → SQL NULL
             id
         ],
     );
@@ -218,7 +225,10 @@ pub async fn create_collection(
     parent_id: Option<u32>,
     state: State<'_, AppState>,
 ) -> CommandResult<CollectionDTO> {
-    let db = state.db.lock().map_err(|e| format!("Database lock poisoned: {}", e))?;
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
     // Validate collection type
     if !["static", "smart", "quick"].contains(&collection_type.as_str()) {
@@ -269,7 +279,10 @@ pub async fn add_images_to_collection(
     image_ids: Vec<u32>,
     state: State<'_, AppState>,
 ) -> CommandResult<()> {
-    let mut db = state.db.lock().map_err(|e| format!("Database lock poisoned: {}", e))?;
+    let mut db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
     // Verify collection exists first
     let collection_exists: Result<i32, _> = db.connection().query_row(
@@ -307,7 +320,10 @@ pub async fn add_images_to_collection(
 /// Get all collections
 #[tauri::command]
 pub async fn get_collections(state: State<'_, AppState>) -> CommandResult<Vec<CollectionDTO>> {
-    let db = state.db.lock().map_err(|e| format!("Database lock poisoned: {}", e))?;
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
     let mut stmt = db
         .connection()
@@ -346,7 +362,10 @@ pub async fn search_images(
     query: String,
     state: State<'_, AppState>,
 ) -> CommandResult<Vec<ImageDTO>> {
-    let db = state.db.lock().map_err(|e| format!("Database lock poisoned: {}", e))?;
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
     let search_pattern = format!("%{}%", query);
 
@@ -510,10 +529,12 @@ mod tests {
         let image_id = db.connection().last_insert_rowid() as u32;
 
         // Insérer l'état initial (rating=3, flag='pick')
-        db.connection().execute(
-            "INSERT INTO image_state (image_id, rating, flag) VALUES (?, ?, ?)",
-            rusqlite::params![image_id, 3i32, "pick"],
-        ).unwrap();
+        db.connection()
+            .execute(
+                "INSERT INTO image_state (image_id, rating, flag) VALUES (?, ?, ?)",
+                rusqlite::params![image_id, 3i32, "pick"],
+            )
+            .unwrap();
 
         // Mettre à jour avec rating=None, flag=None → doit CONSERVER les valeurs existantes
         // (et ne pas insérer la chaîne "NULL" qui violerait le CHECK constraint)
@@ -531,14 +552,21 @@ mod tests {
             ],
         );
 
-        assert!(result.is_ok(), "update avec None ne doit pas échouer: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "update avec None ne doit pas échouer: {:?}",
+            result
+        );
 
         // Vérifier que les valeurs initiales sont conservées
-        let (rating, flag): (i32, String) = db.connection().query_row(
-            "SELECT rating, flag FROM image_state WHERE image_id = ?",
-            [image_id],
-            |row| Ok((row.get(0)?, row.get(1)?)),
-        ).unwrap();
+        let (rating, flag): (i32, String) = db
+            .connection()
+            .query_row(
+                "SELECT rating, flag FROM image_state WHERE image_id = ?",
+                [image_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
 
         assert_eq!(rating, 3, "rating doit être conservé à 3");
         assert_eq!(flag, "pick", "flag doit être conservé à 'pick'");

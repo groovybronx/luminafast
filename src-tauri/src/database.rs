@@ -141,8 +141,9 @@ impl Database {
         );
 
         // execute_batch handles multi-statement SQL including triggers with BEGIN...END
-        self.connection.execute_batch(migration_sql)
-            .map_err(|e| DatabaseError::MigrationFailed(format!("Migration {} failed: {}", version, e)))?;
+        self.connection.execute_batch(migration_sql).map_err(|e| {
+            DatabaseError::MigrationFailed(format!("Migration {} failed: {}", version, e))
+        })?;
 
         // Record migration as applied
         self.connection

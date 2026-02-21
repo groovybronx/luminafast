@@ -1,14 +1,14 @@
 //! Commandes Tauri pour extraction EXIF
 //! Phase 2.2 - Harvesting Métadonnées EXIF/IPTC
-use tauri::command;
 use crate::models::exif::ExifMetadata;
 use crate::services::exif;
+use tauri::command;
 
 /// Extrait les métadonnées EXIF d'un fichier image
-/// 
+///
 /// # Arguments
 /// * `file_path` - Chemin absolu vers le fichier image
-/// 
+///
 /// # Returns
 /// * `Ok(ExifMetadata)` - Métadonnées extraites avec succès
 /// * `Err(String)` - Erreur lors de l'extraction
@@ -19,10 +19,10 @@ pub async fn extract_exif(file_path: String) -> Result<ExifMetadata, String> {
 }
 
 /// Extrait les métadonnées EXIF de plusieurs fichiers images en batch
-/// 
+///
 /// # Arguments
 /// * `file_paths` - Liste des chemins absolus vers les fichiers images
-/// 
+///
 /// # Returns
 /// * `Ok(Vec<ExifMetadata>)` - Vecteur des métadonnées extraites (ignore les erreurs)
 /// * `Err(String)` - Erreur critique
@@ -33,7 +33,7 @@ pub async fn extract_exif_batch(file_paths: Vec<String>) -> Result<Vec<ExifMetad
         .iter()
         .filter_map(|path| exif::extract_exif_metadata(path).ok())
         .collect();
-    
+
     Ok(results)
 }
 

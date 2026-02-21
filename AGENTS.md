@@ -41,7 +41,7 @@
 
 ### Avant de commencer une sous-phase :
 1. **Lire** le brief correspondant : `Docs/briefs/PHASE-X.Y.md` ci il n existe pas encore, créer le brief en suivant le template de `DOCS/briefs/BRIEF_TEMPLATE.md`
-2. **Lire** ce fichier (`AI_INSTRUCTIONS.md`) en entier
+2. **Lire** ce fichier d'instructions en entier
 3. **Lire** `Docs/CHANGELOG.md` pour comprendre l'état actuel du projet
 4. **Lire** `Docs/APP_DOCUMENTATION.md` pour l'architecture en place
 5. **Vérifier** que toutes les sous-phases dépendantes sont marquées ✅ dans le CHANGELOG

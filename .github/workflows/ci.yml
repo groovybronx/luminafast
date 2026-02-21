@@ -108,29 +108,23 @@ jobs:
         sudo apt-get install -y \
           libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
           librsvg2-dev patchelf libssl-dev pkg-config build-essential
+    
+    # AJOUT : Créer le dossier dist pour satisfaire tauri::generate_context!()
+    - name: Create dist directory placeholder
+      run: |
+        mkdir -p dist
+        echo '<!DOCTYPE html><html><body>CI placeholder</body></html>' > dist/index.html
+        echo "✅ dist directory created for Rust compilation"
         
     - name: Check Rust formatting
       run: cd src-tauri && cargo fmt --all -- --check
       
-    # NOTE: Clippy peut échouer à cause des warnings de code non utilisé
-    # Warnings identifiés (70 au total):
-    # - Structs non construites: PreviewService, NewPreviewRecord, etc.
-    # - Méthodes non utilisées: hash_files_batch, detect_duplicates, etc.
-    # - Variables non lues: id, config, event_tx dans WatcherHandle
-    # Solution temporaire: autoriser dead_code pendant le développement
     - name: Clippy lint
       run: cd src-tauri && cargo clippy --all-targets --all-features -- -D warnings -A dead_code -A unused_variables
       
-    # NOTE: Vérification que le code Rust compile (hors Tauri)
-    # Le build Tauri complet est fait dans le job integration
     - name: Build Rust code
       run: cd src-tauri && cargo build --lib --verbose
       
-    # NOTE: Les tests Rust peuvent hanging indéfiniment sur CI
-    # Problème identifié: 4 tests ignorés localement qui peuvent timeout:
-    # - test_lock_commands, test_watcher_commands 
-    # - test_file_locking, test_watcher_lifecycle
-    # Solution: timeout de 5 minutes et exécution des tests ignorés
     - name: Run Rust tests
       run: cd src-tauri && timeout 300 cargo test -- --ignored
 

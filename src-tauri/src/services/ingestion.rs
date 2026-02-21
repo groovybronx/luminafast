@@ -158,6 +158,7 @@ impl IngestionService {
                 Some("cr3") => crate::models::discovery::RawFormat::CR3,
                 Some("raf") => crate::models::discovery::RawFormat::RAF,
                 Some("arw") => crate::models::discovery::RawFormat::ARW,
+
                 _ => {
                     // Skip unsupported formats
                     continue;

@@ -47,7 +47,6 @@ impl RawFormat {
     }
 
     /// Get the MIME type for this format
-    #[allow(dead_code)]
     pub fn mime_type(&self) -> &'static str {
         match self {
             RawFormat::CR3 => "image/x-canon-cr3",
@@ -57,7 +56,6 @@ impl RawFormat {
     }
 
     /// Get the description for this format
-    #[allow(dead_code)]
     pub fn description(&self) -> &'static str {
         match self {
             RawFormat::CR3 => "Canon RAW 3",
@@ -67,7 +65,6 @@ impl RawFormat {
     }
 
     /// Get the magic bytes for this format
-    #[allow(dead_code)]
     pub fn magic_bytes(&self) -> &'static [u8] {
         match self {
             RawFormat::CR3 => &[0x49, 0x52, 0x42, 0x02],
@@ -77,7 +74,6 @@ impl RawFormat {
     }
 
     /// Check if bytes match this format's signature
-    #[allow(dead_code)]
     pub fn matches_signature(&self, bytes: &[u8]) -> bool {
         let signature = self.magic_bytes();
         if bytes.len() < signature.len() {
@@ -149,7 +145,6 @@ impl DiscoveredFile {
     }
 
     /// Mark this file as processed with its hash and optional database ID
-    #[allow(dead_code)]
     pub fn mark_processed(&mut self, hash: String, database_id: Option<i64>) {
         self.processed = true;
         self.blake3_hash = Some(hash);
@@ -160,7 +155,6 @@ impl DiscoveredFile {
     }
 
     /// Mark this file as having an error
-    #[allow(dead_code)]
     pub fn mark_error(&mut self, error: String) {
         self.error_message = Some(error);
         self.status = FileProcessingStatus::Error;
@@ -252,7 +246,6 @@ pub struct DiscoverySession {
 
 impl DiscoverySession {
     /// Accessor for session_id (alias for id)
-    #[allow(dead_code)]
     pub fn session_id(&self) -> Uuid {
         self.id
     }
@@ -458,7 +451,6 @@ impl BatchIngestionResult {
     }
 
     /// Calculate statistics
-    #[allow(dead_code)]
     pub fn finalize(&mut self) {
         let total_processed = self.successful.len() + self.failed.len() + self.skipped.len();
         if total_processed > 0 {
@@ -468,13 +460,11 @@ impl BatchIngestionResult {
     }
 
     /// Get total files processed
-    #[allow(dead_code)]
     pub fn total_processed(&self) -> usize {
         self.successful.len() + self.failed.len() + self.skipped.len()
     }
 
     /// Get success rate as percentage
-    #[allow(dead_code)]
     pub fn success_rate(&self) -> f64 {
         let total = self.total_processed();
         if total == 0 {

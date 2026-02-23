@@ -1020,8 +1020,11 @@ pub async fn get_folder_images(
         // This prevents matching /Root2 when searching for /Root
         let path_exact = path.clone();
         let path_descendants = format!("{}/% ", path.trim_end_matches('/'));
-        stmt.query_map(rusqlite::params![path_exact, path_descendants], map_image_row)
-            .map_err(|e| format!("Failed to query images: {}", e))?
+        stmt.query_map(
+            rusqlite::params![path_exact, path_descendants],
+            map_image_row,
+        )
+        .map_err(|e| format!("Failed to query images: {}", e))?
     } else {
         stmt.query_map(rusqlite::params![folder_id], map_image_row)
             .map_err(|e| format!("Failed to query images: {}", e))?

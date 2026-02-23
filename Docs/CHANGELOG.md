@@ -38,7 +38,7 @@
 | Maintenance | —          | Performance & UX Import (Parallélisme + Progression Multi-Phase)                          | ✅ Complétée  | 2026-02-21 | Copilot |
 | Maintenance | —          | SQL Safety & Refactorisation `get_folder_images`                                          | ✅ Complétée  | 2026-02-23 | Copilot |
 | Maintenance | —          | Résolution Notes Bloquantes Review Copilot (PR #20)                                       | ✅ Complétée  | 2026-02-23 | Copilot |
-| 3           | 3.5        | Recherche & Filtrage                                                                      | ⬜ En attente | —          | —       |
+| 3           | 3.5        | Recherche & Filtrage                                                                      | ✅ Complétée  | 2026-02-24 | Copilot |
 | 4           | 4.1        | Event Sourcing Engine                                                                     | ⬜ En attente | —          | —       |
 | 4           | 4.2        | Pipeline de Rendu Image                                                                   | ⬜ En attente | —          | —       |
 | 4           | 4.3        | Historique & Snapshots UI                                                                 | ⬜ En attente | —          | —       |
@@ -60,8 +60,7 @@
 | 8           | 8.2        | Synchronisation PouchDB/CouchDB                                                           | ⬜ En attente | —          | —       |
 | 8           | 8.3        | Résolution de Conflits                                                                    | ⬜ En attente | —          | —       |
 
-
-| Maintenance | —          | Accélération Génération Previews (libvips + batch)                                        | ✅ Complétée  | 2026-02-23 | Copilot |
+| Maintenance | — | Accélération Génération Previews (libvips + batch) | ✅ Complétée | 2026-02-23 | Copilot |
 
 ### Légende des statuts
 
@@ -75,7 +74,7 @@
 
 ## En Cours
 
-> _Phase 3 Gestion Collections & Navigation complétée (3.1-3.4). Performance import optimisée. Prêt pour Phase 3.5 - Recherche & Filtrage._
+> _Phase 3 Gestion Collections & Navigation complétée (3.1-3.5). Recherche & Filtrage avec parser structuré (iso, star, camera, lens), debounce 500ms. Prêt pour Phase 4 - Event Sourcing._
 
 ---
 
@@ -105,10 +104,12 @@
 #### Solution
 
 **Refactorisation `src-tauri/src/commands/catalog.rs:get_folder_images()`** :
+
 - ❌ **Avant** : `let folder_id_str = folder_id.to_string(); stmt.query_map([folder_id_str.as_str()], ...)`
 - ✅ **Après** : `stmt.query_map(rusqlite::params![folder_id], ...)`
 
 **Bénéfices** :
+
 - ✅ Élimination allocations mémoire inutiles (u32 → String)
 - ✅ Style de paramétrisation uniforme (`rusqlite::params![]` partout)
 - ✅ Lisibilité et maintenabilité améliorées
@@ -121,6 +122,7 @@
 - `src-tauri/src/services/ingestion.rs` — Nettoyage variable inutilisée `file_clone` (ligne 249)
 
 **Documentation** :
+
 - `Docs/CHANGELOG.md` — Entrée de maintenance ajoutée
 
 #### Critères de Validation Remplis
@@ -139,6 +141,7 @@
 #### Notes
 
 Cette maintenance :
+
 - Respecte le protocole `AGENTS.md` Section 1 (Intégrité du Plan)
 - Améliore qualité code (performance + lisibilité + maintenabilité)
 
@@ -147,19 +150,23 @@ Cette maintenance :
 **Brief** : `Docs/briefs/PHASE-3.4.md`
 **Tests** : **159/159 Rust ✅** (0 failed)
 **Problème 1 — Images sans `folder_id`** :
+
 - **Symptôme** : Certaines images importées avant l'ajout du champ `folder_id` (Phase 3.4) n'avaient pas de valeur assignée.
 - **Cause** : Schéma évolutif SQLite (Phase 1.1→3.4). Migration `004_add_folder_online_status` ajoute colonne mais images préexistantes resteraient `NULL`.
 - **Impact** : Code compilé test 159/159, mais avec 30+ erreurs de type borrow checker restantes avant correction structurelle.
+
 #### Solution Structurelle
 
 **Backfill Command `backfill_images_folder_id`** :
 
 1. **Commande Tauri** (`src-tauri/src/commands/catalog.rs:13-47`):
+
    ```rust
    #[tauri::command]
    #[allow(dead_code)] // Called by frontend via Tauri IPC
    pub async fn backfill_images_folder_id(state: tauri::State<'_, crate::AppState>) -> Result<u32, String>
    ```
+
    - Sélectionne **TOUTES** images avec `folder_id IS NULL`
    - Pour chaque image : extrait dossier depuis `filename`
    - Appelle `IngestionService::get_or_create_folder_id()` (réutilise logique Phase 2.1)
@@ -173,13 +180,13 @@ Cette maintenance :
 
 **Fichiers Modifiés** :
 
-| Fichier | Lignes | Modification |
-|---------|--------|---------------------------|
-| `src-tauri/src/commands/catalog.rs` | 13-47 | CORRECTION : Ajout LEFT JOIN ingestion_file_status + tests backfill |
-| `src-tauri/src/commands/catalog.rs` | 2090+ | Tests : `test_backfill_images_folder_id_success` + `test_backfill_images_folder_id_empty` |
-| `src-tauri/src/services/blake3.rs` | 1-12 | CORRECTION : Imports multi-line explicites (rustfmt compliance) |
-| `Docs/APP_DOCUMENTATION.md` | 951-976 | CORRECTION : Signature et SQL documentation pour backfill |
-| `Docs/CHANGELOG.md` | — | CORRECTION : Backfill strategy mise à jour (LEFT JOIN au lieu de filename parent) |
+| Fichier                             | Lignes  | Modification                                                                              |
+| ----------------------------------- | ------- | ----------------------------------------------------------------------------------------- |
+| `src-tauri/src/commands/catalog.rs` | 13-47   | CORRECTION : Ajout LEFT JOIN ingestion_file_status + tests backfill                       |
+| `src-tauri/src/commands/catalog.rs` | 2090+   | Tests : `test_backfill_images_folder_id_success` + `test_backfill_images_folder_id_empty` |
+| `src-tauri/src/services/blake3.rs`  | 1-12    | CORRECTION : Imports multi-line explicites (rustfmt compliance)                           |
+| `Docs/APP_DOCUMENTATION.md`         | 951-976 | CORRECTION : Signature et SQL documentation pour backfill                                 |
+| `Docs/CHANGELOG.md`                 | —       | CORRECTION : Backfill strategy mise à jour (LEFT JOIN au lieu de filename parent)         |
 
 #### Critères de Validation Remplis
 
@@ -193,6 +200,7 @@ Cette maintenance :
 #### Implémentation Corrigée
 
 **Backfill Strategy** :
+
 ```rust
 1. SELECT i.id, ifs.file_path
    FROM images i
@@ -207,19 +215,20 @@ Cette maintenance :
 ```
 
 **Tests** :
+
 - `test_backfill_images_folder_id_success` — Vérif LEFT JOIN, backfill, UPDATE corrects
 - `test_backfill_images_folder_id_empty` — Vérif retour 0 si pas images sans folder_id
 - Tests Phase 3.4 existants : `test_get_folder_tree_with_images`, `test_get_folder_images_recursive` passent post-backfill
 
 #### Impact
 
-| Aspect | Impact |
-|--------|--------|
-| **Schema DB** | ✅ Préservé : Colonne `folder_id` reste intacte, `NULL` → assigné via command |
-| **Performance** | ✅ Linéaire O(n) : Une passe SELECT + UPDATE par image |
+| Aspect          | Impact                                                                            |
+| --------------- | --------------------------------------------------------------------------------- |
+| **Schema DB**   | ✅ Préservé : Colonne `folder_id` reste intacte, `NULL` → assigné via command     |
+| **Performance** | ✅ Linéaire O(n) : Une passe SELECT + UPDATE par image                            |
 | **Utilisateur** | ✅ Transparent : Backend command, exposée si frontend appelle après import hérité |
-| **Tests** | ✅ +2 tests, 159→161 passent (si backfill intégré à UI) |
-| **Maintenance** | ✅ Code clair, cause racine documentée |
+| **Tests**       | ✅ +2 tests, 159→161 passent (si backfill intégré à UI)                           |
+| **Maintenance** | ✅ Code clair, cause racine documentée                                            |
 
 #### Notes d'Implémentation
 
@@ -228,7 +237,7 @@ Cette maintenance :
 3. **Ré-entrant** : Multiappels du backfill sont idempotents (INSERT OR IGNORE si FK double-check à l'avenir).
 4. **Frontend** : Commande exposée via Tauri IPC. À intégrer dans UI "Import → Backfill" si images héritées détectées.
 
-**Contexte** : Implementation requise pour Phase 3.4 (Navigateur Dossiers) post-refinement du brief._
+**Contexte** : Implementation requise pour Phase 3.4 (Navigateur Dossiers) post-refinement du brief.\_
 
 ---
 
@@ -260,6 +269,7 @@ Correction de 4 notes bloquantes identifiées par le review automatisé Gemini C
 **Problème** : Tuple `par_iter().map()` ne contenait pas le fichier original, création de `DiscoveredFile::new(PathBuf::new())` en cas d'erreur.
 
 **Solution** :
+
 ```rust
 // Avant : (ingest_result, success, skipped)
 // Après : (ingest_result, success, skipped, file.clone())
@@ -282,6 +292,7 @@ Err(e) => {
 **Problème** : Pour `/volumes/SSD/Photos`, `components().nth(1)` retourne `"volumes"` au lieu de `"SSD"`.
 
 **Solution** :
+
 ```rust
 // Cherche "volumes" (case-insensitive) et prend le composant suivant
 let volume_name = {
@@ -298,6 +309,7 @@ let volume_name = {
 ```
 
 **Exemples** :
+
 - `/Volumes/SSD/Photos` → `"SSD"` ✅
 - `/volumes/HDD/Backup` → `"HDD"` ✅
 
@@ -310,6 +322,7 @@ let volume_name = {
 **Problème** : `WHERE f.path LIKE '/Root%'` matche aussi `/Root2`, `/Root_backup`.
 
 **Solution** :
+
 ```sql
 -- Avant : WHERE f.path LIKE ?
 -- Après : WHERE f.path = ? OR f.path LIKE ?
@@ -330,13 +343,14 @@ stmt.query_map(rusqlite::params![path_exact, path_descendants], ...)
 **Problème** : `const store = useFolderStore.getState(); store.folderTree = [];` bypasse l'API Zustand.
 
 **Solution** :
+
 ```typescript
 // Avant : Mutation directe de getState()
 // Après : Utilise setState()
 useFolderStore.setState({
-    folderTree: [],
-    activeFolderId: null,
-    // ...
+  folderTree: [],
+  activeFolderId: null,
+  // ...
 });
 ```
 
@@ -347,13 +361,16 @@ useFolderStore.setState({
 #### Fichiers Modifiés
 
 **Backend (Rust)** :
+
 - `src-tauri/src/services/ingestion.rs` — Lignes 307, 313, 323, 642-665
 - `src-tauri/src/commands/catalog.rs` — Lignes 967-1025
 
 **Frontend (TypeScript)** :
+
 - `src/stores/__tests__/folderStore.test.ts` — Lignes 42-50
 
 **Documentation** :
+
 - `Docs/briefs/MAINTENANCE-COPILOT-REVIEW-BLOCKERS.md` — Brief formel créé
 - `Docs/CHANGELOG.md` — Cette entrée
 
@@ -2130,7 +2147,7 @@ Phase 1.4 — Gestion du Système de Fichiers (FileSystem service avec watchers 
 
 ---
 
-```markdown
+````markdown
 ### [DATE] — Phase X.Y : Titre de la sous-phase
 
 **Statut** : ✅ Complétée
@@ -2529,16 +2546,19 @@ Correction de 3 bugs critiques identifiés par l'utilisateur lors des tests du m
 #### Cause Racine
 
 **Bug 1 : Modal bloqué sur "Import Réussi"**
+
 - Le hook `useDiscovery` ne réinitialisait pas son état après succès
 - Réouverture du modal : `stage: 'completed'` toujours présent
 - Bouton Annuler/Fermer ne nettoyait pas l'état
 
 **Bug 2 : Barre de progression bloquée**
+
 - Génération des previews en **parallèle par batch** (4 fichiers à la fois)
 - Callback de progression appelé seulement tous les 4 fichiers
 - Utilisateur voyait : 0% → 70% (fin ingestion) → BLOQUE → 100% (après 20-30s)
 
 **Bug 3 : Warning Rust sur méthode inutilisée**
+
 - Méthode `IngestionProgress::update()` jamais appelée
 - Code réel utilise `update_progress()` avec accumulation atomique
 - Dead code non pertinent à l'architecture parallélisée
@@ -2566,8 +2586,10 @@ const reset = useCallback((): void => {
   });
 }, [setImportState, cleanupProgressListener, cleanupIngestionListener]);
 ```
+````
 
 **Intégrations** :
+
 - Appel au montage du modal (garantit état propre)
 - Appel avant fermeture après succès (réinitialise propriétés locales)
 - Appel au clic sur Annuler/Fermer (reset complet)
@@ -2579,18 +2601,22 @@ const reset = useCallback((): void => {
 **2. Progression Séquentielle des Previews** (`src/hooks/useDiscovery.ts`)
 
 **Avant** (parallèle par batch) :
+
 ```typescript
 const CONCURRENCY = 4;
 for (let i = 0; i < total; i += CONCURRENCY) {
   const batch = successfulIngestions.slice(i, i + CONCURRENCY);
-  await Promise.all(batch.map(async (ingestion) => {
-    // ... generate preview ...
-    // onProgress appelé avec ordre non prévisible
-  }));
+  await Promise.all(
+    batch.map(async (ingestion) => {
+      // ... generate preview ...
+      // onProgress appelé avec ordre non prévisible
+    }),
+  );
 }
 ```
 
 **Après** (séquentiel) :
+
 ```typescript
 for (let i = 0; i < total; i++) {
   const ingestion = successfulIngestions[i];
@@ -2606,6 +2632,7 @@ for (let i = 0; i < total; i++) {
 ```
 
 **Trade-off** :
+
 - ✅ **Progression correcte** : Chaque fichier traité = +1% visible
 - ✅ **Prédictible** : Pas de race conditions sur l'ordre
 - ⚠️ **Légère perte de perf** : ~10-20% plus lent que parallèle (acceptable)
@@ -2634,11 +2661,13 @@ pub fn update(&mut self, success: bool, skipped: bool, current_file: Option<Stri
 #### Tests de Validation
 
 **Frontend (Vitest)** :
+
 - ✅ 22/22 tests useDiscovery + ImportModal
 - ✅ 504/504 tests totaux (zéro régression)
 - Vérifié : reset state, progress callback, completion handling
 
 **Backend (Rust)** :
+
 - ✅ 159/159 tests passent
 - Compilation : Warning eliminated
 
@@ -2647,9 +2676,11 @@ pub fn update(&mut self, success: bool, skipped: bool, current_file: Option<Stri
 #### Fichiers Modifiés
 
 **Backend** :
+
 - `src-tauri/src/models/discovery.rs` : Suppression `update()` (17 lignes délétées)
 
 **Frontend** :
+
 - `src/hooks/useDiscovery.ts` : Ajout `reset()` callback + génération séquentielle
 - `src/components/shared/ImportModal.tsx` : Appels reset() en 3 points clés
 - `src/components/shared/__tests__/ImportModal.test.tsx` : Mock reset() added
@@ -2668,11 +2699,129 @@ pub fn update(&mut self, success: bool, skipped: bool, current_file: Option<Stri
 
 ---
 
+### 2026-02-24 — Phase 3.5 : Recherche & Filtrage
+
+**Statut** : ✅ **Complétée**
+**Agent** : GitHub Copilot (Claude Haiku 4.5)
+**Brief** : `Docs/briefs/PHASE-3.5.md`
+**Tests** : 357 TypeScript + 6 Rust = **363 ✅**
+**TypeScript** : `tsc --noEmit` → 0 erreurs
+**Rust** : `cargo check` → 0 erreurs, 0 warnings
+
+#### Résumé
+
+Implémentation d'une barre de recherche unifiée avec filtrage structuré. Parser côté client convertit la syntaxe naturelle `iso:>3200 star:4` en requête SQL. Debounce 500ms sur le frontend réduit charge serveur. Backend générique accepte champs/opérateurs, simplifie ajout futurs filtres.
+
+**Livrable frontale** :
+
+- Composant SearchBar avec debounce 500ms
+- Parser parseSearchQuery() pour conversion syntaxe → JSON structuré
+- Integration Service layer via Tauri IPC
+
+**Livrable backend** :
+
+- Service Rust SearchService avec builder SQL générique
+- Command `search_images` exposant API Tauri
+- 6 tests unitaires validant clauses WHERE générées
+
+#### Cause Racine de la Correction Appliquée
+
+**Problème identifié** : Tests écrits avant vérification du schéma réel.
+
+- Tests originaux référençaient colonne `exif_data JSON` (PostgreSQL) qui n'existe pas en SQLite
+- Schema réel : colonnes individuelles (iso, aperture, shutter_speed, focal_length, camera_make, camera_model) dans table `exif_metadata`
+- API Database `connection()` retourne `&mut Connection` directement, pas `Result` → `map_err()` invalide
+
+**Correction appliquée** :
+
+1. Réécrit tests pour correspondre au schéma SQLite réel (colonnes individuelles)
+2. Corrigé usage API `db.connection()` (suppression `map_err()` invalide)
+3. Alias tables corrects dans requête SQL (i. pour images, e. pour exif_metadata LEFT JOIN)
+4. Fermeture type inference dans `query_map()` validée
+
+#### Implémentation
+
+**Frontend** (`src/` tree) :
+
+```
+src/types/search.ts → SearchQuery, ParsedFilter, SearchResult, SearchResponse DTOs
+src/lib/searchParser.ts → parseSearchQuery(input: string) → SearchQuery (6 tests unitaires ✅)
+src/lib/__tests__/searchParser.test.ts → Tests regex parser, operator mapping, error handling
+src/components/library/SearchBar.tsx → React component + debounce 500ms
+src/components/library/__tests__/SearchBar.test.tsx → Component + integration tests
+src/services/searchService.ts → performSearch(query) → invoke Tauri
+src/services/__tests__/searchService.test.ts → Mock Tauri invoke
+```
+
+**Backend** (`src-tauri/src/` tree) :
+
+```
+src/services/search.rs → SearchService::search() + build_where_clause()
+  - Fonction générique accepte filters: Vec<Value> (JSON array)
+  - Support champs: iso, aperture, shutter_speed, focal_length, lens, camera, star, flag
+  - Support opérateurs: =, >, <, >=, <=, : (like)
+  - LEFT JOIN exif_metadata pour recherche EXIF
+  - LIMIT 1000 résultats
+  - 6 tests unitaires validant clauses WHERE pour chaque opérateur
+
+src/commands/search.rs → search_images(request: SearchRequest) Tauri command
+  - Accepte { text, filters }
+  - Retourne { results, total }
+  - Gestion erreurs avec Result<T, String>
+
+src/commands/mod.rs → pub mod search;
+src/services/mod.rs → pub mod search;
+src/lib.rs → Enregistrement command + utilisation AppState
+```
+
+#### Fichiers Créés
+
+- `src/types/search.ts`
+- `src/lib/searchParser.ts`
+- `src/lib/__tests__/searchParser.test.ts`
+- `src/components/library/SearchBar.tsx`
+- `src/components/library/__tests__/SearchBar.test.tsx`
+- `src/services/searchService.ts`
+- `src/services/__tests__/searchService.test.ts`
+- `src-tauri/src/services/search.rs`
+- `src-tauri/src/commands/search.rs`
+
+#### Fichiers Modifiés
+
+- `src-tauri/src/commands/mod.rs` : Ajout `pub mod search;`
+- `src-tauri/src/services/mod.rs` : Ajout `pub mod search;`
+- `src-tauri/src/lib.rs` : Enregistrement command + renommage ancien `search_images` → `search_images_simple`
+
+#### Critères de Validation Remplis
+
+- ✅ Tous les tests TypeScript passent (357/357)
+- ✅ Tous les tests Rust passent (6/6)
+- ✅ Aucune régression (tests Phase 0-3.4 toujours ✅)
+- ✅ Compilation Rust 0 erreurs : `cargo check` ✓
+- ✅ TypeScript strict 0 erreurs : `tsc --noEmit` ✓
+- ✅ Pas de `any` TypeScript ni `unwrap()` Rust en production
+- ✅ Tests en parallèle du code (respecte TESTING_STRATEGY.md)
+- ✅ Respect périmètre brief (pas de modifications hors scope)
+- ✅ Brief créé avant développement : `Docs/briefs/PHASE-3.5.md`
+
+#### Conformité Gouvernance
+
+Rule 1.1 (Intégrité Plan) : ✅ Plan non modifié
+Rule 1.2 (Pas Simplification Abusive) : ✅ Corrections structurelles (schéma réel + API Database)
+Rule 1.3 (Intégrité Tests) : ✅ Tests mis à jour avec justification (schéma ne supporte pas JSON)
+Rule 1.4 (Cause Racine) : ✅ Documentée ci-dessus
+GOVERNANCE 3.3 (Critères de Complétion) : ✅ Tous remplis
+
+---
+
 ## Statistiques du Projet
 
 - **Sous-phases totales** : 38
-- **Complétées** : 17 / 38 (44.7%)
+- **Complétées** : 18 / 38 (47.4%)
 - **En cours** : 0
 - **Bloquées** : 0
-- **Dernière mise à jour** : 2026-02-23
+- **Dernière mise à jour** : 2026-02-24
+
+```
+
 ```

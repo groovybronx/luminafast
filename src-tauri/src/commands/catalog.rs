@@ -422,8 +422,10 @@ pub async fn get_collections(state: State<'_, AppState>) -> CommandResult<Vec<Co
 }
 
 /// Search images with text query
+/// Ancienne commande de recherche simple (deprecated, utiliser search_images de search.rs)
 #[tauri::command]
-pub async fn search_images(
+#[allow(dead_code)]
+pub async fn search_images_simple(
     query: String,
     state: State<'_, AppState>,
 ) -> CommandResult<Vec<ImageDTO>> {

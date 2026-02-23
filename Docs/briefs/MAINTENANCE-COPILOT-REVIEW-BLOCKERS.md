@@ -24,6 +24,7 @@ Suite au review automatisé de la PR #20 par Gemini Code Assist, 4 notes bloquan
 ### 2.1 — DiscoveredFile dummy (ingestion.rs)
 
 **Problème** :
+
 ```rust
 Err(e) => {
     let failed_result = IngestionResult {
@@ -49,6 +50,7 @@ Err(e) => {
 ### 2.2 — volume_name extraction (ingestion.rs)
 
 **Problème** :
+
 ```rust
 let volume_name = Path::new(folder_path)
     .components()
@@ -59,6 +61,7 @@ let volume_name = Path::new(folder_path)
 ```
 
 Pour `/volumes/SSD/Photos` :
+
 - `nth(0)` = `RootDir` (`/`)
 - `nth(1)` = `Normal("volumes")` ❌
 - `nth(2)` = `Normal("SSD")` ✅
@@ -72,6 +75,7 @@ Pour `/volumes/SSD/Photos` :
 ### 2.3 — Filtrage SQL LIKE (catalog.rs)
 
 **Problème** :
+
 ```sql
 WHERE f.path LIKE '/Root%'
 -- Matche : /Root, /Root/Sub  ✅
@@ -87,6 +91,7 @@ WHERE f.path LIKE '/Root%'
 ### 2.4 — Mutation directe Zustand (folderStore.test.ts)
 
 **Problème** :
+
 ```typescript
 const store = useFolderStore.getState();
 store.folderTree = []; // ❌ Mutation directe
@@ -103,6 +108,7 @@ store.folderTree = []; // ❌ Mutation directe
 ### 3.1 — Préserver fichier original (ingestion.rs lignes 307, 313, 323)
 
 **Avant** :
+
 ```rust
 .map(|file| {
     let ingest_result = self.ingest_file(file).await;
@@ -115,6 +121,7 @@ for (ingest_result, success, skipped) in ingest_results {
 ```
 
 **Après** :
+
 ```rust
 .map(|file| {
     let ingest_result = self.ingest_file(file).await;
@@ -140,6 +147,7 @@ for (ingest_result, success, skipped, original_file) in ingest_results {
 ### 3.2 — Corriger volume_name extraction (ingestion.rs lignes 642-665)
 
 **Avant** :
+
 ```rust
 let volume_name = Path::new(folder_path)
     .components()
@@ -150,6 +158,7 @@ let volume_name = Path::new(folder_path)
 ```
 
 **Après** :
+
 ```rust
 let volume_name = {
     let components: Vec<_> = Path::new(folder_path)
@@ -179,6 +188,7 @@ let volume_name = {
 ```
 
 **Exemples** :
+
 - `/Volumes/SSD/Photos` → `"SSD"` ✅
 - `/volumes/HDD/Backup` → `"HDD"` ✅
 - `/data/projects` → `"projects"` (fallback) ✅
@@ -191,12 +201,14 @@ let volume_name = {
 ### 3.3 — Corriger filtrage SQL LIKE (catalog.rs lignes 967-1025)
 
 **Avant** :
+
 ```sql
 WHERE f.path LIKE ?
 -- Avec : format!("{}%", path)
 ```
 
 **Après** :
+
 ```sql
 WHERE f.path = ? OR f.path LIKE ?
 -- Avec : path_exact = path, path_descendants = format!("{}/% ", path.trim_end_matches('/'))
@@ -216,6 +228,7 @@ let image_iter = if let Some(path) = folder_path {
 ```
 
 **Exemples** :
+
 - `/Root` → matche `/Root` (exact) ET `/Root/Sub` (LIKE) ✅
 - `/Root` → NE matche PAS `/Root2` ✅
 
@@ -227,29 +240,31 @@ let image_iter = if let Some(path) = folder_path {
 ### 3.4 — Corriger mutation Zustand (folderStore.test.ts ligne 42)
 
 **Avant** :
+
 ```typescript
 beforeEach(() => {
-    const store = useFolderStore.getState();
-    store.folderTree = []; // ❌ Mutation directe
-    store.activeFolderId = null;
-    // ...
+  const store = useFolderStore.getState();
+  store.folderTree = []; // ❌ Mutation directe
+  store.activeFolderId = null;
+  // ...
 });
 ```
 
 **Après** :
+
 ```typescript
 beforeEach(() => {
-    // Reset store state using setState to avoid direct mutation
-    useFolderStore.setState({
-        folderTree: [],
-        activeFolderId: null,
-        activeFolderImageIds: null,
-        expandedFolderIds: new Set(),
-        isLoading: false,
-        error: null,
-    }); // ✅ Utilise l'API Zustand
+  // Reset store state using setState to avoid direct mutation
+  useFolderStore.setState({
+    folderTree: [],
+    activeFolderId: null,
+    activeFolderImageIds: null,
+    expandedFolderIds: new Set(),
+    isLoading: false,
+    error: null,
+  }); // ✅ Utilise l'API Zustand
 
-    vi.clearAllMocks();
+  vi.clearAllMocks();
 });
 ```
 
@@ -324,6 +339,7 @@ Pour `/Volumes/SSD/Photos`, après `filter_map` (garde uniquement `Normal`), on 
 `["Volumes", "SSD", "Photos"]`
 
 `windows(2)` crée des fenêtres de 2 éléments :
+
 - `["Volumes", "SSD"]` → Match ! Retourne `"SSD"`
 - `["SSD", "Photos"]` (non évalué car find() a déjà réussi)
 

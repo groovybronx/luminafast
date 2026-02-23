@@ -12,6 +12,7 @@ Lors de l'analyse du PR #20 (Bug de l'import des images), une critique de revue 
 
 **Problème identifié:**
 La fonction utilise une conversion inutile `u32 → String → &str` et mélange deux styles de paramétrisation SQL, ce qui crée:
+
 - ❌ Perte de performance (allocations mémoire inutiles)
 - ❌ Difficulté de maintenance (mélange de styles)
 - ❌ Risk de régression lors d'ajout de paramètres futurs
@@ -33,6 +34,7 @@ Bien que **rusqlite gère correctement les paramètres** (injection SQL impossib
 ## Objectif
 
 Refactoriser `get_folder_images()` pour:
+
 1. ✅ Éliminer conversions `u32 → String → &str`
 2. ✅ Utiliser un style cohérent de paramétrisation SQL
 3. ✅ Améliorer lisibilité et maintenabilité du code
@@ -46,10 +48,12 @@ Refactoriser `get_folder_images()` pour:
 ### Fichiers à modifier
 
 **Backend (Rust):**
+
 - `src-tauri/src/commands/catalog.rs` : Refactoriser `get_folder_images()` (lignes 943-1040)
 - `src-tauri/src/commands/catalog.rs` : Ajouter/améliorer tests unitaires (section `#[cfg(test)]`)
 
 **Documentation:**
+
 - `Docs/CHANGELOG.md` : Ajouter entrée de maintenance
 - `Docs/APP_DOCUMENTATION.md` : Mettre à jour section historique
 
@@ -66,6 +70,7 @@ Refactoriser `get_folder_images()` pour:
 ### 1. Refactorisation `get_folder_images()`
 
 **Avant (problématique):**
+
 ```rust
 let image_iter = if let Some(path) = folder_path {
     let search_pattern = format!("{}%", path);
@@ -79,6 +84,7 @@ let image_iter = if let Some(path) = folder_path {
 ```
 
 **Après (optimisé):**
+
 ```rust
 let image_iter = if let Some(path) = folder_path {
     let search_pattern = format!("{}%", path);
@@ -91,6 +97,7 @@ let image_iter = if let Some(path) = folder_path {
 ```
 
 **Bénéfices:**
+
 - ✅ Pas de conversion `u32 → String`
 - ✅ Utilise `rusqlite::params![]` uniformément
 - ✅ Plus lisible et maintenable
@@ -143,6 +150,7 @@ fn test_get_folder_images_empty() {
 ## Dépendances
 
 **Pré-requis:**
+
 - ✅ Phase 3.4 complétée (Folder Navigator implémenté)
 - ✅ Base de données SQLite initialisée
 
@@ -152,13 +160,13 @@ fn test_get_folder_images_empty() {
 
 ## Impact et Risques
 
-| Aspect | Impact | Mitigation |
-|--------|--------|-----------|
-| **Comportement utilisateur** | ✅ Zéro impact | Refactorisation interne, API identique |
-| **Performance** | ✅ Légière amélioration | Moins d'allocations mémoire |
-| **Maintenance future** | ✅ Amélioration | Code plus lisible et cohérent |
-| **Tests existants** | ✅ Tous passent | Aucun changement logique |
-| **Complexité** | ⬜ Très faible | Changement localisé à 1 fonction |
+| Aspect                       | Impact                  | Mitigation                             |
+| ---------------------------- | ----------------------- | -------------------------------------- |
+| **Comportement utilisateur** | ✅ Zéro impact          | Refactorisation interne, API identique |
+| **Performance**              | ✅ Légière amélioration | Moins d'allocations mémoire            |
+| **Maintenance future**       | ✅ Amélioration         | Code plus lisible et cohérent          |
+| **Tests existants**          | ✅ Tous passent         | Aucun changement logique               |
+| **Complexité**               | ⬜ Très faible          | Changement localisé à 1 fonction       |
 
 ---
 
@@ -178,10 +186,12 @@ fn test_get_folder_images_empty() {
 ## Ressources d'Apprentissage
 
 **Rusqlite paramètres:**
+
 - `rusqlite::params![]` macro pour paramètres nommés/positionnels
 - Documentation: https://docs.rs/rusqlite/latest/rusqlite/#parameters
 
 **Best practices SQL Rust:**
+
 - Toujours utiliser prepared statements avec paramètres
 - Éviter format!() pour construire chaînes SQL
 - Préférer `rusqlite::params![]` ou `rusqlite::params_from_iter()`
@@ -191,6 +201,7 @@ fn test_get_folder_images_empty() {
 ## Notes pour Reviewer
 
 Cette maintenance:
+
 1. **Respecte le protocole AGENTS.md** — Brief formel, cause racine documentée
 2. **Zéro risque régression** — Tests exhaustifs couvrent les deux branches
 3. **Améliore qualité code** — Performance + lisibilité + maintenabilité

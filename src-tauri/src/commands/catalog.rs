@@ -11,9 +11,7 @@ pub struct AppState {
 /// Commande Tauri pour backfill des images sans folder_id
 #[tauri::command]
 #[allow(dead_code)] // Called by frontend via Tauri IPC, not by unit tests
-pub async fn backfill_images_folder_id(
-    state: State<'_, AppState>,
-) -> CommandResult<u32> {
+pub async fn backfill_images_folder_id(state: State<'_, AppState>) -> CommandResult<u32> {
     let mut db_guard = state
         .db
         .lock()

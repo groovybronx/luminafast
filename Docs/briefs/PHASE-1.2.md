@@ -1,9 +1,11 @@
 # Phase 1.2 — Tauri Commands CRUD
 
 ## Objectif
+
 Exposer les commandes Rust via `#[tauri::command]` pour permettre au frontend TypeScript d'interagir avec la base de données SQLite du catalogue.
 
 ## Fichiers à créer/modifier
+
 - `src-tauri/src/commands/` - Nouveau dossier pour les commandes
   - `catalog.rs` - Commandes CRUD pour images/collections
   - `mod.rs` - Export des commandes
@@ -13,11 +15,14 @@ Exposer les commandes Rust via `#[tauri::command]` pour permettre au frontend Ty
 - `Docs/briefs/PHASE-1.2.md` - Ce fichier
 
 ## Dépendances
+
 - ✅ Phase 1.1 - Schéma SQLite du Catalogue (terminée)
 - ✅ Phase 0.4 - State Management Zustand (pour les stores)
 
 ## Interfaces à respecter
+
 ### Commandes Rust à implémenter
+
 ```rust
 #[tauri::command]
 async fn get_all_images(filter: Option<ImageFilter>) -> Result<Vec<ImageDTO>, String>
@@ -42,6 +47,7 @@ async fn search_images(query: String) -> Result<Vec<ImageDTO>, String>
 ```
 
 ### DTOs Rust (avec serde)
+
 ```rust
 #[derive(Serialize, Deserialize)]
 pub struct ImageDTO {
@@ -68,21 +74,23 @@ pub struct CollectionDTO {
 ```
 
 ### Service TypeScript
+
 ```typescript
 export class CatalogService {
   static async getAllImages(filter?: ImageFilter): Promise<ImageDTO[]> {
     return invoke('get_all_images', { filter });
   }
-  
+
   static async getImageDetail(id: number): Promise<ImageDetailDTO> {
     return invoke('get_image_detail', { id });
   }
-  
+
   // ... autres méthodes
 }
 ```
 
 ## Critères de validation
+
 - [x] Toutes les commandes Rust compilent sans erreur
 - [x] Les DTOs sont sérialisables/désérialisables correctement
 - [x] Le service TypeScript peut appeler les commandes Rust
@@ -92,6 +100,7 @@ export class CatalogService {
 - [x] `cargo tauri dev` fonctionne avec les nouvelles commandes
 
 ## Contexte architectural
+
 - Base de données SQLite déjà initialisée dans `src-tauri/src/database.rs`
 - Modèles Rust disponibles dans `src-tauri/src/models/catalog.rs`
 - Stores Zustand prêts à être connectés (catalogStore, uiStore, editStore, systemStore)
@@ -99,6 +108,7 @@ export class CatalogService {
 - Convention d'erreur : `Result<T, String>` avec messages descriptifs
 
 ## Notes
+
 - Utiliser `async` pour les opérations DB potentiellement longues
 - Gérer les erreurs SQLite de manière appropriée
 - Les IDs sont des `u32` dans Rust, `number` dans TypeScript

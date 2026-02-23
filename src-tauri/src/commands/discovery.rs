@@ -207,15 +207,15 @@ pub async fn create_discovery_config(
 pub async fn get_supported_formats() -> Result<Vec<String>, String> {
     let formats = vec![
         // RAW formats
-        "cr3".to_string(),  // Canon RAW 3
-        "cr2".to_string(),  // Canon RAW 2
-        "nef".to_string(),  // Nikon Electronic Format
-        "arw".to_string(),  // Sony Alpha RAW
-        "raf".to_string(),  // Fujifilm RAW
-        "orf".to_string(),  // Olympus RAW Format
-        "pef".to_string(),  // Pentax Electronic Format
-        "rw2".to_string(),  // Panasonic RAW 2
-        "dng".to_string(),  // Adobe Digital Negative
+        "cr3".to_string(), // Canon RAW 3
+        "cr2".to_string(), // Canon RAW 2
+        "nef".to_string(), // Nikon Electronic Format
+        "arw".to_string(), // Sony Alpha RAW
+        "raf".to_string(), // Fujifilm RAW
+        "orf".to_string(), // Olympus RAW Format
+        "pef".to_string(), // Pentax Electronic Format
+        "rw2".to_string(), // Panasonic RAW 2
+        "dng".to_string(), // Adobe Digital Negative
         // Standard formats
         "jpg".to_string(),  // JPEG
         "jpeg".to_string(), // JPEG (alternate extension)
@@ -412,7 +412,7 @@ mod tests {
     async fn test_get_supported_formats() {
         let formats = get_supported_formats().await.unwrap();
         assert_eq!(formats.len(), 13); // 9 RAW + 4 standard formats
-        // RAW formats
+                                       // RAW formats
         assert!(formats.contains(&"cr3".to_string()));
         assert!(formats.contains(&"cr2".to_string()));
         assert!(formats.contains(&"nef".to_string()));

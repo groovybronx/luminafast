@@ -17,7 +17,7 @@ import type {
 } from '@/types/discovery';
 import { listen } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 /**
  * Hook return type
@@ -56,11 +56,14 @@ export function useDiscovery(): UseDiscoveryReturn {
   const startIngestionRef = useRef<((sessionId: string) => Promise<void>) | null>(null);
 
   // Phase weights for progress calculation (must sum to 1.0)
-  const PHASE_WEIGHTS = {
-    scan: 0.3, // Discovery scan: 0-30%
-    ingest: 0.4, // Ingestion (hashing + EXIF + DB): 30-70%
-    previews: 0.3, // Preview generation: 70-100%
-  };
+  const PHASE_WEIGHTS = useMemo(
+    () => ({
+      scan: 0.3, // Discovery scan: 0-30%
+      ingest: 0.4, // Ingestion (hashing + EXIF + DB): 30-70%
+      previews: 0.3, // Preview generation: 70-100%
+    }),
+    [],
+  );
 
   // Generate previews for a list of successfully ingested images
   const generatePreviewsForImages = useCallback(

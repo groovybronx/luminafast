@@ -11,6 +11,7 @@ npm run test:workflow
 ```
 
 Exécute :
+
 - TypeScript type-check
 - ESLint linting
 - Vitest tests avec coverage
@@ -23,6 +24,7 @@ npm run test:workflow:backend
 ```
 
 Exécute :
+
 - `cargo fmt` check
 - `cargo clippy` lint
 - `cargo build`
@@ -99,11 +101,13 @@ Pour utiliser une image Docker custom, créer `.actrc` :
 ## Workflow Type: Avant de Commiter
 
 1. **Développement rapide** (10-20 sec) :
+
    ```bash
    npm run test:workflow
    ```
 
 2. **Avant pull request** (1-2 min) :
+
    ```bash
    npm run test:workflow:all
    ```
@@ -117,26 +121,28 @@ Pour utiliser une image Docker custom, créer `.actrc` :
 
 ## Scripts Disponibles
 
-| Command | Description |
-|---------|-------------|
-| `npm run test:workflow` | Frontend seulement |
-| `npm run test:workflow:backend` | Backend seulement |
-| `npm run test:workflow:all` | Frontend + Backend |
-| `./scripts/test-workflow.sh` | Shell script équivalent |
-| `act` | Simulation GitHub Actions complète |
-| `act -j frontend` | Job frontend seulement |
-| `act -j backend` | Job backend seulement |
+| Command                         | Description                        |
+| ------------------------------- | ---------------------------------- |
+| `npm run test:workflow`         | Frontend seulement                 |
+| `npm run test:workflow:backend` | Backend seulement                  |
+| `npm run test:workflow:all`     | Frontend + Backend                 |
+| `./scripts/test-workflow.sh`    | Shell script équivalent            |
+| `act`                           | Simulation GitHub Actions complète |
+| `act -j frontend`               | Job frontend seulement             |
+| `act -j backend`                | Job backend seulement              |
 
 ---
 
 ## Troubleshooting
 
 ### `act` n'est pas installé
+
 ```bash
 brew install act
 ```
 
 ### Erreurs Docker avec `act`
+
 ```bash
 # Vérifier Docker
 docker --version
@@ -146,11 +152,13 @@ open -a Docker  # macOS
 ```
 
 ### Script shell pas exécutable
+
 ```bash
 chmod +x ./scripts/test-workflow.sh
 ```
 
 ### Tests lents la première fois ?
+
 - `act` télécharge les images Docker la première fois (~1GB)
 - Les runs suivants sont plus rapides
 

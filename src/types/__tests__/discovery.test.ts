@@ -5,33 +5,31 @@
  * serialization, and utility functions.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  RawFormat,
-  DiscoveryConfig,
-  DiscoverySession,
-  DiscoveredFile,
-  IngestionResult,
   BatchIngestionRequest,
   BatchIngestionResult,
+  calculateSessionDuration,
+  ConfigValidationResult,
+  DEFAULT_DISCOVERY_CONFIG,
+  DiscoveredFile,
+  DiscoveryConfig,
+  DiscoveryError,
+  DiscoveryErrorType,
+  DiscoveryProgress,
+  DiscoverySession,
   DiscoveryStats,
   DiscoveryStatus,
   FileProcessingStatus,
-  DiscoveryErrorType,
-  DiscoveryError,
-  DiscoveryProgress,
-  PathValidationResult,
-  ConfigValidationResult,
-  DEFAULT_DISCOVERY_CONFIG,
-} from '../discovery';
-import {
-  isRawFormat,
+  formatDuration,
+  formatFileSize,
+  getRawFormatInfo,
+  IngestionResult,
   isDiscoveryStatus,
   isFileProcessingStatus,
-  getRawFormatInfo,
-  formatFileSize,
-  formatDuration,
-  calculateSessionDuration,
+  isRawFormat,
+  PathValidationResult,
+  RawFormat,
 } from '../discovery';
 
 describe('Discovery Types', () => {
@@ -43,11 +41,23 @@ describe('Discovery Types', () => {
     });
 
     it('should identify valid RAW formats', () => {
+      // RAW formats
       expect(isRawFormat('cr3')).toBe(true);
+      expect(isRawFormat('cr2')).toBe(true);
+      expect(isRawFormat('nef')).toBe(true);
       expect(isRawFormat('raf')).toBe(true);
       expect(isRawFormat('arw')).toBe(true);
-      expect(isRawFormat('jpg')).toBe(false);
-      expect(isRawFormat('png')).toBe(false);
+      expect(isRawFormat('orf')).toBe(true);
+      expect(isRawFormat('pef')).toBe(true);
+      expect(isRawFormat('rw2')).toBe(true);
+      expect(isRawFormat('dng')).toBe(true);
+      // Standard formats (now supported)
+      expect(isRawFormat('jpg')).toBe(true);
+      expect(isRawFormat('jpeg')).toBe(true);
+      expect(isRawFormat('png')).toBe(true);
+      expect(isRawFormat('webp')).toBe(true);
+      // Invalid
+      expect(isRawFormat('txt')).toBe(false);
       expect(isRawFormat('')).toBe(false);
     });
   });
@@ -149,11 +159,13 @@ describe('Discovery Types', () => {
     it('should have correct default configuration', () => {
       expect(DEFAULT_DISCOVERY_CONFIG.rootPath).toBe('');
       expect(DEFAULT_DISCOVERY_CONFIG.recursive).toBe(true);
-      expect(DEFAULT_DISCOVERY_CONFIG.formats).toEqual([
-        RawFormat.CR3,
-        RawFormat.RAF,
-        RawFormat.ARW,
-      ]);
+      // Phase 2.3 compliance: 9 RAW + 4 standard formats = 13 total
+      expect(DEFAULT_DISCOVERY_CONFIG.formats).toHaveLength(13);
+      expect(DEFAULT_DISCOVERY_CONFIG.formats).toContain(RawFormat.CR3);
+      expect(DEFAULT_DISCOVERY_CONFIG.formats).toContain(RawFormat.NEF);
+      expect(DEFAULT_DISCOVERY_CONFIG.formats).toContain(RawFormat.DNG);
+      expect(DEFAULT_DISCOVERY_CONFIG.formats).toContain(RawFormat.JPG);
+      expect(DEFAULT_DISCOVERY_CONFIG.formats).toContain(RawFormat.PNG);
       expect(DEFAULT_DISCOVERY_CONFIG.excludeDirs).toContain('.DS_Store');
       expect(DEFAULT_DISCOVERY_CONFIG.excludeDirs).toContain('.git');
       expect(DEFAULT_DISCOVERY_CONFIG.maxDepth).toBeNull();

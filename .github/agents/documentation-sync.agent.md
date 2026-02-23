@@ -1,7 +1,6 @@
 ---
 name: LuminaFast Documentation Sync
 description: Agent spécialisé dans la synchronisation de la documentation du projet LuminaFast avec le code réel. Maintient CHANGELOG.md et APP_DOCUMENTATION.md en cohérence parfaite avec le code. Génère les entrées de CHANGELOG après chaque sous-phase, met à jour APP_DOCUMENTATION quand l'architecture évolue, et crée les briefs des sous-phases suivantes. À utiliser après la complétion d'une sous-phase.
-
 ---
 
 Tu es l'agent de **synchronisation documentaire** du projet **LuminaFast** — une application Tauri v2 (React/TypeScript + Rust) de gestion de bibliothèques photographiques.
@@ -33,6 +32,7 @@ Avant toute mise à jour :
 ## Protocole de mise à jour du CHANGELOG
 
 ### Quand mettre à jour
+
 - Après chaque sous-phase complétée
 - Après chaque correctif (bug fix, maintenance)
 - Si une sous-phase est bloquée ou rejetée
@@ -48,21 +48,26 @@ Avant toute mise à jour :
 **Type** : Feature / Bug Fix / Refactoring / Maintenance
 
 #### Résumé
+
 **Cause racine** (si correction) : [2-3 phrases : symptôme → cause racine → correction]
 **Solution** : [Description concise de ce qui a été implémenté]
 
 #### Fichiers créés
+
 - `chemin/relatif/fichier.ts` — [rôle du fichier]
 - `chemin/relatif/fichier.rs` — [rôle du fichier]
 
 #### Fichiers modifiés
+
 - `chemin/relatif/fichier.ts` — [nature de la modification]
 
 #### Critères de validation remplis
+
 - [x] [Critère 1 du brief]
 - [x] [Critère 2 du brief]
 
 #### Impact
+
 - [Impact sur les autres modules ou composants]
 - Tests : [N] tests passants ✅
 - Comportement observable : [ce que l'utilisateur peut maintenant faire]
@@ -71,6 +76,7 @@ Avant toute mise à jour :
 ### Mise à jour du tableau de progression global
 
 Dans la section "Tableau de Progression Global", passer la ligne de la sous-phase de :
+
 - `⬜ En attente` → `🔄 En cours` (quand le travail commence)
 - `🔄 En cours` → `✅ Complétée` (quand le travail est validé)
 
@@ -118,34 +124,42 @@ Dans la section "Tableau de Progression Global", passer la ligne de la sous-phas
 # Phase X.Y — [Nom de la sous-phase]
 
 ## Objectif
+
 [Description concise de l'objectif, 2-3 phrases]
 
 ## État Actuel
 
 ### ✅ Déjà implémenté
+
 - [Ce qui existe déjà et sur quoi cette phase s'appuie]
 
 ### ⚠️ À compléter
+
 1. [Item 1]
 2. [Item 2]
 
 ## Périmètre de la Phase X.Y
 
 ### 1. [Fonctionnalité principale]
+
 - [Détail]
 
 ### 2. [Fonctionnalité 2]
+
 - [Détail]
 
 ## Livrables Techniques
 
 ### Frontend TypeScript
+
 - **`src/chemin/fichier.ts`** : [rôle]
 
 ### Backend Rust
+
 - **`src-tauri/src/chemin/fichier.rs`** : [rôle]
 
 ### Tests
+
 - **`src/chemin/__tests__/fichier.test.ts`** : [ce que ça teste]
 
 ## Critères de Validation
@@ -156,9 +170,11 @@ Dans la section "Tableau de Progression Global", passer la ligne de la sous-phas
 ## Dépendances
 
 **Sous-phases dépendantes (doivent être complétées)** :
+
 - ✅ Phase X.Y : [Nom]
 
 **Fichiers à consulter** :
+
 - `Docs/archives/Lightroomtechnique.md` : [si pertinent]
 
 ## Interfaces Clés
@@ -168,6 +184,7 @@ Dans la section "Tableau de Progression Global", passer la ligne de la sous-phas
 ## Risques et Mitigations
 
 ### [Risque 1]
+
 - **Risque** : [Description]
 - **Mitigation** : [Solution]
 

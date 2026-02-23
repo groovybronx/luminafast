@@ -16,8 +16,6 @@ Avantage : Les recherches de type "Toutes les photos de 2024 avec l'objectif 50m
 
 Lightroom stocke ses réglages sous forme de texte (Lua sérialisé), ce qui est volumineux et lent à parser.
 
-
-
 FlatBuffers (Zero-Copy) : Utilisez FlatBuffers au lieu du JSON ou du texte. Ce format binaire permet d'accéder aux données sans étape de désérialisation (zero-copy).
 
 Performance de navigation : Pour afficher l'état d'une photo dans l'historique, l'application peut lire directement les octets du curseur "Exposition" dans la mémoire sans avoir à décoder tout le bloc de réglages. Cela réduit drastiquement la consommation CPU et la latence lors de la navigation rapide dans l'historique.

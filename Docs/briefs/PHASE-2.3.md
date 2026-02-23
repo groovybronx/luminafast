@@ -3,11 +3,13 @@
 > **Statut** : ✅ **Complétée (100%)** — Thumbnails JPEG 240px générés et affichés dans la grille. Cache `Previews.lrdata/` opérationnel.
 
 ## Objectif
+
 Implémenter un système complet de génération de thumbnails et previews haute qualité pour les fichiers RAW photographiques, avec cache intelligent et traitement parallèle.
 
 ## Périmètre
 
 ### Fonctionnalités requises
+
 - [x] Génération de thumbnails (240px bord long, JPEG q75) pour grille rapide
 - [x] Génération de previews haute résolution pour mode développement
 - [x] Support des formats RAW principaux (CR3, RAF, ARW, NEF, ORF, PEF, RW2, DNG)
@@ -17,6 +19,7 @@ Implémenter un système complet de génération de thumbnails et previews haute
 - [x] Parallélisation avec rayon pour performance optimale
 
 ### Architecture technique
+
 - [x] Service Rust avec tokio::sync::Mutex pour concurrence
 - [x] Intégration `image` crate pour traitement et redimensionnement
 - [x] Structure de cache `Previews.lrdata/thumbnails/` organisée par hash BLAKE3
@@ -25,6 +28,7 @@ Implémenter un système complet de génération de thumbnails et previews haute
 - [x] Tests unitaires complets (>90% coverage)
 
 ### Performance cibles
+
 - [x] Thumbnail generation <100ms par fichier RAW
 - [x] Preview generation <500ms par fichier RAW
 - [x] Support 4-8 threads parallèles
@@ -32,12 +36,14 @@ Implémenter un système complet de génération de thumbnails et previews haute
 - [x] Memory usage stable (<200MB pour gros dossiers)
 
 ## Dépendances
+
 - Phase 2.2 doit être complétée ✅
 - Service filesystem disponible ✅
 - Base de données SQLite initialisée ✅
 - Service BLAKE3 disponible pour hash ✅
 
 ## Livrables
+
 1. **Services Rust** : `src-tauri/src/services/preview.rs`
 2. **Modèles** : `src-tauri/src/models/preview.rs`
 3. **Commandes Tauri** : `src-tauri/src/commands/preview.rs`
@@ -48,6 +54,7 @@ Implémenter un système complet de génération de thumbnails et previews haute
 ## Architecture technique
 
 ### Structure du cache
+
 ```
 .luminafast/
 ├── previews/
@@ -62,12 +69,14 @@ Implémenter un système complet de génération de thumbnails et previews haute
 ```
 
 ### Service Rust
+
 - `PreviewService` : Service singleton avec état partagé
 - `ThumbnailGenerator` : Génération thumbnails rapide
 - `PreviewGenerator` : Génération previews haute qualité
 - `CacheManager` : Gestion du cache et cleanup
 
 ### Types principaux
+
 ```rust
 pub struct PreviewConfig {
     pub thumbnail_size: (u32, u32),
@@ -90,6 +99,7 @@ pub struct PreviewResult {
 ```
 
 ## Critères de validation
+
 - [ ] Tous les tests unitaires passent
 - [ ] TypeScript strict, zéro `any`
 - [ ] Documentation Rust (`///`) pour fonctions publiques
@@ -99,6 +109,7 @@ pub struct PreviewResult {
 - [ ] Parallélisation efficace
 
 ## Risques et mitigations
+
 - **Risque** : Fichiers RAW corrompus ou non supportés
 - **Mitigation** : Gestion d'erreurs robuste avec Result<T,E>
 - **Risque** : Performance avec gros dossiers (>10k fichiers)
@@ -109,17 +120,21 @@ pub struct PreviewResult {
 - **Mitigation** : Fallback vers image crate ou system calls
 
 ## Timeline estimée
+
 - Jour 1 : Analyse tech + modèles Rust + service preview
 - Jour 2 : Commandes Tauri + types TypeScript
 - Jour 3 : Service frontend + tests unitaires
 - Jour 4 : Performance tuning + documentation
 
 ## Recherche technologique
+
 À analyser avant implémentation :
+
 1. **libraw-rust** : Binding Rust pour libraw (support RAW complet)
 2. **image crate** : Support limité mais plus simple
 3. **system calls** : dcraw/sips en fallback (macOS)
 4. **Performance** : Benchmark des approches
 
 ---
-*Phase 2.3 - Génération de Previews*
+
+_Phase 2.3 - Génération de Previews_

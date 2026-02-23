@@ -1,8 +1,8 @@
 // Correction : déclaration globale pour __dirname
 declare const __dirname: string;
-import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { defineConfig } from 'vitest/config';
 // Correction : assurez-vous que les types Node.js sont installés
 // npm install --save-dev @types/node
 
@@ -41,6 +41,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
       '@tauri-apps/api': path.resolve(__dirname, './src/test/mocks/tauri-api'),
       '@tauri-apps/api/core': path.resolve(__dirname, './src/test/mocks/tauri-api/core'),
+      '@tauri-apps/api/event': path.resolve(__dirname, './src/test/mocks/tauri-api/event'),
     },
   },
 });

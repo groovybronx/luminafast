@@ -105,7 +105,10 @@ impl RawFormat {
 
     /// Check if this is a RAW format (vs standard image format)
     pub fn is_raw(&self) -> bool {
-        !matches!(self, RawFormat::JPG | RawFormat::JPEG | RawFormat::PNG | RawFormat::WEBP)
+        !matches!(
+            self,
+            RawFormat::JPG | RawFormat::JPEG | RawFormat::PNG | RawFormat::WEBP
+        )
     }
 
     /// Get the MIME type for this format
@@ -286,18 +289,20 @@ impl Default for DiscoveryConfig {
             recursive: true,
             formats: vec![
                 // RAW formats (Phase 2.3 compliance)
-                RawFormat::CR3, RawFormat::CR2,  // Canon
-                RawFormat::NEF,                   // Nikon
-                RawFormat::ARW,                   // Sony
-                RawFormat::RAF,                   // Fujifilm
-                RawFormat::ORF,                   // Olympus
-                RawFormat::PEF,                   // Pentax
-                RawFormat::RW2,                   // Panasonic
-                RawFormat::DNG,                   // Adobe
+                RawFormat::CR3,
+                RawFormat::CR2, // Canon
+                RawFormat::NEF, // Nikon
+                RawFormat::ARW, // Sony
+                RawFormat::RAF, // Fujifilm
+                RawFormat::ORF, // Olympus
+                RawFormat::PEF, // Pentax
+                RawFormat::RW2, // Panasonic
+                RawFormat::DNG, // Adobe
                 // Standard formats
-                RawFormat::JPG, RawFormat::JPEG,  // JPEG
-                RawFormat::PNG,                   // PNG
-                RawFormat::WEBP,                  // WebP
+                RawFormat::JPG,
+                RawFormat::JPEG, // JPEG
+                RawFormat::PNG,  // PNG
+                RawFormat::WEBP, // WebP
             ],
             exclude_dirs: vec![
                 ".git".to_string(),
@@ -857,7 +862,7 @@ mod tests {
 
         assert!(config.recursive);
         assert_eq!(config.formats.len(), 13); // 9 RAW + 4 standard formats
-        // Check a few key formats
+                                              // Check a few key formats
         assert!(config.formats.contains(&RawFormat::CR3));
         assert!(config.formats.contains(&RawFormat::NEF));
         assert!(config.formats.contains(&RawFormat::DNG));

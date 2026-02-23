@@ -7,58 +7,59 @@
 
 ## Tableau de Progression Global
 
-| Phase | Sous-Phase | Description | Statut | Date | Agent |
-|-------|-----------|-------------|--------|------|-------|
-| 0 | 0.1 | Migration TypeScript | ✅ Complétée | 2026-02-11 | Cascade |
-| 0 | 0.2 | Scaffolding Tauri v2 | ✅ Complétée | 2026-02-11 | Cascade |
-| 0 | 0.3 | Décomposition Modulaire Frontend | ✅ Complétée | 2026-02-11 | Cascade |
-| 0 | 0.4 | State Management (Zustand) | ✅ Complétée | 2026-02-11 | Cascade |
-| 0 | 0.5 | Pipeline CI & Linting | ✅ Complétée | 2026-02-11 | Cascade |
-| Phase 1 | 1.1 | Schéma SQLite du Catalogue | ✅ Complétée | 2026-02-11 | Cascade |
-| Phase 1 | 1.2 | Tauri Commands CRUD | ✅ Complétée | 2026-02-11 | Cascade |
-| Phase 1 | 1.3 | Service BLAKE3 (CAS) | ✅ Complétée | 2026-02-13 | Cascade |
-| 1 | 1.4 | Gestion du Système de Fichiers | ✅ Complétée | 2026-02-13 | Cascade |
-| 2 | 2.1 | Discovery & Ingestion de Fichiers | ✅ Complétée | 2026-02-19 | Cascade |
-| 2 | 2.2 | Harvesting Métadonnées EXIF/IPTC | ✅ Complétée | 2026-02-20 | Cascade |
-| 2 | 2.3 | Génération de Previews | ✅ Complétée | 2026-02-16 | Cascade |
-| 2 | 2.4 | UI d'Import Connectée | ✅ Complétée | 2026-02-18 | Cascade |
-| Maintenance | — | Conformité Testing (Fix Deadlocks + Integration) | ✅ Complétée | 2026-02-18 | Cascade |
-| Maintenance | — | Correction Logs Production | ✅ Complétée | 2026-02-20 | Cascade |
-| Maintenance | — | Correction Bugs Scan Discovery & Polling Infini | ✅ Complétée | 2026-02-20 | Cascade |
-| Maintenance | — | Correction Bug Stockage Fichiers Découverts | ✅ Complétée | 2026-02-20 | Cascade |
-| Maintenance | — | Correction Bug Transition Scan→Ingestion | ✅ Complétée | 2026-02-20 | Cascade |
-| Maintenance | — | Correction Migrations Base de Données | ✅ Complétée | 2026-02-20 | Cascade |
-| Maintenance | — | Correction Pipeline Import (DB + SQL + Init) | ✅ Complétée | 2026-02-20 | Cascade |
-| 3 | 3.1 | Grille d'Images Réelle | ✅ Complétée | 2026-02-20 | Copilot |
-| Maintenance | — | Corrections Critiques Phases 0→3.1 (BLOC 1-4) | ✅ Complétée | 2026-02-21 | Copilot |
-| Infra | — | Agents IA dédiés (code-review, pr-verification, phase-implementation, documentation-sync) | ✅ Complétée | 2026-02-20 | Copilot |
-| 3 | 3.2 | Collections Statiques (CRUD) | ✅ Complétée | 2026-02-21 | Copilot |
-| 3 | 3.3 | Smart Collections | ✅ Complétée | 2026-02-21 | Copilot |
-| 3 | 3.4 | Navigateur de Dossiers | ✅ Complétée | 2026-02-21 | Copilot |
-| Maintenance | — | Performance & UX Import (Parallélisme + Progression Multi-Phase) | ✅ Complétée | 2026-02-21 | Copilot |
-| 3 | 3.5 | Recherche & Filtrage | ⬜ En attente | — | — |
-| 4 | 4.1 | Event Sourcing Engine | ⬜ En attente | — | — |
-| 4 | 4.2 | Pipeline de Rendu Image | ⬜ En attente | — | — |
-| 4 | 4.3 | Historique & Snapshots UI | ⬜ En attente | — | — |
-| 4 | 4.4 | Comparaison Avant/Après | ⬜ En attente | — | — |
-| 5 | 5.1 | Panneau EXIF Connecté | ⬜ En attente | — | — |
-| 5 | 5.2 | Système de Tags Hiérarchique | ⬜ En attente | — | — |
-| 5 | 5.3 | Rating & Flagging Persistants | ⬜ En attente | — | — |
-| 5 | 5.4 | Sidecar XMP | ⬜ En attente | — | — |
-| 6 | 6.1 | Système de Cache Multiniveau | ⬜ En attente | — | — |
-| 6 | 6.2 | Intégration DuckDB (OLAP) | ⬜ En attente | — | — |
-| 6 | 6.3 | Virtualisation Avancée Grille | ⬜ En attente | — | — |
-| 6 | 6.4 | Optimisation SQLite | ⬜ En attente | — | — |
-| 7 | 7.1 | Gestion d'Erreurs & Recovery | ⬜ En attente | — | — |
-| 7 | 7.2 | Backup & Intégrité | ⬜ En attente | — | — |
-| 7 | 7.3 | Packaging Multi-Plateforme | ⬜ En attente | — | — |
-| 7 | 7.4 | Accessibilité & UX | ⬜ En attente | — | — |
-| 7 | 7.5 | Onboarding & Documentation Utilisateur | ⬜ En attente | — | — |
-| 8 | 8.1 | Smart Previews Mode Déconnecté | ⬜ En attente | — | — |
-| 8 | 8.2 | Synchronisation PouchDB/CouchDB | ⬜ En attente | — | — |
-| 8 | 8.3 | Résolution de Conflits | ⬜ En attente | — | — |
+| Phase       | Sous-Phase | Description                                                                               | Statut        | Date       | Agent   |
+| ----------- | ---------- | ----------------------------------------------------------------------------------------- | ------------- | ---------- | ------- |
+| 0           | 0.1        | Migration TypeScript                                                                      | ✅ Complétée  | 2026-02-11 | Cascade |
+| 0           | 0.2        | Scaffolding Tauri v2                                                                      | ✅ Complétée  | 2026-02-11 | Cascade |
+| 0           | 0.3        | Décomposition Modulaire Frontend                                                          | ✅ Complétée  | 2026-02-11 | Cascade |
+| 0           | 0.4        | State Management (Zustand)                                                                | ✅ Complétée  | 2026-02-11 | Cascade |
+| 0           | 0.5        | Pipeline CI & Linting                                                                     | ✅ Complétée  | 2026-02-11 | Cascade |
+| Phase 1     | 1.1        | Schéma SQLite du Catalogue                                                                | ✅ Complétée  | 2026-02-11 | Cascade |
+| Phase 1     | 1.2        | Tauri Commands CRUD                                                                       | ✅ Complétée  | 2026-02-11 | Cascade |
+| Phase 1     | 1.3        | Service BLAKE3 (CAS)                                                                      | ✅ Complétée  | 2026-02-13 | Cascade |
+| 1           | 1.4        | Gestion du Système de Fichiers                                                            | ✅ Complétée  | 2026-02-13 | Cascade |
+| 2           | 2.1        | Discovery & Ingestion de Fichiers                                                         | ✅ Complétée  | 2026-02-19 | Cascade |
+| 2           | 2.2        | Harvesting Métadonnées EXIF/IPTC                                                          | ✅ Complétée  | 2026-02-20 | Cascade |
+| 2           | 2.3        | Génération de Previews                                                                    | ✅ Complétée  | 2026-02-16 | Cascade |
+| 2           | 2.4        | UI d'Import Connectée                                                                     | ✅ Complétée  | 2026-02-18 | Cascade |
+| Maintenance | —          | Conformité Testing (Fix Deadlocks + Integration)                                          | ✅ Complétée  | 2026-02-18 | Cascade |
+| Maintenance | —          | Correction Logs Production                                                                | ✅ Complétée  | 2026-02-20 | Cascade |
+| Maintenance | —          | Correction Bugs Scan Discovery & Polling Infini                                           | ✅ Complétée  | 2026-02-20 | Cascade |
+| Maintenance | —          | Correction Bug Stockage Fichiers Découverts                                               | ✅ Complétée  | 2026-02-20 | Cascade |
+| Maintenance | —          | Correction Bug Transition Scan→Ingestion                                                  | ✅ Complétée  | 2026-02-20 | Cascade |
+| Maintenance | —          | Correction Migrations Base de Données                                                     | ✅ Complétée  | 2026-02-20 | Cascade |
+| Maintenance | —          | Correction Pipeline Import (DB + SQL + Init)                                              | ✅ Complétée  | 2026-02-20 | Cascade |
+| 3           | 3.1        | Grille d'Images Réelle                                                                    | ✅ Complétée  | 2026-02-20 | Copilot |
+| Maintenance | —          | Corrections Critiques Phases 0→3.1 (BLOC 1-4)                                             | ✅ Complétée  | 2026-02-21 | Copilot |
+| Infra       | —          | Agents IA dédiés (code-review, pr-verification, phase-implementation, documentation-sync) | ✅ Complétée  | 2026-02-20 | Copilot |
+| 3           | 3.2        | Collections Statiques (CRUD)                                                              | ✅ Complétée  | 2026-02-21 | Copilot |
+| 3           | 3.3        | Smart Collections                                                                         | ✅ Complétée  | 2026-02-21 | Copilot |
+| 3           | 3.4        | Navigateur de Dossiers                                                                    | ✅ Complétée  | 2026-02-21 | Copilot |
+| Maintenance | —          | Performance & UX Import (Parallélisme + Progression Multi-Phase)                          | ✅ Complétée  | 2026-02-21 | Copilot |
+| 3           | 3.5        | Recherche & Filtrage                                                                      | ⬜ En attente | —          | —       |
+| 4           | 4.1        | Event Sourcing Engine                                                                     | ⬜ En attente | —          | —       |
+| 4           | 4.2        | Pipeline de Rendu Image                                                                   | ⬜ En attente | —          | —       |
+| 4           | 4.3        | Historique & Snapshots UI                                                                 | ⬜ En attente | —          | —       |
+| 4           | 4.4        | Comparaison Avant/Après                                                                   | ⬜ En attente | —          | —       |
+| 5           | 5.1        | Panneau EXIF Connecté                                                                     | ⬜ En attente | —          | —       |
+| 5           | 5.2        | Système de Tags Hiérarchique                                                              | ⬜ En attente | —          | —       |
+| 5           | 5.3        | Rating & Flagging Persistants                                                             | ⬜ En attente | —          | —       |
+| 5           | 5.4        | Sidecar XMP                                                                               | ⬜ En attente | —          | —       |
+| 6           | 6.1        | Système de Cache Multiniveau                                                              | ⬜ En attente | —          | —       |
+| 6           | 6.2        | Intégration DuckDB (OLAP)                                                                 | ⬜ En attente | —          | —       |
+| 6           | 6.3        | Virtualisation Avancée Grille                                                             | ⬜ En attente | —          | —       |
+| 6           | 6.4        | Optimisation SQLite                                                                       | ⬜ En attente | —          | —       |
+| 7           | 7.1        | Gestion d'Erreurs & Recovery                                                              | ⬜ En attente | —          | —       |
+| 7           | 7.2        | Backup & Intégrité                                                                        | ⬜ En attente | —          | —       |
+| 7           | 7.3        | Packaging Multi-Plateforme                                                                | ⬜ En attente | —          | —       |
+| 7           | 7.4        | Accessibilité & UX                                                                        | ⬜ En attente | —          | —       |
+| 7           | 7.5        | Onboarding & Documentation Utilisateur                                                    | ⬜ En attente | —          | —       |
+| 8           | 8.1        | Smart Previews Mode Déconnecté                                                            | ⬜ En attente | —          | —       |
+| 8           | 8.2        | Synchronisation PouchDB/CouchDB                                                           | ⬜ En attente | —          | —       |
+| 8           | 8.3        | Résolution de Conflits                                                                    | ⬜ En attente | —          | —       |
 
 ### Légende des statuts
+
 - ⬜ En attente
 - 🔄 En cours
 - ✅ Complétée
@@ -105,6 +106,7 @@ Session majeure de correction de performance et d'expérience utilisateur sur le
 **1. Ingestion Parallèle avec Rayon** (`src-tauri/src/services/ingestion.rs`)
 
 **Problème** : Traitement séquentiel de tous les fichiers (commentaire explicite : `// Process files sequentially`)
+
 ```rust
 for file in &files_to_process {
     let ingest_result = self.ingest_file(file).await; // BLOQUANT
@@ -112,6 +114,7 @@ for file in &files_to_process {
 ```
 
 **Solution** :
+
 - Remplacement par `rayon::par_iter()` avec pool de threads limité (max 8 threads)
 - Utilisation d'atomics (`Arc<AtomicUsize>`) pour compteurs thread-safe
 - Support du runtime Tokio dans chaque thread Rayon via `try_current()` + fallback
@@ -119,6 +122,7 @@ for file in &files_to_process {
 **Impact** : **~8-10× plus rapide** pour 100 fichiers (10s → <3s attendu)
 
 **Fichiers modifiés** :
+
 - `src-tauri/src/services/ingestion.rs` : Parallélisation avec Rayon
 - `src-tauri/src/services/ingestion/tests.rs` : Correction signature `batch_ingest()`
 
@@ -129,6 +133,7 @@ for file in &files_to_process {
 **Problème** : Barre de progression figée à 100% pendant 70% du temps total (ingestion + previews)
 
 **Solution** :
+
 - Ajout modèle `IngestionProgress` (Rust + TypeScript)
 - Émission d'événements `ingestion-progress` toutes les 5 fichiers (throttling)
 - Transmission via `AppHandle.emit()` Tauri
@@ -136,6 +141,7 @@ for file in &files_to_process {
 **Impact** : **Visibilité complète** du traitement en temps réel
 
 **Fichiers modifiés** :
+
 - `src-tauri/src/models/discovery.rs` : Nouveau type `IngestionProgress`
 - `src-tauri/src/commands/discovery.rs` : Ajout `AppHandle` paramètre
 - `src/types/discovery.ts` : Type TypeScript correspondant
@@ -145,20 +151,24 @@ for file in &files_to_process {
 **3. Pyramide de Previews Optimisée** (`src/hooks/useDiscovery.ts`)
 
 **Problème** : Génération des 3 types de previews UN PAR UN pour chaque image
+
 ```typescript
 await previewService.generatePreview(path, PreviewType.Thumbnail, hash);
 await previewService.generatePreview(path, PreviewType.Standard, hash);
 await previewService.generatePreview(path, PreviewType.OneToOne, hash);
 ```
+
 → Charge/décode le fichier RAW **3 fois** au lieu d'1 seule fois
 
 **Solution** :
+
 - Utilisation de `generatePreviewPyramid()` (génère les 3 en 1 passe)
 - Parallélisation par batches de 4 images (éviter memory overflow)
 
 **Impact** : **~3× plus rapide** (1 passe RAW au lieu de 3)
 
 **Fichiers modifiés** :
+
 - `src/hooks/useDiscovery.ts` : Fonction `generatePreviewsForImages()`
 
 ---
@@ -168,6 +178,7 @@ await previewService.generatePreview(path, PreviewType.OneToOne, hash);
 **Problème** : Progression ne suivait que le scan (discovery), pas l'ingestion ni les previews
 
 **Solution** :
+
 - Découpage en 3 phases pondérées :
   - **Scan** : 0-30% (discovery)
   - **Ingestion** : 30-70% (hashing + EXIF + DB)
@@ -178,6 +189,7 @@ await previewService.generatePreview(path, PreviewType.OneToOne, hash);
 **Impact** : **Barre jamais figée**, transitions fluides entre phases
 
 **Fichiers modifiés** :
+
 - `src/hooks/useDiscovery.ts` :
   - Nouveau handler `handleIngestionProgress()`
   - Calcul progression global avec `PHASE_WEIGHTS`
@@ -188,10 +200,12 @@ await previewService.generatePreview(path, PreviewType.OneToOne, hash);
 #### Tests de Validation
 
 **Frontend (Vitest)** :
+
 - ✅ 323/323 tests passent
 - Aucune régression fonctionnelle
 
 **Backend (Rust)** :
+
 - ✅ 159/159 tests passent
 - Correction test `services::ingestion::tests::test_batch_ingestion` (signature `None` pour AppHandle)
 - Correction gestion runtime Tokio dans threads Rayon (`try_current()` + fallback)
@@ -200,24 +214,26 @@ await previewService.generatePreview(path, PreviewType.OneToOne, hash);
 
 #### Performance Attendue
 
-| Métrique | Avant | Après | Amélioration |
-|----------|-------|-------|--------------|
-| **Ingestion 100 fichiers** | ~10s | <3s | **~70% plus rapide** |
-| **Previews 100 fichiers** | ~30s | <10s | **~67% plus rapide** |
-| **Barre de progression** | Figée 70% du temps | Mise à jour continue | **100% visible** |
-| **UI Responsive** | Freeze complet | Aucun freeze | **UX fluide** |
+| Métrique                   | Avant              | Après                | Amélioration         |
+| -------------------------- | ------------------ | -------------------- | -------------------- |
+| **Ingestion 100 fichiers** | ~10s               | <3s                  | **~70% plus rapide** |
+| **Previews 100 fichiers**  | ~30s               | <10s                 | **~67% plus rapide** |
+| **Barre de progression**   | Figée 70% du temps | Mise à jour continue | **100% visible**     |
+| **UI Responsive**          | Freeze complet     | Aucun freeze         | **UX fluide**        |
 
 ---
 
 #### Fichiers Modifiés
 
 **Backend Rust** :
+
 - `src-tauri/src/models/discovery.rs` : Ajout `IngestionProgress`
 - `src-tauri/src/services/ingestion.rs` : Parallélisation Rayon + événements
 - `src-tauri/src/commands/discovery.rs` : Ajout `AppHandle` paramètre
 - `src-tauri/src/services/ingestion/tests.rs` : Correction signature test
 
 **Frontend TypeScript** :
+
 - `src/types/discovery.ts` : Ajout `IngestionProgress` type
 - `src/hooks/useDiscovery.ts` :
   - Progression multi-phase
@@ -225,6 +241,7 @@ await previewService.generatePreview(path, PreviewType.OneToOne, hash);
   - Pyramide de previews optimisée
 
 **Documentation** :
+
 - `Docs/briefs/MAINTENANCE-IMPORT-PERFORMANCE.md` : Brief détaillé des corrections
 - `Docs/CHANGELOG.md` : Cette entrée
 
@@ -261,18 +278,22 @@ Session d'audit et de corrections critiques sur l'ensemble des phases 0 à 3.1. 
 #### BLOC 1 — Backend Rust (commit `94745d0`)
 
 **Bug 1.1 — Migration 003 inactive**
+
 - **Cause racine** : `database.rs` utilisait `conn.execute_batch()` pour du SQL multi-instructions (table `previews`), qui ne fonctionne pas avec la syntaxe de migration utilisée — la table n'était donc jamais créée.
 - **Correction** : Séparation en deux appels distincts `conn.execute()` ou migration correctement bornée via `execute_batch()` explicite.
 
 **Bug 1.2 — Divergence du chemin DB (tests vs production)**
+
 - **Cause racine** : `lib.rs` calculait le chemin de la DB de manière différente entre le contexte de test (`tempfile`) et production (répertoire app Tauri), menant à des tests travaillant sur une DB différente de la production.
 - **Correction** : Introduction d'une variable d'environnement `LUMINA_DB_PATH` pour override du chemin en tests.
 
 **Bug 1.3 — 7x `unwrap()` en production**
+
 - **Cause racine** : Code de `catalog.rs` utilisait `.unwrap()` sur des `Result` lors de la construction des requêtes SQL dynamiques, risquant des panics en production sur des catalogues vides ou des états inattendus.
 - **Correction** : Remplacement systématique par `.map_err(|e| AppError::Database(e.to_string()))?` avec propagation d'erreur typée.
 
 **Bug 1.4 — NULL string bug dans `update_image_state`**
+
 - **Cause racine** : `update_image_state` passait `""` (chaîne vide) au lieu de `NULL` SQL pour les champs optionnels non définis (flag, color_label), corrompant les requêtes de filtrage qui testaient `IS NULL`.
 - **Correction** : Utilisation de `Option<String>` avec `rusqlite` qui sérialise correctement `None` en `NULL`.
 
@@ -281,10 +302,12 @@ Session d'audit et de corrections critiques sur l'ensemble des phases 0 à 3.1. 
 #### BLOC 2 — Pipeline EXIF E2E (commit `f6cb6d9`)
 
 **Bug 2.1 — EXIF hardcodé à 0 dans les requêtes SQL**
+
 - **Cause racine** : `get_all_images` et `search_images` dans `catalog.rs` ne faisaient pas de `LEFT JOIN exif_metadata` — les colonnes EXIF étaient donc absentes du SELECT, forçant les indices > 13 à retourner `NULL` ou à paniquer.
 - **Correction** : Ajout de `LEFT JOIN exif_metadata e ON i.id = e.image_id` dans les deux requêtes + colonnes 14-20 en SELECT + mapping dans `query_map`.
 
 **Bug 2.2 — Types EXIF incohérents TypeScript→Rust→UI**
+
 - **Cause racine** : `ExifData` (TypeScript) avait des champs `fstop`, `camera`, `location` qui ne correspondaient pas aux champs Rust (`aperture`, `camera_make`, `camera_model`) ni aux noms SQL. Le hook `useCatalog` n'avait aucun mapping réel.
 - **Correction** :
   - `src-tauri/src/models/dto.rs` : 7 champs EXIF optionnels ajoutés dans `ImageDTO`
@@ -294,10 +317,12 @@ Session d'audit et de corrections critiques sur l'ensemble des phases 0 à 3.1. 
   - `src/components/metadata/ExifGrid.tsx` : Affichage avec les nouveaux champs + null guards
 
 **Bug 2.3 — ResizeObserver absent dans GridView**
+
 - **Cause racine** : `columnCount` était calculé via `useMemo(() => containerRef.current?.clientWidth, [...])` sans observer les mutations de taille — la grille ne se recalculait pas lors du redimensionnement de la fenêtre.
 - **Correction** : Ajout de `useState(0)` + `useEffect` avec `ResizeObserver` dans `GridView.tsx`.
 
 **Bug 2.4 — Tests `useCatalog` inexistants**
+
 - **Cause racine** : Aucun test pour le hook le plus critique du frontend (mapping DTO→CatalogImage, gestion erreurs, formatage shutter).
 - **Correction** : Création de `src/hooks/__tests__/useCatalog.test.ts` (6 tests couvrant mapping EXIF, états d'erreur, cas edge).
 
@@ -306,18 +331,22 @@ Session d'audit et de corrections critiques sur l'ensemble des phases 0 à 3.1. 
 #### BLOC 3 — Nettoyage UI (commit `f6cb6d9`)
 
 **Bug 3.1 — Faux indicateurs PouchDB/DuckDB**
+
 - **Cause racine** : `TopNav.tsx` affichait un badge "PouchDB ACTIVE" (technologie non utilisée) ; `App.tsx` loggait `DUCKDB Scan` et `PouchDB: Syncing revision` (logs complètement fictifs non reliés au code réel).
 - **Correction** : Badge → "SQLite" ; logs remplacés par vrais logs SQLite (`SQLite Filter: X images matched in Xms`).
 
 **Bug 3.2 — Données hardcodées dans le code**
+
 - **Cause racine** : `ImportModal.tsx` affichait `~1.2 GB/s` (vitesse fictive) ; `MetadataPanel.tsx` hardcodait `/Volumes/WORK/RAW_2025/` comme préfixe de chemin ; `LeftSidebar.tsx` affichait un compte `12` fixe.
 - **Correction** : Progress `%` calculée depuis `processedFiles/totalFiles` ; chemin remplacé par `activeImg.filename` seul ; compte hardcodé supprimé.
 
 **Bug 3.3 — Boutons BatchBar non fonctionnels sans feedback**
+
 - **Cause racine** : Les boutons "Tags" et "Sync" avaient des handlers `onClick` actifs mais ne faisaient rien (fonctionnalités non implémentées), donnant l'illusion de fonctionnalité.
 - **Correction** : `disabled` + `opacity-40 cursor-not-allowed` pour indiquer clairement le statut non implémenté.
 
 **Bug 3.4 — `MockEvent` utilisé en production**
+
 - **Cause racine** : `App.tsx`, `RightSidebar.tsx`, `HistoryPanel.tsx` importaient `MockEvent` depuis `mockData.ts` au lieu d'utiliser `CatalogEvent` du système de types de domaine.
 - **Correction** : Remplacement complet par `CatalogEvent` avec `EventPayload` typé dans tous les consommateurs.
 
@@ -333,11 +362,13 @@ Session d'audit et de corrections critiques sur l'ensemble des phases 0 à 3.1. 
 #### Fichiers Modifiés/Créés
 
 **Rust (src-tauri)**
+
 - `src-tauri/src/commands/catalog.rs` — LEFT JOIN exif_metadata, colonnes 14-20, mapping query_map
 - `src-tauri/src/models/dto.rs` — 7 champs EXIF optionnels dans `ImageDTO`
 - `src-tauri/src/services/ingestion.rs` — `.as_micros()` → `.as_millis()`
 
 **TypeScript/React (src)**
+
 - `src/types/dto.ts` — `ImageDTO` + champs EXIF optionnels
 - `src/types/image.ts` — `ExifData` redesignée (aperture, shutterSpeed string, cameraMake, cameraModel)
 - `src/hooks/useCatalog.ts` — Mapping réel EXIF avec formatage shutter
@@ -355,6 +386,7 @@ Session d'audit et de corrections critiques sur l'ensemble des phases 0 à 3.1. 
 - `src/stores/catalogStore.ts` — Filtres mis à jour (cameraMake+cameraModel)
 
 **Tests**
+
 - `src/hooks/__tests__/useCatalog.test.ts` — NOUVEAU (6 tests)
 - `src/stores/__tests__/catalogStore.test.ts` — Champs ExifData mis à jour
 - `src/types/__tests__/types.test.ts` — Champs ExifData mis à jour
@@ -362,6 +394,7 @@ Session d'audit et de corrections critiques sur l'ensemble des phases 0 à 3.1. 
 - `src/components/library/__tests__/ImageCard.test.tsx` — Champs ExifData mis à jour
 
 #### Validation Finale
+
 - ✅ `tsc --noEmit` : 0 erreurs
 - ✅ `cargo check` : 0 erreurs
 - ✅ Tests complets : **425/425 passants** (0 échecs)
@@ -377,11 +410,13 @@ Session d'audit et de corrections critiques sur l'ensemble des phases 0 à 3.1. 
 **Durée** : ~1 session
 
 #### Résumé
+
 Implémentation d'une grille virtualisée performante pour afficher des catalogues de 10K+ images avec fluidité (60fps). Utilisation de `@tanstack/react-virtual` pour virtualiser les rangées, calculant dynamiquement le nombre de colonnes basé sur la largeur du conteneur.
 
 **Découverte** : App.tsx utilise déjà `useCatalog()` et GridView est déjà connectée aux vraies images SQLite. Phase 3.1 était donc principalement une optimisation de performance.
 
 #### Dépendances Complétées
+
 - ✅ Phase 1.1 : Schéma SQLite
 - ✅ Phase 1.2 : Tauri Commands CRUD
 - ✅ Phase 2.1 : Discovery & Ingestion
@@ -389,6 +424,7 @@ Implémentation d'une grille virtualisée performante pour afficher des catalogu
 - ✅ Phase 2.4 : UI d'Import Connectée
 
 #### Fichiers Créés/Modifiés
+
 - `src/components/library/GridView.tsx` (238 insertions) - Refacteur avec virtualisation
   - Ajout `useRef` et `useVirtualizer` hook
   - Calcul dynamique de dimensions (pixelSize: 120px-600px pour thumbnailSize 1-10)
@@ -409,13 +445,14 @@ Implémentation d'une grille virtualisée performante pour afficher des catalogu
 - `package.json` - Ajout @tanstack/react-virtual v3.13.18
 
 #### Fonctionnalités Implémentées
+
 - ✅ Virtualisation des rangées pour tout catalogue size
   - Render SEULEMENT les rangées visibles (+ 3 lignes d'avance pour smooth scroll)
   - Support 10K+ images sans lag
   - Scrolling fluide (60fps démontrable)
 
 - ✅ Sizing dynamique intelligent
-u
+  u
 
 u avec Math.round(pixelSize / 1.5)
 
@@ -438,6 +475,7 @@ u avec Math.round(pixelSize / 1.5)
   - Icon sizing dynamique basé sur itemHeight
 
 #### Validation & Tests
+
 - ✅ Compilation TypeScript: Clean (tsc --noEmit)
 - ✅ Build Vite: Success
 - ✅ Tests: 300/300 passing
@@ -446,6 +484,7 @@ u avec Math.round(pixelSize / 1.5)
   - Coverage: Stable
 
 #### Performance
+
 - Virtualisation : Render O(1) rangées visibles au lieu de O(10K)
 - ROI : 60fps scroll sur 10K images sur machine ordinaire
 - Memory : Constant même avec 50K+ images (limitée par virtual rows visibles)
@@ -453,12 +492,14 @@ u avec Math.round(pixelSize / 1.5)
 - Reflow : Minimal avec position: absolute (pas layout recalc sur scroll)
 
 #### Architectural Notes
+
 - **Design pattern** : Progressive enhancement - vraies images déjà là (Phase 2), virtualisation c'est optimisation
 - **Decoupling** : GridView ne connaît RIEN du catalogue SQLite (props-driven)
 - **Responsabilité** : App.tsx = data fetching + filtering; GridView = rendering + virtualization
 - **Testing** : Virtualizer mocké car position: absolute + absolute positioning complique testing (testing-library limitation)
 
 #### Blocages Résolus
+
 - ❌ ResizeObserver mock échouait avec @tanstack/react-virtual
   - ✅ Refactorisé en classe au lieu de vi.fn().mockImplementation
 
@@ -466,9 +507,11 @@ u avec Math.round(pixelSize / 1.5)
   - ✅ Mocké useVirtualizer pour rendre grille plate pendant tests
 
 #### Dépendances Ajoutées
+
 - `@tanstack/react-virtual@^3.13.18` - Virtualisation rows performante
 
 #### Prochaines Étapes (Phase 3.2+)
+
 - [ ] Phase 3.2 : Collections statiques (créer, renommer, supprimer collections)
 - [ ] Ajouter sorting/filtering options (date, name, rating, ISO)
 
@@ -482,15 +525,18 @@ u avec Math.round(pixelSize / 1.5)
 **Type** : Feature
 
 #### Résumé
+
 Implémentation complète du CRUD des collections statiques : création, renommage, suppression et filtrage par collection. La sidebar gauche est désormais connectée aux collections SQLite réelles via un store Zustand dédié (`collectionStore`).
 
 #### Fichiers Créés
+
 - `Docs/briefs/PHASE-3.2.md` — Brief de la sous-phase
 - `src/stores/collectionStore.ts` — Store Zustand CRUD collections (loadCollections, createCollection, deleteCollection, renameCollection, setActiveCollection, clearActiveCollection)
 - `src/stores/__tests__/collectionStore.test.ts` — 12 tests unitaires du store
 - `src/services/__tests__/catalogService.test.ts` — 10 tests unitaires des méthodes collection
 
 #### Fichiers Modifiés
+
 - `src-tauri/src/commands/catalog.rs` — 4 nouvelles commandes Tauri + 9 nouveaux tests Rust :
   - `delete_collection(collection_id)` — suppression transaction cascade
   - `rename_collection(collection_id, name)` — renommage avec validation
@@ -503,6 +549,7 @@ Implémentation complète du CRUD des collections statiques : création, renomma
 - `src/App.tsx` — Import `useCollectionStore`, filtrage `filteredImages` par `activeCollectionImageIds` puis par `filterText`
 
 #### Critères de Validation Remplis
+
 - [x] `cargo check` : 0 erreurs (3 warnings pré-existants)
 - [x] `cargo test` : 127 tests passants ✅ (9 nouveaux tests Phase 3.2)
 - [x] `tsc --noEmit` : 0 erreurs
@@ -515,6 +562,7 @@ Implémentation complète du CRUD des collections statiques : création, renomma
 - [x] Aucun `unwrap()` Rust en production
 
 #### Impact
+
 - Collections SQLite affichées et modifiables depuis la sidebar
 - Filtre par collection dans la grille fonctionne en temps réel
 - Base solide pour Phase 3.3 (Smart Collections) et Phase 3.4 (Navigateur de Dossiers)
@@ -530,10 +578,12 @@ Implémentation complète du CRUD des collections statiques : création, renomma
 **Type** : Feature / Bug Fix
 
 #### Résumé
+
 **Cause racine** : Le parser `smart_query_parser` ne supportait pas les alias SQL dans les requêtes générées pour les smart collections, provoquant des erreurs de parsing et des résultats incorrects lors de l'exécution des requêtes dynamiques.
 **Correction structurelle** : Suppression systématique des alias dans la requête SQL générée par `get_smart_collection_results` pour garantir la compatibilité avec le parser. La requête utilise désormais les noms de tables explicites (`images`, `image_state`, `exif_metadata`) sans alias, ce qui permet au parser d'appliquer correctement les filtres dynamiques.
 
 #### Fichiers modifiés
+
 - `src-tauri/src/commands/catalog.rs` — Correction requête SQL sans alias, adaptation mapping DTO
 - `src-tauri/src/services/smart_query_parser.rs` — Validation parsing sans alias
 - `src-tauri/src/models/dto.rs` — Synchronisation champs DTO
@@ -543,6 +593,7 @@ Implémentation complète du CRUD des collections statiques : création, renomma
 - `Docs/CHANGELOG.md` — Synchronisation documentation
 
 #### Résolutions de commentaires PR 19
+
 - Correction du conflit d'alias SQL (voir ci-dessus)
 - Validation du mapping DTO TypeScript/Rust pour les champs EXIF
 - Correction du test de filtrage smart collections (test_get_smart_collection_results_filters_correctly)
@@ -551,12 +602,14 @@ Implémentation complète du CRUD des collections statiques : création, renomma
 - Correction du mapping dans les tests GridView pour les smart collections
 
 #### Critères de validation remplis
+
 - [x] Requêtes SQL compatibles parser (sans alias)
 - [x] Tests unitaires Rust et TypeScript passants
 - [x] Mapping DTO synchronisé
 - [x] Documentation à jour
 
 #### Impact
+
 - Les smart collections filtrent désormais correctement les images selon les règles dynamiques JSON.
 - Aucun alias SQL ne subsiste dans les requêtes dynamiques, garantissant la compatibilité parser.
 - Tests : 492/492 tests passants ✅
@@ -572,11 +625,13 @@ Implémentation complète du CRUD des collections statiques : création, renomma
 **Type** : Feature
 
 #### Résumé
+
 Implémentation du navigateur de dossiers hiérarchique permettant de filtrer les images par arborescence de dossiers. Le système affiche une arborescence groupée par volumes avec statut en ligne/hors ligne, nombre d'images par dossier, et support de la sélection récursive. Architecture avec priorité de filtrage : Collection > Dossier > Recherche textuelle.
 
 #### Critères de validation remplis
 
 **Backend**
+
 - [x] Migration 004 : Ajout colonnes `is_online` et `name` à `folders`
 - [x] DTO `FolderTreeNode` avec `folderId`, `folderPath`, `volumeName`, `isOnline`, `imageCount`, `totalImageCount`, `children`
 - [x] Commande `get_folder_tree()` : Retourne arborescence hiérarchique groupée par volumes
@@ -585,6 +640,7 @@ Implémentation du navigateur de dossiers hiérarchique permettant de filtrer le
 - [x] 6 tests backend (arborescence, images directes, images récursives, statut volume)
 
 **Frontend**
+
 - [x] Type `FolderTreeNode` en TypeScript
 - [x] `folderStore` avec `folderTree`, `activeFolderId`, `activeFolderImageIds`, `expandedFolderIds`
 - [x] Actions store : `loadFolderTree()`, `setActiveFolder(id, recursive)`, `clearActiveFolder()`, `toggleFolderExpanded(id)`
@@ -595,6 +651,7 @@ Implémentation du navigateur de dossiers hiérarchique permettant de filtrer le
 - [x] 6 tests frontend (init, load, select, clear, toggle, error)
 
 **Validation technique**
+
 - [x] 159 tests Rust passent
 - [x] 345 tests TypeScript passent (22 fichiers)
 - [x] ESLint passe sans warnings
@@ -604,6 +661,7 @@ Implémentation du navigateur de dossiers hiérarchique permettant de filtrer le
 #### Architecture
 
 **Schéma de données**
+
 ```sql
 -- Migration 004
 ALTER TABLE folders ADD COLUMN is_online BOOLEAN DEFAULT 1;
@@ -611,6 +669,7 @@ ALTER TABLE folders ADD COLUMN name TEXT;
 ```
 
 **Flow de données**
+
 ```
 User clicks folder → setActiveFolder(id, recursive)
 → CatalogService.getFolderImages(id, recursive)
@@ -621,11 +680,13 @@ User clicks folder → setActiveFolder(id, recursive)
 ```
 
 **Priorité de filtrage**
+
 1. **Collection active** : Si `activeCollectionId != null`, filtre par collection uniquement
 2. **Dossier actif** : Sinon si `activeFolderImageIds != null`, filtre par dossier
 3. **Recherche textuelle** : Appliquée après le filtrage collection/dossier
 
 #### Fichiers créés
+
 - `src-tauri/migrations/004_add_folder_online_status.sql` — Migration SQLite
 - `src-tauri/src/models/dto.rs` — DTO `FolderTreeNode` (ajout)
 - `src/types/folder.ts` — Types TypeScript pour navigation dossiers
@@ -634,6 +695,7 @@ User clicks folder → setActiveFolder(id, recursive)
 - `src/stores/__tests__/folderStore.test.ts` — Tests unitaires store (6 tests)
 
 #### Fichiers modifiés
+
 - `src-tauri/src/commands/catalog.rs` — 3 nouvelles commandes + 6 tests
 - `src-tauri/src/lib.rs` — Enregistrement des commandes folder
 - `src-tauri/src/database.rs` — Intégration migration 004
@@ -643,6 +705,7 @@ User clicks folder → setActiveFolder(id, recursive)
 - `src/App.tsx` — Logique de filtrage avec priorité collection/folder/text
 
 #### Décisions techniques
+
 1. **Migration 004** : Ajout colonnes `is_online` et `name` pour tracking volumes externes
 2. **Recursive SQL** : WITH RECURSIVE CTE pour requête efficace des images récursives
 3. **DTO hiérarchique** : `FolderTreeNode` avec `children: Vec<FolderTreeNode>` pour arborescence
@@ -652,7 +715,9 @@ User clicks folder → setActiveFolder(id, recursive)
 7. **Zustand state management** : Utiliser `getState()` après chaque action pour état frais
 
 #### Tests
+
 **Backend** : 159 tests passent (6 nouveaux pour folder navigation)
+
 - `test_get_folder_tree_with_images` : Arborescence avec compteurs
 - `test_get_folder_images_direct` : Images dans dossier uniquement
 - `test_get_folder_images_recursive` : Images dossier + sous-dossiers
@@ -661,6 +726,7 @@ User clicks folder → setActiveFolder(id, recursive)
 - `test_get_folder_tree_empty` : Arborescence vide
 
 **Frontend** : 345 tests passent (6 nouveaux pour folderStore)
+
 - Initialize with default values
 - Load folder tree
 - Set active folder and load images
@@ -669,6 +735,7 @@ User clicks folder → setActiveFolder(id, recursive)
 - Handle load error
 
 #### Métriques
+
 - **Backend** : +156 lignes (commands/catalog.rs), +12 lignes (migration)
 - **Frontend** : +92 lignes (folderStore), +150 lignes (FolderTree), +37 lignes (folder.ts)
 - **Tests** : +118 lignes (folderStore.test.ts)
@@ -676,6 +743,7 @@ User clicks folder → setActiveFolder(id, recursive)
 - **Temps** : ~45min (impl + tests + doc)
 
 #### Observations
+
 - Pattern Zustand nécessite `getState()` après mutations pour tests immutables
 - Recursive CTE SQLite performant pour hiérarchies même profondes
 - Filter priority évite bugs UX classiques (collection masquée par folder)
@@ -692,16 +760,19 @@ User clicks folder → setActiveFolder(id, recursive)
 **Type** : Bug Fix + Feature
 
 #### Résumé
+
 **Cause racine (bug)** : Tauri v2 sérialise les paramètres Rust en camelCase côté frontend. Les appels `invoke` dans `catalogService.ts` utilisaient du snake_case (`collection_id`, `image_ids`, `collection_type` …), provoquant l'erreur `missing required key collectionType`.
 **Solution bug** : Correction des 6 clés snake_case → camelCase dans les appels `invoke` + alignement des assertions dans les tests.
 **Feature additionnelle** : Ajout d'un bouton `FolderPlus` dans la `BatchBar` avec un popover listant les collections SQLite, permettant d'ajouter les images sélectionnées (Cmd+clic) à une collection directement depuis la grille.
 
 #### Fichiers Modifiés
+
 - `src/services/catalogService.ts` — 6 clés invoke corrigées snake_case → camelCase
 - `src/services/__tests__/catalogService.test.ts` — assertions mises à jour (camelCase)
 - `src/components/shared/BatchBar.tsx` — bouton `FolderPlus` + popover collections (useCollectionStore + useCatalogStore)
 
 #### Impact
+
 - Les commandes Tauri collection fonctionnent correctement en runtime
 - 455 tests frontend passants ✅
 - L'utilisateur peut ajouter N images sélectionnées à une collection depuis la BatchBar
@@ -716,29 +787,35 @@ User clicks folder → setActiveFolder(id, recursive)
 **Type** : Quality Fix (Production)
 
 #### Résumé
+
 **Cause racine** : Les logs de fallback Tauri (`console.warn`) s'affichaient systématiquement dans l'application buildée en production, créant du bruit inutile pour les utilisateurs finaux.
 
 **Solution** : Ajout de logs conditionnels utilisant `import.meta.env.DEV` pour afficher les warnings de fallback uniquement en développement. Les vrais errors (problèmes critiques) restent toujours visibles.
 
 #### Fichiers modifiés
+
 - `src/services/previewService.ts` - Ajout méthode `logDev()`, remplacement 12 console.warn (fallbacks + logs de succès)
 - `src/services/filesystemService.ts` - Ajout méthode `logDev()`, remplacement 1 console.warn
 - `src/services/discoveryService.ts` - Logs conditionnels (3 console.warn)
 - `src/services/hashingService.ts` - Ajout méthode `logDev()`, remplacement 1 console.warn
 
 #### Impact
+
 - Application buildée : Aucun warning/log de succès en production ✅
 - Mode développement : Warnings et logs conservés pour debugging ✅
 - Tests unitaires : Comportement inchangé (399 tests passants) ✅
 - Errors réels : Toujours affichés (console.error préservés) ✅
 
 #### Logs rendus conditionnels
+
 **Fallbacks Tauri** (mock mode) :
+
 - `Tauri not available, mocking command`
 - `Tauri event system not available`
 - `Mock unlisten called`
 
 **Succès d'opérations** (PreviewService) :
+
 - `Preview générée` (ligne 210)
 - `Batch terminé` (ligne 235)
 - `Pyramide générée` (ligne 274)
@@ -756,6 +833,7 @@ User clicks folder → setActiveFolder(id, recursive)
 **Type** : Critical Bug Fix
 
 #### Résumé
+
 **Symptôme** : Lors de l'import d'un dossier, le scan restait bloqué sur "scanning" avec 0 fichiers trouvés, et `get_discovery_status` était appelé des milliers de fois en boucle infinie (network tab saturé).
 
 **Cause racine #1 (Backend Rust)** : Dans `perform_discovery()`, la logique de vérification d'arrêt du scan était incorrecte. Elle vérifiait `sessions.keys().next()` au lieu du champ `status` de la session active. Si une ancienne session existait dans le HashMap, le scan s'arrêtait immédiatement sans scanner aucun fichier.
@@ -763,20 +841,24 @@ User clicks folder → setActiveFolder(id, recursive)
 **Cause racine #2 (Frontend TypeScript)** : Dans `useDiscovery`, la fonction `monitorSession()` effectuait un polling infini sans timeout ni limite de tentatives, appelant `getDiscoveryStatus()` toutes les secondes indéfiniment.
 
 **Solution** :
+
 - **Backend** : Correction de la logique pour vérifier `session.status == DiscoveryStatus::Stopped` au lieu de comparer les clés du HashMap
 - **Frontend** : Ajout d'un compteur `pollAttempts` avec limite de 600 tentatives (10 minutes @ 1s) et message d'erreur explicite au timeout
 
 #### Fichiers modifiés
+
 - `src-tauri/src/services/discovery.rs` (ligne 157-166) - Correction logique vérification stop scan
 - `src/hooks/useDiscovery.ts` (ligne 203-261) - Ajout timeout protection polling avec maxPollAttempts
 
 #### Impact
+
 - Scan discovery : Trouve maintenant les fichiers RAF (34 fichiers dans `101_FUJI` détectés) ✅
 - Polling frontend : S'arrête automatiquement après 10 minutes si bloqué ✅
 - Sessions multiples : Supportées correctement (pas d'interférence entre sessions) ✅
 - Performance réseau : Évite la saturation du network tab en cas d'erreur backend ✅
 
 #### Tests
+
 - Scan dossier `101_FUJI` : 34 fichiers `.RAF` détectés (auparavant 0)
 - Compilation Rust : `cargo check` OK (warnings existants préservés)
 - Compilation TypeScript : `npm run build` OK
@@ -792,16 +874,19 @@ User clicks folder → setActiveFolder(id, recursive)
 **Type** : Critical Bug Fix
 
 #### Résumé
+
 **Symptôme** : Le scan discovery trouvait les fichiers (34 RAF détectés) mais l'ingestion ne démarrait pas — `get_discovered_files` retournait toujours un tableau vide.
 
 **Cause racine** : La fonction `get_session_files()` dans `DiscoveryService` était un stub qui retournait systématiquement `Ok(vec![])`. Les fichiers étaient comptés pendant le scan (`files_found++`) mais jamais stockés quelque part pour récupération ultérieure.
 
 **Solution** :
+
 - Ajout d'un champ `discovered_files: Arc<RwLock<HashMap<Uuid, Vec<DiscoveredFile>>>>` au `DiscoveryService` pour stocker les fichiers découverts par session
 - Modification de `perform_discovery()` pour construire un vecteur `session_files` et le stocker dans le HashMap à la fin du scan
 - Modification de `get_session_files()` pour retourner les fichiers stockés au lieu d'un vecteur vide
 
 #### Fichiers modifiés
+
 - `src-tauri/src/services/discovery.rs` :
   - Ligne 16 : Ajout champ `discovered_files` à la struct
   - Ligne 28 : Initialisation dans `new()`
@@ -813,12 +898,14 @@ User clicks folder → setActiveFolder(id, recursive)
   - Ligne 264-268 : Persistance finale dans HashMap
 
 #### Impact
+
 - Ingestion : Fonctionne maintenant après le scan ✅
 - Fichiers découverts : Accessibles via `get_discovered_files()` ✅
 - Performance : Pas d'impact (clone uniquement pendant le scan) ✅
 - Mémoire : Fichiers stockés en RAM jusqu'à la fin de session (acceptable pour < 50K fichiers) ✅
 
 #### Tests
+
 - Compilation Rust : `cargo check` OK (3.13s)
 - Application : Relancée avec succès
 - Import prêt : Test manuel requis (sélectionner dossier `101_FUJI`)
@@ -833,17 +920,20 @@ User clicks folder → setActiveFolder(id, recursive)
 **Type** : Critical Bug Fix
 
 #### Résumé
+
 **Symptôme** : Après correction du stockage des fichiers découverts, le scan trouvait 30 fichiers RAF et passait à `status: "completed"`, mais l'ingestion ne démarrait jamais automatiquement.
 
 **Cause racine** : Logique circulaire dans `ImportModal` — l'effet vérifiait `stage === 'ingesting' && !isIngesting`, mais `isIngesting` retourne `true` quand `stage === 'ingesting'`, rendant la condition toujours fausse. De plus, `startScan` ne déclenchait pas `startIngestion()` après completion.
 
 **Solution** :
+
 - Ajout d'un `useRef<startIngestion>` dans `useDiscovery` pour éviter dépendance circulaire
 - Appel automatique de `startIngestion()` via la ref 100ms après que le scan soit `completed`
 - Suppression de l'effet inutile dans `ImportModal` qui ne fonctionnait pas
 - Nettoyage des variables inutilisées (`isIngesting`, `sessionId`, `startIngestion`)
 
 #### Fichiers modifiés
+
 - `src/hooks/useDiscovery.ts` :
   - Ligne 51 : Ajout `startIngestionRef` pour éviter dépendance circulaire
   - Ligne 229-235 : Appel automatique via `startIngestionRef.current()`
@@ -852,12 +942,14 @@ User clicks folder → setActiveFolder(id, recursive)
   - Ligne 14-26 : Suppression variables inutilisées et effet circulaire
 
 #### Impact
+
 - Transition automatique : Scan → Ingestion fonctionne ✅
 - Pas de dépendance circulaire : Build sans erreurs ✅
 - UX améliorée : Import automatique sans intervention utilisateur ✅
 - Code plus propre : Effet inutile supprimé ✅
 
 #### Tests
+
 - Compilation TypeScript : `npm run build` OK (1.36s)
 - Application : Relancée avec succès
 - **Test utilisateur requis** : Import dossier `101_FUJI` → Vérifier ingestion auto-start
@@ -872,29 +964,34 @@ User clicks folder → setActiveFolder(id, recursive)
 **Type** : Critical Bug Fix
 
 #### Résumé
+
 **Symptôme** : Erreur SQL lors du batch_ingest : `"no such table: ingestion_sessions"`. L'application affichait 30 fichiers découverts mais échouait à l'ingestion.
 
 **Cause racine** : La base de données SQLite existante avait été créée avant l'ajout de la migration `002_ingestion_sessions`, donc la table manquait. Tentative d'ajout de la migration `003_previews` a révélé un bug dans le parser SQL (ne gère pas les triggers avec `BEGIN...END;`).
 
 **Solution** :
+
 - Suppression de la base de données corrompue : `/Users/davidmichels/Library/Application Support/com.luminafast.V2/luminafast.db`
 - Migration `002_ingestion_sessions` configurée et appliquée correctement
 - Migration `003_previews` temporairement désactivée (parser SQL à corriger)
 - Recréation complète de la DB avec schéma à jour
 
 #### Fichiers modifiés
+
 - `src-tauri/src/database.rs` :
   - Ligne 80-83 : Ajout appel `run_migration("002_ingestion_sessions")` CORRECTION : était déjà présent
   - Ligne 86 : Commentaire TODO pour migration 003_previews (parser à corriger)
   - Ligne 123 : Commentaire ligne 003_previews dans match version
 
 #### Impact
+
 - Table `ingestion_sessions` : Disponible ✅
 - Batch ingestion : Peut maintenant démarrer ✅
 - Preview generation : Fonctionne sans table dédiée (stockage filesystem) ✅
 - Migration 003_previews : À réparer plus tard (pas bloquant) ⚠️
 
 #### Tests
+
 - Base de données : Supprimée et recréée avec succès
 - Migrations : 001_initial et 002_ingestion_sessions appliquées
 - Application : Lancée (PID 72400)
@@ -911,6 +1008,7 @@ User clicks folder → setActiveFolder(id, recursive)
 **Type** : Critical Bug Fix
 
 #### Résumé
+
 Suite des corrections critiques pour rendre le pipeline d'import end-to-end fonctionnel. Après la correction des migrations, 4 bugs bloquants restaient : IngestionService utilisait une DB in-memory, indices SQL incorrects dans get_all_images, PreviewService non initialisé, et problème de dépendance circulaire.
 
 **Cause racine #1 (IngestionService)** : La fonction `get_ingestion_service()` créait une connexion in-memory (`Connection::open_in_memory()`) via `OnceLock`, donc toutes les insertions SQL allaient dans une DB temporaire sans le schéma des migrations.
@@ -922,12 +1020,14 @@ Suite des corrections critiques pour rendre le pipeline d'import end-to-end fonc
 **Cause racine #4 (Auto-ingestion)** : Problème de dépendance circulaire déjà corrigé mais solution useRef incomplète.
 
 **Solution** :
+
 - **IngestionService** : Suppression de `get_ingestion_service()` et création de connexions vers le fichier DB réel (`luminafast.db`) dans `batch_ingest()` et `ingest_file()`
 - **get_all_images** : Correction indices colonnes SQL (rating→11, flag→12)
 - **PreviewService** : Ajout de `previewService.initialize()` dans App.tsx avant `refreshCatalog()`
 - **Auto-ingestion** : useRef déjà en place (pas de modification supplémentaire)
 
 #### Fichiers modifiés
+
 - `src-tauri/src/commands/discovery.rs` :
   - Suppression `INGESTION_SERVICE` OnceLock et `get_ingestion_service()`
   - Ajout `get_db_path()` helper
@@ -951,6 +1051,7 @@ Suite des corrections critiques pour rendre le pipeline d'import end-to-end fonc
   - `Docs/CHANGELOG.md` - Mise à jour
 
 #### Impact
+
 - IngestionService : Utilise maintenant la DB principale avec toutes les migrations ✅
 - Batch ingestion : **30 fichiers RAF importés avec succès** en SQLite ✅
 - Catalogue frontend : Images affichées sans erreur de typage ✅
@@ -958,6 +1059,7 @@ Suite des corrections critiques pour rendre le pipeline d'import end-to-end fonc
 - Pipeline end-to-end : **FONCTIONNEL** (scan → hash → insert → display) ✅
 
 #### Tests validés
+
 - Compilation Rust : `cargo check` OK
 - Compilation TypeScript : `npm run build` OK
 - Base de données : 30 images insérées avec BLAKE3 hashes
@@ -966,11 +1068,13 @@ Suite des corrections critiques pour rendre le pipeline d'import end-to-end fonc
 - **Import complet testé** : 101_FUJI (30x RAF) → DB → Library view
 
 #### Limitations connues
+
 - **Dimensions NULL** : width/height non extraits (extraction RAW pas implémentée)
 - **Thumbnails vides** : Génération previews Phase 2.3 pas encore intégrée à l'ingestion
 - **Session orpheline** : Recompilation pendant import crée session "scanning" non terminée (bénin)
 
 #### Prochaine étape
+
 Phase 3.1 — Grille d'Images Réelle (remplacer URLs mockées par previews locales)
 
 ---
@@ -983,9 +1087,11 @@ Phase 3.1 — Grille d'Images Réelle (remplacer URLs mockées par previews loca
 **Durée** : ~1 session
 
 #### Résumé
+
 Finalisation complète de l'IngestionService avec `batch_ingest()`, `extract_basic_exif()` (extraction avancée), et `get_session_stats() Tests unitaires complets (17 tests passants). **Extraction EXIF avancée implémentée** avec détection intelligente par patterns et fallback robuste.
 
 #### Fichiers créés/modifiés
+
 ```
 src-tauri/src/services/ingestion.rs
 ├── batch_ingest() - Implémenté avec traitement séquentiel et gestion résultats
@@ -999,6 +1105,7 @@ src-tauri/src/services/ingestion.rs
 ```
 
 #### Fonctionnalités Implémentées
+
 - **batch_ingest()**: Conversion file_paths → DiscoveredFile, détection format (CR3/RAF/ARW), limite max_files, traitement séquentiel, collection résultats
 - **extract_basic_exif()**: Extraction EXIF avancée avec détection par extension + patterns filename + fallback
 - **Camera Make Detection**: Extension-based (CR3=Canon, RAF=Fujifilm, ARW=Sony) + patterns (EOS, GFX, DSC, etc.)
@@ -1009,6 +1116,7 @@ src-tauri/src/services/ingestion.rs
 - **Tests**: Couverture complète ingestion, déduplication BLAKE3, transactions SQLite
 
 #### Validation
+
 - ✅ 17 tests unitaires ingestion passants
 - ✅ `batch_ingest()` traite 100+ fichiers sans erreur
 - ✅ Détection format fonctionnelle
@@ -1019,6 +1127,7 @@ src-tauri/src/services/ingestion.rs
 - ✅ Rust Result<T,E>, zéro `unwrap()`
 
 #### Prochaine Étape
+
 Phase 2.2 — Harvesting Métadonnées EXIF/IPTC (extraction complète des métadonnées)
 
 ---
@@ -1030,9 +1139,11 @@ Phase 2.2 — Harvesting Métadonnées EXIF/IPTC (extraction complète des méta
 **Durée** : ~1 session
 
 #### Résumé
+
 Travaux de maintenance pour assurer la conformité avec `Docs/TESTING_STRATEGY.md`. Correction de deadlocks critiques dans le service `Filesystem`, réactivation de tests ignorés, et création de l'infrastructure de tests d'intégration Rust. Initialisation des tests de composants React.
 
 #### Fichiers créés/modifiés
+
 - `src-tauri/tests/app_integration.rs` — Infrastructure tests intégration
 - `src-tauri/src/services/filesystem.rs` — **Fix deadlock** (release lock before update stats)
 - `src-tauri/src/commands/filesystem.rs` — Réactivation tests
@@ -1041,6 +1152,7 @@ Travaux de maintenance pour assurer la conformité avec `Docs/TESTING_STRATEGY.m
 - `Docs/TESTING_COMPLIANCE_REPORT.md` — Rapport de conformité
 
 #### Résultats
+
 - **Rust** : 108 tests passants, 0 ignorés
 - **Frontend** : 5 tests composants passants
 - **Conformité** : ✅ Rétablissement complet
@@ -1054,9 +1166,11 @@ Travaux de maintenance pour assurer la conformité avec `Docs/TESTING_STRATEGY.m
 **Durée** : ~1 session
 
 #### Résumé
+
 Connexion complète de l'interface utilisateur d'import (`ImportModal`) aux services Rust (`DiscoveryService`, `IngestionService`) via le wrapper TypeScript `discoveryService`. Remplacement des mocks par une logique réelle pour la sélection de dossiers, le scan de fichiers RAW, et leur ingestion en base de données.
 
 #### Fichiers créés/modifiés
+
 ```
 src/stores/systemStore.ts — Extension importState avec sessionId, stats, stage, error
 src/hooks/useDiscovery.ts — Hook d'orchestration (321 lignes)
@@ -1066,6 +1180,7 @@ src/components/shared/__tests__/ImportModal.test.tsx — Tests composant (12 tes
 ```
 
 #### Fonctionnalités Implémentées
+
 - **Sélection de dossier** : Dialogue natif via `dialog.open()` + validation `discoveryService.validateDiscoveryPath`
 - **Processus de découverte** : `discoveryService.startDiscovery()` avec monitoring progression en temps réel
 - **Processus d'ingestion** : `discoveryService.batchIngest()` avec feedback visuel et gestion d'erreurs
@@ -1073,17 +1188,20 @@ src/components/shared/__tests__/ImportModal.test.tsx — Tests composant (12 tes
 - **Gestion d'état** : Store `systemStore` enrichi avec stage, sessionId, stats détaillées
 
 #### Tests
+
 - **Hook useDiscovery** : 11 tests couvrant tous les cas d'usage (sélection, scan, ingestion, erreurs)
 - **Composant ImportModal** : 12 tests d'intégration UI avec mocks complets
 - **Store systemStore** : 10 tests mis à jour pour nouvelle interface
 
 #### Architecture
+
 - **Hook d'abstraction** : `useDiscovery` isole la logique métier de l'UI
 - **Store centralisé** : `systemStore` gère l'état global d'import
 - **Services découplés** : UI → Hook → Service → Rust (pas de dépendance directe)
 - **Gestion d'erreurs robuste** : Types `ServiceError`, try/catch, feedback utilisateur
 
 #### Validation
+
 - ✅ Dialogue natif de sélection de dossier fonctionnel
 - ✅ Scan avec progression en temps réel
 - ✅ Ingestion par lots avec feedback
@@ -1100,9 +1218,11 @@ src/components/shared/__tests__/ImportModal.test.tsx — Tests composant (12 tes
 **Durée** : ~2 sessions (création squelettes 2026-02-16, implémentation complète 2026-02-20)
 
 #### Résumé
+
 Implémentation complète de l'extraction de métadonnées EXIF pour fichiers RAW/JPEG avec kamadak-exif v0.6.1. Service Rust performant (<50ms par fichier) avec 10 champs de métadonnées synchronisés avec le schéma SQL. Intégration au pipeline d'ingestion avec fallback filename-based. Service IPTC créé en skeleton (structure ready, extraction non implémentée — reportée Phase 5.4).
 
 #### Fichiers créés/modifiés
+
 ```
 src-tauri/src/
 ├── services/exif.rs (258 lignes) — Service extraction EXIF complet
@@ -1134,7 +1254,9 @@ src-tauri/src/lib.rs
 ```
 
 #### Architecture EXIF
+
 **ExifMetadata struct (10 champs)** :
+
 - `iso: Option<u16>` — Sensibilité ISO
 - `aperture: Option<f64>` — Ouverture (f-number)
 - `shutter_speed: Option<f64>` — Vitesse obturateur en **log2(secondes)** pour tri SQL
@@ -1147,10 +1269,12 @@ src-tauri/src/lib.rs
 - `color_space: Option<String>` — Espace colorimétrique
 
 **Conversions spéciales** :
+
 - **Shutter speed → log2** : 1/125s devient log2(1/125) = -6.97 pour `ORDER BY shutter_speed`
 - **GPS DMS → décimal** : 48°51'29.52"N → 48.858200 pour compatibilité mapping
 
 **Intégration pipeline** :
+
 ```rust
 // Dans services/ingestion.rs ligne 73-97
 let exif_data = match exif::extract_exif_metadata(&file_path) {
@@ -1164,6 +1288,7 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 ```
 
 #### Tests
+
 - **services::exif** : 2 tests unitaires (shutter_speed_to_log2, error handling)
 - **services::iptc** : 2 tests unitaires (struct validation, empty extraction)
 - **services::ingestion** : 17 tests passants (inclut EXIF integration)
@@ -1171,11 +1296,13 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 - **Total frontend** : 399 tests passants (98.93% coverage)
 
 #### Performance
+
 - Extraction EXIF : <50ms par fichier (target atteint ✅)
 - Intégration ingestion : Aucun ralentissement measurable
 - Memory usage : Stable (pas de leak détecté)
 
 #### Validation
+
 - [x] Extraction EXIF complète pour RAW/JPEG
 - [x] 10 champs synchronisés avec schéma SQL
 - [x] Conversion log2 pour shutter_speed
@@ -1190,23 +1317,27 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 #### Décisions techniques
 
 **EXIF — kamadak-exif v0.6.1** :
+
 - Crate name `exif` (import `use exif::{Reader, Exif, ...}`)
 - API v0.6 utilise `Exif` struct (pas `Reader`)
 - Helper functions avec `&Exif` parameter pour réutilisabilité
 - Result<T, String> pour error handling explicite
 
 **IPTC — Reporté** :
+
 - kamadak-exif ne supporte pas IPTC/XMP nativement
 - Options futures : img-parts crate (pure Rust) ou rexiv2 (binding C++)
 - Décision : Skeleton créé, implémentation reportée Phase 5.4 (Sidecar XMP)
 - Impact : Non bloquant — EXIF suffit pour Phase 3.1 (Grille d'Images Réelle)
 
 **Synchronisation SQL** :
+
 - ExifMetadata struct Rust ↔ exif_metadata table SQL (migrations/001_initial.sql)
 - Pas de champ orphelin — intégrité garantie
 - image_state table initialisée avec rating=0, flag=NULL pour chaque image insérée
 
 #### Bugs corrigés pendant implémentation
+
 1. **Import error** : `kamadak_exif` → crate name est `exif`
 2. **Type error** : `Reader` vs `Exif` → API v0.6 utilise Exif struct
 3. **Lifetime error** : Partial move exif_metadata → ref binding pattern `if let Ok(ref real_exif)`
@@ -1214,6 +1345,7 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 5. **Test failure** : Missing image_state table → ajouté dans test schema
 
 #### Prochaine étape
+
 **Phase 3.1 — Grille d'Images Réelle** : Connecter UI Grid View aux données réelles du catalogue SQLite, afficher thumbnails via convertFileSrc(), montrer métadonnées EXIF dans panneau droit, implémenter tri par date/rating/ISO.
 
 ---
@@ -1226,7 +1358,9 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 **Durée** : ~1 session
 
 #### Résumé
+
 Création des fichiers manquants identifiés lors du code review détaillé :
+
 - `src/components/library/ImageCard.tsx` (PHASE-0.3)
 - `src/services/exifService.ts` (PHASE-2.2)
 - `src-tauri/src/services/iptc.rs` (PHASE-2.2)
@@ -1236,6 +1370,7 @@ Création des fichiers manquants identifiés lors du code review détaillé :
 Tous les fichiers respectent les conventions : typage strict, structure modulaire, interfaces/structs/enums, documentation.
 
 #### Fichiers créés
+
 ```
 src/components/library/ImageCard.tsx
 src/services/exifService.ts
@@ -1245,14 +1380,17 @@ src-tauri/src/commands/exif.rs
 ```
 
 #### Validation
+
 - ✅ Conventions de nommage et typage strict respectées
 - ✅ Structure modulaire conforme
 - ✅ Critères des briefs atteints
 - ✅ Prêt pour tests unitaires et intégration
 
 #### Prochaine étape
+
 - Ajouter tests unitaires pour les nouveaux fichiers
 - Demander validation au propriétaire avant modification du plan
+
 ### 2026-02-16 — Phase 2.3 : Génération de Previews (Pyramide d'Images)
 
 **Statut** : ✅ Complétée
@@ -1260,9 +1398,11 @@ src-tauri/src/commands/exif.rs
 **Durée** : ~1 session
 
 #### Résumé
+
 Implémentation complète du système de génération de previews avec pyramide d'images à 3 niveaux. Service Rust performant avec concurrence, cache structuré par hash BLAKE3, et interface TypeScript complète. Support des formats RAW via `rsraw` et `image` crate. Validation réussie : navigation fluide dans grilles 500+ images.
 
 #### Fichiers créés/modifiés
+
 ```
 src-tauri/src/
 ├── models/preview.rs (365 lignes) - Modèles complets avec sérialisation
@@ -1276,17 +1416,20 @@ src/
 ```
 
 #### Tests
+
 - **20 tests unitaires Rust** passants
 - Tests de sérialisation pour tous les types
 - Tests d'intégration service + cache
 - Mock complet pour tests frontend
 
 #### Performance
+
 - Thumbnail: <200ms, Standard: <500ms
 - Cache hiérarchique par hash prefix
 - Concurrency configurable (Rayon + Tokio)
 
 #### Validation
+
 - ✅ Navigation fluide grilles 500+ images
 - ✅ Génération pyramidale fonctionnelle
 - ✅ Respect strict AI_INSTRUCTIONS.md
@@ -1302,9 +1445,11 @@ src/
 **Durée** : ~1 session
 
 #### Résumé
+
 Migration complète du projet de JavaScript (JSX) vers TypeScript (TSX) strict. Création des types de domaine métier. Configuration TypeScript avec `strict: true` et `noUncheckedIndexedAccess: true`. Zéro erreur `tsc --noEmit`.
 
 #### Fichiers créés
+
 - `tsconfig.json` — Config TS strict avec path aliases `@/*`
 - `tsconfig.node.json` — Config TS pour vite.config.ts
 - `src/vite-env.d.ts` — Déclarations d'environnement Vite
@@ -1316,6 +1461,7 @@ Migration complète du projet de JavaScript (JSX) vers TypeScript (TSX) strict. 
 - `Docs/briefs/PHASE-0.1.md` — Brief de la sous-phase
 
 #### Fichiers modifiés
+
 - `src/App.jsx` → `src/App.tsx` — Typage complet (interfaces props, state, callbacks, events)
 - `src/main.jsx` → `src/main.tsx` — Typage + null check sur getElementById
 - `vite.config.js` → `vite.config.ts` — Renommage
@@ -1323,6 +1469,7 @@ Migration complète du projet de JavaScript (JSX) vers TypeScript (TSX) strict. 
 - `package.json` — Ajout dépendance `typescript`
 
 #### Critères de validation
+
 - [x] `tsc --noEmit` passe sans erreur
 - [x] `npm run dev` lance l'app sans régression visuelle
 - [x] `npm run build` produit un build valide (233 KB gzipped)
@@ -1330,6 +1477,7 @@ Migration complète du projet de JavaScript (JSX) vers TypeScript (TSX) strict. 
 - [x] Tous les composants ont des props typées
 
 #### Décisions techniques
+
 - `noUncheckedIndexedAccess: true` activé pour la sécurité des accès array
 - Arrays de constantes mock extraits avec `as const` pour le typage
 - Interface `MockEvent` temporaire (sera remplacée par `CatalogEvent` en Phase 4.1)
@@ -1344,9 +1492,11 @@ Migration complète du projet de JavaScript (JSX) vers TypeScript (TSX) strict. 
 **Durée** : ~1 session
 
 #### Résumé
+
 Création de tests unitaires complets pour tous les stores Zustand (Phase 0.4) et les types TypeScript (Phase 0.1). Configuration de Vitest avec jsdom. Correction de bugs découverts pendant les tests. **61 tests passent** sur 5 fichiers.
 
 #### Fichiers créés
+
 - `vitest.config.ts` — Configuration Vitest avec jsdom
 - `src/test/setup.ts` — Setup global (jest-dom, mocks)
 - `src/test/storeUtils.ts` — Utilitaires pour isolation des tests Zustand
@@ -1357,12 +1507,14 @@ Création de tests unitaires complets pour tous les stores Zustand (Phase 0.4) e
 - `src/types/__tests__/types.test.ts` — 16 tests (validation types TypeScript)
 
 #### Fichiers modifiés
+
 - `package.json` — Ajout scripts `test`, `test:ui`, `test:run`, `test:coverage`
 - `package.json` — Ajout dépendances Vitest, @testing-library/react, jsdom
 - `src/stores/catalogStore.ts` — **Bug fix** : `addImages()` ajoute en fin de liste
 - `src/stores/systemStore.ts` — **Bug fix** : limitation logs avec `slice(-15)`
 
 #### Critères de validation
+
 - [x] 61 tests passent sans erreur
 - [x] Couverture complète des 4 stores Zustand
 - [x] Tests utilisent `act()` pour les mises à jour d'état React
@@ -1370,6 +1522,7 @@ Création de tests unitaires complets pour tous les stores Zustand (Phase 0.4) e
 - [x] Aucun test modifié pour devenir "vert" sans justification
 
 #### Décisions techniques
+
 - Utilisation de `act()` de @testing-library/react pour wrapper les mises à jour Zustand
 - Reset manuel du state Zustand dans `beforeEach` (singleton global)
 - Tests composants (GridView, TopNav) supprimés car obsolètes après migration Zustand
@@ -1377,6 +1530,7 @@ Création de tests unitaires complets pour tous les stores Zustand (Phase 0.4) e
 - Mock de `Date.now()` avec `vi.useFakeTimers()` pour tests déterministes
 
 #### Bugs corrigés
+
 1. **catalogStore.addImages()** : Ajoutait les images au début au lieu de la fin
 2. **systemStore.addLog()** : Mauvaise logique de limitation (slice avant concat au lieu d'après)
 3. **Tests non déterministes** : INITIAL_IMAGES utilise Math.random(), comparaison par IDs
@@ -1390,9 +1544,11 @@ Création de tests unitaires complets pour tous les stores Zustand (Phase 0.4) e
 **Durée** : ~1 session
 
 #### Résumé
+
 Mise en place complète d'un pipeline d'intégration continue et de linting strict. Configuration ESLint étendue pour TypeScript/React, outils Rust (Clippy + rustfmt), workflow GitHub Actions CI, et coverage de tests à 98.93%.
 
 #### Fichiers créés
+
 - `.github/workflows/ci.yml` — Pipeline CI/CD complet (frontend, backend, intégration, sécurité)
 - `.rustfmt.toml` — Configuration formatting Rust stable
 - `clippy.toml` — Configuration linting Rust avec règles qualité
@@ -1400,6 +1556,7 @@ Mise en place complète d'un pipeline d'intégration continue et de linting stri
 - `Docs/briefs/PHASE-0.5.md` — Brief de la sous-phase
 
 #### Fichiers modifiés
+
 - `eslint.config.js` — Configuration étendue ESLint (TypeScript + React + tests)
 - `package.json` — Scripts npm (lint, type-check, test:ci, build:tauri)
 - `vitest.config.ts` — Configuration coverage avec seuils 80%
@@ -1409,16 +1566,19 @@ Mise en place complète d'un pipeline d'intégration continue et de linting stri
 - Plusieurs composants — Correction types FlagType pour éviter redondance
 
 #### Dépendances ajoutées
+
 - `@typescript-eslint/eslint-plugin` ^8.55.0
 - `@typescript-eslint/parser` ^8.55.0
 - `typescript-eslint` ^8.55.0
 - `@vitest/coverage-v8` — Coverage provider
 
 #### Tests ajoutés
+
 - Tests types TypeScript : 20 tests (validation interfaces, types, enums)
 - Coverage global : 98.93% (branches: 94.44%, functions: 100%, lines: 100%)
 
 #### Critères de validation
+
 - [x] ESLint passe sans erreur sur tout le codebase
 - [x] Clippy passe sans warning sur le code Rust
 - [x] GitHub Actions exécute les tests avec succès
@@ -1428,6 +1588,7 @@ Mise en place complète d'un pipeline d'intégration continue et de linting stri
 - [x] Formatage automatique (Prettier + rustfmt)
 
 #### Décisions techniques
+
 - **ESLint** : Configuration multi-niveaux (TS/TSX, tests, configs)
 - **Rust** : Utilisation options stables uniquement pour rustfmt
 - **CI** : Pipeline complet avec 4 jobs (frontend, backend, intégration, sécurité)
@@ -1435,6 +1596,7 @@ Mise en place complète d'un pipeline d'intégration continue et de linting stri
 - **Scripts** : Commandes unifiées pour linting et tests
 
 #### Notes / Observations
+
 - Phase préparatoire essentielle pour garantir la qualité du code backend
 - Pipeline CI prêt pour les phases de développement Rust
 - Standards de qualité établis pour tout le projet
@@ -1449,9 +1611,11 @@ Mise en place complète d'un pipeline d'intégration continue et de linting stri
 **Durée** : ~1 session
 
 #### Résumé
+
 Découpage du fichier monolithique `App.tsx` (728 lignes) en 17 composants individuels + 2 modules utilitaires. App.tsx réduit à 159 lignes (orchestrateur pur). Aucun fichier ne dépasse 80 lignes. Zéro régression fonctionnelle.
 
 #### Fichiers créés
+
 - `src/lib/helpers.ts` — safeID()
 - `src/lib/mockData.ts` — generateImages, IMAGE_THEMES, INITIAL_IMAGES, MockEvent
 - `src/components/shared/GlobalStyles.tsx` — Styles CSS globaux
@@ -1474,9 +1638,11 @@ Découpage du fichier monolithique `App.tsx` (728 lignes) en 17 composants indiv
 - `Docs/briefs/PHASE-0.3.md` — Brief de la sous-phase
 
 #### Fichiers modifiés
+
 - `src/App.tsx` — Réécrit comme orchestrateur (728 → 159 lignes)
 
 #### Critères de validation
+
 - [x] `tsc --noEmit` passe sans erreur
 - [x] `npm run build` produit un build valide (235 KB gzipped)
 - [x] Aucun fichier ne dépasse 300 lignes (max: 159 lignes)
@@ -1485,6 +1651,7 @@ Découpage du fichier monolithique `App.tsx` (728 lignes) en 17 composants indiv
 - [x] Aucune régression fonctionnelle
 
 #### Décisions techniques
+
 - Props drilling pour la communication inter-composants (Zustand prévu en Phase 0.4)
 - RightSidebar orchestre les sous-composants (DevelopSliders, HistoryPanel, MetadataPanel)
 - MockEvent déplacé dans lib/mockData.ts (temporaire, sera remplacé par CatalogEvent)
@@ -1499,9 +1666,11 @@ Découpage du fichier monolithique `App.tsx` (728 lignes) en 17 composants indiv
 **Durée** : ~1 session
 
 #### Résumé
+
 Remplacement complet de tous les `useState` de App.tsx par des stores Zustand centralisés. Création de quatre stores : catalogStore, uiStore, editStore, systemStore. App.tsx devient un orchestrateur pur sans état local. Élimination du props drilling.
 
 #### Fichiers créés
+
 - `src/stores/catalogStore.ts` — Gestion images, sélection, filtres (Set<number> pour sélection)
 - `src/stores/uiStore.ts` — Gestion UI (activeView, sidebars, thumbnailSize, modals)
 - `src/stores/editStore.ts` — Gestion événements et edits (eventLog, currentEdits, undo/redo)
@@ -1510,10 +1679,12 @@ Remplacement complet de tous les `useState` de App.tsx par des stores Zustand ce
 - `Docs/briefs/PHASE-0.4.md` — Brief de la sous-phase
 
 #### Fichiers modifiés
+
 - `src/App.tsx` — Migration complète vers Zustand (159 → 152 lignes, zéro useState)
 - `package.json` — Ajout dépendance `zustand`
 
 #### Critères de validation
+
 - [x] `tsc --noEmit` passe sans erreur
 - [x] `npm run build` produit un build valide (238 KB gzipped)
 - [x] App.tsx ne contient plus aucun `useState`
@@ -1522,6 +1693,7 @@ Remplacement complet de tous les `useState` de App.tsx par des stores Zustand ce
 - [x] Les stores sont correctement typés avec les interfaces existantes
 
 #### Décisions techniques
+
 - Utilisation de `Set<number>` pour la sélection (plus performant que array)
 - Getters dans les stores (getSelectedImages, getFilteredImages, etc.)
 - Sélection par défaut vide (initialisée dans useEffect avec INITIAL_IMAGES)
@@ -1529,6 +1701,7 @@ Remplacement complet de tous les `useState` de App.tsx par des stores Zustand ce
 - undo/redo préparés mais non implémentés (Phase 4.1)
 
 #### Notes / Observations
+
 - Phase préparatoire essentielle pour Phase 1 (backend Rust)
 - Les stores serviront de couche d'abstraction avec les commandes Tauri
 - Performance maintenue, zéro régression UX
@@ -1543,9 +1716,11 @@ Remplacement complet de tous les `useState` de App.tsx par des stores Zustand ce
 **Durée** : ~1 session
 
 #### Résumé
+
 Intégration complète de Tauri v2 dans le projet React+Vite+TypeScript. L'UI mockup s'affiche dans une fenêtre native macOS 1440×900. Plugins fs, dialog et shell installés et enregistrés. Backend Rust compile sans erreur.
 
 #### Fichiers créés
+
 - `src-tauri/Cargo.toml` — Dépendances Rust (tauri, plugins fs/dialog/shell/log)
 - `src-tauri/tauri.conf.json` — Config fenêtre 1440×900, CSP pour picsum.photos, identifier com.luminafast.app
 - `src-tauri/src/main.rs` — Point d'entrée Rust
@@ -1556,15 +1731,18 @@ Intégration complète de Tauri v2 dans le projet React+Vite+TypeScript. L'UI mo
 - `Docs/briefs/PHASE-0.2.md` — Brief de la sous-phase
 
 #### Fichiers modifiés
+
 - `package.json` — Ajout @tauri-apps/api, plugins frontend, scripts tauri
 
 #### Critères de validation
+
 - [x] `cargo check` passe sans erreur
 - [x] `cargo tauri dev` lance l'app dans une fenêtre native macOS
 - [x] L'UI mockup s'affiche dans la fenêtre Tauri
 - [x] Les plugins fs, dialog et shell sont enregistrés côté Rust
 
 #### Décisions techniques
+
 - Fenêtre par défaut 1440×900 avec minimum 1024×680 (adapté pour photo management)
 - CSP configurée pour autoriser picsum.photos (mock images) — sera restreint en production
 - Plugin log activé uniquement en mode debug
@@ -1579,9 +1757,11 @@ Intégration complète de Tauri v2 dans le projet React+Vite+TypeScript. L'UI mo
 **Durée** : ~1 session
 
 #### Résumé
+
 Implémentation complète du service de hachage BLAKE3 haute performance pour la déduplication et l'intégrité des fichiers. Service Rust avec streaming, cache, et parallélisation. Commandes Tauri exposées avec wrapper TypeScript robuste. Tests unitaires complets (115 tests passants au total).
 
 #### Fichiers créés
+
 - `src-tauri/src/models/hashing.rs` : Types complets pour hachage, doublons, erreurs, configuration
 - `src-tauri/src/services/blake3.rs` : Service BLAKE3 avec streaming, cache, parallélisation
 - `src-tauri/src/services/mod.rs` : Module services
@@ -1592,6 +1772,7 @@ Implémentation complète du service de hachage BLAKE3 haute performance pour la
 - `src/services/__tests__/hashingService.test.ts` : 30 tests unitaires service
 
 #### Fichiers modifiés
+
 - `src-tauri/Cargo.toml` : Ajout dépendances blake3, rayon, tokio avec features
 - `src-tauri/src/lib.rs` : Initialisation HashingState + commandes invoke_handler
 - `src-tauri/src/models/mod.rs` : Export types hashing
@@ -1599,12 +1780,14 @@ Implémentation complète du service de hachage BLAKE3 haute performance pour la
 - `src/types/index.ts` : Re-export types hashing
 
 #### Tests ajoutés
+
 - **Types TypeScript** : 20 tests (validation interfaces, enums, sérialisation)
 - **Service TypeScript** : 30 tests (Tauri commands, gestion erreurs, fallbacks)
 - **Service Rust** : 10 tests unitaires (hachage déterministe, doublons, cache, benchmarks)
 - **Total** : 115 tests passants (stores + types + services)
 
 #### Critères de validation
+
 - [x] Hachage BLAKE3 fonctionnel avec streaming pour gros fichiers
 - [x] Détection de doublons 100% accurate
 - [x] Performance cibles atteintes (tests benchmarks)
@@ -1617,6 +1800,7 @@ Implémentation complète du service de hachage BLAKE3 haute performance pour la
 - [x] TypeScript strict, zéro any
 
 #### Décisions techniques
+
 - **Streaming BLAKE3** : Chunk size 64KB pour gros fichiers (>100MB)
 - **Séquentiel vs Parallèle** : Implémentation séquentielle pour async/await simplicité
 - **Cache** : Arc<Mutex<HashMap>> pour thread-safe avec stats
@@ -1625,18 +1809,21 @@ Implémentation complète du service de hachage BLAKE3 haute performance pour la
 - **Hash Format** : 64 caractères hex (BLAKE3 output standard)
 
 #### Performance
+
 - **Compilation** : <3s pour build complet Rust
 - **Tests** : <1s pour 115 tests unitaires
 - **Hash Mock** : <1ms pour hash fichier simulé
 - **Cache** : Hit/miss tracking avec size estimation
 
 #### Architecture
+
 - **Backend Rust** : Blake3Service avec streaming, cache, callbacks progression
 - **Frontend TypeScript** : HashingService avec invoke Tauri + fallbacks
 - **Types** : Partagés entre Rust (serde) et TypeScript (strict)
 - **Commands** : 8 commandes Tauri (hash, batch, duplicates, integrity, cache, benchmark)
 
 #### Prochaine Étape
+
 Phase 1.4 — Gestion du Système de Fichiers (FileSystem service avec watchers et locks)
 
 ---
@@ -1650,31 +1837,39 @@ Phase 1.4 — Gestion du Système de Fichiers (FileSystem service avec watchers 
 **Durée** : X heures
 
 #### Résumé
+
 [2-3 phrases décrivant ce qui a été accompli]
 
 #### Fichiers créés
+
 - `chemin/vers/fichier.ts` — Description
 
 #### Fichiers modifiés
+
 - `chemin/vers/fichier.ts` — Nature de la modification
 
 #### Tests ajoutés
+
 - `tests/chemin/fichier.test.ts` — Ce que le test couvre
 
 #### Critères de validation
+
 - [x] Critère 1 du brief
 - [x] Critère 2 du brief
 
 #### Décisions techniques
+
 - [Toute décision prise pendant la sous-phase avec justification]
 
 #### Notes / Observations
+
 - Configurer les PRAGMA SQLite pour performance optimale
 - Créer les modèles Rust correspondants
 - Mettre en place le système de migrations
 - Écrire les tests unitaires de validation
 
 ### Fichiers Créés/Modifiés
+
 - `src-tauri/Cargo.toml` : Ajout dépendances `rusqlite`, `thiserror`, `chrono`, `tempfile`
 - `src-tauri/src/database.rs` : Module gestion SQLite avec migrations et PRAGMA
 - `src-tauri/migrations/001_initial.sql` : Schéma SQL complet (9 tables + index)
@@ -1684,6 +1879,7 @@ Phase 1.4 — Gestion du Système de Fichiers (FileSystem service avec watchers 
 - `package.json` : Scripts npm pour tests Rust (`rust:test`, `rust:check`, `rust:build`)
 
 ### Schéma Implémenté
+
 - ✅ `images` : Table pivot avec BLAKE3 hash, métadonnées de base
 - ✅ `folders` : Structure hiérarchique des dossiers
 - ✅ `exif_metadata` : Métadonnées EXIF complètes
@@ -1694,6 +1890,7 @@ Phase 1.4 — Gestion du Système de Fichiers (FileSystem service avec watchers 
 - ✅ `migrations` : Tracking des migrations appliquées
 
 ### PRAGMA Configurés
+
 - `journal_mode = WAL` : Concurrency optimale
 - `synchronous = NORMAL` : Équilibre performance/sécurité
 - `cache_size = -20000` : Cache 20MB en mémoire
@@ -1702,6 +1899,7 @@ Phase 1.4 — Gestion du Système de Fichiers (FileSystem service avec watchers 
 - `foreign_keys = ON` : Contraintes référentielles activées
 
 ### Tests Unitaires (11/11 passants)
+
 - `test_database_creation` : Création connexion SQLite
 - `test_migration_simple` : Migration automatique complète
 - `test_migration_debug` : Debug parsing SQL
@@ -1715,17 +1913,20 @@ Phase 1.4 — Gestion du Système de Fichiers (FileSystem service avec watchers 
 - `models::catalog::tests::test_collection_type_serialization` : Enums sérialisables
 
 ### Problèmes Résolus
+
 - **Parsing SQL incorrect** : Correction du parsing des statements SQL avec gestion des commentaires
 - **Contraintes FK** : Configuration `foreign_keys = ON` dans PRAGMA
 - **Tests de migration** : Gestion du cas où table `migrations` n'existe pas encore
 - **Scripts npm** : Ajout raccourcis pour tests Rust (`npm run rust:test`)
 
 ### Performance
+
 - **Compilation** : <3s pour build complet
 - **Tests** : <50ms pour 11 tests unitaires
 - **Migration** : <10ms pour schéma complet
 
 ### Prochaine Étape
+
 Phase 1.2 — Tauri Commands CRUD (exposer les commandes Rust via IPC)
 
 ---
@@ -1737,9 +1938,11 @@ Phase 1.2 — Tauri Commands CRUD (exposer les commandes Rust via IPC)
 **Durée** : ~3 sessions
 
 ### Résumé
+
 Implémentation complète du service de gestion du système de fichiers avec watchers, locks et événements. Architecture unifiée Rust/TypeScript avec serde custom, concurrence async avec tokio::sync::RwLock, et gestion d'erreurs robuste. Tests déterministes 100% conformes à la stratégie de tests.
 
 ### Backend Rust
+
 - **Types unifiés** : Création de `src-tauri/src/models/filesystem.rs` (302 lignes) avec serde custom pour PathBuf, DateTime, Duration
 - **Service filesystem** : Implémentation dans `src-tauri/src/services/filesystem.rs` (476 lignes) avec tokio::sync::RwLock pour la concurrence
 - **Commandes Tauri** : Création de `src-tauri/src/commands/filesystem.rs` (502 lignes) avec 15 commandes filesystem
@@ -1747,20 +1950,24 @@ Implémentation complète du service de gestion du système de fichiers avec wat
 - **Tests unitaires** : 26 tests Rust couvrant tous les composants
 
 ### Frontend TypeScript
+
 - **Types filesystem** : Création de `src/types/filesystem.ts` (412 lignes) avec interfaces strictes
 - **Service wrapper** : Création de `src/services/filesystemService.ts` (628 lignes) avec gestion d'erreurs robuste
 - **Tests unitaires** : 24 tests Vitest déterministes, 100% conformes à TESTING_STRATEGY.md
 
 ### Architecture
+
 - **Sérialisation unifiée** : Types Rust/TypeScript partagés avec serde custom (pas de DTOs séparés)
 - **Concurrence async** : Utilisation de tokio::sync::RwLock pour gérer l'état partagé
 - **Gestion d'erreurs** : Result<T, FilesystemError> systématique côté Rust, try/catch côté TypeScript
 
 ### Dépendances ajoutées
+
 - `notify = "6.1"` pour filesystem watchers
 - `uuid = { version = "1.0", features = ["v4", "serde"] }` pour IDs uniques
 
 ### Fichiers créés/modifiés
+
 - `src-tauri/src/models/filesystem.rs` (302 lignes)
 - `src-tauri/src/services/filesystem.rs` (476 lignes)
 - `src-tauri/src/commands/filesystem.rs` (502 lignes)
@@ -1778,15 +1985,18 @@ Implémentation complète du service de gestion du système de fichiers avec wat
 **Durée** : ~2 sessions
 
 ### Résumé
+
 Correction complète des erreurs de build et de tests Rust pour préparer la Phase 1.3 - Service BLAKE3. Synchronisation des modèles discovery/ingestion, fix de la concurrence (Sync safety), et restauration de l'intégrité des tests. Architecture préservée avec serde custom (Phase 1.4) et respect strict des règles de gouvernance.
 
 ### Corrections Structurelles
+
 - **Modèles Discovery** : Ajout `FileProcessingStatus`, mise à jour `DiscoveredFile` avec champs status/error_message/database_id/ingested_at, fix `DiscoverySession` API
 - **Services** : `Blake3Service::new(HashConfig)`, changement `IngestionService.db` de `tokio::sync::RwLock` → `std::sync::Mutex` (Sync safety)
 - **Tests** : Type annotations explicites, imports corrigés, assertions flexibles pour timing sub-millisecond
 - **Commands** : `OnceLock<Arc<IngestionService>>` Sync-safe, suppression `FileEventDto` incorrect (conformité Phase 1.4)
 
 ### Problèmes Résolus
+
 - **E0609 Missing fields** : `DiscoveredFile` enrichi avec tous les champs requis
 - **E0282 Type inference** : Annotations explicites dans tous les tests
 - **E0277 Sync safety** : `rusqlite::Connection` non Sync → `std::sync::Mutex` wrapper
@@ -1794,12 +2004,14 @@ Correction complète des erreurs de build et de tests Rust pour préparer la Pha
 - **Test timing** : `as_micros()` pour précision sub-millisecond, cleanup verrous expirés
 
 ### Résultats Tests
+
 - **83/83 tests passent** (0 échec)
 - **4 tests filesystem lents skippés** (tests avec `sleep()` >60s)
 - **Compilation** : `cargo check` et `cargo check --tests` sans erreur
 - **Avertissements** : Seuls warnings non critiques (unused imports/vars)
 
 ### Fichiers modifiés
+
 - `src-tauri/src/models/discovery.rs` (mise à jour complète API)
 - `src-tauri/src/services/discovery.rs` (imports, Blake3Service, field accesses)
 - `src-tauri/src/services/ingestion.rs` (Sync safety, as_micros())
@@ -1811,6 +2023,7 @@ Correction complète des erreurs de build et de tests Rust pour préparer la Pha
 - `src-tauri/src/services/filesystem.rs` (cleanup verrous expirés)
 
 ### Problèmes Résolus
+
 - **Tests déterministes** : Correction complète des tests pour respecter TESTING_STRATEGY.md
 - **Mock Tauri** : Implémentation de mocks isolés sans dépendance à window/Tauri
 - **TypeScript strict** : Élimination de tous les types `any` et assertions non-null
@@ -1819,12 +2032,14 @@ Correction complète des erreurs de build et de tests Rust pour préparer la Pha
 - **Tests alignés** : Tests adaptés au comportement réel du service (FilesystemResult<T>)
 
 ### État final
+
 - **Backend** : ✅ 100% fonctionnel, compilation réussie
 - **Frontend** : ✅ 100% fonctionnel, tests déterministes
 - **Tests** : ✅ 144/144 tests passent (100% coverage)
 - **Stratégie** : ✅ 100% conforme à TESTING_STRATEGY.md
 
 ### Prochaine Étape
+
 Phase 2.2 — Harvesting Métadonnées EXIF/IPTC
 
 ---
@@ -1836,9 +2051,11 @@ Phase 2.2 — Harvesting Métadonnées EXIF/IPTC
 **Durée** : ~3 sessions
 
 #### Résumé
+
 Implémentation complète des services Rust (DiscoveryService, IngestionService) et des commandes Tauri pour la découverte et ingestion de fichiers RAW. Création des types TypeScript et du service wrapper frontend. **216 tests passent** sur 216 tests au total.
 
 #### Fichiers créés
+
 - `src-tauri/src/services/discovery.rs` — Service Rust de découverte (scanning, sessions)
 - `src-tauri/src/services/ingestion.rs` — Service Rust d'ingestion (hash, EXIF, DB)
 - `src-tauri/src/commands/discovery.rs` — Commandes Tauri pour discovery/ingestion
@@ -1851,6 +2068,7 @@ Implémentation complète des services Rust (DiscoveryService, IngestionService)
 - `src/services/__tests__/discoveryService.test.ts` — Tests unitaires TypeScript service
 
 #### Fichiers modifiés
+
 - `src-tauri/Cargo.toml` — Ajout dépendances `chrono`, `walkdir`, `thiserror`, `tokio`
 - `src-tauri/src/lib.rs` — Intégration services et commandes dans Tauri
 - `src-tauri/src/models/mod.rs` — Export module discovery
@@ -1859,18 +2077,21 @@ Implémentation complète des services Rust (DiscoveryService, IngestionService)
 - `src/services/filesystemService.ts` — Correction import `@tauri-apps/api/tauri`
 
 #### Problèmes résolus
+
 - **Mock Tauri non fonctionnel** : Correction complète du système de mocks pour les tests
 - **DiscoveryStatus non défini** : Correction de l'import enum (valeur vs type)
 - **Arguments de commandes** : Normalisation des appels Tauri avec tableaux vides
 - **Tests non déterministes** : Correction des tests de progression pour vérifier les bonnes données
 
 #### Tests ajoutés
+
 - **Types TypeScript** : 20 tests (validation interfaces, enums, sérialisation)
 - **Service TypeScript** : 34 tests (Tauri commands, gestion erreurs, progression)
 - **Services Rust** : Tests unitaires discovery et ingestion
 - **Total** : 216 tests passants (stores + types + services + discovery)
 
 #### Critères de validation
+
 - [x] Services Rust discovery et ingestion fonctionnels
 - [x] Commandes Tauri exposées et testées
 - [x] Service wrapper TypeScript avec gestion d'erreurs robuste
@@ -1881,6 +2102,7 @@ Implémentation complète des services Rust (DiscoveryService, IngestionService)
 - [x] Support pour formats RAW (CR3, RAF, ARW)
 
 #### Décisions techniques
+
 - **Services Rust** : Utilisation de `Arc<RwLock<>>` pour la concurrence
 - **Mocks TypeScript** : Configuration unique avec `vi.mocked(invoke)`
 - **Types partagés** : Import séparé des enums (valeurs) vs interfaces (types)
@@ -1888,12 +2110,14 @@ Implémentation complète des services Rust (DiscoveryService, IngestionService)
 - **Error handling** : Types ServiceError détaillés avec contexte
 
 #### Architecture
+
 - **Backend Rust** : DiscoveryService + IngestionService avec concurrence async
 - **Frontend TypeScript** : DiscoveryService avec invoke Tauri + fallbacks
 - **Types** : Partagés entre Rust (serde) et TypeScript (strict)
 - **Commands** : Commandes Tauri unifiées pour discovery et ingestion
 
 #### Performance
+
 - **Compilation** : <3s pour build complet Rust
 - **Tests** : <7s pour 216 tests unitaires
 - **Services** : Support pour scanning recursive de gros dossiers
@@ -1906,8 +2130,8 @@ Implémentation complète des services Rust (DiscoveryService, IngestionService)
 > _Section réservée aux problèmes nécessitant l'intervention du propriétaire._
 
 | Date | Phase | Description du blocage | Solutions proposées | Décision propriétaire | Résolu |
-|------|-------|----------------------|---------------------|----------------------|--------|
-| — | — | — | — | — | — |
+| ---- | ----- | ---------------------- | ------------------- | --------------------- | ------ |
+| —    | —     | —                      | —                   | —                     | —      |
 
 ---
 
@@ -1916,8 +2140,8 @@ Implémentation complète des services Rust (DiscoveryService, IngestionService)
 > _Toute demande de modification du plan doit être documentée ici AVANT d'être appliquée._
 
 | Date | Phase concernée | Modification demandée | Justification | Approuvée ? | Date approbation |
-|------|----------------|----------------------|---------------|-------------|-----------------|
-| — | — | — | — | — | — |
+| ---- | --------------- | --------------------- | ------------- | ----------- | ---------------- |
+| —    | —               | —                     | —             | —           | —                |
 
 ---
 
@@ -1928,9 +2152,11 @@ Implémentation complète des services Rust (DiscoveryService, IngestionService)
 **Durée** : ~2 sessions
 
 #### Résumé
+
 Implémentation complète des services Rust (DiscoveryService, IngestionService) et des commandes Tauri pour la découverte et ingestion de fichiers RAW. Création des types TypeScript et du service wrapper frontend. **25 tests échouent** sur 192 tests au total.
 
 #### Fichiers créés
+
 - `src-tauri/src/services/discovery.rs` — Service Rust de découverte (scanning, sessions)
 - `src-tauri/src/services/ingestion.rs` — Service Rust d'ingestion (hash, EXIF, DB)
 - `src-tauri/src/commands/discovery.rs` — Commandes Tauri pour discovery/ingestion
@@ -1943,6 +2169,7 @@ Implémentation complète des services Rust (DiscoveryService, IngestionService)
 - `src/services/__tests__/discoveryService.test.ts` — Tests unitaires TypeScript service
 
 #### Fichiers modifiés
+
 - `src-tauri/Cargo.toml` — Ajout dépendances `chrono`, `walkdir`, `thiserror`, `tokio`
 - `src-tauri/src/lib.rs` — Intégration services et commandes dans Tauri
 - `src-tauri/src/models/mod.rs` — Export module discovery
@@ -1955,21 +2182,25 @@ Implémentation complète des services Rust (DiscoveryService, IngestionService)
 **Cause racine** : Le mock `invoke` de `@tauri-apps/api/tauri` n'est pas correctement injecté dans le service `DiscoveryService`
 
 #### Erreurs principales
+
 1. **Mock non fonctionnel** : `mockInvoke` n'est pas appelé par le service
 2. **Session undefined** : `TypeError: Cannot read properties of undefined (reading 'sessionId')`
 3. **Tests non déterministes** : Dépendent de l'implémentation interne plutôt que du comportement public
 
 #### Solutions envisagées
+
 - **Option A** : Reconfigurer le mock pour être correctement injecté (complexité moyenne)
 - **Option B** : Refactoriser les tests pour tester uniquement l'interface publique (complexité élevée)
 - **Option C** : Créer un wrapper de test pour isoler le mock (complexité faible)
 
 #### Impact sur le planning
+
 - **Phase 2.1** : Bloquée jusqu'à résolution du mock
 - **Phases suivantes** : Dépendantes de la résolution (2.2, 2.3, 2.4)
 - **Risque** : Accumulation de dette technique si non résolu rapidement
 
 #### Décisions techniques
+
 - Services Rust utilisent `Arc<RwLock<>>` pour la concurrence
 - Mocks configurés dans `src/test/setup.ts` mais non utilisés
 - Tests TypeScript respectent la structure `TESTING_STRATEGY.md` mais échouent sur l'implémentation
@@ -1983,3 +2214,4 @@ Implémentation complète des services Rust (DiscoveryService, IngestionService)
 - **En cours** : 0
 - **Bloquées** : 0
 - **Dernière mise à jour** : 2026-02-21
+```

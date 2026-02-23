@@ -8,6 +8,7 @@
 ## 1. RÈGLES ABSOLUES (NON NÉGOCIABLES)
 
 ### 1.1 — Intégrité du Plan
+
 - **Le plan de développement (`Docs/briefs/` + `Docs/archives/luminafast_developement_plan.md` ) ne peut PAS être modifié** sans l'approbation explicite du propriétaire du projet.
 - Si une modification du plan est nécessaire, l'agent DOIT :
   1. Expliquer la raison avec une justification technique détaillée
@@ -16,6 +17,7 @@
 - Aucune phase, sous-phase ou étape ne peut être sautée, annulée ou contournée.
 
 ### 1.2 — Interdiction de Simplification Abusive
+
 - **Ne JAMAIS résoudre un problème en supprimant une fonctionnalité, une validation ou un test existant.**
 - **Ne JAMAIS simplifier le code dans le but de contourner un problème ou faire passer un test.**
 - Si une correction nécessite de simplifier le code, l'agent DOIT :
@@ -24,6 +26,7 @@
 - Les workarounds (contournements) sont INTERDITS. Viser systématiquement la correction structurelle (cause racine).
 
 ### 1.3 — Intégrité des Tests
+
 - **Ne JAMAIS modifier un test pour le rendre "vert" sans expliquer quelle hypothèse du test initial était fausse.**
 - Si un test échoue après une modification de code, l'agent DOIT :
   1. Analyser la cause racine de l'échec
@@ -32,6 +35,7 @@
 - **Chaque sous-phase DOIT produire des fichiers de tests correspondants.** Aucun code sans test.
 
 ### 1.4 — Analyse Cause Racine Obligatoire
+
 - Avant toute modification de code (bug fix, refactoring), l'agent DOIT fournir une analyse courte (2-3 phrases) identifiant la **cause racine** du problème.
 - Cette analyse doit être documentée dans le commit message et dans le CHANGELOG.
 
@@ -40,6 +44,7 @@
 ## 2. PROTOCOLE DE TRAVAIL PAR SOUS-PHASE
 
 ### Avant de commencer une sous-phase :
+
 1. **Lire** le brief correspondant : `Docs/briefs/PHASE-X.Y.md` ci il n existe pas encore, créer le brief en suivant le template de `DOCS/briefs/BRIEF_TEMPLATE.md`
 2. **Lire** ce fichier d'instructions en entier
 3. **Lire** `Docs/CHANGELOG.md` pour comprendre l'état actuel du projet
@@ -49,6 +54,7 @@
 7. **Créer une branche Git** dédiée à la sous-phase (ex: `phase/3.2-collections`)
 
 ### Pendant le travail :
+
 1. Respecter strictement le périmètre défini dans le brief (pas de modifications hors scope)
 2. Écrire les tests EN PARALLÈLE du code (pas après)
 3. Utiliser les types TypeScript stricts — pas de `any`, pas de `as unknown`
@@ -57,6 +63,7 @@
 6. Suivre les conventions de code définies en section 4
 
 ### Après avoir terminé une sous-phase :
+
 1. **Exécuter tous les tests** (unitaires + intégration) — TOUS doivent passer
 2. **Mettre à jour** `Docs/CHANGELOG.md` avec l'entrée de la sous-phase complétée
 3. **Mettre à jour** `Docs/APP_DOCUMENTATION.md` pour refléter les changements
@@ -64,26 +71,26 @@
 5. **Lister** les fichiers créés/modifiés dans le CHANGELOG
 6. **Créer** le brief de la sous-phase suivante si non existant en suivant le template de `Docs/briefs/BRIEF_TEMPLATE.md`
 
-
 ---
 
 ## 3. DOCUMENTS DE RÉFÉRENCE ARCHITECTURALE
 
 Ces documents définissent l'architecture cible et les choix technologiques. Ils doivent être consultés pour toute décision de conception :
 
-| Document | Contenu | Quand le consulter |
-|----------|---------|-------------------|
-| `Docs/archives/Lightroomtechnique.md` | Architecture Lightroom Classic (SQLite, collections, previews, EXIF) | Conception du schéma DB, collections, cache |
-| `Docs/archives/recommendations.md` | Stack moderne recommandée (DuckDB, BLAKE3, FlatBuffers, Event Sourcing) | Choix technologiques, sérialisation, performance |
-| `Docs/GOVERNANCE.md` | Règles de gouvernance du projet | En cas de doute sur les permissions |
-| `Docs/TESTING_STRATEGY.md` | Stratégie de tests | Avant d'écrire tout test |
-| `Docs/APP_DOCUMENTATION.md` | État actuel de l'application | Avant chaque sous-phase |
+| Document                              | Contenu                                                                 | Quand le consulter                               |
+| ------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------ |
+| `Docs/archives/Lightroomtechnique.md` | Architecture Lightroom Classic (SQLite, collections, previews, EXIF)    | Conception du schéma DB, collections, cache      |
+| `Docs/archives/recommendations.md`    | Stack moderne recommandée (DuckDB, BLAKE3, FlatBuffers, Event Sourcing) | Choix technologiques, sérialisation, performance |
+| `Docs/GOVERNANCE.md`                  | Règles de gouvernance du projet                                         | En cas de doute sur les permissions              |
+| `Docs/TESTING_STRATEGY.md`            | Stratégie de tests                                                      | Avant d'écrire tout test                         |
+| `Docs/APP_DOCUMENTATION.md`           | État actuel de l'application                                            | Avant chaque sous-phase                          |
 
 ---
 
 ## 4. CONVENTIONS DE CODE
 
 ### 4.1 — TypeScript (Frontend)
+
 ```
 - Strict mode activé (`strict: true` dans tsconfig.json)
 - Pas de `any` — utiliser `unknown` + type guards si nécessaire
@@ -96,6 +103,7 @@ Ces documents définissent l'architecture cible et les choix technologiques. Ils
 ```
 
 ### 4.2 — Rust (Backend Tauri)
+
 ```
 - Utiliser `Result<T, E>` systématiquement — pas de `unwrap()` en production
 - Structs avec `#[derive(Debug, Clone, Serialize, Deserialize)]`
@@ -108,6 +116,7 @@ Ces documents définissent l'architecture cible et les choix technologiques. Ils
 ```
 
 ### 4.3 — Nommage
+
 ```
 - Fichiers composants : PascalCase.tsx (ex: GridView.tsx)
 - Fichiers utilitaires : camelCase.ts (ex: catalogService.ts)
@@ -120,6 +129,7 @@ Ces documents définissent l'architecture cible et les choix technologiques. Ils
 ```
 
 ### 4.4 — Structure des fichiers
+
 ```
 - Un composant par fichier
 - Imports en haut, exports en bas
@@ -148,12 +158,12 @@ Si l'agent rencontre un blocage qu'il ne peut pas résoudre dans le périmètre 
 
 ## 6. FICHIERS À TOUJOURS MAINTENIR À JOUR
 
-| Fichier | Quand mettre à jour | Responsabilité |
-|---------|---------------------|----------------|
-| `Docs/CHANGELOG.md` | Après chaque sous-phase complétée | Obligatoire |
-| `Docs/APP_DOCUMENTATION.md` | Après chaque sous-phase qui modifie l'architecture, l'API ou la DB | Obligatoire |
-| `Docs/briefs/PHASE-X.Y.md` | Avant de commencer la sous-phase | Obligatoire |
-| Tests correspondants | En parallèle du code de la sous-phase | Obligatoire |
+| Fichier                     | Quand mettre à jour                                                | Responsabilité |
+| --------------------------- | ------------------------------------------------------------------ | -------------- |
+| `Docs/CHANGELOG.md`         | Après chaque sous-phase complétée                                  | Obligatoire    |
+| `Docs/APP_DOCUMENTATION.md` | Après chaque sous-phase qui modifie l'architecture, l'API ou la DB | Obligatoire    |
+| `Docs/briefs/PHASE-X.Y.md`  | Avant de commencer la sous-phase                                   | Obligatoire    |
+| Tests correspondants        | En parallèle du code de la sous-phase                              | Obligatoire    |
 
 ---
 
@@ -174,6 +184,7 @@ Avant chaque commit, l'agent DOIT vérifier :
 - [ ] **Stats réelles** : Utilisées dans les services (pas de fallback temporel)
 
 ---
+
 ## 8. RAPPEL FINAL
 
 > **L'objectif est de produire une application de qualité commerciale.**

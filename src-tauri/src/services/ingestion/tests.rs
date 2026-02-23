@@ -90,7 +90,7 @@ fn create_test_raw_file(dir: &TempDir, filename: &str, format: RawFormat) -> Pat
     let content: &[u8] = match format {
         // Canon formats
         RawFormat::CR3 => b"\x00\x00\x00\x18ftypcrx \x00\x00\x00\x00crx isom", // ISO BMFF with ftyp box
-        RawFormat::CR2 => b"II*\x00", // TIFF LE
+        RawFormat::CR2 => b"II*\x00",                                          // TIFF LE
         // Nikon formats
         RawFormat::NEF => b"II*\x00NEF", // TIFF LE + NEF marker
         // Sony formats

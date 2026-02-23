@@ -182,14 +182,7 @@ export const LeftSidebar = ({
     clearActiveCollection,
   } = useCollectionStore();
 
-  const {
-    folderTree,
-    activeFolderId,
-    expandedFolderIds,
-    loadFolderTree,
-    setActiveFolder,
-    toggleFolderExpanded,
-  } = useFolderStore();
+  const { folderTree, loadFolderTree, setActiveFolder } = useFolderStore();
 
   useEffect(() => {
     void loadCollections();
@@ -371,14 +364,11 @@ export const LeftSidebar = ({
             {folderTree.length > 0 ? (
               <FolderTree
                 nodes={folderTree}
-                activeFolderId={activeFolderId}
-                expandedFolderIds={expandedFolderIds}
-                onSelectFolder={async (id) => {
+                onFolderSelected={async (id) => {
                   onSetFilterText('');
                   clearActiveCollection();
                   await setActiveFolder(id, true);
                 }}
-                onToggleExpand={toggleFolderExpanded}
               />
             ) : (
               <p className="text-[10px] text-zinc-700 italic px-2 py-1">Aucun dossier importé</p>

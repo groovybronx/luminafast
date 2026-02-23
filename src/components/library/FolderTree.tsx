@@ -1,12 +1,12 @@
 import { ChevronDown, ChevronRight, Folder, HardDrive } from 'lucide-react';
-import { useState } from 'react';
 import type { FolderTreeNode } from '../../types/folder';
+import { useFolderStore } from '../../stores/folderStore';
 
 interface FolderTreeItemProps {
   node: FolderTreeNode;
   isActive: boolean;
   isExpanded: boolean;
-  onSelect: (id: number) => void;
+  onSelect: (id: number) => void | Promise<void>;
   onToggleExpand: (id: number) => void;
   depth: number;
 }
@@ -22,15 +22,21 @@ function FolderTreeItem({
   const hasChildren = node.children.length > 0;
   const paddingLeft = `${depth * 12 + 8}px`;
 
+  const handleClick = async () => {
+    if (hasChildren) {
+      onToggleExpand(node.id);
+    }
+    await Promise.resolve(onSelect(node.id));
+  };
+
+  // Get store state for recursive children
+  const activeFolderId = useFolderStore((s) => s.activeFolderId);
+  const expandedFolderIds = useFolderStore((s) => s.expandedFolderIds);
+
   return (
     <div>
       <button
-        onClick={() => {
-          if (hasChildren) {
-            onToggleExpand(node.id);
-          }
-          onSelect(node.id);
-        }}
+        onClick={handleClick}
         className={`w-full text-left py-1.5 px-2 rounded text-[11px] hover:bg-zinc-800 flex items-center gap-1.5 transition-colors group ${
           isActive ? 'bg-zinc-800 text-zinc-200' : 'text-zinc-400'
         } ${!node.is_online ? 'opacity-50' : ''}`}
@@ -55,7 +61,15 @@ function FolderTreeItem({
       {isExpanded && hasChildren && (
         <div>
           {node.children.map((child) => (
-            <FolderTreeItemContainer key={child.id} node={child} depth={depth + 1} />
+            <FolderTreeItem
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              isActive={activeFolderId === child.id}
+              isExpanded={expandedFolderIds.has(child.id)}
+              onSelect={onSelect}
+              onToggleExpand={onToggleExpand}
+            />
           ))}
         </div>
       )}
@@ -63,54 +77,33 @@ function FolderTreeItem({
   );
 }
 
-// Container component to access store hooks
-interface FolderTreeItemContainerProps {
-  node: FolderTreeNode;
-  depth: number;
-}
-
-function FolderTreeItemContainer({ node, depth }: FolderTreeItemContainerProps) {
-  const [activeFolderId, setActiveFolderId] = useState<number | null>(null);
-  const [expandedFolderIds, setExpandedFolderIds] = useState<Set<number>>(new Set());
-
-  // Ces états devraient venir du store, mais pour simplifier le composant
-  // on les passe via props depuis le parent
-  return (
-    <FolderTreeItem
-      node={node}
-      isActive={activeFolderId === node.id}
-      isExpanded={expandedFolderIds.has(node.id)}
-      onSelect={setActiveFolderId}
-      onToggleExpand={(id) => {
-        const newSet = new Set(expandedFolderIds);
-        if (newSet.has(id)) {
-          newSet.delete(id);
-        } else {
-          newSet.add(id);
-        }
-        setExpandedFolderIds(newSet);
-      }}
-      depth={depth}
-    />
-  );
-}
-
 // Composant principal exporté
 interface FolderTreeProps {
   nodes: FolderTreeNode[];
-  activeFolderId: number | null;
-  expandedFolderIds: Set<number>;
-  onSelectFolder: (id: number) => void;
-  onToggleExpand: (id: number) => void;
+  onFolderSelected?: (id: number) => void | Promise<void>;
 }
 
-export function FolderTree({
-  nodes,
-  activeFolderId,
-  expandedFolderIds,
-  onSelectFolder,
-  onToggleExpand,
-}: FolderTreeProps) {
+export function FolderTree({ nodes, onFolderSelected }: FolderTreeProps) {
+  // Get state from the global store
+  const activeFolderId = useFolderStore((s) => s.activeFolderId);
+  const expandedFolderIds = useFolderStore((s) => s.expandedFolderIds);
+  const setActiveFolder = useFolderStore((s) => s.setActiveFolder);
+  const toggleFolderExpanded = useFolderStore((s) => s.toggleFolderExpanded);
+
+  const handleSelectFolder = async (id: number) => {
+    // If custom callback provided, use it instead of default behavior
+    if (onFolderSelected) {
+      await Promise.resolve(onFolderSelected(id));
+    } else {
+      // Default: Load images from the selected folder (non-recursive by default)
+      await setActiveFolder(id, false);
+    }
+  };
+
+  const handleToggleExpand = (id: number) => {
+    toggleFolderExpanded(id);
+  };
+
   // Grouper par volume
   const volumeMap = new Map<string, FolderTreeNode[]>();
   nodes.forEach((node) => {
@@ -137,8 +130,8 @@ export function FolderTree({
                 node={node}
                 isActive={activeFolderId === node.id}
                 isExpanded={expandedFolderIds.has(node.id)}
-                onSelect={onSelectFolder}
-                onToggleExpand={onToggleExpand}
+                onSelect={handleSelectFolder}
+                onToggleExpand={handleToggleExpand}
                 depth={0}
               />
             ))}

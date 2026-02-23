@@ -959,9 +959,8 @@ pub async fn get_folder_images(
         .lock()
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
-    let query = if recursive {
-        // Get folder path
-        let folder_path: String = db
+    let folder_path = if recursive {
+        let path: String = db
             .connection()
             .query_row(
                 "SELECT path FROM folders WHERE id = ?",
@@ -969,64 +968,71 @@ pub async fn get_folder_images(
                 |row| row.get(0),
             )
             .map_err(|e| format!("Folder not found: {}", e))?;
-
-        // Get all folders that start with this path
-        format!(
-            "SELECT i.id, i.blake3_hash, i.filename, i.extension, i.width, i.height,
-                    s.rating, s.flag, i.captured_at, i.imported_at,
-                    e.iso, e.aperture, e.shutter_speed, e.focal_length, e.lens,
-                    e.camera_make, e.camera_model
-             FROM images i
-             LEFT JOIN image_state s ON i.id = s.image_id
-             LEFT JOIN exif_metadata e ON i.id = e.image_id
-             INNER JOIN folders f ON i.folder_id = f.id
-             WHERE f.path LIKE '{}%'
-             ORDER BY i.filename",
-            folder_path
-        )
+        Some(path)
     } else {
-        format!(
-            "SELECT i.id, i.blake3_hash, i.filename, i.extension, i.width, i.height,
-                    s.rating, s.flag, i.captured_at, i.imported_at,
-                    e.iso, e.aperture, e.shutter_speed, e.focal_length, e.lens,
-                    e.camera_make, e.camera_model
-             FROM images i
-             LEFT JOIN image_state s ON i.id = s.image_id
-             LEFT JOIN exif_metadata e ON i.id = e.image_id
-             WHERE i.folder_id = {}
-             ORDER BY i.filename",
-            folder_id
-        )
+        None
+    };
+
+    let query = if folder_path.is_some() {
+        "SELECT i.id, i.blake3_hash, i.filename, i.extension, i.width, i.height,
+                s.rating, s.flag, i.captured_at, i.imported_at,
+                e.iso, e.aperture, e.shutter_speed, e.focal_length, e.lens,
+                e.camera_make, e.camera_model
+         FROM images i
+         LEFT JOIN image_state s ON i.id = s.image_id
+         LEFT JOIN exif_metadata e ON i.id = e.image_id
+         INNER JOIN folders f ON i.folder_id = f.id
+         WHERE f.path LIKE ?
+         ORDER BY i.filename"
+    } else {
+        "SELECT i.id, i.blake3_hash, i.filename, i.extension, i.width, i.height,
+                s.rating, s.flag, i.captured_at, i.imported_at,
+                e.iso, e.aperture, e.shutter_speed, e.focal_length, e.lens,
+                e.camera_make, e.camera_model
+         FROM images i
+         LEFT JOIN image_state s ON i.id = s.image_id
+         LEFT JOIN exif_metadata e ON i.id = e.image_id
+         WHERE i.folder_id = ?
+         ORDER BY i.filename"
     };
 
     let mut stmt = db
         .connection()
-        .prepare(&query)
+        .prepare(query)
         .map_err(|e| format!("Failed to prepare statement: {}", e))?;
 
-    let image_iter = stmt
-        .query_map([], |row| {
-            Ok(ImageDTO {
-                id: row.get(0)?,
-                blake3_hash: row.get(1)?,
-                filename: row.get(2)?,
-                extension: row.get(3)?,
-                width: row.get(4)?,
-                height: row.get(5)?,
-                rating: row.get(6)?,
-                flag: row.get(7)?,
-                captured_at: row.get(8)?,
-                imported_at: row.get(9)?,
-                iso: row.get(10)?,
-                aperture: row.get(11)?,
-                shutter_speed: row.get(12)?,
-                focal_length: row.get(13)?,
-                lens: row.get(14)?,
-                camera_make: row.get(15)?,
-                camera_model: row.get(16)?,
-            })
+    // Helper closure to map row to ImageDTO
+    fn map_image_row(row: &rusqlite::Row) -> rusqlite::Result<ImageDTO> {
+        Ok(ImageDTO {
+            id: row.get(0)?,
+            blake3_hash: row.get(1)?,
+            filename: row.get(2)?,
+            extension: row.get(3)?,
+            width: row.get(4)?,
+            height: row.get(5)?,
+            rating: row.get(6)?,
+            flag: row.get(7)?,
+            captured_at: row.get(8)?,
+            imported_at: row.get(9)?,
+            iso: row.get(10)?,
+            aperture: row.get(11)?,
+            shutter_speed: row.get(12)?,
+            focal_length: row.get(13)?,
+            lens: row.get(14)?,
+            camera_make: row.get(15)?,
+            camera_model: row.get(16)?,
         })
-        .map_err(|e| format!("Failed to query images: {}", e))?;
+    }
+
+    let image_iter = if let Some(path) = folder_path {
+        let search_pattern = format!("{}%", path);
+        stmt.query_map([search_pattern.as_str()], map_image_row)
+            .map_err(|e| format!("Failed to query images: {}", e))?
+    } else {
+        let folder_id_str = folder_id.to_string();
+        stmt.query_map([folder_id_str.as_str()], map_image_row)
+            .map_err(|e| format!("Failed to query images: {}", e))?
+    };
 
     let mut images = Vec::new();
     for image_result in image_iter {

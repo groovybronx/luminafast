@@ -452,9 +452,9 @@ Implémentation d'une grille virtualisée performante pour afficher des catalogu
   - Scrolling fluide (60fps démontrable)
 
 - ✅ Sizing dynamique intelligent
-  u
-
-u avec Math.round(pixelSize / 1.5)
+  - Pixel size calculé pour maintenir aspect ratio 3:2
+  - Adaptation automatique du nombre de colonnes selon largeur conteneur
+  - Support responsive (resize fenêtre recalculant colcount)  
 
 - ✅ Responsive grid
   - Recalcul colcount via useMemo(containerRef.current.clientWidth, [itemWidth, gap])

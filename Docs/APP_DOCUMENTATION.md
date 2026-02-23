@@ -3,7 +3,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-23 (Maintenance : Résolution Notes Bloquantes Review Copilot) — État : 4 corrections critiques appliquées (ingestion error handling, volume_name extraction, SQL path filtering, Zustand tests), 504 tests ✅. Branche `bug-de-l-import-des-images`.
+> **Dernière mise à jour** : 2026-02-24 (Phase 3.5 : Recherche & Filtrage) — État : Recherche & Filtrage unifiée complétée (parser structuré, debounce 500ms), 526 tests ✅ (357 TS + 169 Rust). Branche `phase/3.5-recherche-filtrage`.
 >
 > ### Décisions Projet (validées par le propriétaire)
 >
@@ -18,9 +18,9 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : Phases 0 à 3.4 complétées + Maintenance import stabilisée
+### État actuel : Phases 0 à 3.5 complétées — Recherche & Filtrage unifiée
 
-Pipeline d'import production-ready : Discovery (scan récursif) → BLAKE3 hashing → Extraction EXIF (kamadak-exif v0.6.1) → Insertion SQLite → **Ingestion parallélisée Rayon** → **Génération previews séquentielle** → Synchronisation catalogue → **Modal réinitialisable**. Progression temps réel visible sur 3 phases (0-30% scan, 30-70% ingestion, 70-100% previews). **Grille virtualisée** avec `@tanstack/react-virtual` (10K+ images, 60fps). **Collections statiques CRUD** : création, renommage, suppression, filtrage via `collectionStore`. **Smart Collections** : Parser JSON→SQL avec 10 champs, 8 opérateurs. **Navigation Dossiers** : Arborescence hiérarchique avec compteurs. 504 tests (345 TS + 159 Rust), **zéro warning**.
+Pipeline d'import production-ready : Discovery (scan récursif) → BLAKE3 hashing → Extraction EXIF (kamadak-exif v0.6.1) → Insertion SQLite → **Ingestion parallélisée Rayon** → **Génération previews séquentielle** → Synchronisation catalogue → **Modal réinitialisable**. Progression temps réel visible sur 3 phases (0-30% scan, 30-70% ingestion, 70-100% previews). **Grille virtualisée** avec `@tanstack/react-virtual` (10K+ images, 60fps). **Collections statiques CRUD** : création, renommage, suppression, filtrage via `collectionStore`. **Smart Collections** : Parser JSON→SQL avec 10 champs, 8 opérateurs. **Navigation Dossiers** : Arborescence hiérarchique avec compteurs. **Recherche & Filtrage** : Parser côté client (iso:>3200, star:4, camera:canon) → JSON structuré, debounce 500ms, backend générique. 526 tests (357 TS + 169 Rust), **zéro warning**.
 
 ### Objectif : Application Tauri autonome commercialisable
 

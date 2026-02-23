@@ -611,7 +611,7 @@ impl IngestionService {
 
     /// Get or create a folder entry in the database
     /// Returns the folder_id for the given file path
-    fn get_or_create_folder_id(
+    pub fn get_or_create_folder_id(
         &self,
         transaction: &rusqlite::Transaction,
         file_path: &str,

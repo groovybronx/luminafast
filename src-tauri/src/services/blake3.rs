@@ -1,4 +1,7 @@
-use crate::models::hashing::*;
+use crate::models::hashing::{
+    DuplicateAnalysis, DuplicateInfo, FileHash, HashConfig, HashError, HashProgress, HashResult,
+    HashType,
+};
 use blake3::Hasher;
 use std::collections::HashMap;
 use std::fs::File;

@@ -32,11 +32,11 @@ pub struct Database {
 }
 
 impl Database {
-        /// Get mutable reference to the underlying SQLite connection (transactional usage only)
-        #[allow(dead_code)] // Used by backfill_images_folder_id command
-        pub fn transaction_conn(&mut self) -> &mut Connection {
-            &mut self.connection
-        }
+    /// Get mutable reference to the underlying SQLite connection (transactional usage only)
+    #[allow(dead_code)] // Used by backfill_images_folder_id command
+    pub fn transaction_conn(&mut self) -> &mut Connection {
+        &mut self.connection
+    }
     /// Create new database connection
     pub fn new<P: AsRef<Path>>(path: P) -> DatabaseResult<Self> {
         let connection = Connection::open(&path)?;

@@ -11,26 +11,41 @@ pub struct AppState {
 /// Commande Tauri pour backfill des images sans folder_id
 #[tauri::command]
 #[allow(dead_code)] // Called by frontend via Tauri IPC, not by unit tests
-pub async fn backfill_images_folder_id(state: tauri::State<'_, crate::AppState>) -> Result<u32, String> {
-    let mut db_guard = state.db.lock().map_err(|e| format!("Database lock poisoned: {}", e))?;
+pub async fn backfill_images_folder_id(
+    state: tauri::State<'_, crate::AppState>,
+) -> Result<u32, String> {
+    let mut db_guard = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
     let db_path = db_guard.get_db_path().to_path_buf();
-    let transaction = db_guard.transaction_conn().transaction().map_err(|e| format!("Transaction error: {}", e))?;
+    let transaction = db_guard
+        .transaction_conn()
+        .transaction()
+        .map_err(|e| format!("Transaction error: {}", e))?;
     let mut updated_count = 0u32;
 
     // Créer un service ingestion avec le même db (Arc original)
     let ingestion_service = crate::services::ingestion::IngestionService::new(
-        crate::services::blake3::Blake3Service::new(crate::models::hashing::HashConfig::default()).into(),
-        std::sync::Arc::new(std::sync::Mutex::new(rusqlite::Connection::open(&db_path).map_err(|e| format!("Connection error: {}", e))?)),
+        crate::services::blake3::Blake3Service::new(crate::models::hashing::HashConfig::default())
+            .into(),
+        std::sync::Arc::new(std::sync::Mutex::new(
+            rusqlite::Connection::open(&db_path).map_err(|e| format!("Connection error: {}", e))?,
+        )),
     );
 
     // Sélectionner toutes les images sans folder_id
     {
-        let mut stmt = transaction.prepare("SELECT id, filename FROM images WHERE folder_id IS NULL").map_err(|e| format!("Prepare error: {}", e))?;
-        let images_iter = stmt.query_map([], |row| {
-            let id: u32 = row.get(0)?;
-            let filename: String = row.get(1)?;
-            Ok((id, filename))
-        }).map_err(|e| format!("Query error: {}", e))?;
+        let mut stmt = transaction
+            .prepare("SELECT id, filename FROM images WHERE folder_id IS NULL")
+            .map_err(|e| format!("Prepare error: {}", e))?;
+        let images_iter = stmt
+            .query_map([], |row| {
+                let id: u32 = row.get(0)?;
+                let filename: String = row.get(1)?;
+                Ok((id, filename))
+            })
+            .map_err(|e| format!("Query error: {}", e))?;
 
         for img_res in images_iter {
             let (id, filename) = img_res.map_err(|e| format!("Row error: {}", e))?;
@@ -43,17 +58,23 @@ pub async fn backfill_images_folder_id(state: tauri::State<'_, crate::AppState>)
                 None => continue,
             };
             // Appeler get_or_create_folder_id
-            let folder_id_opt = ingestion_service.get_or_create_folder_id(&transaction, folder_path).map_err(|e| format!("Folder error: {}", e))?;
+            let folder_id_opt = ingestion_service
+                .get_or_create_folder_id(&transaction, folder_path)
+                .map_err(|e| format!("Folder error: {}", e))?;
             if let Some(folder_id) = folder_id_opt {
-                transaction.execute(
-                    "UPDATE images SET folder_id = ? WHERE id = ?",
-                    rusqlite::params![folder_id, id],
-                ).map_err(|e| format!("Update error: {}", e))?;
+                transaction
+                    .execute(
+                        "UPDATE images SET folder_id = ? WHERE id = ?",
+                        rusqlite::params![folder_id, id],
+                    )
+                    .map_err(|e| format!("Update error: {}", e))?;
                 updated_count += 1;
             }
         }
     }
-    transaction.commit().map_err(|e| format!("Commit error: {}", e))?;
+    transaction
+        .commit()
+        .map_err(|e| format!("Commit error: {}", e))?;
     Ok(updated_count)
 }
 

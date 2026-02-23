@@ -1,4 +1,3 @@
-/// <reference types="vitest" />
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { SearchBar } from '../SearchBar';
@@ -24,7 +23,7 @@ describe('SearchBar', () => {
             expect.objectContaining({ field: 'iso', operator: '>', value: 3200 }),
             expect.objectContaining({ field: 'star', operator: ':', value: 4 }),
           ]),
-        })
+        }),
       );
     });
   });
@@ -42,10 +41,10 @@ describe('SearchBar', () => {
     await waitFor(
       () => {
         expect(onSearch).toHaveBeenCalledWith(
-          expect.objectContaining({ text: 'vacances', filters: [] })
+          expect.objectContaining({ text: 'vacances', filters: [] }),
         );
       },
-      { timeout: 1000 }
+      { timeout: 1000 },
     );
   });
 

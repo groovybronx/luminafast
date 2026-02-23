@@ -870,17 +870,17 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 
 ## 14. Historique des Modifications de ce Document
 
-| Date       | Phase                 | Modification                                                            | Raison                                         |
-| ---------- | --------------------- | ----------------------------------------------------------------------- | ---------------------------------------------- |
-| 2026-02-23 | Maintenance SQL       | Refactorisation `get_folder_images()` pour sécurité et performance      | Élimination conversions u32→String inutiles    |
-| 2026-02-23 | Maintenance Qualité   | Résolution 4 notes bloquantes Review Copilot (PR #20)                   | Error handling, volume_name, SQL LIKE, Zustand |
-| 2026-02-13 | 1.4                   | Ajout section Service Filesystem complète                               | Implémentation Phase 1.4 terminée              |
-| 2026-02-13 | 1.3                   | Mise à jour complète après Phase 1.3 (BLAKE3)                           | Synchronisation documentation avec état actuel |
-| 2026-02-12 | 1.2                   | Ajout section API/Commandes Tauri complète                              | Implémentation Phase 1.2 terminée              |
-| 2026-02-11 | 1.1                   | Ajout section Base de Données SQLite complète                           | Implémentation Phase 1.1 terminée              |
-| 2026-02-11 | 1.1                   | Mise à jour stack technique et architecture fichiers                    | Ajout src-tauri avec SQLite                    |
-| 2026-02-11 | 1.1                   | Ajout scripts Rust dans section développement                           | Scripts npm pour tests Rust                    |
-| 2026-02-11 | 0.5   | Mise à jour après complétion Phase 0.5               | CI/CD implémenté et fonctionnel                |
+| Date       | Phase               | Modification                                                       | Raison                                         |
+| ---------- | ------------------- | ------------------------------------------------------------------ | ---------------------------------------------- |
+| 2026-02-23 | Maintenance SQL     | Refactorisation `get_folder_images()` pour sécurité et performance | Élimination conversions u32→String inutiles    |
+| 2026-02-23 | Maintenance Qualité | Résolution 4 notes bloquantes Review Copilot (PR #20)              | Error handling, volume_name, SQL LIKE, Zustand |
+| 2026-02-13 | 1.4                 | Ajout section Service Filesystem complète                          | Implémentation Phase 1.4 terminée              |
+| 2026-02-13 | 1.3                 | Mise à jour complète après Phase 1.3 (BLAKE3)                      | Synchronisation documentation avec état actuel |
+| 2026-02-12 | 1.2                 | Ajout section API/Commandes Tauri complète                         | Implémentation Phase 1.2 terminée              |
+| 2026-02-11 | 1.1                 | Ajout section Base de Données SQLite complète                      | Implémentation Phase 1.1 terminée              |
+| 2026-02-11 | 1.1                 | Mise à jour stack technique et architecture fichiers               | Ajout src-tauri avec SQLite                    |
+| 2026-02-11 | 1.1                 | Ajout scripts Rust dans section développement                      | Scripts npm pour tests Rust                    |
+| 2026-02-11 | 0.5                 | Mise à jour après complétion Phase 0.5                             | CI/CD implémenté et fonctionnel                |
 
 | Date       | Sous-Phase            | Nature de la modification                                                            |
 | ---------- | --------------------- | ------------------------------------------------------------------------------------ |
@@ -973,18 +973,21 @@ export interface FolderTreeNode {
 💡 **Nouvelle commande Phase 3.4** : Backfill structural pour images héritées sans `folder_id`.
 
 Sélectionne **TOUTES** les images avec `folder_id IS NULL` via LEFT JOIN avec `ingestion_file_status` (récupère le full `file_path`), les traite en transaction :
+
 1. Utilise LEFT JOIN avec `ingestion_file_status` pour récupérer le full `file_path`
 2. Appelle `IngestionService::get_or_create_folder_id()` avec le full path (réutilise Phase 2.1)
 3. Exécute `UPDATE images SET folder_id = ? WHERE id = ?` en masse
 4. Retourne le nombre d'images mises à jour (u32)
 
 **Signature** :
+
 ```rust
 #[tauri::command]
 pub async fn backfill_images_folder_id(state: State<'_, AppState>) -> Result<u32, String>
 ```
 
 **SQL interne** :
+
 ```sql
 SELECT i.id, ifs.file_path
 FROM images i
@@ -1114,6 +1117,7 @@ Convertit la syntaxe naturelle en JSON structuré. Exemple :
 
 **Entrée** : `"iso:>3200 star:4"`
 **Sortie** :
+
 ```typescript
 {
   text: "",
@@ -1125,6 +1129,7 @@ Convertit la syntaxe naturelle en JSON structuré. Exemple :
 ```
 
 **Champs supportés** :
+
 - `iso` (numérique) — ISO sensitivity
 - `aperture` (numérique) — f-stop
 - `shutter_speed` (numérique) — shutter speed
@@ -1135,6 +1140,7 @@ Convertit la syntaxe naturelle en JSON structuré. Exemple :
 - `flag` (texte: pick/reject) — flag status
 
 **Opérateurs supportés** :
+
 - `=` — exact match (implicite pour texte : `camera:canon` = `camera:=canon`)
 - `>` — greater than (numérique)
 - `<` — less than (numérique)
@@ -1143,6 +1149,7 @@ Convertit la syntaxe naturelle en JSON structuré. Exemple :
 - `:` — LIKE search (texte) — `camera:canon` → `camera LIKE '%canon%'`
 
 **Implémentation** :
+
 - Fichier : `src/lib/searchParser.ts`
 - Regex : `/([a-zA-Z_]+)\s*(:)\s*(>=|<=|>|<|=)?\s*([^\s]+)/g`
 - Tests : 6 tests unitaires dans `src/lib/__tests__/searchParser.test.ts`
@@ -1213,6 +1220,7 @@ export interface SearchResponse {
 🆕 **Nouvelle commande Phase 3.5** : Recherche unifiée avec filtres dynamiques.
 
 **Signature** :
+
 ```rust
 #[tauri::command]
 pub async fn search_images(
@@ -1222,6 +1230,7 @@ pub async fn search_images(
 ```
 
 **Input DTO** :
+
 ```rust
 #[derive(Debug, Deserialize)]
 pub struct SearchRequest {
@@ -1231,6 +1240,7 @@ pub struct SearchRequest {
 ```
 
 **Output DTO** :
+
 ```rust
 #[derive(Debug, Serialize)]
 pub struct SearchResponseDTO {
@@ -1249,6 +1259,7 @@ pub struct SearchResultDTO {
 ```
 
 **SQL interne** :
+
 ```sql
 SELECT i.id, i.filename, i.blake3_hash, s.rating, s.flag
 FROM images i
@@ -1268,6 +1279,7 @@ LIMIT 1000
 Deux méthodes principales :
 
 #### `SearchService::search()`
+
 ```rust
 pub fn search(
     db: &mut Database,
@@ -1281,6 +1293,7 @@ pub fn search(
 - Utilise `build_where_clause()` pour générer dynamiquement la clause WHERE
 
 #### `SearchService::build_where_clause()`
+
 ```rust
 pub fn build_where_clause(filters: &[Value]) -> Result<String, String>
 ```
@@ -1307,6 +1320,7 @@ pub fn build_where_clause(filters: &[Value]) -> Result<String, String>
 | flag | i.flag | image_state |
 
 **Tests** (6 tests unitaires) :
+
 - `test_build_where_clause_iso_greater_than` : Valide clause EXIF > opérateur
 - `test_build_where_clause_star_equals` : Valide clause rating =
 - `test_build_where_clause_multiple_filters` : Validation AND chaîning
@@ -1332,9 +1346,11 @@ pub fn build_where_clause(filters: &[Value]) -> Result<String, String>
 ### Tests
 
 **Backend (6 tests)** :
+
 - Tous les tests passent : `cargo test search::` ✅
 
 **Frontend (2 tests)** :
+
 - SearchBar component + integration tests
 - parseSearchQuery parser tests (6 tests spécifiques)
 

@@ -1,4 +1,3 @@
-/// <reference types="vitest" />
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { performSearch } from '../searchService';
 import type { SearchQuery } from '@/types/search';
@@ -29,7 +28,7 @@ describe('performSearch', () => {
     expect(result).toEqual(mockResponse);
   });
 
-  it('retourne un résultat vide en cas d\'erreur', async () => {
+  it("retourne·un·résultat·vide·en·cas·d'erreur", async () => {
     vi.mocked(invoke).mockRejectedValueOnce(new Error('Connexion failed'));
 
     const result = await performSearch({ text: 'test', filters: [] });

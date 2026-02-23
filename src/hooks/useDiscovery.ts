@@ -39,6 +39,7 @@ export interface UseDiscoveryReturn {
   startScan: (path: string) => Promise<void>;
   startIngestion: (sessionId: string) => Promise<void>;
   cancel: () => Promise<void>;
+  reset: () => void;
 
   // Session info
   sessionId: string | null;
@@ -67,41 +68,41 @@ export function useDiscovery(): UseDiscoveryReturn {
 
   // Generate previews for a list of successfully ingested images
   const generatePreviewsForImages = useCallback(
-    async (successfulIngestions: IngestionResult[]) => {
-      // Parallelize preview generation (max 4 images at once to avoid memory issues)
-      const BATCH_SIZE = 4;
+    async (
+      successfulIngestions: IngestionResult[],
+      onProgress?: (processed: number, total: number, filename: string) => void,
+    ) => {
+      const total = successfulIngestions.length;
       let successCount = 0;
       let failureCount = 0;
 
-      for (let i = 0; i < successfulIngestions.length; i += BATCH_SIZE) {
-        const batch = successfulIngestions.slice(i, i + BATCH_SIZE);
+      // Process files sequentially to ensure linear progress
+      // (avoid race conditions and ensure predictable UI updates)
+      for (let i = 0; i < total; i++) {
+        const ingestion = successfulIngestions[i];
+        if (!ingestion) continue;
 
-        const batchPromises = batch.map(async (ingestion) => {
-          try {
-            const hash = ingestion.metadata?.blake3Hash ?? ingestion.file.blake3Hash;
-            if (!hash) {
-              throw new Error('No hash available for preview generation');
-            }
-
-            // Generate complete pyramid (Thumbnail + Standard + 1:1) in a single pass
-            // This is 3× faster than generating each type separately
-            await previewService.generatePreviewPyramid(ingestion.file.path, hash);
-
-            return { success: true, file: ingestion.file };
-          } catch (error) {
-            console.error(
-              `Failed to generate preview pyramid for ${ingestion.file.filename}:`,
-              error,
-            );
-            return { success: false, file: ingestion.file, error };
+        try {
+          const hash = ingestion.metadata?.blake3Hash ?? ingestion.file.blake3Hash;
+          if (!hash) {
+            throw new Error('No hash available for preview generation');
           }
-        });
 
-        const results = await Promise.allSettled(batchPromises);
-        successCount += results.filter((r) => r.status === 'fulfilled' && r.value.success).length;
-        failureCount += results.filter(
-          (r) => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success),
-        ).length;
+          // Generate complete pyramid (Thumbnail + Standard + 1:1) in a single pass
+          await previewService.generatePreviewPyramid(ingestion.file.path, hash);
+          successCount++;
+        } catch (error) {
+          console.error(
+            `Failed to generate preview pyramid for ${ingestion.file.filename}:`,
+            error,
+          );
+          failureCount++;
+        }
+
+        // Update progress after EACH file is processed (linear progression)
+        if (onProgress) {
+          onProgress(i + 1, total, ingestion.file.filename);
+        }
       }
 
       addLog(
@@ -419,31 +420,33 @@ export function useDiscovery(): UseDiscoveryReturn {
 
         try {
           const previewServiceAvailable = await previewService.isAvailable();
+          addLog(`Preview service available: ${previewServiceAvailable}`, 'sync');
+
           if (!previewServiceAvailable) {
             addLog('PreviewService not available, cannot generate previews', 'warning');
           } else {
-            const totalImages = result.successful.length;
-
-            // Update progress during preview generation
-            for (let i = 0; i < totalImages; i += 4) {
-              const previewProgress = i / totalImages; // 0.0 - 1.0
+            // Create progress callback: updates state during actual preview generation
+            const onPreviewProgress = (processed: number, total: number, filename: string) => {
+              const previewProgress = processed / total; // 0.0 - 1.0
               const globalProgress =
-                previewsBaseProgress + previewProgress * PHASE_WEIGHTS.previews;
+                previewsBaseProgress + previewProgress * PHASE_WEIGHTS.previews; // 70% + (0-30%)
 
-              const currentImage = result.successful[i];
-              if (currentImage) {
-                setImportState({
-                  progress: globalProgress * 100,
-                  processedFiles: i,
-                  totalFiles: totalImages,
-                  currentFile: `Previews: ${currentImage.file.filename}`,
-                });
-              }
+              addLog(
+                `Preview ${processed}/${total} (${(globalProgress * 100).toFixed(1)}%) - ${filename}`,
+                'sync',
+              );
 
-              await new Promise((resolve) => setTimeout(resolve, 10));
-            }
+              setImportState({
+                progress: globalProgress * 100,
+                processedFiles: processed,
+                totalFiles: total,
+                currentFile: `Previews: ${filename}`,
+              });
+            };
 
-            await generatePreviewsForImages(result.successful);
+            // Generate previews with real-time progress tracking
+            addLog(`Starting preview generation for ${result.successful.length} images`, 'sync');
+            await generatePreviewsForImages(result.successful, onPreviewProgress);
             addLog(`Previews generated for ${result.successful.length} images`, 'sync');
           }
         } catch (error) {
@@ -514,6 +517,24 @@ export function useDiscovery(): UseDiscoveryReturn {
     }
   }, [setImportState, addLog, cleanupProgressListener]);
 
+  // Reset to initial state (for modal reopen)
+  const reset = useCallback((): void => {
+    cleanupProgressListener();
+    cleanupIngestionListener();
+    sessionIdRef.current = null;
+
+    setImportState({
+      isImporting: false,
+      progress: 0,
+      currentFile: '',
+      sessionId: null,
+      totalFiles: 0,
+      processedFiles: 0,
+      stage: 'idle',
+      error: null,
+    });
+  }, [setImportState, cleanupProgressListener, cleanupIngestionListener]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -539,6 +560,7 @@ export function useDiscovery(): UseDiscoveryReturn {
     startScan,
     startIngestion,
     cancel,
+    reset,
 
     // Session info
     sessionId: importState.sessionId,

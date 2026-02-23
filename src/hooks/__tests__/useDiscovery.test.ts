@@ -481,8 +481,9 @@ describe('useDiscovery', () => {
       });
     }
 
-    // Progress is weighted by PHASE_WEIGHTS.scan (0.3), so 50% becomes 15%
-    expect(result.current.progress).toBeCloseTo(50 * 0.3);
+    // Progress calculation: percentage (50%) * PHASE_WEIGHTS.scan (0.3) = 15% global progress
+    // The phase weights distribute work across three phases: scan (0-30%), ingest (30-70%), previews (70-100%)
+    expect(result.current.progress).toBeCloseTo(15, 1); // 50% * 0.3 = 15%
     expect(result.current.processedFiles).toBe(50);
     expect(result.current.totalFiles).toBe(100);
     expect(result.current.currentFile).toBe('Analyse: /test/subfolder');

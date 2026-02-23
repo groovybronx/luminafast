@@ -3,7 +3,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-21 (Phase 3.4 Folder Navigator) — État : Pipeline import + grille virtualisée + collections CRUD + smart collections avec parser JSON→SQL + navigation dossiers hiérarchique. 345 tests frontend, 159 tests Rust, **504/504 tests ✅**. Branche `phase/3.4-folder-navigator`.
+> **Dernière mise à jour** : 2026-02-23 (Maintenance : Correction UI Import) — État : Pipeline import stabilisé avec reset modal, progression temps réel séquentielle, 504 tests ✅. Branche `bug-de-l-import-des-images`.
 >
 > ### Décisions Projet (validées par le propriétaire)
 >
@@ -18,9 +18,9 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : Phases 0 à 3.4 complétées — Collections CRUD + Smart Collections + Navigation Dossiers Hiérarchique
+### État actuel : Phases 0 à 3.4 complétées + Maintenance import stabilisée
 
-Pipeline complet validé : Discovery (scan récursif) → BLAKE3 hashing → **Extraction EXIF réelle (kamadak-exif v0.6.1)** → Insertion SQLite (images + exif_metadata + image_state + folders) → **Exposition via LEFT JOIN dans les commandes CRUD** → Mapping TypeScript → Affichage UI. **Grille virtualisée** avec `@tanstack/react-virtual` (10K+ images, 60fps). **Collections statiques CRUD** : création, renommage, suppression, filtrage via `collectionStore` Zustand et 4 commandes Tauri dédiées. **Smart Collections** : Parser `smart_query_parser.rs` converti JSON→SQL, 10 champs supportés (rating, ISO, aperture, focal_length, camera, lens, flag, color_label, filename), 8 opérateurs (=, !=, >, >=, <, <=, contains, starts_with). **Navigation Dossiers** : Arborescence hiérarchique groupée par volumes avec compteurs d'images, statut en ligne/hors ligne, sélection récursive, filtrage avec priorité Collection > Dossier > Recherche textuelle. UI `SmartCollectionBuilder.tsx` + `FolderTree.tsx` avec preview live. IPTC skeleton créé mais extraction non implémentée (reportée Phase 5.4).
+Pipeline d'import production-ready : Discovery (scan récursif) → BLAKE3 hashing → Extraction EXIF (kamadak-exif v0.6.1) → Insertion SQLite → **Ingestion parallélisée Rayon** → **Génération previews séquentielle** → Synchronisation catalogue → **Modal réinitialisable**. Progression temps réel visible sur 3 phases (0-30% scan, 30-70% ingestion, 70-100% previews). **Grille virtualisée** avec `@tanstack/react-virtual` (10K+ images, 60fps). **Collections statiques CRUD** : création, renommage, suppression, filtrage via `collectionStore`. **Smart Collections** : Parser JSON→SQL avec 10 champs, 8 opérateurs. **Navigation Dossiers** : Arborescence hiérarchique avec compteurs. 504 tests (345 TS + 159 Rust), **zéro warning**.
 
 ### Objectif : Application Tauri autonome commercialisable
 
@@ -144,7 +144,7 @@ LuminaFast/
 │   │       └── __tests__/         # Tests composants partagés
 │   └── hooks/                       # Hooks React personnalisés
 │       ├── useCatalog.ts           # Hook principal catalogue (mapping DTO→CatalogImage + EXIF)
-│       ├── useDiscovery.ts         # Hook discovery/ingestion
+│       ├── useDiscovery.ts         # Hook discovery/ingestion (reset() cleanup, preview séquentiel)
 │       └── __tests__/             # Tests hooks (useCatalog.test.ts, useDiscovery.test.ts)
 │   ├── test/                       # Infrastructure tests et mocks
 │   │   ├── setup.ts                # Configuration tests globale
@@ -552,16 +552,16 @@ export interface CatalogEvent {
 
 ### 12.2 — Tests et Coverage
 
-**Framework de tests** : Vitest avec jsdom
+**Framework de tests** : Vitest + jsdom (TypeScript) + Rust built-in
 
-- **425 tests** au total (stores + types + services + composants + hooks + Rust)
-- **Types de tests** :
+- **504 tests au total** : 345 TypeScript + 159 Rust ✅
+- **Tests TypeScript (345)** :
   - Tests stores (4 fichiers) : catalogStore, uiStore, editStore, systemStore
-  - Tests types (2 fichiers) : validation des interfaces TypeScript et hashing
+  - Tests types (6 fichiers) : validation interfaces, DTO, hashing, preview, events
   - Tests services (5 fichiers) : catalogService, exifService, discoveryService, filesystemService, hashingService
-  - Tests composants (4 fichiers) : GridView, ImageCard, et autres composants
-  - Tests hooks (2 fichiers) : `useCatalog.test.ts` (6 tests EXIF mapping), `useDiscovery.test.ts`
-  - Tests Rust (~320) : base de données, modèles, services, hashing, filesystem, ingestion
+  - Tests composants (8+ fichiers) : GridView, ImageCard, ImportModal, etc.
+  - Tests hooks (2 fichiers) : `useCatalog.test.ts`, `useDiscovery.test.ts` (reset, progress)
+- **Tests Rust (159)** : Database (11), Discovery (18), Ingestion (24), Collections (28), EXIF (18), Preview (27), Filesystem (16), Hashing (17)
 - **Commandes** : `npm test`, `npm run test:ci`, `npm run rust:test`
 
 ### 12.3 — Pipeline CI/CD

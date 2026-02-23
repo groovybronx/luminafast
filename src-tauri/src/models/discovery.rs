@@ -372,23 +372,6 @@ impl IngestionProgress {
         }
     }
 
-    /// Update progress with a processed file result
-    pub fn update(&mut self, success: bool, skipped: bool, current_file: Option<String>) {
-        self.processed += 1;
-        if success {
-            self.successful += 1;
-        } else if skipped {
-            self.skipped += 1;
-        } else {
-            self.failed += 1;
-        }
-        self.current_file = current_file;
-        self.percentage = if self.total > 0 {
-            self.processed as f32 / self.total as f32
-        } else {
-            0.0
-        };
-    }
 }
 
 /// Discovery session information

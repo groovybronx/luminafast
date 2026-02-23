@@ -785,6 +785,18 @@ impl PreviewService {
             return None;
         }
 
+        // Validate source_hash: must be a valid hex string without path traversal characters
+        if !source_hash.chars().all(|c| c.is_ascii_hexdigit()) {
+            log::error!("Invalid source_hash: contains non-hexadecimal characters");
+            return None;
+        }
+
+        // Additional safety check: ensure no path traversal attempts
+        if source_hash.contains('.') || source_hash.contains('/') || source_hash.contains('\\') {
+            log::error!("Invalid source_hash: contains path traversal characters");
+            return None;
+        }
+
         let type_dir = self.config.preview_type_dir(*preview_type);
         let hash_prefix = &source_hash[..2];
         let filename = format!("{}.jpg", source_hash);

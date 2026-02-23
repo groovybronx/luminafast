@@ -78,31 +78,36 @@ export function useDiscovery(): UseDiscoveryReturn {
 
       // Process files sequentially to ensure linear progress
       // (avoid race conditions and ensure predictable UI updates)
-      for (let i = 0; i < total; i++) {
-        const ingestion = successfulIngestions[i];
-        if (!ingestion) continue;
+      const CONCURRENCY = 4;
+      let processedCount = 0;
 
-        try {
-          const hash = ingestion.metadata?.blake3Hash ?? ingestion.file.blake3Hash;
-          if (!hash) {
-            throw new Error('No hash available for preview generation');
-          }
+      for (let i = 0; i < total; i += CONCURRENCY) {
+        const batch = successfulIngestions.slice(i, i + CONCURRENCY);
 
-          // Generate complete pyramid (Thumbnail + Standard + 1:1) in a single pass
-          await previewService.generatePreviewPyramid(ingestion.file.path, hash);
-          successCount++;
-        } catch (error) {
-          console.error(
-            `Failed to generate preview pyramid for ${ingestion.file.filename}:`,
-            error,
-          );
-          failureCount++;
-        }
+        await Promise.all(
+          batch.map(async (ingestion) => {
+            try {
+              const hash = ingestion.metadata?.blake3Hash ?? ingestion.file.blake3Hash;
+              if (!hash) {
+                throw new Error('No hash available for preview generation');
+              }
 
-        // Update progress after EACH file is processed (linear progression)
-        if (onProgress) {
-          onProgress(i + 1, total, ingestion.file.filename);
-        }
+              await previewService.generatePreviewPyramid(ingestion.file.path, hash);
+              successCount++;
+            } catch (error) {
+              console.error(
+                `Failed to generate preview pyramid for ${ingestion.file.filename}:`,
+                error,
+              );
+              failureCount++;
+            }
+
+            processedCount++;
+            if (onProgress) {
+              onProgress(processedCount, total, ingestion.file.filename);
+            }
+          }),
+        );
       }
 
       addLog(

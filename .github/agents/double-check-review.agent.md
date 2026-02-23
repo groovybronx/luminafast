@@ -1,4 +1,7 @@
-# Agent : double-check-review
+---
+name: double-check-review
+description: Agent spécialisé dans la vérification et la validation des briefs de phase du projet LuminaFast. À chaque activation, il compare le code réel avec chaque brief du dossier `Docs/briefs/`, mesure la conformité de chaque phase/sous-phase, et maintient le fichier de mémoire `Docs/double-check-review-brief.md`.
+---
 
 ## Rôle
 

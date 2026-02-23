@@ -43,14 +43,15 @@ describe('useFolderStore', () => {
   ];
 
   beforeEach(() => {
-    // Reset store state
-    const store = useFolderStore.getState();
-    store.folderTree = [];
-    store.activeFolderId = null;
-    store.activeFolderImageIds = null;
-    store.expandedFolderIds = new Set();
-    store.isLoading = false;
-    store.error = null;
+    // Reset store state using setState to avoid direct mutation
+    useFolderStore.setState({
+      folderTree: [],
+      activeFolderId: null,
+      activeFolderImageIds: null,
+      expandedFolderIds: new Set(),
+      isLoading: false,
+      error: null,
+    });
 
     // Reset mocks
     vi.clearAllMocks();

@@ -304,13 +304,13 @@ impl IngestionService {
                         }
                     }
 
-                    (ingest_result, success, skipped)
+                    (ingest_result, success, skipped, file.clone())
                 })
                 .collect()
         });
 
         // Collect results and populate BatchIngestionResult
-        for (ingest_result, success, skipped) in ingest_results {
+        for (ingest_result, success, skipped, original_file) in ingest_results {
             match ingest_result {
                 Ok(ingestion_result) => {
                     if success {
@@ -322,15 +322,9 @@ impl IngestionService {
                     }
                 }
                 Err(e) => {
-                    // Create failed result for error
+                    // Create failed result for error, preserving original file info
                     let failed_result = IngestionResult {
-                        file: DiscoveredFile::new(
-                            request.session_id,
-                            std::path::PathBuf::new(),
-                            crate::models::discovery::RawFormat::CR3,
-                            0,
-                            chrono::Utc::now(),
-                        ),
+                        file: original_file.clone(),
                         success: false,
                         database_id: None,
                         processing_time_ms: 0,
@@ -638,13 +632,34 @@ impl IngestionService {
             .unwrap_or("")
             .to_string();
 
-        // Extract volume name (first component after root)
-        let volume_name = Path::new(folder_path)
-            .components()
-            .nth(1) // Skip root, take first real component
-            .and_then(|c| c.as_os_str().to_str())
-            .unwrap_or("Unknown")
-            .to_string();
+        // Extract volume name: find "volumes" component and take the next one
+        // For paths like /Volumes/SSD/Photos or /volumes/SSD/Photos
+        let volume_name = {
+            let components: Vec<_> = Path::new(folder_path)
+                .components()
+                .filter_map(|c| {
+                    if let std::path::Component::Normal(os_str) = c {
+                        os_str.to_str()
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            // Find "volumes" (case-insensitive) and take the next component
+            components
+                .windows(2)
+                .find(|w| w[0].eq_ignore_ascii_case("volumes"))
+                .map(|w| w[1].to_string())
+                .unwrap_or_else(|| {
+                    // Fallback: take second component if exists, otherwise first
+                    components
+                        .get(1)
+                        .or_else(|| components.first())
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| "Unknown".to_string())
+                })
+        };
 
         // Check if folder already exists
         let existing_id: Option<i64> = transaction

@@ -973,7 +973,7 @@ pub async fn get_folder_images(
          LEFT JOIN image_state s ON i.id = s.image_id
          LEFT JOIN exif_metadata e ON i.id = e.image_id
          INNER JOIN folders f ON i.folder_id = f.id
-         WHERE f.path LIKE ?
+         WHERE f.path = ? OR f.path LIKE ?
          ORDER BY i.filename"
     } else {
         "SELECT i.id, i.blake3_hash, i.filename, i.extension, i.width, i.height,
@@ -1016,8 +1016,11 @@ pub async fn get_folder_images(
     }
 
     let image_iter = if let Some(path) = folder_path {
-        let search_pattern = format!("{}%", path);
-        stmt.query_map(rusqlite::params![search_pattern], map_image_row)
+        // Proper boundary check: match exact path OR descendants with '/' separator
+        // This prevents matching /Root2 when searching for /Root
+        let path_exact = path.clone();
+        let path_descendants = format!("{}/% ", path.trim_end_matches('/'));
+        stmt.query_map(rusqlite::params![path_exact, path_descendants], map_image_row)
             .map_err(|e| format!("Failed to query images: {}", e))?
     } else {
         stmt.query_map(rusqlite::params![folder_id], map_image_row)

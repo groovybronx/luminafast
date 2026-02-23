@@ -9,11 +9,30 @@
 // RAW Format Types
 // ============================================================================
 
-/** Supported RAW file formats */
+/** Supported image file formats (RAW + standard formats) */
 export enum RawFormat {
-  CR3 = 'cr3', // Canon
-  RAF = 'raf', // Fuji
-  ARW = 'arw', // Sony
+  // Canon formats
+  CR3 = 'cr3', // Canon RAW 3 (newer)
+  CR2 = 'cr2', // Canon RAW 2 (older)
+  // Nikon formats
+  NEF = 'nef', // Nikon Electronic Format
+  // Sony formats
+  ARW = 'arw', // Sony Alpha RAW
+  // Fujifilm formats
+  RAF = 'raf', // Fujifilm RAW
+  // Olympus formats
+  ORF = 'orf', // Olympus RAW Format
+  // Pentax formats
+  PEF = 'pef', // Pentax Electronic Format
+  // Panasonic formats
+  RW2 = 'rw2', // Panasonic RAW 2
+  // Adobe DNG (universal RAW)
+  DNG = 'dng', // Adobe Digital Negative
+  // Standard image formats
+  JPG = 'jpg', // JPEG
+  JPEG = 'jpeg', // JPEG (alternate extension)
+  PNG = 'png', // Portable Network Graphics
+  WEBP = 'webp', // WebP
 }
 
 /** RAW format metadata */
@@ -58,7 +77,23 @@ export interface DiscoveryConfig {
 export const DEFAULT_DISCOVERY_CONFIG: DiscoveryConfig = {
   rootPath: '',
   recursive: true,
-  formats: [RawFormat.CR3, RawFormat.RAF, RawFormat.ARW],
+  formats: [
+    // RAW formats (Phase 2.3 compliance)
+    RawFormat.CR3,
+    RawFormat.CR2, // Canon
+    RawFormat.NEF, // Nikon
+    RawFormat.ARW, // Sony
+    RawFormat.RAF, // Fujifilm
+    RawFormat.ORF, // Olympus
+    RawFormat.PEF, // Pentax
+    RawFormat.RW2, // Panasonic
+    RawFormat.DNG, // Adobe
+    // Standard formats
+    RawFormat.JPG,
+    RawFormat.JPEG, // JPEG
+    RawFormat.PNG, // PNG
+    RawFormat.WEBP, // WebP
+  ],
   excludeDirs: [
     '.DS_Store',
     '.git',
@@ -229,6 +264,26 @@ export interface IngestionResult {
   error: string | null;
   /** Ingestion metadata */
   metadata: IngestionMetadata | null;
+}
+
+/** Ingestion progress event (real-time updates during batch ingestion) */
+export interface IngestionProgress {
+  /** Session ID */
+  sessionId: string;
+  /** Total files to ingest */
+  total: number;
+  /** Files processed so far */
+  processed: number;
+  /** Number of successful ingestions */
+  successful: number;
+  /** Number of failed ingestions */
+  failed: number;
+  /** Number of skipped files */
+  skipped: number;
+  /** Current file being processed */
+  currentFile: string | null;
+  /** Progress percentage (0.0 - 1.0) */
+  percentage: number;
 }
 
 // ============================================================================
@@ -455,32 +510,131 @@ export function isFileProcessingStatus(value: string): value is FileProcessingSt
 /** Get format information for a RAW format */
 export function getRawFormatInfo(format: RawFormat): RawFormatInfo {
   const formatMap: Record<RawFormat, RawFormatInfo> = {
+    // Canon formats
     [RawFormat.CR3]: {
       format: RawFormat.CR3,
       extension: 'cr3',
       mimeType: 'image/x-canon-cr3',
       description: 'Canon RAW 3',
-      signature: [0x49, 0x52, 0x42, 0x02],
+      signature: [0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x63, 0x72, 0x33, 0x20], // ftyp cr3 (ISO BMFF)
       minSize: 1024 * 1024, // 1MB
       maxSize: 1024 * 1024 * 1024, // 1GB
     },
-    [RawFormat.RAF]: {
-      format: RawFormat.RAF,
-      extension: 'raf',
-      mimeType: 'image/x-fuji-raf',
-      description: 'Fujifilm RAW',
-      signature: [0x46, 0x55, 0x4a, 0x49],
+    [RawFormat.CR2]: {
+      format: RawFormat.CR2,
+      extension: 'cr2',
+      mimeType: 'image/x-canon-cr2',
+      description: 'Canon RAW 2',
+      signature: [0x49, 0x49, 0x2a, 0x00], // TIFF LE
       minSize: 1024 * 1024, // 1MB
       maxSize: 1024 * 1024 * 1024, // 1GB
     },
+    // Nikon formats
+    [RawFormat.NEF]: {
+      format: RawFormat.NEF,
+      extension: 'nef',
+      mimeType: 'image/x-nikon-nef',
+      description: 'Nikon Electronic Format',
+      signature: [0x49, 0x49, 0x2a, 0x00], // TIFF LE
+      minSize: 1024 * 1024, // 1MB
+      maxSize: 1024 * 1024 * 1024, // 1GB
+    },
+    // Sony formats
     [RawFormat.ARW]: {
       format: RawFormat.ARW,
       extension: 'arw',
       mimeType: 'image/x-sony-arw',
       description: 'Sony Alpha RAW',
-      signature: [0x00, 0x00, 0x02, 0x00],
+      signature: [0x49, 0x49, 0x2a, 0x00], // TIFF LE (Sony)
       minSize: 1024 * 1024, // 1MB
       maxSize: 1024 * 1024 * 1024, // 1GB
+    },
+    // Fujifilm formats
+    [RawFormat.RAF]: {
+      format: RawFormat.RAF,
+      extension: 'raf',
+      mimeType: 'image/x-fuji-raf',
+      description: 'Fujifilm RAW',
+      signature: [0x46, 0x55, 0x4a, 0x49, 0x46, 0x49, 0x4c, 0x4d], // FUJIFILM
+      minSize: 1024 * 1024, // 1MB
+      maxSize: 1024 * 1024 * 1024, // 1GB
+    },
+    // Olympus formats
+    [RawFormat.ORF]: {
+      format: RawFormat.ORF,
+      extension: 'orf',
+      mimeType: 'image/x-olympus-orf',
+      description: 'Olympus RAW Format',
+      signature: [0x49, 0x49, 0x52, 0x4f], // IIRO
+      minSize: 1024 * 1024, // 1MB
+      maxSize: 1024 * 1024 * 1024, // 1GB
+    },
+    // Pentax formats
+    [RawFormat.PEF]: {
+      format: RawFormat.PEF,
+      extension: 'pef',
+      mimeType: 'image/x-pentax-pef',
+      description: 'Pentax Electronic Format',
+      signature: [0x49, 0x49, 0x2a, 0x00], // TIFF LE
+      minSize: 1024 * 1024, // 1MB
+      maxSize: 1024 * 1024 * 1024, // 1GB
+    },
+    // Panasonic formats
+    [RawFormat.RW2]: {
+      format: RawFormat.RW2,
+      extension: 'rw2',
+      mimeType: 'image/x-panasonic-rw2',
+      description: 'Panasonic RAW 2',
+      signature: [0x49, 0x49, 0x55, 0x00], // IIU\0
+      minSize: 1024 * 1024, // 1MB
+      maxSize: 1024 * 1024 * 1024, // 1GB
+    },
+    // Adobe DNG
+    [RawFormat.DNG]: {
+      format: RawFormat.DNG,
+      extension: 'dng',
+      mimeType: 'image/x-adobe-dng',
+      description: 'Adobe Digital Negative',
+      signature: [0x49, 0x49, 0x2a, 0x00], // TIFF LE
+      minSize: 1024 * 1024, // 1MB
+      maxSize: 1024 * 1024 * 1024, // 1GB
+    },
+    // Standard formats
+    [RawFormat.JPG]: {
+      format: RawFormat.JPG,
+      extension: 'jpg',
+      mimeType: 'image/jpeg',
+      description: 'JPEG',
+      signature: [0xff, 0xd8, 0xff],
+      minSize: 1024, // 1KB
+      maxSize: 100 * 1024 * 1024, // 100MB
+    },
+    [RawFormat.JPEG]: {
+      format: RawFormat.JPEG,
+      extension: 'jpeg',
+      mimeType: 'image/jpeg',
+      description: 'JPEG',
+      signature: [0xff, 0xd8, 0xff],
+      minSize: 1024, // 1KB
+      maxSize: 100 * 1024 * 1024, // 100MB
+    },
+    [RawFormat.PNG]: {
+      format: RawFormat.PNG,
+      extension: 'png',
+      mimeType: 'image/png',
+      description: 'PNG',
+      signature: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+      minSize: 1024, // 1KB
+      maxSize: 100 * 1024 * 1024, // 100MB
+    },
+    [RawFormat.WEBP]: {
+      format: RawFormat.WEBP,
+      extension: 'webp',
+      mimeType: 'image/webp',
+      description: 'WebP',
+      signature: [0x52, 0x49, 0x46, 0x46], // RIFF
+      minSize: 1024, // 1KB
+      maxSize: 100 * 1024 * 1024, // 100MB
     },
   };
 

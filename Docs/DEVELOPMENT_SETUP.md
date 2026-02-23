@@ -5,11 +5,13 @@
 Pour bénéficier du formatage automatique, installez ces extensions (recommandations dans `.vscode/extensions.json`) :
 
 ### Essentielles
+
 - **rust-lang.rust-analyzer** — Formatage Rust automatique (rustfmt) + Clippy
 - **esbenp.prettier-vscode** — Formatage TypeScript/React automatique
 - **dbaeumer.vscode-eslint** — Linting TypeScript automatique
 
 ### Recommandées
+
 - **tauri-apps.tauri-vscode** — Support Tauri
 - **bradlc.vscode-tailwindcss** — Autocomplétion Tailwind
 - **eamodio.gitlens** — Git enrichi
@@ -26,6 +28,7 @@ Le formatage Rust est **automatique** via rust-analyzer :
 - **Code actions** : Les suggestions clippy s'appliquent automatiquement si possible
 
 **Configuration** (déjà dans `.vscode/settings.json`) :
+
 ```json
 "[rust]": {
   "editor.defaultFormatter": "rust-lang.rust-analyzer",
@@ -35,6 +38,7 @@ Le formatage Rust est **automatique** via rust-analyzer :
 ```
 
 **Commandes manuelles** (si besoin) :
+
 ```bash
 npm run rust:fmt          # Formater tout le code Rust
 npm run rust:clippy       # Lancer Clippy
@@ -53,6 +57,7 @@ Le formatage TypeScript est **automatique** via Prettier :
 - **Imports** : Organisés automatiquement à la sauvegarde
 
 **Configuration** (déjà dans `.vscode/settings.json`) :
+
 ```json
 "[typescript]": {
   "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -66,6 +71,7 @@ Le formatage TypeScript est **automatique** via Prettier :
 ```
 
 **Commandes manuelles** (si besoin) :
+
 ```bash
 npm run format            # Formater tout le code TypeScript
 npm run lint:fix          # Corriger les erreurs ESLint
@@ -84,6 +90,7 @@ make setup-hooks
 ```
 
 Le hook vérifie et formate automatiquement :
+
 - ✅ Rust : `cargo fmt` + `cargo clippy`
 - ✅ TypeScript : `prettier` + `eslint --fix`
 - ✅ Type check : `tsc --noEmit`
@@ -139,6 +146,7 @@ too-many-lines-threshold = 100
 ```
 
 Les règles clippy actives sont définies dans `.vscode/settings.json` :
+
 - `-D warnings` : Toutes les warnings sont des erreurs
 - `-A dead_code` : Ignore le code mort (utile en développement)
 - `-A unused_variables` : Ignore les variables inutilisées (utile en développement)
@@ -201,21 +209,25 @@ Puis utilisez `Shift+Alt+F` pour formater manuellement quand vous le souhaitez.
 ## Troubleshooting
 
 ### "rustfmt not found"
+
 ```bash
 rustup component add rustfmt
 ```
 
 ### "clippy not found"
+
 ```bash
 rustup component add clippy
 ```
 
 ### "Prettier doesn't format on save"
+
 1. Vérifier que l'extension Prettier est installée
 2. Vérifier dans la barre de statut que Prettier est le formatter par défaut
 3. `Cmd+Shift+P` → "Format Document With..." → "Prettier"
 
 ### "ESLint ne corrige pas automatiquement"
+
 1. Vérifier que l'extension ESLint est installée
 2. Vérifier dans `.vscode/settings.json` que `source.fixAll.eslint` est activé
 3. Relancer VS Code
@@ -231,6 +243,7 @@ make ci
 ```
 
 Cette commande exécute :
+
 1. Format check (Rust + TypeScript)
 2. Lint (Clippy + ESLint)
 3. Type check (TypeScript)

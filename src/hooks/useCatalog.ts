@@ -5,15 +5,15 @@
  * the catalog service and update the catalog store with real data from SQLite.
  */
 
-import { useCallback, useState } from 'react';
-import { useCatalogStore } from '@/stores/catalogStore';
 import { CatalogService } from '@/services/catalogService';
 import { previewService } from '@/services/previewService';
+import { useCatalogStore } from '@/stores/catalogStore';
 import { useSystemStore } from '@/stores/systemStore';
-import type { ImageDTO, ImageFilter } from '@/types/dto';
 import type { CatalogImage, FlagType } from '@/types';
 import { PreviewType } from '@/types';
+import type { ImageDTO, ImageFilter } from '@/types/dto';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { useCallback, useState } from 'react';
 
 /**
  * Hook return type

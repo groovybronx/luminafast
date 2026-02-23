@@ -130,3 +130,16 @@ impl From<crate::models::catalog::Collection> for CollectionDTO {
         }
     }
 }
+
+/// DTO for folder tree hierarchy
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FolderTreeNode {
+    pub id: u32,
+    pub name: String,
+    pub path: String,
+    pub volume_name: String,
+    pub is_online: bool,
+    pub image_count: u32,       // images directly in this folder
+    pub total_image_count: u32, // images recursively (this folder + children)
+    pub children: Vec<FolderTreeNode>,
+}

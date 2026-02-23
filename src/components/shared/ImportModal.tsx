@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Import, FolderOpen, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { useDiscovery } from '@/hooks/useDiscovery';
+import { AlertCircle, CheckCircle, FolderOpen, Import, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface ImportModalProps {
   onClose: () => void;
@@ -21,17 +21,27 @@ export const ImportModal = ({ onClose, onImportComplete }: ImportModalProps) => 
     selectRootFolder,
     startScan,
     cancel,
+    reset,
   } = useDiscovery();
+
+  // Reset state on mount to ensure clean start
+  useEffect(() => {
+    reset();
+  }, [reset]);
 
   // Handle completion
   useEffect(() => {
     if (stage === 'completed' && onImportComplete) {
       setTimeout(() => {
         onImportComplete();
+        // Reset state before closing to ensure clean state for next open
+        reset();
+        setSelectedPath(null);
+        setIsStarted(false);
         onClose();
       }, 1500); // Give user time to see success state
     }
-  }, [stage, onImportComplete, onClose]);
+  }, [stage, onImportComplete, onClose, reset]);
 
   const handleStartImport = async () => {
     if (!selectedPath) return;
@@ -185,7 +195,12 @@ export const ImportModal = ({ onClose, onImportComplete }: ImportModalProps) => 
 
           {!isActive && (
             <button
-              onClick={onClose}
+              onClick={() => {
+                reset();
+                setSelectedPath(null);
+                setIsStarted(false);
+                onClose();
+              }}
               className="flex-1 py-2 bg-zinc-900 hover:bg-zinc-800 rounded text-xs text-zinc-500 transition-colors uppercase font-bold tracking-widest"
             >
               {isComplete ? 'Fermer' : 'Annuler'}

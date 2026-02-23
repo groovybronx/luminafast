@@ -1,6 +1,21 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
+// Mock Tauri event API (unique, compatible hook)
+vi.mock('@tauri-apps/api/event', () => ({
+  listen: vi.fn(() =>
+    Promise.resolve(() => {
+      /* cleanup mock */
+    }),
+  ),
+  emit: vi.fn(),
+}));
+
+// Mock Tauri dialog API
+vi.mock('@tauri-apps/plugin-dialog', () => ({
+  open: vi.fn(() => Promise.resolve('/mock/path')),
+}));
+
 // Mock de window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -39,12 +54,6 @@ Object.defineProperty(window, '__TAURI_INTERNALS__', {
   writable: true,
 });
 
-// Mock Tauri event system
-vi.mock('@tauri-apps/api/event', () => ({
-  listen: vi.fn(),
-  emit: vi.fn(),
-}));
-
 // Mock Tauri window API
 vi.mock('@tauri-apps/api/window', () => ({
   getCurrent: vi.fn(() => ({
@@ -62,7 +71,7 @@ vi.mock('@tauri-apps/api/path', () => ({
 }));
 
 // Mock Tauri dialog API
-vi.mock('@taur-apps/api/dialog', () => ({
+vi.mock('@tauri-apps/api/dialog', () => ({
   open: vi.fn(),
   save: vi.fn(),
   ask: vi.fn(),
@@ -88,7 +97,7 @@ vi.mock('@tauri-apps/api/fs', () => ({
 }));
 
 // Mock Tauri notification API
-vi.mock('@taur-apps/api/notification', () => ({
+vi.mock('@tauri-apps/api/notification', () => ({
   requestPermission: vi.fn(),
   requestPermissions: vi.fn(),
   isPermissionGranted: vi.fn(),

@@ -18,6 +18,7 @@
 ## 2. Structure des Fichiers de Tests
 
 ### Frontend (TypeScript/React)
+
 ```
 src/
 ├── __tests__/                    # Tests d'intégration frontend globaux
@@ -51,6 +52,7 @@ src/
 ```
 
 ### Backend (Rust/Tauri)
+
 ```
 src-tauri/
 ├── src/
@@ -70,6 +72,7 @@ src-tauri/
 ```
 
 ### Tests End-to-End
+
 ```
 e2e/
 ├── import.spec.ts          # Test E2E du pipeline d'import
@@ -87,6 +90,7 @@ e2e/
 ## 3. Types de Tests par Couche
 
 ### 3.1 — Tests Unitaires Rust (`cargo test`)
+
 **Portée** : Fonctions individuelles, modules isolés
 **Framework** : Module `#[cfg(test)]` intégré + `assert!` macros
 **Quand** : À chaque fonction publique créée
@@ -121,6 +125,7 @@ mod tests {
 ```
 
 ### 3.2 — Tests d'Intégration Rust (`tests/`)
+
 **Portée** : Interactions entre modules (DB + hashing + filesystem)
 **Framework** : `#[test]` dans le dossier `tests/`
 **Quand** : À chaque sous-phase impliquant le backend
@@ -140,6 +145,7 @@ fn test_import_creates_image_with_exif() {
 ```
 
 ### 3.3 — Tests de Composants React (Vitest + Testing Library)
+
 **Portée** : Composants individuels, rendu et interactions
 **Framework** : `vitest` + `@testing-library/react`
 **Quand** : À chaque composant créé ou modifié
@@ -171,6 +177,7 @@ describe('GridView', () => {
 ```
 
 ### 3.4 — Tests de Stores Zustand (Vitest)
+
 **Portée** : Logique d'état, actions, sélecteurs
 **Framework** : `vitest`
 **Quand** : À chaque store créé ou modifié
@@ -197,6 +204,7 @@ describe('catalogStore', () => {
 ```
 
 ### 3.5 — Tests End-to-End (Playwright ou Tauri test driver)
+
 **Portée** : Flux utilisateur complets dans l'app Tauri
 **Framework** : `@playwright/test` ou `tauri-driver`
 **Quand** : À la fin de chaque phase majeure (0, 1, 2, 3, 4, 5, 6, 7)
@@ -205,21 +213,24 @@ describe('catalogStore', () => {
 
 ## 4. Convention de Nommage des Tests
 
-| Type | Pattern | Exemple |
-|------|---------|---------|
-| Test unitaire Rust | `test_<module>_<behavior>` | `test_blake3_hash_deterministic` |
+| Type                  | Pattern                             | Exemple                               |
+| --------------------- | ----------------------------------- | ------------------------------------- |
+| Test unitaire Rust    | `test_<module>_<behavior>`          | `test_blake3_hash_deterministic`      |
 | Test intégration Rust | `test_<workflow>_<expected_result>` | `test_import_creates_image_with_exif` |
-| Test composant React | `<Component>.test.tsx` | `GridView.test.tsx` |
-| Test store | `<storeName>.test.ts` | `catalogStore.test.ts` |
-| Test service | `<serviceName>.test.ts` | `catalogService.test.ts` |
-| Test E2E | `<feature>.spec.ts` | `import.spec.ts` |
+| Test composant React  | `<Component>.test.tsx`              | `GridView.test.tsx`                   |
+| Test store            | `<storeName>.test.ts`               | `catalogStore.test.ts`                |
+| Test service          | `<serviceName>.test.ts`             | `catalogService.test.ts`              |
+| Test E2E              | `<feature>.spec.ts`                 | `import.spec.ts`                      |
 
 ### Nommage des blocs `describe` / `it` :
+
 ```
 describe('<NomDuModule>')
   it('<verbe à la 3e personne> <comportement attendu>')
 ```
+
 Exemples :
+
 - `it('renders correct number of thumbnails')`
 - `it('returns empty array when no images match filter')`
 - `it('persists rating after app restart')`
@@ -228,43 +239,43 @@ Exemples :
 
 ## 5. Matrice de Couverture par Sous-Phase
 
-| Sous-Phase | Tests Unitaires | Tests Intégration | Tests Composants | Tests E2E |
-|-----------|----------------|-------------------|------------------|-----------|
-| 0.1 TypeScript | — | — | Compilation check | — |
-| 0.2 Tauri | — | Build check | — | App launches |
-| 0.3 Modules | — | — | Chaque composant extrait | — |
-| 0.4 Zustand | — | — | Chaque store | — |
-| 0.5 CI | — | Pipeline verte | — | — |
-| 1.1 SQLite | Schema + CRUD | Migrations | — | — |
-| 1.2 Commands | DTO serde | Tauri invoke | Service wrappers | — |
-| 1.3 BLAKE3 | Hash functions | Dedup detection | — | — |
-| 1.4 Filesystem | Path resolution | Watcher + lock | — | — |
-| 2.1 Import | Scanner | Pipeline complète | — | Import 10 files |
-| 2.2 EXIF | Parser | Harvest + store | — | — |
-| 2.3 Previews | Resize | Pyramid generation | — | — |
-| 2.4 Import UI | — | — | ImportModal | Import flow |
-| 3.1 Grid | — | — | GridView + virtual | — |
-| 3.2 Collections | CRUD SQL | Add/remove images | Sidebar tree | — |
-| 3.3 Smart | Query parser | Dynamic results | Rule builder UI | — |
-| 3.4 Folders | — | Path tree | Folder browser | — |
-| 3.5 Search | Query parser | Full pipeline | SearchBar | Search flow |
-| 4.1 Events | Replay logic | Snapshot + replay | — | — |
-| 4.2 Render | Filter math | Pipeline chain | Slider → preview | — |
-| 4.3 History | — | — | HistoryPanel | Time travel |
-| 4.4 Before/After | — | — | SplitView | — |
-| 5.1 EXIF Panel | — | — | ExifPanel | — |
-| 5.2 Tags | CRUD SQL | Hierarchy | TagPanel | — |
-| 5.3 Rating | — | Persist + reload | — | Rate → restart → check |
-| 5.4 XMP | Read/write | Roundtrip | — | — |
-| 6.1 Cache | LRU logic | Multi-level | — | — |
-| 6.2 DuckDB | Queries | Sync SQLite→Duck | — | — |
-| 6.3 Virtual Grid | — | — | Scroll perf | — |
-| 6.4 SQLite Optim | PRAGMA | Index perf | — | — |
-| 7.1 Errors | — | Recovery | Error boundaries | Crash → recover |
-| 7.2 Backup | — | Backup + restore | — | Full cycle |
-| 7.3 Packaging | — | Build artifacts | — | Install + launch |
-| 7.4 UX | — | — | Keyboard + menus | — |
-| 7.5 Onboarding | — | — | Welcome flow | First run |
+| Sous-Phase       | Tests Unitaires | Tests Intégration  | Tests Composants         | Tests E2E              |
+| ---------------- | --------------- | ------------------ | ------------------------ | ---------------------- |
+| 0.1 TypeScript   | —               | —                  | Compilation check        | —                      |
+| 0.2 Tauri        | —               | Build check        | —                        | App launches           |
+| 0.3 Modules      | —               | —                  | Chaque composant extrait | —                      |
+| 0.4 Zustand      | —               | —                  | Chaque store             | —                      |
+| 0.5 CI           | —               | Pipeline verte     | —                        | —                      |
+| 1.1 SQLite       | Schema + CRUD   | Migrations         | —                        | —                      |
+| 1.2 Commands     | DTO serde       | Tauri invoke       | Service wrappers         | —                      |
+| 1.3 BLAKE3       | Hash functions  | Dedup detection    | —                        | —                      |
+| 1.4 Filesystem   | Path resolution | Watcher + lock     | —                        | —                      |
+| 2.1 Import       | Scanner         | Pipeline complète  | —                        | Import 10 files        |
+| 2.2 EXIF         | Parser          | Harvest + store    | —                        | —                      |
+| 2.3 Previews     | Resize          | Pyramid generation | —                        | —                      |
+| 2.4 Import UI    | —               | —                  | ImportModal              | Import flow            |
+| 3.1 Grid         | —               | —                  | GridView + virtual       | —                      |
+| 3.2 Collections  | CRUD SQL        | Add/remove images  | Sidebar tree             | —                      |
+| 3.3 Smart        | Query parser    | Dynamic results    | Rule builder UI          | —                      |
+| 3.4 Folders      | —               | Path tree          | Folder browser           | —                      |
+| 3.5 Search       | Query parser    | Full pipeline      | SearchBar                | Search flow            |
+| 4.1 Events       | Replay logic    | Snapshot + replay  | —                        | —                      |
+| 4.2 Render       | Filter math     | Pipeline chain     | Slider → preview         | —                      |
+| 4.3 History      | —               | —                  | HistoryPanel             | Time travel            |
+| 4.4 Before/After | —               | —                  | SplitView                | —                      |
+| 5.1 EXIF Panel   | —               | —                  | ExifPanel                | —                      |
+| 5.2 Tags         | CRUD SQL        | Hierarchy          | TagPanel                 | —                      |
+| 5.3 Rating       | —               | Persist + reload   | —                        | Rate → restart → check |
+| 5.4 XMP          | Read/write      | Roundtrip          | —                        | —                      |
+| 6.1 Cache        | LRU logic       | Multi-level        | —                        | —                      |
+| 6.2 DuckDB       | Queries         | Sync SQLite→Duck   | —                        | —                      |
+| 6.3 Virtual Grid | —               | —                  | Scroll perf              | —                      |
+| 6.4 SQLite Optim | PRAGMA          | Index perf         | —                        | —                      |
+| 7.1 Errors       | —               | Recovery           | Error boundaries         | Crash → recover        |
+| 7.2 Backup       | —               | Backup + restore   | —                        | Full cycle             |
+| 7.3 Packaging    | —               | Build artifacts    | —                        | Install + launch       |
+| 7.4 UX           | —               | —                  | Keyboard + menus         | —                      |
+| 7.5 Onboarding   | —               | —                  | Welcome flow             | First run              |
 
 ---
 
@@ -298,11 +309,13 @@ npm run test:all
 ## 7. Fixtures & Données de Test
 
 ### Emplacement : `tests/fixtures/`
+
 - Fichiers images de test (petits, <1MB chacun)
 - Bases SQLite pré-remplies pour tests de migration
 - Fichiers XMP de référence
 
 ### Factories / Builders :
+
 ```typescript
 // src/test-utils/factories.ts
 export function createMockImage(overrides?: Partial<ImageDTO>): ImageDTO {

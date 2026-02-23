@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 a {
   font-weight: 500;
@@ -11,8 +11,6 @@ a:hover {
 
 body {
   margin: 0;
-  
-  
 }
 
 .app-container {

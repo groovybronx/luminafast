@@ -1,11 +1,13 @@
 # Phase 3.1 — Grille d'Images Réelle
 
 ## Objectif
+
 Connecter le composant `GridView` au catalogue SQLite réel via le hook `useCatalog`, remplacer les données mockées par les vraies previews générées, et implémenter une virtualisation performante pour gérer des catalogues de 10K+ images avec fluidité (60fps).
 
 ## État Actuel
 
 ### ✅ Déjà implémenté
+
 - **Hook `useCatalog`** (`src/hooks/useCatalog.ts`) :
   - Charge les images depuis SQLite via `CatalogService.getAllImages()`
   - Récupère les thumbnails via `previewService.getPreviewPath()`
@@ -21,6 +23,7 @@ Connecter le composant `GridView` au catalogue SQLite réel via le hook `useCata
   - Stocke dans `Previews.lrdata/`
 
 ### ⚠️ À compléter
+
 1. **Intégration dans App.tsx** : App.tsx utilise encore `useCatalogStore` directement au lieu du hook `useCatalog`
 2. **Virtualisation** : GridView utilise `.map()` simple (pas performant pour 10K+ images)
 3. **Lazy loading amélioré** : Intersection Observer optionnel pour charger previews à la demande
@@ -29,38 +32,45 @@ Connecter le composant `GridView` au catalogue SQLite réel via le hook `useCata
 ## Périmètre de la Phase 3.1
 
 ### 1. Intégration du Hook useCatalog dans App.tsx
+
 - Remplacer l'accès direct au store par `const { images, isLoading, refreshCatalog } = useCatalog()`
 - Déclencher `refreshCatalog()` au montage et après chaque import
 - Gérer l'état de chargement avec un spinner ou placeholder
 - Gérer les erreurs avec un message utilisateur convivial
 
 ### 2. Virtualisation de la Grille
+
 **Option A** : Utiliser `@tanstack/react-virtual` (recommandé)
+
 - Wrapper le GridView avec un virtualiseur de grille
 - Configurer les dimensions de cellule dynamiques selon `thumbnailSize`
 - Recycler les DOM nodes pour performance
 - Préserver le scroll position lors du resize
 
 **Option B** : Utiliser `react-virtuoso` (alternative)
-- Wrapper avec `<VirtuosoGrid>` 
+
+- Wrapper avec `<VirtuosoGrid>`
 - Configurer `itemContent` pour rendre chaque ImageCard
 - Gérer le responsive avec `useWindowSize`
 
 **Critère de décision** : Préférer @tanstack si déjà dans les dépendances, sinon react-virtuoso.
 
 ### 3. Prefetching Intelligent
+
 - Charger N rows ahead du viewport actuel
 - Utiliser `IntersectionObserver` pour détecter l'approche du bord
 - Canceller les requêtes de preview si l'utilisateur scroll trop vite
 - Placeholder blur-hash pendant le chargement (optionnel pour v1)
 
 ### 4. Gestion des États
+
 - **Loading** : Afficher un skeleton loader pendant le premier chargement
 - **Empty** : Message invitant à importer des photos si le catalogue est vide
 - **Error** : Afficher l'erreur avec un bouton "Retry"
 - **Preview manquante** : Afficher l'icône ImageIcon + bouton "Generate Preview"
 
 ### 5. Tri et Filtrage
+
 - Conserver le filtrage existant dans App.tsx (star:, iso:, gfx, etc.)
 - Ajouter des options de tri :
   - Date (récent → ancien)
@@ -72,12 +82,14 @@ Connecter le composant `GridView` au catalogue SQLite réel via le hook `useCata
 ## Livrables Techniques
 
 ### Frontend TypeScript
+
 - **`src/App.tsx`** : Remplacer `useCatalogStore` par `useCatalog()` hook
 - **`src/components/library/GridView.tsx`** : Ajouter virtualisation (@tanstack/virtual)
 - **`src/stores/uiStore.ts`** : Ajouter `sortBy` et `sortDirection` (optionnel)
 - **`src/hooks/useCatalog.ts`** : Ajouter un filtre de tri (si nécessaire)
 
 ### Dépendances NPM
+
 ```bash
 npm install @tanstack/react-virtual
 # OU
@@ -85,6 +97,7 @@ npm install react-virtuoso
 ```
 
 ### Tests
+
 - **Tests unitaires** :
   - `src/hooks/__tests__/useCatalog.test.ts` : Vérifier le chargement depuis SQLite
   - `src/components/library/__tests__/GridView.test.tsx` : Adapter les tests existants
@@ -107,6 +120,7 @@ npm install react-virtuoso
 ## Dépendances
 
 **Sous-phases dépendantes (doivent être complétées)** :
+
 - ✅ Phase 1.1 : Schéma SQLite
 - ✅ Phase 1.2 : Tauri Commands CRUD
 - ✅ Phase 2.1 : Discovery & Ingestion
@@ -114,6 +128,7 @@ npm install react-virtuoso
 - ✅ Phase 2.4 : UI d'Import Connectée
 
 **Fichiers à consulter** :
+
 - `Docs/archives/Lightroomtechnique.md` : Architecture grille Lightroom Classic
 - `Docs/archives/recommendations.md` : Virtualisation et performance
 - `src/hooks/useCatalog.ts` : Hook existant
@@ -123,6 +138,7 @@ npm install react-virtuoso
 ## Interfaces Clés
 
 ### useCatalog Hook (existant)
+
 ```typescript
 export interface UseCatalogReturn {
   images: CatalogImage[];
@@ -138,6 +154,7 @@ export interface UseCatalogReturn {
 ```
 
 ### GridView Props (existant)
+
 ```typescript
 interface GridViewProps {
   images: CatalogImage[];
@@ -149,41 +166,48 @@ interface GridViewProps {
 ```
 
 ### Nouveau: VirtualizedGridView Props (optionnel)
+
 ```typescript
 interface VirtualizedGridViewProps extends GridViewProps {
   containerHeight: number; // Height of viewport
-  rowHeight: number;       // Dynamic based on thumbnailSize
-  overscan?: number;       // Number of rows to prefetch
+  rowHeight: number; // Dynamic based on thumbnailSize
+  overscan?: number; // Number of rows to prefetch
 }
 ```
 
 ## Risques et Mitigations
 
 ### Performance
+
 - **Risque** : Charger 10K thumbnails d'un coup ralentit l'UI
 - **Mitigation** : Virtualisation + lazy loading progressif
 
 ### Preview manquante
+
 - **Risque** : Affichage cassé si le thumbnail n'existe pas encore
 - **Mitigation** : Fallback gracieux avec icône ImageIcon (déjà implémenté)
 
 ### Cache invalidation
+
 - **Risque** : Anciennes previews affichées après ré-import
 - **Mitigation** : Utiliser `blake3_hash` comme clé de cache (déjà fait)
 
 ### Scroll position
+
 - **Risque** : Perte de position de scroll lors du refresh
 - **Mitigation** : Sauvegarder/restaurer `scrollTop` dans `uiStore`
 
 ## Contexte Architectural
 
 ### Lightroom Classic (référence)
+
 - Utilise une grille virtualisée avec placeholder loading
 - Cache les thumbnails en RAM (LRU)
 - Prefetch intelligent basé sur la direction du scroll
 - Grid responsive avec colonnes dynamiques
 
 ### Stack LuminaFast
+
 - **Previews** : Stockées localement dans `Previews.lrdata/`
 - **Thumbnails** : 240px bord long, JPEG q75
 - **Conversion URLs** : `convertFileSrc()` pour accès Tauri

@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ImportModal } from '../ImportModal';
-import { useSystemStore } from '@/stores/systemStore';
 import { useDiscovery } from '@/hooks/useDiscovery';
+import { useSystemStore } from '@/stores/systemStore';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ImportModal } from '../ImportModal';
 
 // Mock the useDiscovery hook
 vi.mock('@/hooks/useDiscovery', () => ({
@@ -20,6 +20,7 @@ describe('ImportModal', () => {
   const mockStartScan = vi.fn();
   const mockStartIngestion = vi.fn();
   const mockCancel = vi.fn();
+  const mockReset = vi.fn();
   const mockOnClose = vi.fn();
   const mockOnImportComplete = vi.fn();
 
@@ -58,6 +59,7 @@ describe('ImportModal', () => {
       startScan: mockStartScan,
       startIngestion: mockStartIngestion,
       cancel: mockCancel,
+      reset: mockReset,
       sessionId: null,
     });
   });
@@ -144,6 +146,7 @@ describe('ImportModal', () => {
       startScan: mockStartScan,
       startIngestion: mockStartIngestion,
       cancel: mockCancel,
+      reset: mockReset,
       sessionId: 'sess_123',
     });
 
@@ -168,6 +171,7 @@ describe('ImportModal', () => {
       startScan: mockStartScan,
       startIngestion: mockStartIngestion,
       cancel: mockCancel,
+      reset: mockReset,
       sessionId: 'sess_123',
     });
 
@@ -192,6 +196,7 @@ describe('ImportModal', () => {
       startScan: mockStartScan,
       startIngestion: mockStartIngestion,
       cancel: mockCancel,
+      reset: mockReset,
       sessionId: 'sess_123',
     });
 
@@ -217,6 +222,7 @@ describe('ImportModal', () => {
       startScan: mockStartScan,
       startIngestion: mockStartIngestion,
       cancel: mockCancel,
+      reset: mockReset,
       sessionId: null,
     });
 
@@ -241,6 +247,7 @@ describe('ImportModal', () => {
       startScan: mockStartScan,
       startIngestion: mockStartIngestion,
       cancel: mockCancel,
+      reset: mockReset,
       sessionId: 'sess_123',
     });
 
@@ -267,6 +274,7 @@ describe('ImportModal', () => {
       startScan: mockStartScan,
       startIngestion: mockStartIngestion,
       cancel: mockCancel,
+      reset: mockReset,
       sessionId: null,
     });
 

@@ -8,6 +8,7 @@ use crate::services::ingestion::IngestionService;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::OnceLock;
+use tauri::AppHandle;
 use uuid::Uuid;
 
 /// Global discovery service instance
@@ -86,14 +87,43 @@ pub fn ingest_file(file: DiscoveredFile) -> Result<IngestionResult, String> {
     })
 }
 
-/// Batch ingest multiple files using the main database
+/// Batch ingest multiple files using the main database with progress events
 #[tauri::command]
-pub fn batch_ingest(request: BatchIngestionRequest) -> Result<BatchIngestionResult, String> {
+pub fn batch_ingest(
+    app_handle: AppHandle,
+    request: BatchIngestionRequest,
+) -> Result<BatchIngestionResult, String> {
+    // Validate that all files were part of a discovery session
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
+        let discovery_service = get_discovery_service();
+
+        // Get discovered files for the session
+        let discovered_files = discovery_service
+            .get_session_files(request.session_id)
+            .await
+            .map_err(|e| format!("Failed to get session files: {}", e))?;
+
+        // Create a set of valid paths from the discovery session
+        let valid_paths: std::collections::HashSet<_> = discovered_files
+            .iter()
+            .map(|f| f.path.clone())
+            .collect();
+
+        // Validate that all requested files are in the discovery session
+        for file_path in &request.file_paths {
+            if !valid_paths.contains(file_path) {
+                return Err(format!(
+                    "File not found in discovery session: {}. All files must be from a valid discovery session.",
+                    file_path.display()
+                ));
+            }
+        }
+
+        // Proceed with ingestion only if all files are validated
         let ingestion_service = get_ingestion_service();
         let result = ingestion_service
-            .batch_ingest(&request)
+            .batch_ingest(&request, Some(app_handle))
             .await
             .map_err(|e| e.to_string())?;
 
@@ -202,9 +232,21 @@ pub async fn create_discovery_config(
 #[tauri::command]
 pub async fn get_supported_formats() -> Result<Vec<String>, String> {
     let formats = vec![
-        "cr3".to_string(), // Canon
-        "raf".to_string(), // Fuji
-        "arw".to_string(), // Sony
+        // RAW formats
+        "cr3".to_string(), // Canon RAW 3
+        "cr2".to_string(), // Canon RAW 2
+        "nef".to_string(), // Nikon Electronic Format
+        "arw".to_string(), // Sony Alpha RAW
+        "raf".to_string(), // Fujifilm RAW
+        "orf".to_string(), // Olympus RAW Format
+        "pef".to_string(), // Pentax Electronic Format
+        "rw2".to_string(), // Panasonic RAW 2
+        "dng".to_string(), // Adobe Digital Negative
+        // Standard formats
+        "jpg".to_string(),  // JPEG
+        "jpeg".to_string(), // JPEG (alternate extension)
+        "png".to_string(),  // PNG
+        "webp".to_string(), // WebP
     ];
 
     Ok(formats)
@@ -395,17 +437,29 @@ mod tests {
     #[tokio::test]
     async fn test_get_supported_formats() {
         let formats = get_supported_formats().await.unwrap();
-        assert_eq!(formats.len(), 3);
+        assert_eq!(formats.len(), 13); // 9 RAW + 4 standard formats
+                                       // RAW formats
         assert!(formats.contains(&"cr3".to_string()));
-        assert!(formats.contains(&"raf".to_string()));
+        assert!(formats.contains(&"cr2".to_string()));
+        assert!(formats.contains(&"nef".to_string()));
         assert!(formats.contains(&"arw".to_string()));
+        assert!(formats.contains(&"raf".to_string()));
+        assert!(formats.contains(&"orf".to_string()));
+        assert!(formats.contains(&"pef".to_string()));
+        assert!(formats.contains(&"rw2".to_string()));
+        assert!(formats.contains(&"dng".to_string()));
+        // Standard formats
+        assert!(formats.contains(&"jpg".to_string()));
+        assert!(formats.contains(&"jpeg".to_string()));
+        assert!(formats.contains(&"png".to_string()));
+        assert!(formats.contains(&"webp".to_string()));
     }
 
     #[tokio::test]
     async fn test_get_default_discovery_config() {
         let config = get_default_discovery_config().await.unwrap();
         assert!(config.recursive);
-        assert_eq!(config.formats.len(), 3);
+        assert_eq!(config.formats.len(), 13); // 9 RAW + 4 standard formats
         assert!(!config.exclude_dirs.is_empty());
         assert!(config.max_depth.is_none());
         assert!(config.max_files.is_none());

@@ -1,33 +1,34 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tauri API Test</title>
-</head>
-<body>
+  </head>
+  <body>
     <h1>Tauri API Test</h1>
     <div id="result"></div>
 
     <script>
-        console.log('Testing Tauri API...');
-        console.log('window.__TAURI__:', window.__TAURI__);
+      console.log('Testing Tauri API...');
+      console.log('window.__TAURI__:', window.__TAURI__);
 
-        if (window.__TAURI__) {
-            document.getElementById('result').innerHTML = '✅ Tauri API Available!';
+      if (window.__TAURI__) {
+        document.getElementById('result').innerHTML = '✅ Tauri API Available!';
 
-            window.__TAURI__.invoke('get_all_images', { filter: null })
-                .then(result => {
-                    console.log('Command result:', result);
-                    document.getElementById('result').innerHTML += '<br>✅ Commands work!';
-                })
-                .catch(error => {
-                    console.log('Command error:', error);
-                    document.getElementById('result').innerHTML += '<br>❌ Command error: ' + error;
-                });
-        } else {
-            document.getElementById('result').innerHTML = '❌ Tauri API Not Available';
-        }
+        window.__TAURI__
+          .invoke('get_all_images', { filter: null })
+          .then((result) => {
+            console.log('Command result:', result);
+            document.getElementById('result').innerHTML += '<br>✅ Commands work!';
+          })
+          .catch((error) => {
+            console.log('Command error:', error);
+            document.getElementById('result').innerHTML += '<br>❌ Command error: ' + error;
+          });
+      } else {
+        document.getElementById('result').innerHTML = '❌ Tauri API Not Available';
+      }
     </script>
-</body>
+  </body>
 </html>

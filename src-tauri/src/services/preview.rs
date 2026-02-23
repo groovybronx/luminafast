@@ -604,6 +604,15 @@ impl PreviewService {
         output_path: &Path,
         size: (u32, u32),
     ) -> Result<(), PreviewError> {
+        // Créer les répertoires parents si nécessaire
+        if let Some(parent) = output_path.parent() {
+            tokio::fs::create_dir_all(parent)
+                .await
+                .map_err(|e| PreviewError::IoError {
+                    message: format!("Impossible de créer le répertoire de sortie: {}", e),
+                })?;
+        }
+
         let img = image::open(input_path).map_err(|e| PreviewError::ProcessingError {
             message: format!("Impossible d'ouvrir l'image: {}", e),
         })?;
@@ -633,6 +642,15 @@ impl PreviewService {
         output_path: &Path,
         size: (u32, u32),
     ) -> Result<(), PreviewError> {
+        // Créer les répertoires parents si nécessaire
+        if let Some(parent) = output_path.parent() {
+            tokio::fs::create_dir_all(parent)
+                .await
+                .map_err(|e| PreviewError::IoError {
+                    message: format!("Impossible de créer le répertoire de sortie: {}", e),
+                })?;
+        }
+
         let img = image::open(input_path).map_err(|e| PreviewError::ProcessingError {
             message: format!("Impossible d'ouvrir l'image: {}", e),
         })?;
@@ -733,6 +751,15 @@ impl PreviewService {
             Ok(())
         } else {
             // Fichier standard (JPEG, PNG, etc.)
+            // Créer les répertoires parents si nécessaire
+            if let Some(parent) = output_path.parent() {
+                tokio::fs::create_dir_all(parent)
+                    .await
+                    .map_err(|e| PreviewError::IoError {
+                        message: format!("Impossible de créer le répertoire de sortie: {}", e),
+                    })?;
+            }
+
             let img = image::open(input_path).map_err(|e| PreviewError::ProcessingError {
                 message: format!("Impossible d'ouvrir l'image: {}", e),
             })?;
@@ -755,6 +782,18 @@ impl PreviewService {
         preview_type: &PreviewType,
     ) -> Option<PathBuf> {
         if source_hash.len() < 2 {
+            return None;
+        }
+
+        // Validate source_hash: must be a valid hex string without path traversal characters
+        if !source_hash.chars().all(|c| c.is_ascii_hexdigit()) {
+            log::error!("Invalid source_hash: contains non-hexadecimal characters");
+            return None;
+        }
+
+        // Additional safety check: ensure no path traversal attempts
+        if source_hash.contains('.') || source_hash.contains('/') || source_hash.contains('\\') {
+            log::error!("Invalid source_hash: contains path traversal characters");
             return None;
         }
 

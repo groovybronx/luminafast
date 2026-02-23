@@ -1,7 +1,7 @@
-import { useRef, useMemo, useState, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Cloud, RefreshCw, Image as ImageIcon } from 'lucide-react';
-import type { CatalogImage, ActiveView } from '../../types';
+import { Cloud, Image as ImageIcon, RefreshCw } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ActiveView, CatalogImage } from '../../types';
 import './library.css';
 
 interface GridViewProps {

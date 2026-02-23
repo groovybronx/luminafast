@@ -5,13 +5,13 @@ vi.mock('@/hooks/useCatalog', () => ({
     syncAfterImport: mockSyncAfterImport,
   }),
 }));
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { useDiscovery } from '../useDiscovery';
-import { useSystemStore } from '@/stores/systemStore';
 import { discoveryService } from '@/services/discoveryService';
-import { RawFormat, DiscoveryStatus, FileProcessingStatus } from '@/types/discovery';
-import type { DiscoverySession, DiscoveredFile, BatchIngestionResult } from '@/types/discovery';
+import { useSystemStore } from '@/stores/systemStore';
+import type { BatchIngestionResult, DiscoveredFile, DiscoverySession } from '@/types/discovery';
+import { DiscoveryStatus, FileProcessingStatus, RawFormat } from '@/types/discovery';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useDiscovery } from '../useDiscovery';
 
 // Mock Tauri APIs
 vi.mock('@tauri-apps/api/core', () => ({
@@ -481,10 +481,12 @@ describe('useDiscovery', () => {
       });
     }
 
-    expect(result.current.progress).toBe(50);
+    // Progress calculation: percentage (50%) * PHASE_WEIGHTS.scan (0.3) = 15% global progress
+    // The phase weights distribute work across three phases: scan (0-30%), ingest (30-70%), previews (70-100%)
+    expect(result.current.progress).toBeCloseTo(15, 1); // 50% * 0.3 = 15%
     expect(result.current.processedFiles).toBe(50);
     expect(result.current.totalFiles).toBe(100);
-    expect(result.current.currentFile).toBe('Scanning: /test/subfolder');
+    expect(result.current.currentFile).toBe('Analyse: /test/subfolder');
   });
 
   it('should cleanup on unmount', async () => {

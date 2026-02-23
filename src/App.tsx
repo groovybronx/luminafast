@@ -4,6 +4,7 @@ import { safeID } from './lib/helpers';
 
 import { useCatalogStore, useUiStore, useEditStore, useSystemStore } from './stores';
 import { useCollectionStore } from './stores/collectionStore';
+import { useFolderStore } from './stores/folderStore';
 import { useCatalog } from './hooks/useCatalog';
 import { previewService } from './services/previewService';
 import { GlobalStyles } from './components/shared/GlobalStyles';
@@ -43,17 +44,25 @@ export default function App() {
   // Collection active (filtre par collection)
   const activeCollectionImageIds = useCollectionStore((state) => state.activeCollectionImageIds);
 
+  // Folder active (filtre par dossier)
+  const activeFolderImageIds = useFolderStore((state) => state.activeFolderImageIds);
+
   // Compute derived values with useMemo
   const selection = useMemo(() => Array.from(selectionSet), [selectionSet]);
 
   const filteredImages = useMemo(() => {
-    // 1. Filtrer par collection active (si une collection est sélectionnée)
-    const baseImages =
+    // 1. Filtrer par collection active (priorité maximale)
+    let baseImages =
       activeCollectionImageIds !== null
         ? images.filter((img) => activeCollectionImageIds.includes(img.id))
         : images;
 
-    // 2. Appliquer le filtre texte
+    // 2. Filtrer par dossier actif (si aucune collection n'est active)
+    if (activeCollectionImageIds === null && activeFolderImageIds !== null) {
+      baseImages = baseImages.filter((img) => activeFolderImageIds.includes(img.id));
+    }
+
+    // 3. Appliquer le filtre texte
     if (!filterText) return baseImages;
 
     const q = filterText.toLowerCase();
@@ -71,7 +80,7 @@ export default function App() {
         img.state.tags.some((t) => t.toLowerCase().includes(q))
       );
     });
-  }, [images, filterText, activeCollectionImageIds]);
+  }, [images, filterText, activeCollectionImageIds, activeFolderImageIds]);
 
   const logs = useSystemStore((state) => state.logs);
   const addLog = useSystemStore((state) => state.addLog);

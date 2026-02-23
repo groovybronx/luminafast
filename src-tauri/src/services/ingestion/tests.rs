@@ -34,6 +34,14 @@ fn create_test_database() -> Arc<std::sync::Mutex<rusqlite::Connection>> {
             imported_at DATETIME,
             folder_id INTEGER
         );
+        CREATE TABLE folders (
+            id INTEGER PRIMARY KEY,
+            path TEXT NOT NULL UNIQUE,
+            volume_name TEXT,
+            parent_id INTEGER REFERENCES folders(id),
+            is_online BOOLEAN NOT NULL DEFAULT 1,
+            name TEXT DEFAULT ''
+        );
         CREATE TABLE exif_metadata (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             image_id INTEGER NOT NULL,
@@ -80,9 +88,27 @@ fn create_test_raw_file(dir: &TempDir, filename: &str, format: RawFormat) -> Pat
     let file_path = dir.path().join(filename);
 
     let content: &[u8] = match format {
-        RawFormat::CR3 => b"ftypcr3\x00\x00\x00\x18cr3",
+        // Canon formats
+        RawFormat::CR3 => b"\x00\x00\x00\x18ftypcrx \x00\x00\x00\x00crx isom", // ISO BMFF with ftyp box
+        RawFormat::CR2 => b"II*\x00",                                          // TIFF LE
+        // Nikon formats
+        RawFormat::NEF => b"II*\x00NEF", // TIFF LE + NEF marker
+        // Sony formats
+        RawFormat::ARW => b"II*\x00SR2", // TIFF LE + Sony marker
+        // Fujifilm formats
         RawFormat::RAF => b"FUJIFILMCCD-RAW ",
-        RawFormat::ARW => b"\x00\x00\x02\x00SR2",
+        // Olympus formats
+        RawFormat::ORF => b"IIRO", // Olympus signature
+        // Pentax formats
+        RawFormat::PEF => b"II*\x00PEF", // TIFF LE + PEF marker
+        // Panasonic formats
+        RawFormat::RW2 => b"IIU\x00", // RW2 signature
+        // Adobe DNG
+        RawFormat::DNG => b"II*\x00DNG", // TIFF LE + DNG marker
+        // Standard formats
+        RawFormat::JPG | RawFormat::JPEG => b"\xFF\xD8\xFF\xE0JFIF",
+        RawFormat::PNG => b"\x89PNG\r\n\x1a\n",
+        RawFormat::WEBP => b"RIFF\x00\x00\x00\x00WEBP",
     };
 
     std::fs::write(&file_path, content).expect("Failed to write test file");
@@ -259,7 +285,7 @@ async fn test_batch_ingestion() {
 
     // Execute batch ingestion
     let result = service
-        .batch_ingest(&request)
+        .batch_ingest(&request, None)
         .await
         .expect("Batch ingestion failed");
 

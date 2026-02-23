@@ -9,6 +9,7 @@ Implémenter les Smart Collections : collections dynamiques basées sur des règ
 ## État Actuel (pré-3.3)
 
 ### ✅ Déjà implémenté
+
 - Schéma SQLite : colonne `collections.smart_query` (TEXT NULL)
 - Type `collections.type` : peut être `'static'` ou `'smart'` (CHECK constraint)
 - Type TypeScript `SmartQuery` (défini dans `src/types/collection.ts`)
@@ -16,6 +17,7 @@ Implémenter les Smart Collections : collections dynamiques basées sur des règ
 - `collectionStore` Zustand existant avec `setActiveCollection(id)`
 
 ### ⚠️ À implémenter
+
 1. **Backend** : Commande `create_smart_collection(name, smart_query, parent_id)`
 2. **Backend** : Commande `get_smart_collection_results(collection_id)` — parseur JSON → SQL WHERE
 3. **Backend** : Commande `update_smart_collection(collection_id, smart_query)`
@@ -31,6 +33,7 @@ Implémenter les Smart Collections : collections dynamiques basées sur des règ
 ### 1. Backend Rust — 3 nouvelles commandes
 
 #### `create_smart_collection(name: String, smart_query: String, parent_id: Option<u32>) → CommandResult<CollectionDTO>`
+
 - Valider que `name` n'est pas vide
 - Valider que `smart_query` est du JSON valide (parseable en `SmartQuery`)
 - INSERT INTO collections (name, type, smart_query, parent_id) VALUES (?, 'smart', ?, ?)
@@ -38,15 +41,17 @@ Implémenter les Smart Collections : collections dynamiques basées sur des règ
 - Utiliser la même `image_count` calculation que pour les static collections
 
 #### `get_smart_collection_results(collection_id: u32) → CommandResult<Vec<ImageDTO>>`
+
 - Vérifier que la collection existe et que `type = 'smart'`
 - Parser `smart_query` JSON en filtre structuré
 - Convertir en SQL WHERE clause dynamique
-- Exécuter : SELECT images.*, exif_metadata.*, image_state.* ... WHERE [générés]
+- Exécuter : SELECT images._, exif_metadata._, image_state.\* ... WHERE [générés]
 - LEFT JOIN image_state + exif_metadata (même structure que `get_all_images`)
 - ORDER BY images.imported_at DESC
 - Retourner les ImageDTOs
 
 #### `update_smart_collection(collection_id: u32, smart_query: String) → CommandResult<()>`
+
 - Vérifier que la collection existe et que `type = 'smart'`
 - Valider que `smart_query` est du JSON valide
 - UPDATE collections SET smart_query = ? WHERE id = ?
@@ -73,6 +78,7 @@ Implémenter les Smart Collections : collections dynamiques basées sur des règ
 ```
 
 **Champs supportés** :
+
 - `rating` (0-5) : operators `=`, `!=`, `>`, `>=`, `<`, `<=`
 - `iso` (number) : operators `=`, `>`, `>=`, `<`, `<=`, `!=`
 - `aperture` (number) : operators `=`, `>`, `>=`, `<`, `<=`
@@ -130,6 +136,7 @@ fn build_sql_clause(rule: &SmartQueryRule) -> Result<String, Box<dyn std::error:
 ### 4. Backend : Mise à jour `commands/catalog.rs`
 
 Ajouter les 3 commandes + tests unitaires :
+
 - `test_create_smart_collection_success` : créer et récupérer
 - `test_create_smart_collection_invalid_json` : erreur si JSON mal formé
 - `test_get_smart_collection_results_empty` : liste vide
@@ -143,17 +150,31 @@ Ajouter les 3 nouvelles commandes dans `tauri::generate_handler![]`
 ### 6. Frontend : `src/types/collection.ts`
 
 Ajouter/mettre à jour :
+
 ```typescript
 export type SmartQueryOperator =
-  | '=' | '!='
-  | '>' | '>=' | '<' | '<='
-  | 'contains' | 'not_contains'
-  | 'starts_with' | 'ends_with';
+  | '='
+  | '!='
+  | '>'
+  | '>='
+  | '<'
+  | '<='
+  | 'contains'
+  | 'not_contains'
+  | 'starts_with'
+  | 'ends_with';
 
 export type SmartQueryField =
-  | 'rating' | 'iso' | 'aperture' | 'focal_length'
-  | 'camera_make' | 'camera_model' | 'lens'
-  | 'flag' | 'color_label' | 'filename';
+  | 'rating'
+  | 'iso'
+  | 'aperture'
+  | 'focal_length'
+  | 'camera_make'
+  | 'camera_model'
+  | 'lens'
+  | 'flag'
+  | 'color_label'
+  | 'filename';
 
 export interface SmartQueryRule {
   field: SmartQueryField;
@@ -179,6 +200,7 @@ export interface Collection {
 ### 7. Frontend : `src/services/catalogService.ts`
 
 Ajouter les 3 méthodes :
+
 ```typescript
 async createSmartCollection(
   name: string,
@@ -197,8 +219,10 @@ async updateSmartCollection(
 ### 8. Frontend : `src/stores/collectionStore.ts`
 
 Ajouter les actions async :
+
 ```typescript
-createSmartCollection: (name: string, query: SmartQuery, parentId?: number) => Promise<CollectionDTO>;
+createSmartCollection: (name: string, query: SmartQuery, parentId?: number) =>
+  Promise<CollectionDTO>;
 updateSmartCollection: (id: number, query: SmartQuery) => Promise<void>;
 // setActiveCollection doit détecter et charger les résultats pour smart collections
 ```
@@ -206,6 +230,7 @@ updateSmartCollection: (id: number, query: SmartQuery) => Promise<void>;
 ### 9. Frontend : UI Builder (`src/components/library/SmartCollectionBuilder.tsx` - nouveau)
 
 Modal pour construire une smart collection :
+
 - Sélecteur de champ (dropdown : rating, iso, camera_make, etc.)
 - Sélecteur d'opérateur (adapté au type du champ)
 - Champ valeur (input text/number selon type)
@@ -228,12 +253,14 @@ Modal pour construire une smart collection :
 ## Livrables Techniques
 
 ### Fichiers créés
+
 - `src-tauri/src/services/smart_query_parser.rs`
 - `src/components/library/SmartCollectionBuilder.tsx`
 - `src/components/library/__tests__/SmartCollectionBuilder.test.tsx`
 - `src/types/smartQuery.ts` (si séparé de collection.ts)
 
 ### Fichiers modifiés
+
 - `src-tauri/src/commands/catalog.rs` — 3 nouvelles commandes + tests
 - `src-tauri/src/lib.rs` — enregistrement des 3 commandes
 - `src/types/collection.ts` — types SmartQuery enrichis
@@ -248,6 +275,7 @@ Modal pour construire une smart collection :
 ## Tests Requis
 
 ### Backend Rust (`src-tauri/src/commands/`)
+
 - `test_create_smart_collection_success` : créer "ISO > 1600 AND Rating >= 3", récupérer
 - `test_create_smart_collection_invalid_json` : erreur si smart_query JSON mal formé
 - `test_get_smart_collection_results_empty` : liste vide pour query sans match
@@ -260,6 +288,7 @@ Modal pour construire une smart collection :
 - `test_smart_query_parser_invalid_field` : erreur si champ inconnu
 
 ### Frontend (`src/components/library/__tests__/SmartCollectionBuilder.test.tsx`)
+
 - `should render all field options`
 - `should update operator based on selected field`
 - `should add a new rule`
@@ -269,12 +298,14 @@ Modal pour construire une smart collection :
 - `should create smart collection with valid query`
 
 ### Frontend (`src/services/__tests__/catalogService.test.ts`)
+
 - Extension : tests des 3 méthodes smart collection
 
 ### Frontend (`src/stores/__tests__/collectionStore.test.ts`)
-- Extension : *should create smart collection*
-- Extension : *should update smart collection*
-- Extension : *should load smart collection results*
+
+- Extension : _should create smart collection_
+- Extension : _should update smart collection_
+- Extension : _should load smart collection results_
 
 ---
 
@@ -297,12 +328,14 @@ Modal pour construire une smart collection :
 ## Dépendances
 
 **Sous-phases complétées (prérequis)** :
+
 - ✅ Phase 1.1 : Schéma SQLite (collections, exif_metadata, image_state)
 - ✅ Phase 1.2 : Tauri Commands de base
 - ✅ Phase 2.2 : Harvesting EXIF (données présentes)
 - ✅ Phase 3.2 : Collections Statiques CRUD
 
 **Fichiers clés à consulter** :
+
 - `Docs/archives/Lightroomtechnique.md` : Smart Albums dans Lightroom
 - `src-tauri/src/commands/catalog.rs` : Pattern des commandes existantes
 - `src/types/collection.ts` : Types de collections
@@ -334,12 +367,14 @@ Modal pour construire une smart collection :
 ### Résumé des Livrables
 
 **Backend (Rust)**
+
 - ✅ 3 Tauri commands (create, get_results, update)
 - ✅ Parser JSON→SQL avec 10 champs + 8 opérateurs
 - ✅ 14+ tests unitaires du parser
 - ✅ 5 tests des commands
 
 **Frontend (React/TypeScript)**
+
 - ✅ SmartCollectionBuilder composant + 11 tests
 - ✅ 3 service methods wrapping Tauri commands
 - ✅ Zustand store avec actions async
@@ -347,6 +382,7 @@ Modal pour construire une smart collection :
 - ✅ Détection type (static/smart) et chargement résultats appropriés
 
 **Intégration**
+
 - ✅ UI distintive (icône Zap ⚡)
 - ✅ Modal de création via "+ Smart" button
 - ✅ Click-to-load pour charger résultats

@@ -25,6 +25,7 @@ Implémenter une sous-phase du plan de développement en suivant **strictement**
 ```
 
 Pour les décisions architecturales :
+
 ```
 7. Docs/archives/Lightroomtechnique.md  # Si DB, collections, cache, previews
 8. Docs/archives/recommendations.md    # Si choix technologiques, performance
@@ -42,6 +43,7 @@ Avant de coder une seule ligne :
 ### 3. Analyse de la cause racine (si bug fix ou correction)
 
 Produire en 2-3 phrases :
+
 1. **Symptôme** observé
 2. **Cause racine** technique
 3. **Correction structurelle** (pas le workaround)
@@ -51,6 +53,7 @@ Produire en 2-3 phrases :
 ## Règles pendant l'implémentation
 
 ### TypeScript
+
 - `strict: true` — zéro `any`, zéro `// @ts-ignore`
 - Interfaces pour props (suffixe `Props`), types dans `src/types/`
 - Imports absolus via `@/`
@@ -59,6 +62,7 @@ Produire en 2-3 phrases :
 - Maximum ~300 lignes par fichier
 
 ### Rust
+
 - `Result<T, E>` systématiquement — zéro `unwrap()` en production
 - `#[derive(Debug, Clone, Serialize, Deserialize)]` sur les structs sérialisées
 - `#[serde(rename_all = "camelCase")]` sur les structs exposées au frontend
@@ -67,12 +71,14 @@ Produire en 2-3 phrases :
 - Types d'erreur personnalisés avec `thiserror`
 
 ### Architecture
+
 - Respecter le périmètre du brief — ni plus, ni moins
 - Aucune fonctionnalité future implémentée prématurément
 - Interfaces publiques existantes préservées
 - Un composant par fichier
 
 ### Tests (écrits EN PARALLÈLE du code)
+
 - Fichier de test créé en même temps que le fichier source
 - Tests co-localisés : `__tests__/` à côté du fichier source
 - Tests Rust dans `#[cfg(test)]` du même fichier
@@ -120,20 +126,25 @@ Fichiers modifiés: [liste des fichiers clés]
 **Type** : Feature / Bug Fix / Maintenance
 
 #### Résumé
+
 **Cause racine** (si applicable) : [2-3 phrases]
 **Solution** : [Description de ce qui a été implémenté]
 
 #### Fichiers créés
+
 - `chemin/fichier.ts` — [rôle]
 
 #### Fichiers modifiés
+
 - `chemin/fichier.ts` — [modification]
 
 #### Critères de validation remplis
+
 - [x] Critère 1
 - [x] Critère 2
 
 #### Impact
+
 - [Impact sur les autres modules]
 - Tests : [N] tests passants ✅
 ```

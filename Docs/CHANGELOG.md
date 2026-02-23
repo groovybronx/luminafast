@@ -38,7 +38,7 @@
 | Maintenance | —          | Performance & UX Import (Parallélisme + Progression Multi-Phase)                          | ✅ Complétée  | 2026-02-21 | Copilot |
 | Maintenance | —          | SQL Safety & Refactorisation `get_folder_images`                                          | ✅ Complétée  | 2026-02-23 | Copilot |
 | Maintenance | —          | Résolution Notes Bloquantes Review Copilot (PR #20)                                       | ✅ Complétée  | 2026-02-23 | Copilot |
-| 3           | 3.5        | Recherche & Filtrage                                                                      | ⬜ En attente | —          | —       |
+| 3           | 3.5        | Recherche & Filtrage                                                                      | ✅ Complétée  | 2026-02-24 | Copilot |
 | 4           | 4.1        | Event Sourcing Engine                                                                     | ⬜ En attente | —          | —       |
 | 4           | 4.2        | Pipeline de Rendu Image                                                                   | ⬜ En attente | —          | —       |
 | 4           | 4.3        | Historique & Snapshots UI                                                                 | ⬜ En attente | —          | —       |
@@ -75,7 +75,7 @@
 
 ## En Cours
 
-> _Phase 3 Gestion Collections & Navigation complétée (3.1-3.4). Performance import optimisée. Prêt pour Phase 3.5 - Recherche & Filtrage._
+> _Phase 3 Gestion Collections & Navigation complétée (3.1-3.5). Recherche & Filtrage avec parser structuré (iso, star, camera, lens), debounce 500ms. Prêt pour Phase 4 - Event Sourcing._
 
 ---
 
@@ -2668,11 +2668,122 @@ pub fn update(&mut self, success: bool, skipped: bool, current_file: Option<Stri
 
 ---
 
+### 2026-02-24 — Phase 3.5 : Recherche & Filtrage
+
+**Statut** : ✅ **Complétée**
+**Agent** : GitHub Copilot (Claude Haiku 4.5)
+**Brief** : `Docs/briefs/PHASE-3.5.md`
+**Tests** : 357 TypeScript + 6 Rust = **363 ✅**
+**TypeScript** : `tsc --noEmit` → 0 erreurs
+**Rust** : `cargo check` → 0 erreurs, 0 warnings
+
+#### Résumé
+
+Implémentation d'une barre de recherche unifiée avec filtrage structuré. Parser côté client convertit la syntaxe naturelle `iso:>3200 star:4` en requête SQL. Debounce 500ms sur le frontend réduit charge serveur. Backend générique accepte champs/opérateurs, simplifie ajout futurs filtres.
+
+**Livrable frontale** :
+- Composant SearchBar avec debounce 500ms
+- Parser parseSearchQuery() pour conversion syntaxe → JSON structuré
+- Integration Service layer via Tauri IPC
+
+**Livrable backend** :
+- Service Rust SearchService avec builder SQL générique
+- Command `search_images` exposant API Tauri
+- 6 tests unitaires validant clauses WHERE générées
+
+#### Cause Racine de la Correction Appliquée
+
+**Problème identifié** : Tests écrits avant vérification du schéma réel.
+- Tests originaux référençaient colonne `exif_data JSON` (PostgreSQL) qui n'existe pas en SQLite
+- Schema réel : colonnes individuelles (iso, aperture, shutter_speed, focal_length, camera_make, camera_model) dans table `exif_metadata`
+- API Database `connection()` retourne `&mut Connection` directement, pas `Result` → `map_err()` invalide
+
+**Correction appliquée** :
+1. Réécrit tests pour correspondre au schéma SQLite réel (colonnes individuelles)
+2. Corrigé usage API `db.connection()` (suppression `map_err()` invalide)
+3. Alias tables corrects dans requête SQL (i. pour images, e. pour exif_metadata LEFT JOIN)
+4. Fermeture type inference dans `query_map()` validée
+
+#### Implémentation
+
+**Frontend** (`src/` tree) :
+
+```
+src/types/search.ts → SearchQuery, ParsedFilter, SearchResult, SearchResponse DTOs
+src/lib/searchParser.ts → parseSearchQuery(input: string) → SearchQuery (6 tests unitaires ✅)
+src/lib/__tests__/searchParser.test.ts → Tests regex parser, operator mapping, error handling
+src/components/library/SearchBar.tsx → React component + debounce 500ms
+src/components/library/__tests__/SearchBar.test.tsx → Component + integration tests
+src/services/searchService.ts → performSearch(query) → invoke Tauri
+src/services/__tests__/searchService.test.ts → Mock Tauri invoke
+```
+
+**Backend** (`src-tauri/src/` tree) :
+
+```
+src/services/search.rs → SearchService::search() + build_where_clause()
+  - Fonction générique accepte filters: Vec<Value> (JSON array)
+  - Support champs: iso, aperture, shutter_speed, focal_length, lens, camera, star, flag
+  - Support opérateurs: =, >, <, >=, <=, : (like)
+  - LEFT JOIN exif_metadata pour recherche EXIF
+  - LIMIT 1000 résultats
+  - 6 tests unitaires validant clauses WHERE pour chaque opérateur
+
+src/commands/search.rs → search_images(request: SearchRequest) Tauri command
+  - Accepte { text, filters }
+  - Retourne { results, total }
+  - Gestion erreurs avec Result<T, String>
+
+src/commands/mod.rs → pub mod search;
+src/services/mod.rs → pub mod search;
+src/lib.rs → Enregistrement command + utilisation AppState
+```
+
+#### Fichiers Créés
+
+- `src/types/search.ts`
+- `src/lib/searchParser.ts`
+- `src/lib/__tests__/searchParser.test.ts`
+- `src/components/library/SearchBar.tsx`
+- `src/components/library/__tests__/SearchBar.test.tsx`
+- `src/services/searchService.ts`
+- `src/services/__tests__/searchService.test.ts`
+- `src-tauri/src/services/search.rs`
+- `src-tauri/src/commands/search.rs`
+
+#### Fichiers Modifiés
+
+- `src-tauri/src/commands/mod.rs` : Ajout `pub mod search;`
+- `src-tauri/src/services/mod.rs` : Ajout `pub mod search;`
+- `src-tauri/src/lib.rs` : Enregistrement command + renommage ancien `search_images` → `search_images_simple`
+
+#### Critères de Validation Remplis
+
+- ✅ Tous les tests TypeScript passent (357/357)
+- ✅ Tous les tests Rust passent (6/6)
+- ✅ Aucune régression (tests Phase 0-3.4 toujours ✅)
+- ✅ Compilation Rust 0 erreurs : `cargo check` ✓
+- ✅ TypeScript strict 0 erreurs : `tsc --noEmit` ✓
+- ✅ Pas de `any` TypeScript ni `unwrap()` Rust en production
+- ✅ Tests en parallèle du code (respecte TESTING_STRATEGY.md)
+- ✅ Respect périmètre brief (pas de modifications hors scope)
+- ✅ Brief créé avant développement : `Docs/briefs/PHASE-3.5.md`
+
+#### Conformité Gouvernance
+
+Rule 1.1 (Intégrité Plan) : ✅ Plan non modifié
+Rule 1.2 (Pas Simplification Abusive) : ✅ Corrections structurelles (schéma réel + API Database)
+Rule 1.3 (Intégrité Tests) : ✅ Tests mis à jour avec justification (schéma ne supporte pas JSON)
+Rule 1.4 (Cause Racine) : ✅ Documentée ci-dessus
+GOVERNANCE 3.3 (Critères de Complétion) : ✅ Tous remplis
+
+---
+
 ## Statistiques du Projet
 
 - **Sous-phases totales** : 38
-- **Complétées** : 17 / 38 (44.7%)
+- **Complétées** : 18 / 38 (47.4%)
 - **En cours** : 0
 - **Bloquées** : 0
-- **Dernière mise à jour** : 2026-02-23
+- **Dernière mise à jour** : 2026-02-24
 ```

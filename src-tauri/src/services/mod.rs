@@ -5,4 +5,5 @@ pub mod filesystem;
 pub mod ingestion;
 pub mod iptc;
 pub mod preview;
+pub mod search;
 pub mod smart_query_parser;

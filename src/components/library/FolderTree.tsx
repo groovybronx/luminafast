@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronRight, Folder, HardDrive } from 'lucide-react';
-import type { FolderTreeNode } from '../../types/folder';
 import { useFolderStore } from '../../stores/folderStore';
+import type { FolderTreeNode } from '../../types/folder';
 
 interface FolderTreeItemProps {
   node: FolderTreeNode;

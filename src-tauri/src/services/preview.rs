@@ -865,6 +865,50 @@ impl PreviewService {
 
 #[cfg(test)]
 mod tests {
+            #[tokio::test]
+            async fn test_preview_generation_performance_libvips() {
+                // Ce test nécessite un fichier RAW de test accessible
+                let test_file = std::env::var("LUMINAFAST_TEST_RAW").unwrap_or_else(|_| "/tmp/test_image.cr3".to_string());
+                if !std::path::Path::new(&test_file).exists() {
+                    eprintln!("[SKIP] Fichier RAW de test absent: {}", test_file);
+                    return;
+                }
+                let config = PreviewConfig {
+                    catalog_dir: PathBuf::from("/tmp/luminafast-perf-libvips"),
+                    parallel_threads: 2,
+                    generation_timeout: 30,
+                    use_libvips: true,
+                };
+                let service = PreviewService::new(config).expect("init preview service");
+                let hash = "testhash1234567890";
+                let start = std::time::Instant::now();
+                let result = service.generate_preview(
+                    &std::path::Path::new(&test_file),
+                    PreviewType::Thumbnail,
+                    hash,
+                ).await;
+                let elapsed = start.elapsed();
+                match result {
+                    Ok(preview) => {
+                        println!("[PERF] Génération libvips: {:?} en {:?}", preview.path, elapsed);
+                        assert!(elapsed.as_secs_f32() < 2.0, "Génération trop lente (>2s)");
+                    }
+                    Err(e) => panic!("Erreur génération preview: {:?}", e),
+                }
+            }
+        #[tokio::test]
+        async fn test_preview_generation_libvips_flag() {
+            let config = PreviewConfig {
+                catalog_dir: PathBuf::from("/tmp/luminafast-test-libvips"),
+                parallel_threads: 2,
+                generation_timeout: 10,
+                use_libvips: true,
+            };
+            let service = PreviewService::new(config.clone()).expect("init preview service");
+            assert!(service.config.use_libvips, "libvips doit être activé dans la config");
+            // Ce test vérifie uniquement que le flag est bien propagé dans le service.
+            // Pour un test d'intégration complet, il faudrait un mock ou un fichier RAW de test et vérifier le chemin de code.
+        }
     use super::*;
     use std::path::PathBuf;
     use tempfile::TempDir;
@@ -938,7 +982,7 @@ mod tests {
     async fn test_preview_config_default() {
         let config = PreviewConfig::default();
         assert_eq!(config.generation_timeout, 30);
-        assert!(!config.use_libvips);
+        assert!(config.use_libvips);
         assert!(config.parallel_threads > 0);
         assert!(config.catalog_dir.ends_with("Pictures/LuminaFast"));
         assert!(config.previews_dir().ends_with("Previews.lrdata"));

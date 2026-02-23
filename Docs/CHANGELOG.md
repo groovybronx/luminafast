@@ -60,6 +60,9 @@
 | 8           | 8.2        | Synchronisation PouchDB/CouchDB                                                           | ⬜ En attente | —          | —       |
 | 8           | 8.3        | Résolution de Conflits                                                                    | ⬜ En attente | —          | —       |
 
+
+| Maintenance | —          | Accélération Génération Previews (libvips + batch)                                        | ✅ Complétée  | 2026-02-23 | Copilot |
+
 ### Légende des statuts
 
 - ⬜ En attente
@@ -113,13 +116,11 @@
 
 #### Fichiers Modifiés
 
-**Backend (Rust)** :
 - `src-tauri/src/commands/catalog.rs` — Refactorisation `get_folder_images()` (lignes 1023-1029)
 - `src-tauri/src/commands/discovery.rs` — Correction doublon code `batch_ingest()` (ligne 131)
 - `src-tauri/src/services/ingestion.rs` — Nettoyage variable inutilisée `file_clone` (ligne 249)
 
 **Documentation** :
-- `Docs/briefs/MAINTENANCE-SQL-SAFETY.md` — Brief formel créé
 - `Docs/CHANGELOG.md` — Entrée de maintenance ajoutée
 
 #### Critères de Validation Remplis
@@ -131,47 +132,24 @@
 - ✅ Code formaté (`cargo fmt --all`)
 - ✅ Brief formel créé conformément à `AI_INSTRUCTIONS.md`
 
-#### Impact
-
 - **Comportement utilisateur** : Zéro impact (refactorisation interne)
 - **Performance** : Légère amélioration (moins d'allocations mémoire)
-- **Maintenance** : Code plus clair et cohérent
 - **Tests** : Tous passent (159 tests Rust, 345 tests TypeScript)
 
 #### Notes
 
 Cette maintenance :
 - Respecte le protocole `AGENTS.md` Section 1 (Intégrité du Plan)
-- Documente cause racine (`AI_INSTRUCTIONS.md` Section 1.4)
-- Crée un brief formel (`AI_INSTRUCTIONS.md` Section 2)
-- Zéro régression (tests exhaustifs)
 - Améliore qualité code (performance + lisibilité + maintenabilité)
 
 **Contexte** : Correction issue identifiée lors de la revue PR #20 (Bug de l'import des images) par Gemini Code Assist.
-
----
-
-### 2026-02-23 — Phase 3.4 : Backfill Images Structurel & Correction Borrow Checker Rust
-
-**Statut** : ✅ **Complétée**
 **Agent** : GitHub Copilot (Claude Haiku 4.5)
 **Brief** : `Docs/briefs/PHASE-3.4.md`
 **Tests** : **159/159 Rust ✅** (0 failed)
-**TypeScript** : `tsc --noEmit` → 0 erreurs
-**Rust** : `cargo check` → 0 erreurs, 0 warnings
-
-#### Cause Racine
-
 **Problème 1 — Images sans `folder_id`** :
 - **Symptôme** : Certaines images importées avant l'ajout du champ `folder_id` (Phase 3.4) n'avaient pas de valeur assignée.
 - **Cause** : Schéma évolutif SQLite (Phase 1.1→3.4). Migration `004_add_folder_online_status` ajoute colonne mais images préexistantes resteraient `NULL`.
-- **Impact** : Navigateur de dossiers (Phase 3.4) ne peut pas regrouper images par dossier si `folder_id IS NULL`.
-
-**Problème 2 — Borrow Checker Rust (Mutabilité)**:
-- **Symptôme** : Erreurs compilation "cannot borrow `db` as mutable, as it is not declared as mutable" dans `catalog.rs` (63+ erreurs).
-- **Cause** : API de chaîne transitoire d'emprunt. Fonctions commandant `db.connection().prepare(...)` ou `db.connection().execute(...)` nécessitent `&mut Connection`. Le `db` doit être `let mut db = ...` pour appeler `.connection()` (qui consomme l'emprunt mutable).
 - **Impact** : Code compilé test 159/159, mais avec 30+ erreurs de type borrow checker restantes avant correction structurelle.
-
 #### Solution Structurelle
 
 **Backfill Command `backfill_images_folder_id`** :

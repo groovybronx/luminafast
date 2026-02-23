@@ -173,6 +173,8 @@ LuminaFast/
 │   │   │   ├── discovery.rs         # Commandes ingestion + découverte (Phase 2.1)
 │   │   │   ├── hashing.rs           # Commandes BLAKE3 batch
 │   │   │   ├── preview.rs           # Commandes génération previews RAW (Phase 3.3)
+│   │   │   ├── __tests__/preview_performance.rs # Tests de performance batch vs séquentiel (Maint. 2026-02-23)
+│   │   │   ├── __tests__/preview_unit.rs        # Tests unitaires preview pyramide (Maint. 2026-02-23)
 │   │   │   └── types.rs             # Types réponse partagés
 │   │   ├── models/                   # Types Rust du domaine (sérializables)
 │   │   │   ├── mod.rs               # Export des modèles
@@ -201,6 +203,24 @@ LuminaFast/
 │   │   │   │   └── tests.rs         # Tests ingestion
 │   │   │   ├── filesystem.rs        # Service système de fichiers (watcher, lock)
 │   │   │   ├── preview.rs           # Service génération previews RAW (Phase 3.3)
+│   │   │   ├── preview.rs           # Service génération previews RAW (Phase 3.3, batch + libvips activé, Maint. 2026-02-23)
+## 6. Commandes Tauri (Mises à jour)
+
+- `generate_previews_batch(images: Vec<ImageId>, config: PreviewConfig)`
+  - Génère les previews pyramidales en batch (Promise.all côté frontend, batch 4 côté Rust)
+  - Utilise libvips par défaut (configurable)
+  - Retourne la liste des previews générées et les erreurs éventuelles
+
+## 7. Services Frontend (Mises à jour)
+
+- `previewService.generatePreviewsBatch(images: CatalogImage[])`
+  - Appelle la commande Tauri batch, gère Promise.all côté frontend
+  - Retourne les résultats de génération (succès/erreurs)
+
+## 8. Types & Interfaces (Mises à jour)
+
+- `PreviewConfig` (Rust/TS) : champ `use_libvips: bool` activé par défaut
+
 │   │   │   └── __tests__/           # Tests integration services
 │   └── icons/                      # Icônes d'application (16 fichiers)
 ├── index.html                      # HTML racine

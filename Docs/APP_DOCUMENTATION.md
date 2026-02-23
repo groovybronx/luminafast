@@ -948,6 +948,23 @@ export interface FolderTreeNode {
 
 ### Commandes Tauri — Phase 3.4
 
+#### `backfill_images_folder_id() → CommandResult<u32>`
+
+💡 **Nouvelle commande Phase 3.4** : Backfill structural pour images héritées sans `folder_id`.
+
+Sélectionne **TOUTES** les images avec `folder_id IS NULL`, les traite en transaction :
+1. Extrait le dossier depuis champ `filename`
+2. Appelle `IngestionService::get_or_create_folder_id()` (réutilise Phase 2.1)
+3. Exécute `UPDATE images SET folder_id = ? WHERE id = ?` en masse
+4. Retourne le nombre d'images mises à jour
+
+**Usage** : Backend command exposée au frontend. À intégrer dans UI "Import → Backfill" si images héritées détectées (ex: après upgrade depuis v0).
+
+```rust
+#[tauri::command]
+pub async fn backfill_images_folder_id(state: State<'_, AppState>) -> Result<u32, String>
+```
+
 #### `get_folder_tree() → CommandResult<Vec<FolderTreeNode>>`
 
 Retourne l'arborescence hiérarchique groupée par volumes. Requête SQL récursive (CTE) pour construire l'arbre, compteurs d'images direct et récursif, filtrage des dossiers vides.

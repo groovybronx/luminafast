@@ -28,14 +28,22 @@ pub type DatabaseResult<T> = Result<T, DatabaseError>;
 /// Phase 1.1: Schema SQLite du Catalogue
 pub struct Database {
     connection: Connection,
+    db_path: std::path::PathBuf,
 }
 
 impl Database {
+        /// Get mutable reference to the underlying SQLite connection (transactional usage only)
+        #[allow(dead_code)] // Used by backfill_images_folder_id command
+        pub fn transaction_conn(&mut self) -> &mut Connection {
+            &mut self.connection
+        }
     /// Create new database connection
     pub fn new<P: AsRef<Path>>(path: P) -> DatabaseResult<Self> {
-        let connection = Connection::open(path)?;
-        let db = Database { connection };
-
+        let connection = Connection::open(&path)?;
+        let db = Database {
+            connection,
+            db_path: path.as_ref().to_path_buf(),
+        };
         // Configure SQLite PRAGMA for performance as specified in plan
         db.connection.pragma_update(None, "journal_mode", "WAL")?;
         db.connection.pragma_update(None, "synchronous", "NORMAL")?;
@@ -43,13 +51,18 @@ impl Database {
         db.connection.pragma_update(None, "page_size", "4096")?;
         db.connection.pragma_update(None, "temp_store", "memory")?;
         db.connection.pragma_update(None, "foreign_keys", "ON")?;
-
         Ok(db)
     }
 
+    /// Get the path to the SQLite database file
+    #[allow(dead_code)] // Used by backfill_images_folder_id command
+    pub fn get_db_path(&self) -> &std::path::Path {
+        &self.db_path
+    }
+
     /// Get reference to the underlying SQLite connection
-    pub fn connection(&self) -> &Connection {
-        &self.connection
+    pub fn connection(&mut self) -> &mut Connection {
+        &mut self.connection
     }
 
     /// Execute a transaction with the given function
@@ -210,10 +223,10 @@ mod tests {
         let temp_dir = tempdir()?;
         let db_path = temp_dir.path().join("test_manual.db");
 
-        let db = Database::new(&db_path)?;
+        let mut db = Database::new(&db_path)?;
 
         // Manually execute the first CREATE TABLE
-        db.connection.execute(
+        db.connection().execute(
             "CREATE TABLE images (
                 id INTEGER PRIMARY KEY,
                 blake3_hash TEXT NOT NULL UNIQUE,
@@ -232,7 +245,7 @@ mod tests {
 
         // Check that table exists
         let table_exists: i64 = db
-            .connection
+            .connection()
             .query_row(
                 "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='images'",
                 [],
@@ -250,7 +263,7 @@ mod tests {
         let temp_dir = tempdir()?;
         let db_path = temp_dir.path().join("test_migration.db");
 
-        let db = Database::new(&db_path)?;
+        let mut db = Database::new(&db_path)?;
 
         // Check that no tables exist initially
         let tables_before: Vec<String> = db
@@ -263,7 +276,6 @@ mod tests {
         assert!(!tables_before.contains(&"migrations".to_string()));
 
         // Run initialization
-        let mut db = db; // Rebinding as mutable
         db.initialize()?;
 
         // Check that tables exist after migration
@@ -354,7 +366,7 @@ mod tests {
         db.initialize()?;
 
         // Insert a test image as specified in schema
-        db.connection.execute(
+        db.connection().execute(
             "INSERT INTO images (blake3_hash, filename, extension, width, height, orientation, file_size_bytes, captured_at, imported_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))",
             ["hash123", "test.CR3", "CR3", "6000", "4000", "0", "25000000"],
@@ -380,7 +392,7 @@ mod tests {
         db.initialize()?;
 
         // Try to insert image_state for non-existent image (should fail)
-        let result = db.connection.execute(
+        let result = db.connection().execute(
             "INSERT INTO image_state (image_id, rating) VALUES (?, ?)",
             [999, 5],
         );

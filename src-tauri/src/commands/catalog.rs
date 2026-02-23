@@ -8,6 +8,54 @@ use tauri::State;
 pub struct AppState {
     pub db: Arc<Mutex<Database>>,
 }
+/// Commande Tauri pour backfill des images sans folder_id
+#[tauri::command]
+#[allow(dead_code)] // Called by frontend via Tauri IPC, not by unit tests
+pub async fn backfill_images_folder_id(state: tauri::State<'_, crate::AppState>) -> Result<u32, String> {
+    let mut db_guard = state.db.lock().map_err(|e| format!("Database lock poisoned: {}", e))?;
+    let db_path = db_guard.get_db_path().to_path_buf();
+    let transaction = db_guard.transaction_conn().transaction().map_err(|e| format!("Transaction error: {}", e))?;
+    let mut updated_count = 0u32;
+
+    // Créer un service ingestion avec le même db (Arc original)
+    let ingestion_service = crate::services::ingestion::IngestionService::new(
+        crate::services::blake3::Blake3Service::new(crate::models::hashing::HashConfig::default()).into(),
+        std::sync::Arc::new(std::sync::Mutex::new(rusqlite::Connection::open(&db_path).map_err(|e| format!("Connection error: {}", e))?)),
+    );
+
+    // Sélectionner toutes les images sans folder_id
+    {
+        let mut stmt = transaction.prepare("SELECT id, filename FROM images WHERE folder_id IS NULL").map_err(|e| format!("Prepare error: {}", e))?;
+        let images_iter = stmt.query_map([], |row| {
+            let id: u32 = row.get(0)?;
+            let filename: String = row.get(1)?;
+            Ok((id, filename))
+        }).map_err(|e| format!("Query error: {}", e))?;
+
+        for img_res in images_iter {
+            let (id, filename) = img_res.map_err(|e| format!("Row error: {}", e))?;
+            // Extraire le dossier depuis filename
+            let folder_path = match std::path::Path::new(&filename).parent() {
+                Some(p) => match p.to_str() {
+                    Some(s) => s,
+                    None => continue, // skip invalid path
+                },
+                None => continue,
+            };
+            // Appeler get_or_create_folder_id
+            let folder_id_opt = ingestion_service.get_or_create_folder_id(&transaction, folder_path).map_err(|e| format!("Folder error: {}", e))?;
+            if let Some(folder_id) = folder_id_opt {
+                transaction.execute(
+                    "UPDATE images SET folder_id = ? WHERE id = ?",
+                    rusqlite::params![folder_id, id],
+                ).map_err(|e| format!("Update error: {}", e))?;
+                updated_count += 1;
+            }
+        }
+    }
+    transaction.commit().map_err(|e| format!("Commit error: {}", e))?;
+    Ok(updated_count)
+}
 
 /// Get all images with optional filtering
 #[tauri::command]
@@ -15,7 +63,7 @@ pub async fn get_all_images(
     filter: Option<ImageFilter>,
     state: State<'_, AppState>,
 ) -> CommandResult<Vec<ImageDTO>> {
-    let db = state
+    let mut db = state
         .db
         .lock()
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
@@ -116,7 +164,7 @@ pub async fn get_image_detail(
     id: u32,
     state: State<'_, AppState>,
 ) -> CommandResult<ImageDetailDTO> {
-    let db = state
+    let mut db = state
         .db
         .lock()
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
@@ -183,7 +231,7 @@ pub async fn update_image_state(
     flag: Option<String>,
     state: State<'_, AppState>,
 ) -> CommandResult<()> {
-    let db = state
+    let mut db = state
         .db
         .lock()
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
@@ -225,7 +273,7 @@ pub async fn create_collection(
     parent_id: Option<u32>,
     state: State<'_, AppState>,
 ) -> CommandResult<CollectionDTO> {
-    let db = state
+    let mut db = state
         .db
         .lock()
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
@@ -320,7 +368,7 @@ pub async fn add_images_to_collection(
 /// Get all collections
 #[tauri::command]
 pub async fn get_collections(state: State<'_, AppState>) -> CommandResult<Vec<CollectionDTO>> {
-    let db = state
+    let mut db = state
         .db
         .lock()
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
@@ -362,7 +410,7 @@ pub async fn search_images(
     query: String,
     state: State<'_, AppState>,
 ) -> CommandResult<Vec<ImageDTO>> {
-    let db = state
+    let mut db = state
         .db
         .lock()
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
@@ -464,7 +512,7 @@ pub async fn rename_collection(
         return Err("Collection name cannot be empty".to_string());
     }
 
-    let db = state
+    let mut db = state
         .db
         .lock()
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
@@ -527,7 +575,7 @@ pub async fn get_collection_images(
     collection_id: u32,
     state: State<'_, AppState>,
 ) -> CommandResult<Vec<ImageDTO>> {
-    let db = state
+    let mut db = state
         .db
         .lock()
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
@@ -614,7 +662,7 @@ pub async fn create_smart_collection(
     if let Err(e) = crate::services::smart_query_parser::parse_smart_query(&smart_query) {
         return Err(format!("Invalid smart_query structure: {}", e));
     }
-    let db = state
+    let mut db = state
         .db
         .lock()
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
@@ -636,7 +684,7 @@ pub async fn create_smart_collection(
             let id = db.connection().last_insert_rowid() as u32;
 
             // Get image count for this smart collection
-            let image_count = get_smart_collection_image_count(&db, id).unwrap_or(0);
+            let image_count = get_smart_collection_image_count(&mut db, id).unwrap_or(0);
 
             Ok(CollectionDTO {
                 id,
@@ -661,7 +709,7 @@ pub async fn get_smart_collection_results(
     collection_id: u32,
     state: State<'_, AppState>,
 ) -> CommandResult<Vec<ImageDTO>> {
-    let db = state
+    let mut db = state
         .db
         .lock()
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
@@ -751,7 +799,7 @@ pub async fn update_smart_collection(
     let _parsed: serde_json::Value = serde_json::from_str(&smart_query)
         .map_err(|e| format!("Invalid smart_query JSON: {}", e))?;
 
-    let db = state
+    let mut db = state
         .db
         .lock()
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
@@ -790,7 +838,7 @@ pub async fn update_smart_collection(
 
 /// Helper: Get image count for a smart collection
 fn get_smart_collection_image_count(
-    db: &crate::database::Database,
+    db: &mut crate::database::Database,
     collection_id: u32,
 ) -> Result<u32, String> {
     let smart_query: String = db
@@ -824,7 +872,7 @@ fn get_smart_collection_image_count(
 /// Get folder tree hierarchy with image counts
 #[tauri::command]
 pub async fn get_folder_tree(state: State<'_, AppState>) -> CommandResult<Vec<FolderTreeNode>> {
-    let db = state
+    let mut db = state
         .db
         .lock()
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
@@ -945,7 +993,7 @@ pub async fn get_folder_images(
     recursive: bool,
     state: State<'_, AppState>,
 ) -> CommandResult<Vec<ImageDTO>> {
-    let db = state
+    let mut db = state
         .db
         .lock()
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
@@ -1045,7 +1093,7 @@ pub async fn update_volume_status(
     is_online: bool,
     state: State<'_, AppState>,
 ) -> CommandResult<()> {
-    let db = state
+    let mut db = state
         .db
         .lock()
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
@@ -1076,7 +1124,7 @@ mod tests {
 
     #[test]
     fn test_get_all_images_empty_database() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
 
         // Test internal logic by calling the database directly
         let mut stmt = db
@@ -1090,7 +1138,7 @@ mod tests {
 
     #[test]
     fn test_create_collection_database() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
 
         // Test collection creation directly in database
         let result = db.connection().execute(
@@ -1127,7 +1175,7 @@ mod tests {
 
     #[test]
     fn test_image_state_operations() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
 
         // First create an image
         let image_result = db.connection().execute(
@@ -1161,7 +1209,7 @@ mod tests {
 
     #[test]
     fn test_update_image_state_null_values() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
 
         // Créer une image
         db.connection().execute(
@@ -1285,7 +1333,7 @@ mod tests {
 
     #[test]
     fn test_delete_collection_not_found() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
         let exists: Result<i32, _> =
             db.connection()
                 .query_row("SELECT 1 FROM collections WHERE id = ?", [9999u32], |row| {
@@ -1377,7 +1425,7 @@ mod tests {
 
     #[test]
     fn test_rename_collection_success() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
 
         db.connection()
             .execute(
@@ -1407,7 +1455,7 @@ mod tests {
 
     #[test]
     fn test_rename_collection_not_found() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
         let rows = db
             .connection()
             .execute(
@@ -1486,7 +1534,7 @@ mod tests {
 
     #[test]
     fn test_get_collection_images_empty() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
 
         db.connection()
             .execute(
@@ -1511,7 +1559,7 @@ mod tests {
 
     #[test]
     fn test_get_collection_images_with_data() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
 
         // Create 2 images
         db.connection()
@@ -1570,7 +1618,7 @@ mod tests {
 
     #[test]
     fn test_create_smart_collection_success() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
 
         // Create some test images with EXIF data
         db.connection()
@@ -1625,7 +1673,7 @@ mod tests {
 
     #[test]
     fn test_create_smart_collection_invalid_json() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
         let invalid_query = "{ invalid json }";
 
         let result = db.connection().execute(
@@ -1640,7 +1688,7 @@ mod tests {
 
     #[test]
     fn test_get_smart_collection_results_filters_correctly() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
 
         // Create multiple test images with different ratings and ISO
         for i in 1..=5 {
@@ -1704,7 +1752,7 @@ mod tests {
 
     #[test]
     fn test_get_smart_collection_results_wrong_type() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
 
         // Create a STATIC collection (not smart)
         db.connection()
@@ -1730,7 +1778,7 @@ mod tests {
 
     #[test]
     fn test_update_smart_collection_success() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
 
         // Create initial smart collection
         let initial_query =
@@ -1808,7 +1856,7 @@ mod tests {
 
     #[test]
     fn test_update_volume_status_online() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
 
         // Créer un dossier avec un volume
         db.connection()
@@ -1841,7 +1889,7 @@ mod tests {
 
     #[test]
     fn test_update_volume_status_offline() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
 
         // Créer un dossier avec un volume online
         db.connection()
@@ -1874,7 +1922,7 @@ mod tests {
 
     #[test]
     fn test_get_folder_tree_empty() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
 
         // Vérifier qu'il n'y a pas de dossiers
         let mut stmt = db
@@ -1888,7 +1936,7 @@ mod tests {
 
     #[test]
     fn test_get_folder_tree_with_images() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
 
         // Créer un dossier
         db.connection()
@@ -1930,7 +1978,7 @@ mod tests {
 
     #[test]
     fn test_get_folder_images_direct() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
 
         // Créer un dossier parent et un sous-dossier
         db.connection()
@@ -1980,7 +2028,7 @@ mod tests {
 
     #[test]
     fn test_get_folder_images_recursive() {
-        let db = setup_test_db();
+        let mut db = setup_test_db();
 
         // Créer une hiérarchie de dossiers
         db.connection()

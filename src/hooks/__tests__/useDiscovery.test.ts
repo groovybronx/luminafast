@@ -482,7 +482,7 @@ describe('useDiscovery', () => {
     }
 
     // Progress is weighted by PHASE_WEIGHTS.scan (0.3), so 50% becomes 15%
-    expect(result.current.progress).toBe(15);
+    expect(result.current.progress).toBeCloseTo(50 * 0.3);
     expect(result.current.processedFiles).toBe(50);
     expect(result.current.totalFiles).toBe(100);
     expect(result.current.currentFile).toBe('Analyse: /test/subfolder');

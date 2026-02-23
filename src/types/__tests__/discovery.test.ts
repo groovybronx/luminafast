@@ -103,7 +103,9 @@ describe('Discovery Types', () => {
       expect(cr3Info.extension).toBe('cr3');
       expect(cr3Info.mimeType).toBe('image/x-canon-cr3');
       expect(cr3Info.description).toBe('Canon RAW 3');
-      expect(cr3Info.signature).toEqual([0x49, 0x52, 0x42, 0x02]);
+      expect(cr3Info.signature).toEqual([
+        0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x63, 0x72, 0x33, 0x20,
+      ]);
       expect(cr3Info.minSize).toBe(1024 * 1024);
       expect(cr3Info.maxSize).toBe(1024 * 1024 * 1024);
 
@@ -112,14 +114,14 @@ describe('Discovery Types', () => {
       expect(rafInfo.extension).toBe('raf');
       expect(rafInfo.mimeType).toBe('image/x-fuji-raf');
       expect(rafInfo.description).toBe('Fujifilm RAW');
-      expect(rafInfo.signature).toEqual([0x46, 0x55, 0x4a, 0x49]);
+      expect(rafInfo.signature).toEqual([0x46, 0x55, 0x4a, 0x49, 0x46, 0x49, 0x4c, 0x4d]);
 
       const arwInfo = getRawFormatInfo(RawFormat.ARW);
       expect(arwInfo.format).toBe(RawFormat.ARW);
       expect(arwInfo.extension).toBe('arw');
       expect(arwInfo.mimeType).toBe('image/x-sony-arw');
       expect(arwInfo.description).toBe('Sony Alpha RAW');
-      expect(arwInfo.signature).toEqual([0x00, 0x00, 0x02, 0x00]);
+      expect(arwInfo.signature).toEqual([0x49, 0x49, 0x2a, 0x00]);
     });
   });
 

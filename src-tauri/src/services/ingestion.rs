@@ -1,15 +1,18 @@
 use crate::models::catalog::{NewExifMetadata, NewImage};
 use crate::models::discovery::{
     BasicExif, BatchIngestionRequest, BatchIngestionResult, DiscoveredFile, DiscoveryError,
-    FormatDetails, IngestionMetadata, IngestionResult,
+    FormatDetails, IngestionMetadata, IngestionProgress, IngestionResult,
 };
 use crate::models::exif::ExifMetadata;
 use crate::services::blake3::Blake3Service;
 use crate::services::exif;
+use rayon::prelude::*;
 use rusqlite::OptionalExtension;
 use std::path::Path;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
+use tauri::{AppHandle, Emitter};
 use uuid::Uuid;
 
 /// Session statistics update parameters
@@ -121,10 +124,11 @@ impl IngestionService {
         Ok(result)
     }
 
-    /// Ingest multiple files in batch
+    /// Ingest multiple files in batch with parallel processing and progress events
     pub async fn batch_ingest(
         &self,
         request: &BatchIngestionRequest,
+        app_handle: Option<AppHandle>,
     ) -> Result<BatchIngestionResult, DiscoveryError> {
         let start_time = Instant::now();
         let mut result = BatchIngestionResult::new(request.session_id, request.file_paths.len());
@@ -157,9 +161,21 @@ impl IngestionService {
                 .map(|ext| ext.to_lowercase());
 
             let format = match extension.as_deref() {
+                // RAW formats
                 Some("cr3") => crate::models::discovery::RawFormat::CR3,
-                Some("raf") => crate::models::discovery::RawFormat::RAF,
+                Some("cr2") => crate::models::discovery::RawFormat::CR2,
+                Some("nef") => crate::models::discovery::RawFormat::NEF,
                 Some("arw") => crate::models::discovery::RawFormat::ARW,
+                Some("raf") => crate::models::discovery::RawFormat::RAF,
+                Some("orf") => crate::models::discovery::RawFormat::ORF,
+                Some("pef") => crate::models::discovery::RawFormat::PEF,
+                Some("rw2") => crate::models::discovery::RawFormat::RW2,
+                Some("dng") => crate::models::discovery::RawFormat::DNG,
+                // Standard formats
+                Some("jpg") => crate::models::discovery::RawFormat::JPG,
+                Some("jpeg") => crate::models::discovery::RawFormat::JPEG,
+                Some("png") => crate::models::discovery::RawFormat::PNG,
+                Some("webp") => crate::models::discovery::RawFormat::WEBP,
 
                 _ => {
                     // Skip unsupported formats
@@ -183,9 +199,11 @@ impl IngestionService {
             files_to_process.truncate(max_files);
         }
 
+        let total_files = files_to_process.len();
+
         // Update session with total files count
         let initial_stats = SessionStatsUpdate {
-            total_files: files_to_process.len(),
+            total_files,
             ingested_files: 0,
             failed_files: 0,
             skipped_files: 0,
@@ -195,65 +213,129 @@ impl IngestionService {
         self.update_session_stats(request.session_id, initial_stats)
             .await?;
 
-        // Process files sequentially for now (avoid async issues with rayon)
-        let mut ingest_results = Vec::new();
-        let mut total_size = 0u64;
-        let mut total_processing_time = 0u64;
+        // Create thread pool with limited size (4-8 threads for I/O-bound operations)
+        let thread_pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(num_cpus::get().min(8))
+            .build()
+            .map_err(|e| DiscoveryError::IoError(format!("Thread pool creation failed: {}", e)))?;
 
-        for file in &files_to_process {
-            let file_start_time = Instant::now();
-            let ingest_result = self.ingest_file(file).await;
-            let file_processing_time = file_start_time.elapsed().as_millis() as u64;
+        // Atomic counters for thread-safe progress tracking
+        let processed_count = Arc::new(AtomicUsize::new(0));
+        let successful_count = Arc::new(AtomicUsize::new(0));
+        let failed_count = Arc::new(AtomicUsize::new(0));
+        let skipped_count = Arc::new(AtomicUsize::new(0));
+        let total_size = Arc::new(AtomicUsize::new(0));
+        let total_processing_time = Arc::new(AtomicUsize::new(0));
 
-            total_processing_time += file_processing_time;
+        // Create progress tracker
+        let mut progress = IngestionProgress::new(request.session_id, total_files);
 
-            // Get file size for total
-            if let Ok(metadata) = std::fs::metadata(&file.path) {
-                total_size += metadata.len();
-            }
-
-            ingest_results.push(ingest_result);
+        // Emit initial progress event
+        if let Some(ref handle) = app_handle {
+            let _ = handle.emit("ingestion-progress", &progress);
         }
 
-        // Collect results and update session stats
-        let mut successful_count = 0;
-        let mut failed_count = 0;
-        let mut skipped_count = 0;
+        // Process files in parallel using Rayon
+        let ingest_results: Vec<_> = thread_pool.install(|| {
+            files_to_process
+                .par_iter()
+                .map(|file| {
+                    let file_start_time = Instant::now();
 
-        for ingest_result in ingest_results {
+                    // Process file (blocking operation moved to thread pool)
+                    // Try to use current runtime, fallback to creating a new one
+                    let ingest_result = if let Ok(handle) = tokio::runtime::Handle::try_current() {
+                        handle.block_on(async { self.ingest_file(file).await })
+                    } else {
+                        // Create a new runtime for this thread if none exists
+                        let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
+                        rt.block_on(async { self.ingest_file(file).await })
+                    };
+
+                    let file_processing_time = file_start_time.elapsed().as_millis() as u64;
+                    total_processing_time
+                        .fetch_add(file_processing_time as usize, Ordering::Relaxed);
+
+                    // Update file size counter
+                    if let Ok(metadata) = std::fs::metadata(&file.path) {
+                        total_size.fetch_add(metadata.len() as usize, Ordering::Relaxed);
+                    }
+
+                    // Update atomic counters based on result
+                    let current_processed = processed_count.fetch_add(1, Ordering::Relaxed) + 1;
+
+                    let (success, skipped) = match &ingest_result {
+                        Ok(ing_res) => {
+                            if ing_res.success {
+                                successful_count.fetch_add(1, Ordering::Relaxed);
+                                (true, false)
+                            } else if ing_res
+                                .error
+                                .as_ref()
+                                .map(|e| e.contains("already exists"))
+                                .unwrap_or(false)
+                            {
+                                skipped_count.fetch_add(1, Ordering::Relaxed);
+                                (false, true)
+                            } else {
+                                failed_count.fetch_add(1, Ordering::Relaxed);
+                                (false, false)
+                            }
+                        }
+                        Err(_) => {
+                            failed_count.fetch_add(1, Ordering::Relaxed);
+                            (false, false)
+                        }
+                    };
+
+                    // Emit progress event every 5 files or on last file (throttling)
+                    if current_processed % 5 == 0 || current_processed == total_files {
+                        if let Some(ref handle) = app_handle {
+                            let mut prog = IngestionProgress::new(request.session_id, total_files);
+                            prog.processed = current_processed;
+                            prog.successful = successful_count.load(Ordering::Relaxed);
+                            prog.failed = failed_count.load(Ordering::Relaxed);
+                            prog.skipped = skipped_count.load(Ordering::Relaxed);
+                            prog.current_file = Some(
+                                file.path
+                                    .file_name()
+                                    .and_then(|n| n.to_str())
+                                    .unwrap_or("unknown")
+                                    .to_string(),
+                            );
+                            prog.percentage = current_processed as f32 / total_files as f32;
+
+                            let _ = handle.emit("ingestion-progress", &prog);
+                        }
+                    }
+
+                    (ingest_result, success, skipped)
+                })
+                .collect()
+        });
+
+        // Collect results and populate BatchIngestionResult
+        for (ingest_result, success, skipped) in ingest_results {
             match ingest_result {
                 Ok(ingestion_result) => {
-                    if ingestion_result.success {
+                    if success {
                         result.add_successful(ingestion_result);
-                        successful_count += 1;
+                    } else if skipped {
+                        result.add_skipped(ingestion_result);
                     } else {
-                        // Check if it was skipped (already exists)
-                        if let Some(ref error) = ingestion_result.error {
-                            if error.contains("already exists") {
-                                result.add_skipped(ingestion_result);
-                                skipped_count += 1;
-                            } else {
-                                result.add_failed(ingestion_result);
-                                failed_count += 1;
-                            }
-                        } else {
-                            result.add_failed(ingestion_result);
-                            failed_count += 1;
-                        }
+                        result.add_failed(ingestion_result);
                     }
                 }
                 Err(e) => {
                     // Create failed result for error
                     let failed_result = IngestionResult {
-                        file: files_to_process.pop().unwrap_or_else(|| {
-                            crate::models::discovery::DiscoveredFile::new(
-                                request.session_id,
-                                std::path::PathBuf::new(),
-                                crate::models::discovery::RawFormat::CR3,
-                                0,
-                                chrono::Utc::now(),
-                            )
-                        }),
+                        file: DiscoveredFile::new(
+                            request.session_id,
+                            std::path::PathBuf::new(),
+                            crate::models::discovery::RawFormat::CR3,
+                            0,
+                            chrono::Utc::now(),
+                        ),
                         success: false,
                         database_id: None,
                         processing_time_ms: 0,
@@ -261,24 +343,29 @@ impl IngestionService {
                         metadata: None,
                     };
                     result.add_failed(failed_result);
-                    failed_count += 1;
                 }
             }
         }
 
         // Finalize session stats
-        let avg_processing_time = if !files_to_process.is_empty() {
-            total_processing_time as f64 / files_to_process.len() as f64
+        let final_successful = successful_count.load(Ordering::Relaxed);
+        let final_failed = failed_count.load(Ordering::Relaxed);
+        let final_skipped = skipped_count.load(Ordering::Relaxed);
+        let final_size = total_size.load(Ordering::Relaxed) as u64;
+        let final_processing_time = total_processing_time.load(Ordering::Relaxed) as u64;
+
+        let avg_processing_time = if total_files > 0 {
+            final_processing_time as f64 / total_files as f64
         } else {
             0.0
         };
 
         let stats = SessionStatsUpdate {
-            total_files: files_to_process.len(),
-            ingested_files: successful_count,
-            failed_files: failed_count,
-            skipped_files: skipped_count,
-            total_size_bytes: total_size,
+            total_files,
+            ingested_files: final_successful,
+            failed_files: final_failed,
+            skipped_files: final_skipped,
+            total_size_bytes: final_size,
             avg_processing_time_ms: avg_processing_time,
         };
 
@@ -286,6 +373,18 @@ impl IngestionService {
 
         // Mark session as completed
         self.complete_session(request.session_id).await?;
+
+        // Emit final progress event
+        progress.processed = total_files;
+        progress.successful = final_successful;
+        progress.failed = final_failed;
+        progress.skipped = final_skipped;
+        progress.percentage = 1.0;
+        progress.current_file = None;
+
+        if let Some(ref handle) = app_handle {
+            let _ = handle.emit("ingestion-progress", &progress);
+        }
 
         // Finalize result with timing and statistics
         result.total_processing_time_ms =
@@ -385,11 +484,13 @@ impl IngestionService {
         // Extension-based detection
         match extension.to_lowercase().as_str() {
             "cr3" | "cr2" => return Some("Canon".to_string()),
-            "raf" => return Some("Fujifilm".to_string()),
-            "arw" => return Some("Sony".to_string()),
             "nef" => return Some("Nikon".to_string()),
+            "arw" => return Some("Sony".to_string()),
+            "raf" => return Some("Fujifilm".to_string()),
             "orf" => return Some("Olympus".to_string()),
-            "dng" => return Some("Digital".to_string()),
+            "pef" => return Some("Pentax".to_string()),
+            "rw2" => return Some("Panasonic".to_string()),
+            "dng" => return Some("Digital".to_string()), // DNG is generic, could be any manufacturer
             _ => {}
         }
 
@@ -595,9 +696,10 @@ impl IngestionService {
             .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
 
         // Get or create folder for this file
-        let file_path_str = file.path.to_str().ok_or_else(|| {
-            DiscoveryError::IoError("Invalid UTF-8 in file path".to_string())
-        })?;
+        let file_path_str = file
+            .path
+            .to_str()
+            .ok_or_else(|| DiscoveryError::IoError("Invalid UTF-8 in file path".to_string()))?;
         let folder_id = self.get_or_create_folder_id(&transaction, file_path_str)?;
 
         // Create image record

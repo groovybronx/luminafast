@@ -21,19 +21,66 @@ pub enum FileProcessingStatus {
     Error,
 }
 
-/// Supported RAW file formats
+/// Supported image file formats (RAW + standard formats)
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Copy)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum RawFormat {
-    /// Canon RAW 3
+    // Canon formats
+    /// Canon RAW 3 (newer)
     #[serde(rename = "cr3")]
     CR3,
-    /// Fujifilm RAW
-    #[serde(rename = "raf")]
-    RAF,
+    /// Canon RAW 2 (older)
+    #[serde(rename = "cr2")]
+    CR2,
+
+    // Nikon formats
+    /// Nikon Electronic Format
+    #[serde(rename = "nef")]
+    NEF,
+
+    // Sony formats
     /// Sony Alpha RAW
     #[serde(rename = "arw")]
     ARW,
+
+    // Fujifilm formats
+    /// Fujifilm RAW
+    #[serde(rename = "raf")]
+    RAF,
+
+    // Olympus formats
+    /// Olympus RAW Format
+    #[serde(rename = "orf")]
+    ORF,
+
+    // Pentax formats
+    /// Pentax Electronic Format
+    #[serde(rename = "pef")]
+    PEF,
+
+    // Panasonic formats
+    /// Panasonic RAW 2
+    #[serde(rename = "rw2")]
+    RW2,
+
+    // Adobe DNG (universal RAW)
+    /// Adobe Digital Negative (universal RAW)
+    #[serde(rename = "dng")]
+    DNG,
+
+    // Standard image formats
+    /// JPEG (Joint Photographic Experts Group)
+    #[serde(rename = "jpg")]
+    JPG,
+    /// JPEG alternate extension
+    #[serde(rename = "jpeg")]
+    JPEG,
+    /// Portable Network Graphics
+    #[serde(rename = "png")]
+    PNG,
+    /// WebP (Google)
+    #[serde(rename = "webp")]
+    WEBP,
 }
 
 impl RawFormat {
@@ -41,9 +88,24 @@ impl RawFormat {
     pub fn extension(&self) -> &'static str {
         match self {
             RawFormat::CR3 => "cr3",
-            RawFormat::RAF => "raf",
+            RawFormat::CR2 => "cr2",
+            RawFormat::NEF => "nef",
             RawFormat::ARW => "arw",
+            RawFormat::RAF => "raf",
+            RawFormat::ORF => "orf",
+            RawFormat::PEF => "pef",
+            RawFormat::RW2 => "rw2",
+            RawFormat::DNG => "dng",
+            RawFormat::JPG => "jpg",
+            RawFormat::JPEG => "jpeg",
+            RawFormat::PNG => "png",
+            RawFormat::WEBP => "webp",
         }
+    }
+
+    /// Check if this is a RAW format (vs standard image format)
+    pub fn is_raw(&self) -> bool {
+        !matches!(self, RawFormat::JPG | RawFormat::JPEG | RawFormat::PNG | RawFormat::WEBP)
     }
 
     /// Get the MIME type for this format
@@ -52,8 +114,17 @@ impl RawFormat {
     pub fn mime_type(&self) -> &'static str {
         match self {
             RawFormat::CR3 => "image/x-canon-cr3",
-            RawFormat::RAF => "image/x-fuji-raf",
+            RawFormat::CR2 => "image/x-canon-cr2",
+            RawFormat::NEF => "image/x-nikon-nef",
             RawFormat::ARW => "image/x-sony-arw",
+            RawFormat::RAF => "image/x-fuji-raf",
+            RawFormat::ORF => "image/x-olympus-orf",
+            RawFormat::PEF => "image/x-pentax-pef",
+            RawFormat::RW2 => "image/x-panasonic-rw2",
+            RawFormat::DNG => "image/x-adobe-dng",
+            RawFormat::JPG | RawFormat::JPEG => "image/jpeg",
+            RawFormat::PNG => "image/png",
+            RawFormat::WEBP => "image/webp",
         }
     }
 
@@ -63,8 +134,17 @@ impl RawFormat {
     pub fn description(&self) -> &'static str {
         match self {
             RawFormat::CR3 => "Canon RAW 3",
-            RawFormat::RAF => "Fujifilm RAW",
+            RawFormat::CR2 => "Canon RAW 2",
+            RawFormat::NEF => "Nikon Electronic Format",
             RawFormat::ARW => "Sony Alpha RAW",
+            RawFormat::RAF => "Fujifilm RAW",
+            RawFormat::ORF => "Olympus RAW Format",
+            RawFormat::PEF => "Pentax Electronic Format",
+            RawFormat::RW2 => "Panasonic RAW 2",
+            RawFormat::DNG => "Adobe Digital Negative",
+            RawFormat::JPG | RawFormat::JPEG => "JPEG",
+            RawFormat::PNG => "PNG",
+            RawFormat::WEBP => "WebP",
         }
     }
 
@@ -73,9 +153,20 @@ impl RawFormat {
     #[allow(dead_code)]
     pub fn magic_bytes(&self) -> &'static [u8] {
         match self {
-            RawFormat::CR3 => &[0x49, 0x52, 0x42, 0x02],
-            RawFormat::RAF => &[0x46, 0x55, 0x4A, 0x49],
-            RawFormat::ARW => &[0x00, 0x00, 0x02, 0x00],
+            // RAW formats (simplified signatures for testing)
+            RawFormat::CR3 => &[0x49, 0x52, 0x42, 0x02], // CR3 magic
+            RawFormat::CR2 => &[0x49, 0x49, 0x2A, 0x00], // TIFF LE
+            RawFormat::NEF => &[0x49, 0x49, 0x2A, 0x00], // TIFF LE (same as CR2)
+            RawFormat::ARW => &[0x00, 0x00, 0x02, 0x00], // Sony specific
+            RawFormat::RAF => &[0x46, 0x55, 0x4A, 0x49], // FUJI
+            RawFormat::ORF => &[0x49, 0x49, 0x52, 0x4F], // IIRO
+            RawFormat::PEF => &[0x49, 0x49, 0x2A, 0x00], // TIFF LE
+            RawFormat::RW2 => &[0x49, 0x49, 0x55, 0x00], // IIU\0
+            RawFormat::DNG => &[0x49, 0x49, 0x2A, 0x00], // TIFF LE
+            // Standard formats
+            RawFormat::JPG | RawFormat::JPEG => &[0xFF, 0xD8, 0xFF],
+            RawFormat::PNG => &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A],
+            RawFormat::WEBP => &[0x52, 0x49, 0x46, 0x46], // RIFF
         }
     }
 
@@ -193,7 +284,21 @@ impl Default for DiscoveryConfig {
         Self {
             root_path: PathBuf::from("."),
             recursive: true,
-            formats: vec![RawFormat::CR3, RawFormat::RAF, RawFormat::ARW],
+            formats: vec![
+                // RAW formats (Phase 2.3 compliance)
+                RawFormat::CR3, RawFormat::CR2,  // Canon
+                RawFormat::NEF,                   // Nikon
+                RawFormat::ARW,                   // Sony
+                RawFormat::RAF,                   // Fujifilm
+                RawFormat::ORF,                   // Olympus
+                RawFormat::PEF,                   // Pentax
+                RawFormat::RW2,                   // Panasonic
+                RawFormat::DNG,                   // Adobe
+                // Standard formats
+                RawFormat::JPG, RawFormat::JPEG,  // JPEG
+                RawFormat::PNG,                   // PNG
+                RawFormat::WEBP,                  // WebP
+            ],
             exclude_dirs: vec![
                 ".git".to_string(),
                 "node_modules".to_string(),
@@ -223,6 +328,62 @@ pub enum DiscoveryStatus {
     Stopped,
     #[serde(rename = "error")]
     Error(String),
+}
+
+/// Ingestion progress event (emitted during batch ingestion)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IngestionProgress {
+    /// Session ID
+    pub session_id: Uuid,
+    /// Total files to ingest
+    pub total: usize,
+    /// Files processed so far
+    pub processed: usize,
+    /// Number of successful ingestions
+    pub successful: usize,
+    /// Number of failed ingestions
+    pub failed: usize,
+    /// Number of skipped files
+    pub skipped: usize,
+    /// Current file being processed
+    pub current_file: Option<String>,
+    /// Progress percentage (0.0 - 1.0)
+    pub percentage: f32,
+}
+
+impl IngestionProgress {
+    /// Create a new progress event
+    pub fn new(session_id: Uuid, total: usize) -> Self {
+        Self {
+            session_id,
+            total,
+            processed: 0,
+            successful: 0,
+            failed: 0,
+            skipped: 0,
+            current_file: None,
+            percentage: 0.0,
+        }
+    }
+
+    /// Update progress with a processed file result
+    pub fn update(&mut self, success: bool, skipped: bool, current_file: Option<String>) {
+        self.processed += 1;
+        if success {
+            self.successful += 1;
+        } else if skipped {
+            self.skipped += 1;
+        } else {
+            self.failed += 1;
+        }
+        self.current_file = current_file;
+        self.percentage = if self.total > 0 {
+            self.processed as f32 / self.total as f32
+        } else {
+            0.0
+        };
+    }
 }
 
 /// Discovery session information
@@ -695,10 +856,13 @@ mod tests {
         let config = DiscoveryConfig::default();
 
         assert!(config.recursive);
-        assert_eq!(config.formats.len(), 3);
+        assert_eq!(config.formats.len(), 13); // 9 RAW + 4 standard formats
+        // Check a few key formats
         assert!(config.formats.contains(&RawFormat::CR3));
-        assert!(config.formats.contains(&RawFormat::RAF));
-        assert!(config.formats.contains(&RawFormat::ARW));
+        assert!(config.formats.contains(&RawFormat::NEF));
+        assert!(config.formats.contains(&RawFormat::DNG));
+        assert!(config.formats.contains(&RawFormat::JPG));
+        assert!(config.formats.contains(&RawFormat::PNG));
         assert!(!config.exclude_dirs.is_empty());
         assert!(config.max_depth.is_none());
         assert!(config.max_files.is_none());

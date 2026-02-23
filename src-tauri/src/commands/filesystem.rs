@@ -215,15 +215,26 @@ fn detect_mime_type(path: &Path) -> Option<String> {
     let extension = path.extension()?.to_str()?.to_lowercase();
 
     match extension.as_str() {
+        // Standard image formats
         "jpg" | "jpeg" => Some("image/jpeg".to_string()),
         "png" => Some("image/png".to_string()),
+        "webp" => Some("image/webp".to_string()),
         "gif" => Some("image/gif".to_string()),
         "tiff" | "tif" => Some("image/tiff".to_string()),
+        // RAW formats
         "cr3" => Some("image/x-canon-cr3".to_string()),
-        "raf" => Some("image/x-fuji-raf".to_string()),
+        "cr2" => Some("image/x-canon-cr2".to_string()),
+        "nef" => Some("image/x-nikon-nef".to_string()),
         "arw" => Some("image/x-sony-arw".to_string()),
+        "raf" => Some("image/x-fuji-raf".to_string()),
+        "orf" => Some("image/x-olympus-orf".to_string()),
+        "pef" => Some("image/x-pentax-pef".to_string()),
+        "rw2" => Some("image/x-panasonic-rw2".to_string()),
+        "dng" => Some("image/x-adobe-dng".to_string()),
+        // Video formats
         "mp4" => Some("video/mp4".to_string()),
         "mov" => Some("video/quicktime".to_string()),
+        // Documents
         "pdf" => Some("application/pdf".to_string()),
         _ => None,
     }

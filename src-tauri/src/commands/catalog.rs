@@ -880,7 +880,10 @@ pub async fn get_folder_tree(state: State<'_, AppState>) -> CommandResult<Vec<Fo
 
     // Build tree hierarchy
     let mut root_folders: Vec<FolderTreeNode> = Vec::new();
-    let paths: Vec<String> = folders.iter().map(|(_, _, path, _, _, _)| path.clone()).collect();
+    let paths: Vec<String> = folders
+        .iter()
+        .map(|(_, _, path, _, _, _)| path.clone())
+        .collect();
 
     for path in paths {
         let parent_path = std::path::Path::new(&path)

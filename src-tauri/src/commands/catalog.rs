@@ -878,41 +878,32 @@ pub async fn get_folder_tree(state: State<'_, AppState>) -> CommandResult<Vec<Fo
         );
     }
 
-    // Build tree hierarchy
-    let mut root_folders: Vec<FolderTreeNode> = Vec::new();
-    let paths: Vec<String> = folders
-        .iter()
-        .map(|(_, _, path, _, _, _)| path.clone())
-        .collect();
+    // Build tree hierarchy - process from deepest paths to root
+    let mut sorted_paths: Vec<String> = folder_map.keys().cloned().collect();
+    sorted_paths.sort_by_key(|p| std::cmp::Reverse(p.len()));
 
-    for path in paths {
+    for path in sorted_paths {
         let parent_path = std::path::Path::new(&path)
             .parent()
             .and_then(|p| p.to_str())
             .map(|s| s.to_string());
 
-        if let Some(parent_path) = parent_path {
-            if folder_map.contains_key(&parent_path) {
-                // This is a child folder
+        if let Some(p_path) = parent_path {
+            if folder_map.contains_key(&p_path) && p_path != path {
                 if let Some(node) = folder_map.remove(&path) {
-                    if let Some(parent) = folder_map.get_mut(&parent_path) {
-                        parent.children.push(node.clone());
-                        folder_map.insert(path.clone(), node);
+                    if let Some(parent) = folder_map.get_mut(&p_path) {
+                        parent.total_image_count += node.total_image_count;
+                        parent.children.push(node);
+                    } else {
+                        folder_map.insert(path, node);
                     }
                 }
-            } else {
-                // This is a root folder
-                if let Some(node) = folder_map.get(&path) {
-                    root_folders.push(node.clone());
-                }
-            }
-        } else {
-            // This is a root folder
-            if let Some(node) = folder_map.get(&path) {
-                root_folders.push(node.clone());
             }
         }
     }
+
+    let mut root_folders: Vec<FolderTreeNode> = folder_map.into_values().collect();
+    root_folders.sort_by(|a, b| a.path.cmp(&b.path));
 
     // Calculate total counts recursively
     fn calculate_total_counts(node: &mut FolderTreeNode) {
@@ -1026,11 +1017,10 @@ pub async fn get_folder_images(
 
     let image_iter = if let Some(path) = folder_path {
         let search_pattern = format!("{}%", path);
-        stmt.query_map([search_pattern.as_str()], map_image_row)
+        stmt.query_map(rusqlite::params![search_pattern], map_image_row)
             .map_err(|e| format!("Failed to query images: {}", e))?
     } else {
-        let folder_id_str = folder_id.to_string();
-        stmt.query_map([folder_id_str.as_str()], map_image_row)
+        stmt.query_map(rusqlite::params![folder_id], map_image_row)
             .map_err(|e| format!("Failed to query images: {}", e))?
     };
 

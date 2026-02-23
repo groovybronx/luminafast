@@ -3,7 +3,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-23 (Maintenance : Correction UI Import) — État : Pipeline import stabilisé avec reset modal, progression temps réel séquentielle, 504 tests ✅. Branche `bug-de-l-import-des-images`.
+> **Dernière mise à jour** : 2026-02-23 (Maintenance : SQL Safety) — État : Pipeline import stabilisé, refactorisation SQL `get_folder_images` complétée, 504 tests ✅. Branche `bug-de-l-import-des-images`.
 >
 > ### Décisions Projet (validées par le propriétaire)
 >
@@ -850,14 +850,15 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 
 ## 14. Historique des Modifications de ce Document
 
-| Date       | Phase | Modification                                         | Raison                                         |
-| ---------- | ----- | ---------------------------------------------------- | ---------------------------------------------- |
-| 2026-02-13 | 1.4   | Ajout section Service Filesystem complète            | Implémentation Phase 1.4 terminée              |
-| 2026-02-13 | 1.3   | Mise à jour complète après Phase 1.3 (BLAKE3)        | Synchronisation documentation avec état actuel |
-| 2026-02-12 | 1.2   | Ajout section API/Commandes Tauri complète           | Implémentation Phase 1.2 terminée              |
-| 2026-02-11 | 1.1   | Ajout section Base de Données SQLite complète        | Implémentation Phase 1.1 terminée              |
-| 2026-02-11 | 1.1   | Mise à jour stack technique et architecture fichiers | Ajout src-tauri avec SQLite                    |
-| 2026-02-11 | 1.1   | Ajout scripts Rust dans section développement        | Scripts npm pour tests Rust                    |
+| Date       | Phase                 | Modification                                                            | Raison                                         |
+| ---------- | --------------------- | ----------------------------------------------------------------------- | ---------------------------------------------- |
+| 2026-02-23 | Maintenance SQL       | Refactorisation `get_folder_images()` pour sécurité et performance      | Élimination conversions u32→String inutiles    |
+| 2026-02-13 | 1.4                   | Ajout section Service Filesystem complète                               | Implémentation Phase 1.4 terminée              |
+| 2026-02-13 | 1.3                   | Mise à jour complète après Phase 1.3 (BLAKE3)                           | Synchronisation documentation avec état actuel |
+| 2026-02-12 | 1.2                   | Ajout section API/Commandes Tauri complète                              | Implémentation Phase 1.2 terminée              |
+| 2026-02-11 | 1.1                   | Ajout section Base de Données SQLite complète                           | Implémentation Phase 1.1 terminée              |
+| 2026-02-11 | 1.1                   | Mise à jour stack technique et architecture fichiers                    | Ajout src-tauri avec SQLite                    |
+| 2026-02-11 | 1.1                   | Ajout scripts Rust dans section développement                           | Scripts npm pour tests Rust                    |
 | 2026-02-11 | 0.5   | Mise à jour après complétion Phase 0.5               | CI/CD implémenté et fonctionnel                |
 
 | Date       | Sous-Phase            | Nature de la modification                                                            |

@@ -93,8 +93,34 @@ pub fn batch_ingest(
     app_handle: AppHandle,
     request: BatchIngestionRequest,
 ) -> Result<BatchIngestionResult, String> {
+    // Validate that all files were part of a discovery session
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async {
+        let discovery_service = get_discovery_service();
+
+        // Get discovered files for the session
+        let discovered_files = discovery_service
+            .get_session_files(request.session_id)
+            .await
+            .map_err(|e| format!("Failed to get session files: {}", e))?;
+
+        // Create a set of valid paths from the discovery session
+        let valid_paths: std::collections::HashSet<_> = discovered_files
+            .iter()
+            .map(|f| f.path.clone())
+            .collect();
+
+        // Validate that all requested files are in the discovery session
+        for file_path in &request.file_paths {
+            if !valid_paths.contains(file_path) {
+                return Err(format!(
+                    "File not found in discovery session: {}. All files must be from a valid discovery session.",
+                    file_path.display()
+                ));
+            }
+        }
+
+        // Proceed with ingestion only if all files are validated
         let ingestion_service = get_ingestion_service();
         let result = ingestion_service
             .batch_ingest(&request, Some(app_handle))

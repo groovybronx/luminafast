@@ -36,6 +36,7 @@
 | 3           | 3.3        | Smart Collections                                                                         | ✅ Complétée  | 2026-02-21 | Copilot |
 | 3           | 3.4        | Navigateur de Dossiers                                                                    | ✅ Complétée  | 2026-02-21 | Copilot |
 | Maintenance | —          | Performance & UX Import (Parallélisme + Progression Multi-Phase)                          | ✅ Complétée  | 2026-02-21 | Copilot |
+| Maintenance | —          | SQL Safety & Refactorisation `get_folder_images`                                          | ✅ Complétée  | 2026-02-23 | Copilot |
 | 3           | 3.5        | Recherche & Filtrage                                                                      | ⬜ En attente | —          | —       |
 | 4           | 4.1        | Event Sourcing Engine                                                                     | ⬜ En attente | —          | —       |
 | 4           | 4.2        | Pipeline de Rendu Image                                                                   | ⬜ En attente | —          | —       |
@@ -77,6 +78,75 @@
 ## Historique des Sous-Phases Complétées
 
 > _Les entrées ci-dessous sont ajoutées chronologiquement par l'agent IA après chaque sous-phase._
+
+---
+
+### 2026-02-23 — Maintenance : SQL Safety & Refactorisation `get_folder_images`
+
+**Statut** : ✅ **Complétée**
+**Agent** : Copilot (GitHub Copilot Claude Sonnet 4.5)
+**Brief** : `Docs/briefs/MAINTENANCE-SQL-SAFETY.md`
+**Tests** : 345 frontend + 159 Rust = **504/504 ✅**
+**TypeScript** : `tsc --noEmit` → 0 erreurs
+**Rust** : `cargo check` → 0 erreurs, 0 warnings
+
+#### Cause Racine
+
+**Symptôme** : Fonction `get_folder_images()` (Phase 3.4) effectuait conversions inutiles : `folder_id: u32 → String → &str` pour binding SQL.
+
+**Cause** : Implémentation Phase 3.4 rapide sans refactorisation pour clarté et performance.
+
+**Correction** : Utiliser `rusqlite::params![]` uniformément avec types natifs directement (u32, String) sans conversion intermédiaire.
+
+#### Solution
+
+**Refactorisation `src-tauri/src/commands/catalog.rs:get_folder_images()`** :
+- ❌ **Avant** : `let folder_id_str = folder_id.to_string(); stmt.query_map([folder_id_str.as_str()], ...)`
+- ✅ **Après** : `stmt.query_map(rusqlite::params![folder_id], ...)`
+
+**Bénéfices** :
+- ✅ Élimination allocations mémoire inutiles (u32 → String)
+- ✅ Style de paramétrisation uniforme (`rusqlite::params![]` partout)
+- ✅ Lisibilité et maintenabilité améliorées
+- ✅ Préparation pour ajout paramètres futurs
+
+#### Fichiers Modifiés
+
+**Backend (Rust)** :
+- `src-tauri/src/commands/catalog.rs` — Refactorisation `get_folder_images()` (lignes 1023-1029)
+- `src-tauri/src/commands/discovery.rs` — Correction doublon code `batch_ingest()` (ligne 131)
+- `src-tauri/src/services/ingestion.rs` — Nettoyage variable inutilisée `file_clone` (ligne 249)
+
+**Documentation** :
+- `Docs/briefs/MAINTENANCE-SQL-SAFETY.md` — Brief formel créé
+- `Docs/CHANGELOG.md` — Entrée de maintenance ajoutée
+
+#### Critères de Validation Remplis
+
+- ✅ `cargo check` passe (0 erreurs, 0 warnings)
+- ✅ `cargo test --lib` passe (**159/159 tests ✅**)
+- ✅ Tests existants `test_get_folder_images_direct` et `test_get_folder_images_recursive` passent
+- ✅ Aucun changement comportemental (refactorisation interne uniquement)
+- ✅ Code formaté (`cargo fmt --all`)
+- ✅ Brief formel créé conformément à `AI_INSTRUCTIONS.md`
+
+#### Impact
+
+- **Comportement utilisateur** : Zéro impact (refactorisation interne)
+- **Performance** : Légère amélioration (moins d'allocations mémoire)
+- **Maintenance** : Code plus clair et cohérent
+- **Tests** : Tous passent (159 tests Rust, 345 tests TypeScript)
+
+#### Notes
+
+Cette maintenance :
+- Respecte le protocole `AGENTS.md` Section 1 (Intégrité du Plan)
+- Documente cause racine (`AI_INSTRUCTIONS.md` Section 1.4)
+- Crée un brief formel (`AI_INSTRUCTIONS.md` Section 2)
+- Zéro régression (tests exhaustifs)
+- Améliore qualité code (performance + lisibilité + maintenabilité)
+
+**Contexte** : Correction issue identifiée lors de la revue PR #20 (Bug de l'import des images) par Gemini Code Assist.
 
 ---
 
@@ -454,7 +524,7 @@ Implémentation d'une grille virtualisée performante pour afficher des catalogu
 - ✅ Sizing dynamique intelligent
   - Pixel size calculé pour maintenir aspect ratio 3:2
   - Adaptation automatique du nombre de colonnes selon largeur conteneur
-  - Support responsive (resize fenêtre recalculant colcount)  
+  - Support responsive (resize fenêtre recalculant colcount)
 
 - ✅ Responsive grid
   - Recalcul colcount via useMemo(containerRef.current.clientWidth, [itemWidth, gap])
@@ -2369,7 +2439,7 @@ pub fn update(&mut self, success: bool, skipped: bool, current_file: Option<Stri
 ## Statistiques du Projet
 
 - **Sous-phases totales** : 38
-- **Complétées** : 36 / 38 (94.7%)
+- **Complétées** : 37 / 38 (97.4%)
 - **En cours** : 0
 - **Bloquées** : 0
 - **Dernière mise à jour** : 2026-02-23

@@ -243,14 +243,9 @@ impl IngestionService {
                     let file_start_time = Instant::now();
 
                     // Process file (blocking operation moved to thread pool)
-                    // Try to use current runtime, fallback to creating a new one
-                    let ingest_result = if let Ok(handle) = tokio::runtime::Handle::try_current() {
-                        handle.block_on(async { self.ingest_file(file).await })
-                    } else {
-                        // Create a new runtime for this thread if none exists
-                        let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-                        rt.block_on(async { self.ingest_file(file).await })
-                    };
+                    // Create a runtime per thread to avoid blocking the tokio runtime
+                    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
+                    let ingest_result = rt.block_on(async { self.ingest_file(file).await });
 
                     let file_processing_time = file_start_time.elapsed().as_millis() as u64;
                     total_processing_time

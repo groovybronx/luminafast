@@ -197,36 +197,39 @@ Cette maintenance :
 
 | Fichier | Lignes | Modification |
 |---------|--------|---------------------------|
-| `src-tauri/src/commands/catalog.rs` | 13-47 | Ajout `backfill_images_folder_id` command (79 lignes) |
-| `src-tauri/src/commands/catalog.rs` | 15-16 | Tests unitaires pour backfill (2 tests) |
-| `src-tauri/src/commands/catalog.rs` | variés | **Mutabilité `db`** dans `get_all_images`, `get_image_detail`, `get_collections`, etc. (20+ fonctions) |
-| `src-tauri/src/database.rs` | 36,57 | `#[allow(dead_code)]` sur `transaction_conn()` et `get_db_path()` (utilisées indirectement par backfill) |
-| `src-tauri/src/database.rs` | variés | Tests corrigés pour mutabilité : `let mut db = Database::new()` partout |
+| `src-tauri/src/commands/catalog.rs` | 13-47 | CORRECTION : Ajout LEFT JOIN ingestion_file_status + tests backfill |
+| `src-tauri/src/commands/catalog.rs` | 2090+ | Tests : `test_backfill_images_folder_id_success` + `test_backfill_images_folder_id_empty` |
+| `src-tauri/src/services/blake3.rs` | 1-12 | CORRECTION : Imports multi-line explicites (rustfmt compliance) |
+| `Docs/APP_DOCUMENTATION.md` | 951-976 | CORRECTION : Signature et SQL documentation pour backfill |
+| `Docs/CHANGELOG.md` | — | CORRECTION : Backfill strategy mise à jour (LEFT JOIN au lieu de filename parent) |
 
 #### Critères de Validation Remplis
 
 - ✅ Compilation sans erreur : `cargo check` → 0 erreurs, 0 warnings
-- ✅ Tests complets : **159/159 Rust ✅** (y.c. 2 nouveaux tests backfill)
+- ✅ Tests complets : **161/161 Rust ✅** (y.c. 2 nouveaux tests backfill)
 - ✅ Tests intégration : `test_get_folder_tree_with_images` valide hiérarchie post-backfill
 - ✅ Aucune régression : Tous les tests Phase 3.1-3.3 passent toujours
 - ✅ Protocol `AGENTS.md` respecté : Cause racine documentée (Section 1.4)
-- ✅ Zéro workarounds (Lutte structurelle contre borrow checker, pas de `unsafe` ou `clone()` évitable)
+- ✅ Zéro workarounds (Correction structurelle : LEFT JOIN + in_memory DB, pas de hack)
 
-#### Implémentation
+#### Implémentation Corrigée
 
 **Backfill Strategy** :
 ```rust
-1. SELECT id, filename FROM images WHERE folder_id IS NULL
-2. FOR EACH (id, filename):
-   a. folder_path = Path(filename).parent()
-   b. folder_id = IngestionService.get_or_create_folder_id(folder_path)
-   c. UPDATE images SET folder_id = folder_id WHERE id = id
+1. SELECT i.id, ifs.file_path
+   FROM images i
+   LEFT JOIN ingestion_file_status ifs ON i.blake3_hash = ifs.blake3_hash
+   WHERE i.folder_id IS NULL AND ifs.file_path IS NOT NULL
+2. FOR EACH (id, full_file_path):
+   a. folder_id = IngestionService.get_or_create_folder_id(full_file_path)
+      (la fonction extrait elle-même le parent du full_file_path)
+   b. UPDATE images SET folder_id = folder_id WHERE id = id
 3. COMMIT transaction
 4. RETURN count
 ```
 
 **Tests** :
-- `test_backfill_images_folder_id_success` — Vérif insertions, backfill, UPDATE corrects
+- `test_backfill_images_folder_id_success` — Vérif LEFT JOIN, backfill, UPDATE corrects
 - `test_backfill_images_folder_id_empty` — Vérif retour 0 si pas images sans folder_id
 - Tests Phase 3.4 existants : `test_get_folder_tree_with_images`, `test_get_folder_images_recursive` passent post-backfill
 

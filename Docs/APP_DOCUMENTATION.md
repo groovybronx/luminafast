@@ -948,22 +948,31 @@ export interface FolderTreeNode {
 
 ### Commandes Tauri — Phase 3.4
 
-#### `backfill_images_folder_id() → CommandResult<u32>`
+#### `backfill_images_folder_id() → Result<u32, String>`
 
 💡 **Nouvelle commande Phase 3.4** : Backfill structural pour images héritées sans `folder_id`.
 
-Sélectionne **TOUTES** les images avec `folder_id IS NULL`, les traite en transaction :
-1. Extrait le dossier depuis champ `filename`
-2. Appelle `IngestionService::get_or_create_folder_id()` (réutilise Phase 2.1)
+Sélectionne **TOUTES** les images avec `folder_id IS NULL` via LEFT JOIN avec `ingestion_file_status` (récupère le full `file_path`), les traite en transaction :
+1. Utilise LEFT JOIN avec `ingestion_file_status` pour récupérer le full `file_path`
+2. Appelle `IngestionService::get_or_create_folder_id()` avec le full path (réutilise Phase 2.1)
 3. Exécute `UPDATE images SET folder_id = ? WHERE id = ?` en masse
-4. Retourne le nombre d'images mises à jour
+4. Retourne le nombre d'images mises à jour (u32)
 
-**Usage** : Backend command exposée au frontend. À intégrer dans UI "Import → Backfill" si images héritées détectées (ex: après upgrade depuis v0).
-
+**Signature** :
 ```rust
 #[tauri::command]
 pub async fn backfill_images_folder_id(state: State<'_, AppState>) -> Result<u32, String>
 ```
+
+**SQL interne** :
+```sql
+SELECT i.id, ifs.file_path
+FROM images i
+LEFT JOIN ingestion_file_status ifs ON i.blake3_hash = ifs.blake3_hash
+WHERE i.folder_id IS NULL AND ifs.file_path IS NOT NULL
+```
+
+**Usage** : Backend command exposée au frontend. À intégrer dans UI "Import → Backfill" si images héritées détectées (ex: après upgrade depuis v0).
 
 #### `get_folder_tree() → CommandResult<Vec<FolderTreeNode>>`
 

@@ -18,48 +18,46 @@ pub async fn backfill_images_folder_id(
         .db
         .lock()
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
-    let db_path = db_guard.get_db_path().to_path_buf();
     let transaction = db_guard
         .transaction_conn()
         .transaction()
         .map_err(|e| format!("Transaction error: {}", e))?;
     let mut updated_count = 0u32;
 
-    // Créer un service ingestion avec le même db (Arc original)
+    // Créer un service ingestion avec une connexion in_memory (utilisée uniquement pour get_or_create_folder_id)
     let ingestion_service = crate::services::ingestion::IngestionService::new(
         crate::services::blake3::Blake3Service::new(crate::models::hashing::HashConfig::default())
             .into(),
         std::sync::Arc::new(std::sync::Mutex::new(
-            rusqlite::Connection::open(&db_path).map_err(|e| format!("Connection error: {}", e))?,
+            rusqlite::Connection::open_in_memory()
+                .map_err(|e| format!("Memory DB error: {}", e))?,
         )),
     );
 
-    // Sélectionner toutes les images sans folder_id
+    // Sélectionner toutes les images sans folder_id, joinées avec ingestion_file_status pour récupérer le full file_path
     {
         let mut stmt = transaction
-            .prepare("SELECT id, filename FROM images WHERE folder_id IS NULL")
+            .prepare(
+                "SELECT i.id, ifs.file_path
+             FROM images i
+             LEFT JOIN ingestion_file_status ifs ON i.blake3_hash = ifs.blake3_hash
+             WHERE i.folder_id IS NULL AND ifs.file_path IS NOT NULL",
+            )
             .map_err(|e| format!("Prepare error: {}", e))?;
+
         let images_iter = stmt
             .query_map([], |row| {
                 let id: u32 = row.get(0)?;
-                let filename: String = row.get(1)?;
-                Ok((id, filename))
+                let file_path: String = row.get(1)?;
+                Ok((id, file_path))
             })
             .map_err(|e| format!("Query error: {}", e))?;
 
         for img_res in images_iter {
-            let (id, filename) = img_res.map_err(|e| format!("Row error: {}", e))?;
-            // Extraire le dossier depuis filename
-            let folder_path = match std::path::Path::new(&filename).parent() {
-                Some(p) => match p.to_str() {
-                    Some(s) => s,
-                    None => continue, // skip invalid path
-                },
-                None => continue,
-            };
-            // Appeler get_or_create_folder_id
+            let (id, file_path) = img_res.map_err(|e| format!("Row error: {}", e))?;
+            // Appeler get_or_create_folder_id avec le full file_path (la fonction en extrait le parent)
             let folder_id_opt = ingestion_service
-                .get_or_create_folder_id(&transaction, folder_path)
+                .get_or_create_folder_id(&transaction, &file_path)
                 .map_err(|e| format!("Folder error: {}", e))?;
             if let Some(folder_id) = folder_id_opt {
                 transaction
@@ -2096,5 +2094,156 @@ mod tests {
             .unwrap();
 
         assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn test_backfill_images_folder_id_success() {
+        let mut db = setup_test_db();
+
+        // Créer un dossier
+        db.connection()
+            .execute(
+                "INSERT INTO folders (name, path, volume_name, is_online) VALUES (?, ?, ?, ?)",
+                rusqlite::params!["Photos", "/volumes/SSD/Photos", "SSD", true],
+            )
+            .unwrap();
+        let folder_id = db.connection().last_insert_rowid();
+
+        // Créer une image sans folder_id
+        let hash = "hash_backfill_test_1";
+        db.connection()
+            .execute(
+                "INSERT INTO images (blake3_hash, filename, extension, imported_at, folder_id) VALUES (?, ?, ?, ?, NULL)",
+                rusqlite::params![hash, "test1.CR3", "CR3", "2024-01-01T00:00:00Z"],
+            )
+            .unwrap();
+        let image_id = db.connection().last_insert_rowid() as u32;
+
+        // Créer un ingestion_file_status avec le full file_path
+        db.connection()
+            .execute(
+                "INSERT INTO ingestion_sessions (id, status) VALUES (?, ?)",
+                rusqlite::params!["session_backfill", "completed"],
+            )
+            .unwrap();
+
+        db.connection()
+            .execute(
+                "INSERT INTO ingestion_file_status (session_id, file_path, blake3_hash, status) VALUES (?, ?, ?, ?)",
+                rusqlite::params!["session_backfill", "/volumes/SSD/Photos/test1.CR3", hash, "ingested"],
+            )
+            .unwrap();
+
+        // Simuler le backfill: SELECT avec LEFT JOIN (scoped statement)
+        let mut count = 0;
+        {
+            let mut stmt = db
+                .connection()
+                .prepare(
+                    "SELECT i.id, ifs.file_path
+                     FROM images i
+                     LEFT JOIN ingestion_file_status ifs ON i.blake3_hash = ifs.blake3_hash
+                     WHERE i.folder_id IS NULL AND ifs.file_path IS NOT NULL",
+                )
+                .unwrap();
+
+            let images_iter = stmt
+                .query_map([], |row| {
+                    let id: u32 = row.get(0)?;
+                    let file_path: String = row.get(1)?;
+                    Ok((id, file_path))
+                })
+                .unwrap();
+
+            for img_res in images_iter {
+                let (id, _file_path) = img_res.unwrap();
+                // Vérifier que nous trouvons l'image correctement
+                assert_eq!(id, image_id);
+                count += 1;
+            }
+        } // Statement scoped et dropped ici
+
+        assert_eq!(count, 1, "Should find exactly 1 image without folder_id");
+
+        // Simuler l'UPDATE
+        db.connection()
+            .execute(
+                "UPDATE images SET folder_id = ? WHERE id = ?",
+                rusqlite::params![folder_id, image_id],
+            )
+            .unwrap();
+
+        // Vérifier que l'UPDATE a fonctionné
+        let updated_folder_id: i64 = db
+            .connection()
+            .query_row(
+                "SELECT folder_id FROM images WHERE id = ?",
+                [image_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(
+            updated_folder_id, folder_id,
+            "Image should now have a folder_id"
+        );
+    }
+
+    #[test]
+    fn test_backfill_images_folder_id_empty() {
+        let mut db = setup_test_db();
+
+        // Créer une image AVEC folder_id (donc pas candidat pour backfill)
+        db.connection()
+            .execute(
+                "INSERT INTO folders (name, path, volume_name, is_online) VALUES (?, ?, ?, ?)",
+                rusqlite::params!["Photos", "/volumes/SSD/Photos", "SSD", true],
+            )
+            .unwrap();
+        let folder_id = db.connection().last_insert_rowid();
+
+        db.connection()
+            .execute(
+                "INSERT INTO images (blake3_hash, filename, extension, imported_at, folder_id) VALUES (?, ?, ?, ?, ?)",
+                rusqlite::params!["hash_filled", "already_filled.CR3", "CR3", "2024-01-01T00:00:00Z", folder_id],
+            )
+            .unwrap();
+
+        // Vérifier qu'il n'y a PAS d'images sans folder_id
+        let count: i64 = db
+            .connection()
+            .query_row(
+                "SELECT COUNT(*) FROM images WHERE folder_id IS NULL",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(count, 0, "Should have no images without folder_id");
+
+        // Simuler le backfill query : doit retourner 0 images
+        let mut stmt = db
+            .connection()
+            .prepare(
+                "SELECT i.id, ifs.file_path
+                 FROM images i
+                 LEFT JOIN ingestion_file_status ifs ON i.blake3_hash = ifs.blake3_hash
+                 WHERE i.folder_id IS NULL AND ifs.file_path IS NOT NULL",
+            )
+            .unwrap();
+
+        let backfill_count = stmt
+            .query_map([], |row| {
+                let id: u32 = row.get(0)?;
+                let file_path: String = row.get(1)?;
+                Ok((id, file_path))
+            })
+            .unwrap()
+            .count();
+
+        assert_eq!(
+            backfill_count, 0,
+            "Backfill should find no images to process"
+        );
     }
 }

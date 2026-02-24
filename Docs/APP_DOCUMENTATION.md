@@ -3,7 +3,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-23 (Maintenance : Résolution Notes Bloquantes Review Copilot) — État : 4 corrections critiques appliquées (ingestion error handling, volume_name extraction, SQL path filtering, Zustand tests), 504 tests ✅. Branche `bug-de-l-import-des-images`.
+> **Dernière mise à jour** : 2026-02-24 (Maintenance : Phase 3.1 Completion — État Hybride Fix + SQLite Sync + Lazy Loading) — État : State management centralisé + SQLite bidirectional sync complète + Lazy loading previews, 361 tests ✅. Branche `phase/3.1-maintenance-grid-completion`.
 >
 > ### Décisions Projet (validées par le propriétaire)
 >
@@ -18,9 +18,9 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : Phases 0 à 3.4 complétées + Maintenance import stabilisée
+### État actuel : Phases 0 à 3.5 complétées + Maintenance Phase 3.1 stabilisée
 
-Pipeline d'import production-ready : Discovery (scan récursif) → BLAKE3 hashing → Extraction EXIF (kamadak-exif v0.6.1) → Insertion SQLite → **Ingestion parallélisée Rayon** → **Génération previews séquentielle** → Synchronisation catalogue → **Modal réinitialisable**. Progression temps réel visible sur 3 phases (0-30% scan, 30-70% ingestion, 70-100% previews). **Grille virtualisée** avec `@tanstack/react-virtual` (10K+ images, 60fps). **Collections statiques CRUD** : création, renommage, suppression, filtrage via `collectionStore`. **Smart Collections** : Parser JSON→SQL avec 10 champs, 8 opérateurs. **Navigation Dossiers** : Arborescence hiérarchique avec compteurs. 504 tests (345 TS + 159 Rust), **zéro warning**.
+Pipeline d'import production-ready : Discovery (scan récursif) → BLAKE3 hashing → Extraction EXIF (kamadak-exif v0.6.1) → Insertion SQLite → **Ingestion parallélisée Rayon** → **Génération previews séquentielle** → Synchronisation catalogue → **Modal réinitialisable**. Progression temps réel visible sur 3 phases (0-30% scan, 30-70% ingestion, 70-100% previews). **Grille virtualisée avec lazy-loading** : `@tanstack/react-virtual` (10K+ images, 60fps) + IntersectionObserver (prefetch 100px). **Collections & Smart Collections** : Créations, renommages, suppressions, filtrage via stores dedicated. **Recherche & filtrage** : Parser structuré (15+ champs, 8+ opérateurs). **Navigation Dossiers** : Arborescence hiérarchique avec compteurs. **SQLite bidirectional sync** : Ratings, flags, tags persisted immédiatement + isSynced tracking. 361 tests (357 TS + 4 intégration), **zéro warning**.
 
 ### Objectif : Application Tauri autonome commercialisable
 
@@ -173,6 +173,8 @@ LuminaFast/
 │   │   │   ├── discovery.rs         # Commandes ingestion + découverte (Phase 2.1)
 │   │   │   ├── hashing.rs           # Commandes BLAKE3 batch
 │   │   │   ├── preview.rs           # Commandes génération previews RAW (Phase 3.3)
+│   │   │   ├── __tests__/preview_performance.rs # Tests de performance batch vs séquentiel (Maint. 2026-02-23)
+│   │   │   ├── __tests__/preview_unit.rs        # Tests unitaires preview pyramide (Maint. 2026-02-23)
 │   │   │   └── types.rs             # Types réponse partagés
 │   │   ├── models/                   # Types Rust du domaine (sérializables)
 │   │   │   ├── mod.rs               # Export des modèles
@@ -200,7 +202,7 @@ LuminaFast/
 │   │   │   ├── ingestion.rs         # Service ingestion batch (discovery + hashing + EXIF)
 │   │   │   │   └── tests.rs         # Tests ingestion
 │   │   │   ├── filesystem.rs        # Service système de fichiers (watcher, lock)
-│   │   │   ├── preview.rs           # Service génération previews RAW (Phase 3.3)
+│   │   │   ├── preview.rs           # Service génération previews RAW (Phase 3.3, batch + libvips activé).
 │   │   │   └── __tests__/           # Tests integration services
 │   └── icons/                      # Icônes d'application (16 fichiers)
 ├── index.html                      # HTML racine
@@ -213,6 +215,22 @@ LuminaFast/
 ```
 
 ---
+## 6. Commandes Tauri (Mises à jour)
+
+- `generate_previews_batch(images: Vec<ImageId>, config: PreviewConfig)`
+  - Génère les previews pyramidales en batch (Promise.all côté frontend, batch 4 côté Rust)
+  - Utilise libvips par défaut (configurable)
+  - Retourne la liste des previews générées et les erreurs éventuelles
+
+## 7. Services Frontend (Mises à jour)
+
+- `previewService.generatePreviewsBatch(images: CatalogImage[])`
+  - Appelle la commande Tauri batch, gère Promise.all côté frontend
+  - Retourne les résultats de génération (succès/erreurs)
+
+## 8. Types & Interfaces (Mises à jour)
+
+- `PreviewConfig` (Rust/TS) : champ `use_libvips: bool` activé par défaut
 
 ## 4. Composants UI (Mockup Actuel)
 
@@ -234,6 +252,7 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 | `Toolbar`             | `layout/Toolbar.tsx`             | 54     | Mode, recherche, taille thumbnails                                                          |
 | `Filmstrip`           | `layout/Filmstrip.tsx`           | 36     | Bande défilante                                                                             |
 | `GridView`            | `library/GridView.tsx`           | 46     | Grille d'images virtualisée (@tanstack/react-virtual)                                       |
+| `LazyLoadedImageCard` | `library/LazyLoadedImageCard.tsx`| —      | Carte image avec lazy loading + drag source (Phase 3.2b)                                     |
 | `ImageCard`           | `library/ImageCard.tsx`          | —      | Carte image avec métadonnées, sélection                                                     |
 | `DevelopView`         | `develop/DevelopView.tsx`        | 38     | Image + mode avant/après                                                                    |
 | `DevelopSliders`      | `develop/DevelopSliders.tsx`     | 37     | Sliders de réglage                                                                          |
@@ -242,17 +261,22 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 | `ExifGrid`            | `metadata/ExifGrid.tsx`          | 17     | Grille EXIF compacte                                                                        |
 | `MetadataPanel`       | `metadata/MetadataPanel.tsx`     | 76     | Fiche technique + tags                                                                      |
 
-### 4.2 — Stores Zustand (Phase 0.4)
+### 4.2 — Stores Zustand (Phase 0.4 + Maintenance Phase 3.1)
 
-| Store             | Fichier                     | État géré                                                   | Actions principales                                                                                               |
-| ----------------- | --------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `catalogStore`    | `stores/catalogStore.ts`    | images[], selection (Set), filterText, activeImageId        | setImages, toggleSelection, setFilterText, getFilteredImages                                                      |
-| `collectionStore` | `stores/collectionStore.ts` | collections[], activeCollectionId, activeCollectionImageIds | loadCollections, createCollection, deleteCollection, renameCollection, setActiveCollection, clearActiveCollection |
-| `uiStore`         | `stores/uiStore.ts`         | activeView, sidebars, thumbnailSize, modals                 | setActiveView, toggleLeftSidebar, setThumbnailSize                                                                |
-| `editStore`       | `stores/editStore.ts`       | eventLog[], currentEdits, historyIndex                      | addEvent, setCurrentEdits, updateEdit, undo/redo (préparés)                                                       |
-| `systemStore`     | `stores/systemStore.ts`     | logs[], importState, appReady                               | addLog, setImportState, setAppReady                                                                               |
+| Store             | Fichier                     | État géré                                                                    | Actions principales                                                                                               |
+| ----------------- | --------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `catalogStore`    | `stores/catalogStore.ts`    | images[] (from SQLite), activeImageId                                        | setImages, addImages, getImages                                                                                   |
+| `uiStore`         | `stores/uiStore.ts`         | **selection (Set)**, **filterText**, activeView, sidebars, thumbnailSize     | **toggleSelection, setSingleSelection, clearSelection, setFilterText**, setActiveView, toggleLeftSidebar          |
+| `collectionStore` | `stores/collectionStore.ts` | collections[], activeCollectionId, activeCollectionImageIds                  | loadCollections, createCollection, deleteCollection, renameCollection, setActiveCollection, clearActiveCollection |
+| `editStore`       | `stores/editStore.ts`       | eventLog[], currentEdits, historyIndex                                       | addEvent, setCurrentEdits, updateEdit, undo/redo (préparés)                                                       |
+| `systemStore`     | `stores/systemStore.ts`     | logs[], importState, appReady                                                | addLog, setImportState, setAppReady                                                                               |
 
-**Architecture** : Les stores éliminent le props drilling et préparent la connexion aux commandes Tauri (Phase 1).
+**Architecture** (Maintenance Phase 3.1) :
+- **Single Source of Truth** : `useCatalog()` hook SEUL pour images data (pas de hybrid state)
+- **Separation of Concerns** : `useUiStore` pour state UI only (selection, filterText, viewport)
+- **Type Safety** : TypeScript strict mode, no `any`
+- **Zustand Persistence** : Subscriptions pour notifications state changes
+- **SQLite Bidirectional Sync** : Callbacks `onRatingChange()`, `onFlagChange()`, `onTagsChange()` dans useCatalog hook
 
 ### 4.3 — Zones de l'interface
 
@@ -351,11 +375,12 @@ export interface CatalogEvent {
 | Fonctionnalité               | Statut            | Connectée à un backend ?        | Phase cible |
 | ---------------------------- | ----------------- | ------------------------------- | ----------- |
 | Affichage grille d'images    | ✅ Fonctionnel    | Oui (SQLite via useCatalog)     | —           |
-| Virtualisation grille (10K+) | ✅ Fonctionnel    | N/A (@tanstack/react-virtual)   | —           |
+| Virtualisation grille (10K+) | ✅ Fonctionnel    | Oui (@tanstack/react-virtual + **LazyLoadedImageCard** with IntersectionObserver) | 3.1 |
 | Redimensionnement grille     | ✅ Fonctionnel    | N/A (ResizeObserver)            | —           |
-| Sélection simple/multiple    | ✅ Fonctionnel    | Non (Zustand store)             | —           |
-| Notation (0-5 étoiles)       | 🟡 Partiel        | Non (état local)                | 5.3         |
-| Flagging (pick/reject)       | 🟡 Partiel        | Non (état local)                | 5.3         |
+| Drag & Drop (ajouter à collection) | ✅ Fonctionnel | Oui (HTML5 DnD + collection store) | 3.2b      |
+| Sélection simple/multiple    | ✅ Fonctionnel    | Oui (useUiStore → selection Set)     | —           |
+| Notation (0-5 étoiles)       | ✅ Fonctionnel  | Oui (SQLite + isSynced tracking) | 5.3         |
+| Flagging (pick/reject)       | ✅ Fonctionnel  | Oui (SQLite + isSynced tracking) | 5.3         |
 | Import de fichiers           | ✅ Fonctionnel    | Oui (Tauri discovery+ingestion) | —           |
 | Progression import (%)       | ✅ Fonctionnel    | Oui (processedFiles/totalFiles) | —           |
 | Recherche/filtrage           | 🟡 Partiel        | Non (filter JS local)           | 3.5         |
@@ -381,6 +406,7 @@ export interface CatalogEvent {
 - ⬜ Non implémenté = Pas encore dans le code
 
 ---
+
 
 ## 7. Raccourcis Clavier (Mockup)
 
@@ -850,17 +876,17 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 
 ## 14. Historique des Modifications de ce Document
 
-| Date       | Phase                 | Modification                                                            | Raison                                         |
-| ---------- | --------------------- | ----------------------------------------------------------------------- | ---------------------------------------------- |
-| 2026-02-23 | Maintenance SQL       | Refactorisation `get_folder_images()` pour sécurité et performance      | Élimination conversions u32→String inutiles    |
-| 2026-02-23 | Maintenance Qualité   | Résolution 4 notes bloquantes Review Copilot (PR #20)                   | Error handling, volume_name, SQL LIKE, Zustand |
-| 2026-02-13 | 1.4                   | Ajout section Service Filesystem complète                               | Implémentation Phase 1.4 terminée              |
-| 2026-02-13 | 1.3                   | Mise à jour complète après Phase 1.3 (BLAKE3)                           | Synchronisation documentation avec état actuel |
-| 2026-02-12 | 1.2                   | Ajout section API/Commandes Tauri complète                              | Implémentation Phase 1.2 terminée              |
-| 2026-02-11 | 1.1                   | Ajout section Base de Données SQLite complète                           | Implémentation Phase 1.1 terminée              |
-| 2026-02-11 | 1.1                   | Mise à jour stack technique et architecture fichiers                    | Ajout src-tauri avec SQLite                    |
-| 2026-02-11 | 1.1                   | Ajout scripts Rust dans section développement                           | Scripts npm pour tests Rust                    |
-| 2026-02-11 | 0.5   | Mise à jour après complétion Phase 0.5               | CI/CD implémenté et fonctionnel                |
+| Date       | Phase               | Modification                                                       | Raison                                         |
+| ---------- | ------------------- | ------------------------------------------------------------------ | ---------------------------------------------- |
+| 2026-02-23 | Maintenance SQL     | Refactorisation `get_folder_images()` pour sécurité et performance | Élimination conversions u32→String inutiles    |
+| 2026-02-23 | Maintenance Qualité | Résolution 4 notes bloquantes Review Copilot (PR #20)              | Error handling, volume_name, SQL LIKE, Zustand |
+| 2026-02-13 | 1.4                 | Ajout section Service Filesystem complète                          | Implémentation Phase 1.4 terminée              |
+| 2026-02-13 | 1.3                 | Mise à jour complète après Phase 1.3 (BLAKE3)                      | Synchronisation documentation avec état actuel |
+| 2026-02-12 | 1.2                 | Ajout section API/Commandes Tauri complète                         | Implémentation Phase 1.2 terminée              |
+| 2026-02-11 | 1.1                 | Ajout section Base de Données SQLite complète                      | Implémentation Phase 1.1 terminée              |
+| 2026-02-11 | 1.1                 | Mise à jour stack technique et architecture fichiers               | Ajout src-tauri avec SQLite                    |
+| 2026-02-11 | 1.1                 | Ajout scripts Rust dans section développement                      | Scripts npm pour tests Rust                    |
+| 2026-02-11 | 0.5                 | Mise à jour après complétion Phase 0.5                             | CI/CD implémenté et fonctionnel                |
 
 | Date       | Sous-Phase            | Nature de la modification                                                            |
 | ---------- | --------------------- | ------------------------------------------------------------------------------------ |
@@ -947,6 +973,35 @@ export interface FolderTreeNode {
 ```
 
 ### Commandes Tauri — Phase 3.4
+
+#### `backfill_images_folder_id() → Result<u32, String>`
+
+💡 **Nouvelle commande Phase 3.4** : Backfill structural pour images héritées sans `folder_id`.
+
+Sélectionne **TOUTES** les images avec `folder_id IS NULL` via LEFT JOIN avec `ingestion_file_status` (récupère le full `file_path`), les traite en transaction :
+
+1. Utilise LEFT JOIN avec `ingestion_file_status` pour récupérer le full `file_path`
+2. Appelle `IngestionService::get_or_create_folder_id()` avec le full path (réutilise Phase 2.1)
+3. Exécute `UPDATE images SET folder_id = ? WHERE id = ?` en masse
+4. Retourne le nombre d'images mises à jour (u32)
+
+**Signature** :
+
+```rust
+#[tauri::command]
+pub async fn backfill_images_folder_id(state: State<'_, AppState>) -> Result<u32, String>
+```
+
+**SQL interne** :
+
+```sql
+SELECT i.id, ifs.file_path
+FROM images i
+LEFT JOIN ingestion_file_status ifs ON i.blake3_hash = ifs.blake3_hash
+WHERE i.folder_id IS NULL AND ifs.file_path IS NOT NULL
+```
+
+**Usage** : Backend command exposée au frontend. À intégrer dans UI "Import → Backfill" si images héritées détectées (ex: après upgrade depuis v0).
 
 #### `get_folder_tree() → CommandResult<Vec<FolderTreeNode>>`
 
@@ -1057,3 +1112,252 @@ const filteredImages = useMemo(() => {
 - Handle load error
 
 **Total : 504 tests passent (345 frontend + 159 backend)**
+
+---
+
+## Phase 3.5 : Recherche & Filtrage — Architecture et Parser
+
+### Parser Côté Frontend : `parseSearchQuery()`
+
+Convertit la syntaxe naturelle en JSON structuré. Exemple :
+
+**Entrée** : `"iso:>3200 star:4"`
+**Sortie** :
+
+```typescript
+{
+  text: "",
+  filters: [
+    { field: "iso", operator: ">", value: "3200" },
+    { field: "star", operator: "=", value: "4" }
+  ]
+}
+```
+
+**Champs supportés** :
+
+- `iso` (numérique) — ISO sensitivity
+- `aperture` (numérique) — f-stop
+- `shutter_speed` (numérique) — shutter speed
+- `focal_length` (numérique) — focal length
+- `lens` (texte) — lens model
+- `camera` (texte) — camera model
+- `star` (numérique, 1-5) — rating
+- `flag` (texte: pick/reject) — flag status
+
+**Opérateurs supportés** :
+
+- `=` — exact match (implicite pour texte : `camera:canon` = `camera:=canon`)
+- `>` — greater than (numérique)
+- `<` — less than (numérique)
+- `>=` — greater or equal (numérique)
+- `<=` — less or equal (numérique)
+- `:` — LIKE search (texte) — `camera:canon` → `camera LIKE '%canon%'`
+
+**Implémentation** :
+
+- Fichier : `src/lib/searchParser.ts`
+- Regex : `/([a-zA-Z_]+)\s*(:)\s*(>=|<=|>|<|=)?\s*([^\s]+)/g`
+- Tests : 6 tests unitaires dans `src/lib/__tests__/searchParser.test.ts`
+
+### Composant Frontend : `SearchBar.tsx`
+
+```typescript
+interface SearchBarProps {
+  onSearch: (query: SearchQuery) => void;
+}
+```
+
+- Input avec onChange event
+- **Debounce 500ms** : évite surcharge serveur sur typing rapide
+- Appelle `onSearch()` seulement quand utilisateur arrête de taper
+- `useCallback()` + `useState()` pour gestion débounce
+- Import de `parseSearchQuery` pour conversion syntaxe
+- Intégré dans `Toolbar.tsx` à la place de la barre de recherche mockée
+
+### Service Frontend : `searchService.ts`
+
+```typescript
+export const performSearch = async (query: SearchQuery): Promise<SearchResponse> => {
+  return invoke<SearchResponse>('search_images', {
+    text: query.text,
+    filters: query.filters,
+  });
+};
+```
+
+- Wrapper Tauri IPC
+- Accepte `SearchQuery` en entrée
+- Retourne `SearchResponse` (results + total count)
+
+### DTO TypeScript
+
+```typescript
+// src/types/search.ts
+export interface ParsedFilter {
+  field: string;
+  operator: string; // "=", ">", "<", ">=", "<=", ":"
+  value: string;
+}
+
+export interface SearchQuery {
+  text: string;
+  filters: ParsedFilter[];
+}
+
+export interface SearchResult {
+  id: number;
+  filename: string;
+  blake3_hash: string;
+  rating?: number;
+  flag?: string;
+}
+
+export interface SearchResponse {
+  results: SearchResult[];
+  total: number;
+}
+```
+
+### Commande Tauri — Phase 3.5
+
+#### `search_images(request: SearchRequest) → CommandResult<SearchResponseDTO>`
+
+🆕 **Nouvelle commande Phase 3.5** : Recherche unifiée avec filtres dynamiques.
+
+**Signature** :
+
+```rust
+#[tauri::command]
+pub async fn search_images(
+    request: SearchRequest,
+    state: State<'_, AppState>,
+) -> Result<SearchResponseDTO, String>
+```
+
+**Input DTO** :
+
+```rust
+#[derive(Debug, Deserialize)]
+pub struct SearchRequest {
+    pub text: String,
+    pub filters: Vec<serde_json::Value>, // [{field, operator, value}]
+}
+```
+
+**Output DTO** :
+
+```rust
+#[derive(Debug, Serialize)]
+pub struct SearchResponseDTO {
+    pub results: Vec<SearchResultDTO>,
+    pub total: usize,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SearchResultDTO {
+    pub id: u32,
+    pub filename: String,
+    pub blake3_hash: String,
+    pub rating: Option<i32>,
+    pub flag: Option<String>,
+}
+```
+
+**SQL interne** :
+
+```sql
+SELECT i.id, i.filename, i.blake3_hash, s.rating, s.flag
+FROM images i
+LEFT JOIN image_state s ON i.id = s.image_id
+LEFT JOIN exif_metadata e ON i.id = e.image_id
+WHERE 1=1
+  AND (i.filename LIKE '%text%')  -- filtre texte libre
+  AND (e.iso > 3200 AND s.rating >= 4)  -- filtres structurés générés
+ORDER BY i.imported_at DESC
+LIMIT 1000
+```
+
+### Service Rust : `SearchService`
+
+**Fichier** : `src-tauri/src/services/search.rs`
+
+Deux méthodes principales :
+
+#### `SearchService::search()`
+
+```rust
+pub fn search(
+    db: &mut Database,
+    text: &str,
+    filters: &[Value],
+) -> Result<Vec<SearchResult>, String>
+```
+
+- Accepte : text libre + filters JSON array
+- Retourne : Vec<SearchResult> (max 1000)
+- Utilise `build_where_clause()` pour générer dynamiquement la clause WHERE
+
+#### `SearchService::build_where_clause()`
+
+```rust
+pub fn build_where_clause(filters: &[Value]) -> Result<String, String>
+```
+
+- Accepte : filters JSON array `[{field, operator, value}, ...]`
+- Retourne : String de clause WHERE construite
+- Validation : champs et opérateurs autorisés
+- Exemples générées :
+  - `e.iso > 3200`
+  - `i.rating >= 4`
+  - `e.lens LIKE '%tamron%'`
+  - Conditions jointes avec AND
+
+**Mapping champs → colonnes** :
+| Champ | Colonne SQL | Table |
+|-------|-------------|-------|
+| iso | e.iso | exif_metadata |
+| aperture | e.aperture | exif_metadata |
+| shutter_speed | e.shutter_speed | exif_metadata |
+| focal_length | e.focal_length | exif_metadata |
+| lens | e.lens | exif_metadata |
+| camera | e.camera_make, e.camera_model | exif_metadata |
+| star | i.rating | image_state |
+| flag | i.flag | image_state |
+
+**Tests** (6 tests unitaires) :
+
+- `test_build_where_clause_iso_greater_than` : Valide clause EXIF > opérateur
+- `test_build_where_clause_star_equals` : Valide clause rating =
+- `test_build_where_clause_multiple_filters` : Validation AND chaîning
+- `test_build_where_clause_camera_like` : Validation LIKE pour texte
+- `test_build_where_clause_invalid_field` : Rejet champs invalides
+- `test_build_where_clause_empty_filters` : Clause vide quand pas de filtre
+
+**Impl** : `src-tauri/src/services/search.rs` (87 lignes code + 130 lignes tests)
+**Commands** : `src-tauri/src/commands/search.rs` (27 lignes)
+
+### Pipeline Complet Frontend → Backend
+
+1. Utilisateur tape dans SearchBar
+2. Debounce 500ms déclenche `onSearch()`
+3. `parseSearchQuery()` parse: `"iso:>3200"` → `{field: "iso", operator: ">", value: "3200"}`
+4. `performSearch(query)` invoke Tauri command `search_images`
+5. Backend `search_images()` appelle `SearchService::search()`
+6. `build_where_clause()` génère : `e.iso > 3200`
+7. SQL combine texte + WHERE structuré
+8. Résultats retournés en `SearchResponse`
+9. Frontend met à jour grille d'images
+
+### Tests
+
+**Backend (6 tests)** :
+
+- Tous les tests passent : `cargo test search::` ✅
+
+**Frontend (2 tests)** :
+
+- SearchBar component + integration tests
+- parseSearchQuery parser tests (6 tests spécifiques)
+
+**Total** : 363/363 tests (357 TypeScript + 6 Rust)

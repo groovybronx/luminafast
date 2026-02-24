@@ -2,19 +2,48 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [main, develop, phase/*]
+    branches-ignore: [main]
+    paths-ignore: ['**.md', '.github/**', 'Docs/**']
   pull_request:
-    branches: [develop]
+    branches: [develop, main]
+    paths-ignore: ['**.md', '.github/**', 'Docs/**']
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # Quick validation for pushes (non-PR)
-  validate:
-    name: Quick Validation
+  # Detect which files changed
+  detect-changes:
+    name: Detect Changes
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    timeout-minutes: 5
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'src/**'
+              - 'package.json'
+              - 'tsconfig.json'
+              - 'vite.config.ts'
+            backend:
+              - 'src-tauri/**'
+              - 'Cargo.lock'
+
+  # Quick validation (Frontend) for pushes and PRs to develop
+  validate-frontend:
+    name: Quick Validation (Frontend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: detect-changes
+    if: |
+      (github.event_name == 'push' || (github.event_name == 'pull_request' && github.base_ref == 'develop')) &&
+      needs.detect-changes.outputs.frontend == 'true'
 
     steps:
       - uses: actions/checkout@v4
@@ -31,22 +60,43 @@ jobs:
           npm run type-check
           npx prettier --check "src/**/*.{ts,tsx}"
 
+  # Quick validation (Backend) for pushes and PRs to develop
+  validate-backend:
+    name: Quick Validation (Backend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: detect-changes
+    if: |
+      (github.event_name == 'push' || (github.event_name == 'pull_request' && github.base_ref == 'develop')) &&
+      needs.detect-changes.outputs.backend == 'true'
+
+    steps:
+      - uses: actions/checkout@v4
+
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt
+          components: rustfmt, clippy
 
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
           shared-key: rust-stable
 
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libssl-dev pkg-config
+          version: 1.0
+
       - run: cd src-tauri && cargo fmt --all -- --check
 
-  # Optimized frontend pipeline for PRs
+      - run: cd src-tauri && cargo clippy --lib -- -D warnings -A dead_code -A unused_variables
+
+  # Optimized frontend pipeline for PRs to main (non-draft)
   frontend:
     name: Frontend
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    timeout-minutes: 15
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && !github.event.pull_request.draft
 
     steps:
       - uses: actions/checkout@v4
@@ -68,11 +118,12 @@ jobs:
           npm run test:ci
           npm run build
 
-  # Optimized backend pipeline for PRs
+  # Optimized backend pipeline for PRs to main (non-draft)
   backend:
     name: Backend
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    timeout-minutes: 15
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && !github.event.pull_request.draft
 
     steps:
       - uses: actions/checkout@v4
@@ -87,12 +138,10 @@ jobs:
           shared-key: rust-stable
           cache-on-failure: true
 
-      - name: Install system dependencies (cached)
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends \
-            libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
-            librsvg2-dev patchelf libssl-dev pkg-config
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libssl-dev pkg-config
+          version: 1.0
 
       - name: Create dist placeholder
         run: mkdir -p dist && echo '<!DOCTYPE html><html><body>CI</body></html>' > dist/index.html
@@ -107,12 +156,14 @@ jobs:
       - name: Run tests
         run: cd src-tauri && timeout 120 cargo test
 
-  # Integration build (only on merge-ready PRs or labeled)
+  # Integration build (only on merge-ready PRs to main)
   integration:
     name: Integration Build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     if: |
       github.event_name == 'pull_request' &&
+      github.base_ref == 'main' &&
       (contains(github.event.pull_request.labels.*.name, 'run-integration') ||
        github.event.pull_request.mergeable_state == 'clean')
 
@@ -133,12 +184,10 @@ jobs:
           workspaces: src-tauri
           shared-key: rust-stable
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends \
-            libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
-            librsvg2-dev patchelf libssl-dev pkg-config
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libssl-dev pkg-config
+          version: 1.0
 
       - run: npm ci --prefer-offline
 
@@ -149,20 +198,21 @@ jobs:
         run: npm run build:tauri
 
       - uses: actions/upload-artifact@v4
-        if: success()
+        if: always()
         with:
           name: tauri-app-${{ github.sha }}
           path: src-tauri/target/release/bundle/deb/*.deb
           retention-days: 7
 
-  # Security audit (weekly or on-demand)
+  # Security audit for merge-ready PRs to main
   security:
     name: Security Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: |
       github.event_name == 'pull_request' &&
-      (contains(github.event.pull_request.labels.*.name, 'security') ||
-       github.base_ref == 'main')
+      github.base_ref == 'main' &&
+      github.event.pull_request.mergeable_state == 'clean'
 
     steps:
       - uses: actions/checkout@v4
@@ -178,8 +228,6 @@ jobs:
         run: |
           cargo install --locked cargo-audit
           cd src-tauri && cargo audit --deny warnings
-        continue-on-error: true
 
       - name: Node.js security audit
         run: npm audit --audit-level high
-        continue-on-error: true

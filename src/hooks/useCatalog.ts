@@ -33,6 +33,11 @@ export interface UseCatalogReturn {
   // Computed
   imageCount: number;
   hasImages: boolean;
+
+  // NEW: Checkpoint 2 — SQLite bidirectional sync
+  onRatingChange: (imageId: number, rating: number) => Promise<void>;
+  onFlagChange: (imageId: number, flag: 'pick' | 'reject' | null) => Promise<void>;
+  onTagsChange: (imageId: number, tags: string[]) => Promise<void>;
 }
 
 /**
@@ -261,6 +266,70 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
   // Initial load - removed to prevent infinite loop
   // Catalog loading is now explicitly triggered from App.tsx on mount
 
+  // Checkpoint 2: SQLite bidirectional sync callbacks
+  const onRatingChange = useCallback(
+    async (imageId: number, rating: number) => {
+      try {
+        await CatalogService.updateImageState(imageId, { rating });
+
+        // Update local store immediately for responsive UI
+        const updated = storeImages.map((img) =>
+          img.id === imageId ? { ...img, state: { ...img.state, rating, isSynced: true } } : img,
+        );
+        setImages(updated);
+
+        addLog(`Rating updated: image ${imageId} → ${rating}`, 'sqlite');
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Failed to update rating';
+        setError(errorMsg);
+        addLog(`Failed to update rating: ${errorMsg}`, 'error');
+        throw err;
+      }
+    },
+    [storeImages, setImages, addLog],
+  );
+
+  const onFlagChange = useCallback(
+    async (imageId: number, flag: 'pick' | 'reject' | null) => {
+      try {
+        await CatalogService.updateImageState(imageId, { flag });
+
+        // Update local store immediately for responsive UI
+        const updated = storeImages.map((img) =>
+          img.id === imageId ? { ...img, state: { ...img.state, flag, isSynced: true } } : img,
+        );
+        setImages(updated);
+
+        addLog(`Flag updated: image ${imageId} → ${flag ?? 'none'}`, 'sqlite');
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Failed to update flag';
+        setError(errorMsg);
+        addLog(`Failed to update flag: ${errorMsg}`, 'error');
+        throw err;
+      }
+    },
+    [storeImages, setImages, addLog],
+  );
+
+  const onTagsChange = useCallback(
+    async (imageId: number, tags: string[]) => {
+      try {
+        // TODO(Future): Implement tag update via Rust command `update_image_tags`
+        // For now, just log as a placeholder
+        addLog(
+          `Tags update requested (not yet implemented): image ${imageId} → ${tags.join(', ')}`,
+          'info',
+        );
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Failed to update tags';
+        setError(errorMsg);
+        addLog(`Failed to update tags: ${errorMsg}`, 'error');
+        throw err;
+      }
+    },
+    [addLog],
+  );
+
   return {
     // Data
     images: storeImages,
@@ -276,5 +345,10 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
     // Computed
     imageCount: storeImages.length,
     hasImages: storeImages.length > 0,
+
+    // Checkpoint 2: SQLite bidirectional sync
+    onRatingChange,
+    onFlagChange,
+    onTagsChange,
   };
 }

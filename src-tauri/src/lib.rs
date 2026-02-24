@@ -73,7 +73,6 @@ pub fn run() {
             // Catalog commands
             commands::catalog::get_all_images,
             commands::catalog::get_collections,
-            commands::catalog::search_images,
             commands::catalog::get_image_detail,
             commands::catalog::update_image_state,
             commands::catalog::create_collection,
@@ -146,6 +145,8 @@ pub fn run() {
             commands::preview::generate_previews_with_progress,
             commands::preview::benchmark_preview_generation,
             commands::preview::get_preview_config,
+            // Search commands (Phase 3.5)
+            commands::search::search_images,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

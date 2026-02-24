@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { GridView } from '../GridView';
 import type { CatalogImage } from '../../../types';
 import { DEFAULT_EDIT_STATE } from '../../../types';
@@ -32,6 +32,53 @@ vi.mock('@tanstack/react-virtual', () => {
       };
     }),
   };
+});
+
+// Mock IntersectionObserver for LazyLoadedImageCard
+// In tests, all elements are considered "visible" to simplify testing
+vi.stubGlobal(
+  'IntersectionObserver',
+  class MockIntersectionObserver {
+    callback: IntersectionObserverCallback;
+    private timeoutIds: NodeJS.Timeout[] = [];
+
+    observe = vi.fn((element) => {
+      // Use a small timeout to allow React to settle first
+      const id = setTimeout(() => {
+        this.callback(
+          [
+            {
+              target: element,
+              isIntersecting: true,
+              intersectionRatio: 1,
+              boundingClientRect: element.getBoundingClientRect(),
+              intersectionRect: element.getBoundingClientRect(),
+              rootBounds: null,
+              time: Date.now(),
+            } as IntersectionObserverEntry,
+          ],
+          this as any,
+        );
+      }, 10);
+      this.timeoutIds.push(id);
+    });
+
+    disconnect = vi.fn(() => {
+      this.timeoutIds.forEach(clearTimeout);
+      this.timeoutIds = [];
+    });
+
+    unobserve = vi.fn();
+
+    constructor(callback: IntersectionObserverCallback) {
+      this.callback = callback;
+    }
+  } as unknown as typeof IntersectionObserver,
+);
+
+// Mock requestAnimationFrame
+vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+  return setTimeout(() => callback(Date.now()), 0) as unknown as number;
 });
 
 const mockImages: CatalogImage[] = [
@@ -84,7 +131,7 @@ describe('GridView Component', () => {
     });
   });
 
-  it('renders correct number of images', () => {
+  it('renders correct number of images', async () => {
     const onToggle = vi.fn();
     const onSetView = vi.fn();
 
@@ -98,8 +145,14 @@ describe('GridView Component', () => {
       />,
     );
 
-    const images = screen.getAllByRole('img', { hidden: true });
-    expect(images).toHaveLength(2);
+    // Wait for images to load via IntersectionObserver mock
+    await waitFor(
+      () => {
+        const images = screen.getAllByRole('img', { hidden: true });
+        expect(images).toHaveLength(2);
+      },
+      { timeout: 1000 },
+    );
   });
 
   it('displays filenames correctly', () => {

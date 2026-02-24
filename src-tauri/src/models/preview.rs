@@ -74,7 +74,7 @@ impl Default for PreviewConfig {
             catalog_dir,
             parallel_threads: num_cpus::get(),
             generation_timeout: 30,
-            use_libvips: false, // Pour l'instant, utiliser image crate
+            use_libvips: true, // Activation immédiate de libvips pour la génération de previews
         }
     }
 }
@@ -321,7 +321,7 @@ mod tests {
     fn test_preview_config_default() {
         let config = PreviewConfig::default();
         assert_eq!(config.generation_timeout, 30);
-        assert!(!config.use_libvips);
+        assert!(config.use_libvips);
         assert!(config.parallel_threads > 0);
         assert!(config.catalog_dir.ends_with("Pictures/LuminaFast"));
         assert!(config.previews_dir().ends_with("Previews.lrdata"));

@@ -272,7 +272,7 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 | `editStore`       | `stores/editStore.ts`       | eventLog[], currentEdits, historyIndex                                       | addEvent, setCurrentEdits, updateEdit, undo/redo (préparés)                                                       |
 | `systemStore`     | `stores/systemStore.ts`     | logs[], importState, appReady                                                | addLog, setImportState, setAppReady                                                                               |
 
-**Architecture** (Maintenance Phase 3.1) : 
+**Architecture** (Maintenance Phase 3.1) :
 - **Single Source of Truth** : `useCatalog()` hook SEUL pour images data (pas de hybrid state)
 - **Separation of Concerns** : `useUiStore` pour state UI only (selection, filterText, viewport)
 - **Type Safety** : TypeScript strict mode, no `any`

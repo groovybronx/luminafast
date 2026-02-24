@@ -130,6 +130,8 @@ describe('LeftSidebar Drag & Drop (Target)', () => {
 
     const dataTransfer = new MockDataTransfer();
 
+    // dragEnter is required first to increment the drag counter
+    fireEvent.dragEnter(collectionContainer, { dataTransfer } as unknown as DragEvent);
     fireEvent.dragOver(collectionContainer, { dataTransfer } as unknown as DragEvent);
 
     // Check for drag-over styles
@@ -153,6 +155,8 @@ describe('LeftSidebar Drag & Drop (Target)', () => {
 
     const dataTransfer = new MockDataTransfer();
 
+    // dragEnter is required first to increment the drag counter
+    fireEvent.dragEnter(collectionContainer, { dataTransfer } as unknown as DragEvent);
     fireEvent.dragOver(collectionContainer, { dataTransfer } as unknown as DragEvent);
     fireEvent.dragLeave(collectionContainer);
 

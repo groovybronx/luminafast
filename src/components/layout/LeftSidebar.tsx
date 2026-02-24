@@ -90,6 +90,8 @@ function CollectionItem({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(collection.name);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dragCounterRef = useRef(0); // Track drag enter/leave to handle child elements
+
   useEffect(() => {
     if (isEditing) inputRef.current?.focus();
   }, [isEditing]);
@@ -100,19 +102,29 @@ function CollectionItem({
     setIsEditing(false);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
+    dragCounterRef.current += 1;
     onDragOver();
   };
 
-  const handleDragLeave = () => {
-    onDragLeave();
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleDragLeave = (_e: React.DragEvent) => {
+    dragCounterRef.current -= 1;
+    // Only reset if we completely left the container (counter = 0)
+    if (dragCounterRef.current === 0) {
+      onDragLeave();
+    }
   };
 
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    dragCounterRef.current = 0;
     onDragLeave();
 
     try {
@@ -160,6 +172,7 @@ function CollectionItem({
           ? 'bg-blue-600/25 text-white'
           : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
       }`}
+      onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}

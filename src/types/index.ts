@@ -1,6 +1,7 @@
 // --- Re-export all domain types ---
 
 export * from './collection';
+export * from './dragdrop';
 export * from './dto';
 export * from './events';
 export * from './filesystem';

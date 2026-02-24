@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useCollectionStore } from '../../stores/collectionStore';
 import { useFolderStore } from '../../stores/folderStore';
 import type { SmartQuery } from '../../types/collection';
-import type { CollectionDTO } from '../../types/dto';
+import type { CollectionDTO, DragImageData } from '../../types';
 import { FolderTree } from '../library/FolderTree';
 import { SmartCollectionBuilder } from '../library/SmartCollectionBuilder';
 
@@ -67,17 +67,25 @@ function NewCollectionInput({ onConfirm, onCancel }: NewCollectionInputProps) {
 interface CollectionItemProps {
   collection: CollectionDTO;
   isActive: boolean;
+  isDragOver: boolean;
   onSelect: (id: number) => void;
   onDelete: (id: number) => void;
   onRename: (id: number, name: string) => void;
+  onDrop: (collectionId: number, dragData: DragImageData) => Promise<void>;
+  onDragOver: () => void;
+  onDragLeave: () => void;
 }
 
 function CollectionItem({
   collection,
   isActive,
+  isDragOver,
   onSelect,
   onDelete,
   onRename,
+  onDrop,
+  onDragOver,
+  onDragLeave,
 }: CollectionItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(collection.name);
@@ -90,6 +98,33 @@ function CollectionItem({
     const trimmed = editValue.trim();
     if (trimmed && trimmed !== collection.name) onRename(collection.id, trimmed);
     setIsEditing(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    onDragOver();
+  };
+
+  const handleDragLeave = () => {
+    onDragLeave();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDragLeave();
+
+    try {
+      const jsonStr = e.dataTransfer.getData('application/json');
+      if (!jsonStr) return;
+      const dragData: DragImageData = JSON.parse(jsonStr);
+      if (dragData.type === 'image' && dragData.ids.length > 0) {
+        await onDrop(collection.id, dragData);
+      }
+    } catch {
+      // Silently ignore invalid drag data (not logged by design)
+    }
   };
 
   if (isEditing) {
@@ -119,10 +154,15 @@ function CollectionItem({
   return (
     <div
       className={`flex items-center gap-1 text-[11px] rounded group transition-colors ${
+        isDragOver ? 'bg-blue-500/30 border border-blue-400 border-dashed' : ''
+      } ${
         isActive
           ? 'bg-blue-600/25 text-white'
           : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
       }`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
       <button
         className="flex-1 flex items-center gap-2 p-1.5 min-w-0 text-left"
@@ -170,6 +210,8 @@ export const LeftSidebar = ({
 }: LeftSidebarProps) => {
   const [showNewInput, setShowNewInput] = useState(false);
   const [showSmartBuilder, setShowSmartBuilder] = useState(false);
+  const [dragOverCollectionId, setDragOverCollectionId] = useState<number | null>(null);
+
   const {
     collections,
     activeCollectionId,
@@ -180,6 +222,7 @@ export const LeftSidebar = ({
     renameCollection,
     setActiveCollection,
     clearActiveCollection,
+    addImagesToCollection,
   } = useCollectionStore();
 
   const { folderTree, loadFolderTree, setActiveFolder } = useFolderStore();
@@ -217,6 +260,17 @@ export const LeftSidebar = ({
       await createSmartCollection(name, smartQuery);
     } catch {
       /* erreur gérée dans le store */
+    }
+  };
+
+  const handleDropOnCollection = async (collectionId: number, dragData: DragImageData) => {
+    try {
+      if (dragData.ids.length === 0) return;
+      await addImagesToCollection(collectionId, dragData.ids);
+      // TODO: Toast notification "✓ N image(s) ajoutée(s) à Collection" (Phase 3.2b impl)
+    } catch (err) {
+      // TODO: Error toast (Phase 3.2b impl)
+      console.error('Error adding images to collection:', err);
     }
   };
 
@@ -279,9 +333,13 @@ export const LeftSidebar = ({
                 key={c.id}
                 collection={c}
                 isActive={activeCollectionId === c.id}
+                isDragOver={dragOverCollectionId === c.id}
                 onSelect={(id) => void handleSelect(id)}
                 onDelete={(id) => void deleteCollection(id)}
                 onRename={(id, name) => void renameCollection(id, name)}
+                onDrop={(collectionId, dragData) => handleDropOnCollection(collectionId, dragData)}
+                onDragOver={() => setDragOverCollectionId(c.id)}
+                onDragLeave={() => setDragOverCollectionId(null)}
               />
             ))}
             {showNewInput && (

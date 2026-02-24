@@ -2,19 +2,46 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [develop, phase/*]
+    branches-ignore: [main]
+    paths-ignore: ['**.md', '.github/**', 'Docs/**']
   pull_request:
     branches: [develop, main]
+    paths-ignore: ['**.md', '.github/**', 'Docs/**']
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # Quick validation for pushes and PRs to develop
-  validate:
-    name: Quick Validation
+  # Detect which files changed
+  detect-changes:
+    name: Detect Changes
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.base_ref == 'develop')
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'src/**'
+              - 'package.json'
+              - 'tsconfig.json'
+              - 'vite.config.ts'
+            backend:
+              - 'src-tauri/**'
+              - 'Cargo.lock'
+
+  # Quick validation (Frontend) for pushes and PRs to develop
+  validate-frontend:
+    name: Quick Validation (Frontend)
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: |
+      (github.event_name == 'push' || (github.event_name == 'pull_request' && github.base_ref == 'develop')) &&
+      needs.detect-changes.outputs.frontend == 'true'
 
     steps:
       - uses: actions/checkout@v4
@@ -30,6 +57,18 @@ jobs:
         run: |
           npm run type-check
           npx prettier --check "src/**/*.{ts,tsx}"
+
+  # Quick validation (Backend) for pushes and PRs to develop
+  validate-backend:
+    name: Quick Validation (Backend)
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: |
+      (github.event_name == 'push' || (github.event_name == 'pull_request' && github.base_ref == 'develop')) &&
+      needs.detect-changes.outputs.backend == 'true'
+
+    steps:
+      - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
         with:

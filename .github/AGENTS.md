@@ -178,8 +178,8 @@ frontend:
   name: Frontend
   runs-on: ubuntu-latest
   timeout-minutes: 15
-  if: github.event_name == 'pull_request' && 
-      github.base_ref == 'main' && 
+  if: github.event_name == 'pull_request' &&
+      github.base_ref == 'main' &&
       !github.event.pull_request.draft
 
   steps:
@@ -204,8 +204,8 @@ backend:
   name: Backend
   runs-on: ubuntu-latest
   timeout-minutes: 15
-  if: github.event_name == 'pull_request' && 
-      github.base_ref == 'main' && 
+  if: github.event_name == 'pull_request' &&
+      github.base_ref == 'main' &&
       !github.event.pull_request.draft
 
   steps:

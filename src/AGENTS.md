@@ -86,7 +86,7 @@ interface CatalogState {
   images: Image[];
   selectedIds: Set<string>;
   filterText: string;
-  
+
   // Actions
   setImages: (images: Image[]) => void;
   toggleSelect: (id: string) => void;
@@ -97,7 +97,7 @@ export const useCatalogStore = create<CatalogState>((set) => ({
   images: [],
   selectedIds: new Set(),
   filterText: '',
-  
+
   setImages: (images) => set({ images }),
   toggleSelect: (id) => set((state) => ({
     selectedIds: new Set([...state.selectedIds, id])

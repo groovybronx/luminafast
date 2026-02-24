@@ -37,10 +37,10 @@ use thiserror::Error;
 pub enum CatalogError {
     #[error("Database error: {0}")]
     DatabaseError(String),
-    
+
     #[error("Image not found: {0}")]
     ImageNotFound(String),
-    
+
     #[error("Hash mismatch for {path}: expected {expected}, got {actual}")]
     HashMismatch { path: String, expected: String, actual: String },
 }
@@ -228,7 +228,7 @@ Toujours utiliser une nouvelle connexion pour les commandes stateless :
 pub fn get_all_images() -> CatalogResult<Vec<ImageDTO>> {
     let conn = get_db_connection()
         .map_err(|e| CatalogError::DatabaseError(e.to_string()))?;
-    
+
     // Requête
 }
 ```
@@ -242,14 +242,14 @@ pub fn import_image(path: &Path, hash: &str) -> CatalogResult<ImageDTO> {
     let conn = get_db_connection()?;
     let tx = conn.transaction()
         .map_err(|e| CatalogError::DatabaseError(e.to_string()))?;
-    
+
     // Insert image
     // Insert exif
     // Insert preview mappings
-    
+
     tx.commit()
         .map_err(|e| CatalogError::DatabaseError(e.to_string()))?;
-    
+
     Ok(image_dto)
 }
 ```
@@ -269,7 +269,7 @@ async fn batch_import_images(
 ) -> CatalogResult<Vec<ImageDTO>> {
     // Rayon parallélization
     use rayon::prelude::*;
-    
+
     let results: Vec<CatalogResult<ImageDTO>> = paths
         .par_iter()
         .map(|path| {
@@ -277,7 +277,7 @@ async fn batch_import_images(
             insert_image(path, &hash)
         })
         .collect();
-    
+
     results.into_iter().collect()
 }
 ```
@@ -294,14 +294,14 @@ async fn import_and_track(
 ) -> CatalogResult<Vec<ImageDTO>> {
     let total = paths.len();
     let mut results = Vec::new();
-    
+
     for (idx, path) in paths.iter().enumerate() {
         let image = import_single_image(path)?;
         results.push(image);
-        
+
         let _ = app_handle.emit_all("import_progress", (idx + 1, total));
     }
-    
+
     Ok(results)
 }
 ```
@@ -315,7 +315,7 @@ async function importWithProgress() {
     const [current, total] = event.payload;
     console.log(`${current}/${total}`);
   });
-  
+
   const images = await invoke<ImageDTO[]>('import_and_track', { paths });
 }
 ```
@@ -357,24 +357,24 @@ CREATE TABLE IF NOT EXISTS ingestion_file_status (
 pub fn create_session() -> CatalogResult<String> {
     let conn = get_db_connection()?;
     let session_id = uuid::Uuid::new_v4().to_string();
-    
+
     conn.execute(
         "INSERT INTO ingestion_sessions (id, status) VALUES (?, ?)",
         (&session_id, "discovering"),
     )?;
-    
+
     Ok(session_id)
 }
 
 pub fn get_session(session_id: &str) -> CatalogResult<ImportSessionDTO> {
     let conn = get_db_connection()?;
-    
+
     let mut stmt = conn.prepare(
-        "SELECT id, status, started_at, total_files, discovered_count, 
-                ingested_count, preview_count 
+        "SELECT id, status, started_at, total_files, discovered_count,
+                ingested_count, preview_count
          FROM ingestion_sessions WHERE id = ?"
     )?;
-    
+
     let session = stmt.query_row([session_id], |row| {
         Ok(ImportSessionDTO {
             id: row.get(0)?,
@@ -388,7 +388,7 @@ pub fn get_session(session_id: &str) -> CatalogResult<ImportSessionDTO> {
             elapsed_ms: calculate_elapsed(row.get(2)?)?,
         })
     })?;
-    
+
     Ok(session)
 }
 
@@ -425,7 +425,7 @@ mod tests {
             filename: "test.jpg".to_string(),
             // ...
         };
-        
+
         let result = insert_image(&image);
         assert!(result.is_ok());
     }

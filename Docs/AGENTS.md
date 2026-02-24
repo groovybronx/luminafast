@@ -233,7 +233,7 @@ function foo() {
 ```markdown
 - Item bullet
   - Sub-item (indent 2 spaces)
-  
+
 1. Item numéroté
    1. Sub-item numéroté
 ```

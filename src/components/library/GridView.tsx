@@ -1,7 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Cloud, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ActiveView, CatalogImage } from '../../types';
+import { LazyLoadedImageCard } from './LazyLoadedImageCard';
 import './library.css';
 
 interface GridViewProps {
@@ -122,75 +122,17 @@ export const GridView = ({
               >
                 {cells.map((img) => {
                   const isSelected = selection.includes(img.id);
-                  const hasPreview = img.url && img.url.length > 0;
 
                   return (
-                    <div
+                    <LazyLoadedImageCard
                       key={img.id}
-                      onClick={(e) => onToggleSelection(img.id, e)}
-                      onDoubleClick={() => onSetActiveView('develop')}
-                      className={`shrink-0 bg-zinc-900 border transition-all relative group rounded-lg overflow-hidden cursor-pointer ${
-                        isSelected
-                          ? 'border-blue-500 ring-4 ring-blue-500/20 z-10 scale-[0.97]'
-                          : 'border-zinc-800 hover:border-zinc-700 shadow-md'
-                      }`}
-                      style={{
-                        width: itemWidth,
-                        height: itemHeight,
-                      }}
-                    >
-                      {hasPreview ? (
-                        <img
-                          src={img.url}
-                          alt={img.filename}
-                          className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-zinc-800">
-                          <ImageIcon
-                            size={Math.max(16, itemHeight / 4)}
-                            className="text-zinc-600"
-                          />
-                        </div>
-                      )}
-
-                      {/* Sync status indicator */}
-                      <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm rounded-full p-1 shadow-lg">
-                        {img.state.isSynced ? (
-                          hasPreview ? (
-                            <Cloud size={10} className="text-blue-400" />
-                          ) : (
-                            <RefreshCw size={10} className="text-amber-500 animate-spin" />
-                          )
-                        ) : (
-                          <RefreshCw size={10} className="text-amber-500 animate-spin" />
-                        )}
-                      </div>
-
-                      {/* Metadata overlay */}
-                      <div className="absolute bottom-0 inset-x-0 bg-linear-to-t from-black/95 via-black/40 to-transparent p-2 flex justify-between items-end translate-y-1 group-hover:translate-y-0 transition-transform">
-                        <div className="flex flex-col gap-0.5">
-                          <div className="text-[9px] font-mono text-zinc-300 flex items-center gap-1 opacity-80 group-hover:opacity-100 uppercase tracking-tighter truncate">
-                            {img.filename}
-                          </div>
-                          <div className="text-amber-400 text-[9px] flex drop-shadow-md">
-                            {'★'.repeat(img.state.rating)}
-                          </div>
-                        </div>
-                        <div className="text-[8px] font-mono text-zinc-500 shrink-0">
-                          {img.exif.iso} ISO
-                        </div>
-                      </div>
-
-                      {/* Flag indicators */}
-                      {img.state.flag === 'pick' && (
-                        <div className="absolute top-2 left-2 w-2.5 h-2.5 bg-emerald-500 border-2 border-zinc-950 rounded-full shadow-lg"></div>
-                      )}
-                      {img.state.flag === 'reject' && (
-                        <div className="absolute top-2 left-2 w-2.5 h-2.5 bg-red-600 border-2 border-zinc-950 rounded-full shadow-lg"></div>
-                      )}
-                    </div>
+                      image={img}
+                      isSelected={isSelected}
+                      itemWidth={itemWidth}
+                      itemHeight={itemHeight}
+                      onToggleSelection={onToggleSelection}
+                      onSetActiveView={onSetActiveView}
+                    />
                   );
                 })}
               </div>

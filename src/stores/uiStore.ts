@@ -10,6 +10,8 @@ interface UiStore {
   rightSidebarTab: 'develop' | 'metadata' | 'history';
   showImport: boolean;
   showBeforeAfter: boolean;
+  selection: Set<number>; // ← Moved from catalogStore (UI state only)
+  filterText: string; // ← Moved from catalogStore (UI state only)
 
   // Actions
   setActiveView: (view: ActiveView) => void;
@@ -19,6 +21,10 @@ interface UiStore {
   setRightSidebarTab: (tab: 'develop' | 'metadata' | 'history') => void;
   setShowImport: (show: boolean) => void;
   toggleBeforeAfter: () => void;
+  toggleSelection: (id: number, isMultiSelect?: boolean) => void; // ← Moved from catalogStore
+  setSingleSelection: (id: number) => void; // ← Moved from catalogStore
+  clearSelection: () => void; // ← Moved from catalogStore
+  setFilterText: (text: string) => void; // ← Moved from catalogStore
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -30,6 +36,8 @@ export const useUiStore = create<UiStore>((set) => ({
   rightSidebarTab: 'develop',
   showImport: false,
   showBeforeAfter: false,
+  selection: new Set(),
+  filterText: '',
 
   // Actions
   setActiveView: (view: ActiveView) => set({ activeView: view }),
@@ -54,4 +62,26 @@ export const useUiStore = create<UiStore>((set) => ({
     set((state) => ({
       showBeforeAfter: !state.showBeforeAfter,
     })),
+
+  // Selection management (moved from catalogStore)
+  toggleSelection: (id: number, isMultiSelect = false) =>
+    set((state) => {
+      if (!isMultiSelect) {
+        return { selection: new Set([id]) };
+      }
+      const newSelection = new Set(state.selection);
+      if (newSelection.has(id)) {
+        newSelection.delete(id);
+      } else {
+        newSelection.add(id);
+      }
+      return { selection: newSelection };
+    }),
+
+  setSingleSelection: (id: number) => set({ selection: new Set([id]) }),
+
+  clearSelection: () => set({ selection: new Set() }),
+
+  // Filter management (moved from catalogStore)
+  setFilterText: (text: string) => set({ filterText: text }),
 }));

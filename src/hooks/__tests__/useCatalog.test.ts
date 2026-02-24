@@ -175,4 +175,98 @@ describe('useCatalog', () => {
     });
     expect(result.current.hasImages).toBe(true);
   });
+
+  // Checkpoint 2: SQLite bidirectional sync callbacks
+  describe('SQLite sync callbacks', () => {
+    it('onRatingChange should update local store and call CatalogService', async () => {
+      mockGetAllImages.mockResolvedValue([makeImageDTO({ id: 1, rating: 0 })]);
+      const updateMock = vi.mocked(CatalogService.updateImageState);
+
+      const { result } = renderHook(() => useCatalog());
+
+      await act(async () => {
+        await result.current.refreshCatalog();
+      });
+
+      await act(async () => {
+        await result.current.onRatingChange(1, 5);
+      });
+
+      // Verify service was called with correct args
+      expect(updateMock).toHaveBeenCalledWith(1, { rating: 5 });
+
+      // Verify local store was updated with new rating
+      const img = useCatalogStore.getState().images[0];
+      expect(img?.state.rating).toBe(5);
+      expect(img?.state.isSynced).toBe(true);
+    });
+
+    it('onFlagChange should update local store and call CatalogService', async () => {
+      mockGetAllImages.mockResolvedValue([makeImageDTO({ id: 1, flag: 'pick' as any })]);
+      const updateMock = vi.mocked(CatalogService.updateImageState);
+
+      const { result } = renderHook(() => useCatalog());
+
+      await act(async () => {
+        await result.current.refreshCatalog();
+      });
+
+      await act(async () => {
+        await result.current.onFlagChange(1, 'pick');
+      });
+
+      // Verify service was called
+      expect(updateMock).toHaveBeenCalledWith(1, { flag: 'pick' });
+
+      // Verify local store updated
+      const img = useCatalogStore.getState().images[0];
+      expect(img?.state.flag).toBe('pick');
+      expect(img?.state.isSynced).toBe(true);
+    });
+
+    it('onFlagChange with null should clear flag', async () => {
+      mockGetAllImages.mockResolvedValue([makeImageDTO({ id: 1, flag: 'pick' })]);
+      const updateMock = vi.mocked(CatalogService.updateImageState);
+
+      const { result } = renderHook(() => useCatalog());
+
+      await act(async () => {
+        await result.current.refreshCatalog();
+      });
+
+      await act(async () => {
+        await result.current.onFlagChange(1, null);
+      });
+
+      expect(updateMock).toHaveBeenCalledWith(1, { flag: null });
+
+      const img = useCatalogStore.getState().images[0];
+      expect(img?.state.flag).toBeNull();
+    });
+
+    it('onRatingChange should handle update errors', async () => {
+      mockGetAllImages.mockResolvedValue([makeImageDTO({ id: 1, rating: 0 })]);
+      const updateMock = vi.mocked(CatalogService.updateImageState);
+      updateMock.mockRejectedValue(new Error('SQLite write failed'));
+
+      const { result } = renderHook(() => useCatalog());
+
+      await act(async () => {
+        await result.current.refreshCatalog();
+      });
+
+      // Should throw error
+      let caughtError: Error | undefined;
+      await act(async () => {
+        try {
+          await result.current.onRatingChange(1, 5);
+        } catch (err) {
+          caughtError = err as Error;
+        }
+      });
+
+      expect(caughtError?.message).toBe('SQLite write failed');
+      expect(result.current.error).toBe('SQLite write failed');
+    });
+  });
 });

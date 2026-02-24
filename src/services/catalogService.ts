@@ -71,15 +71,22 @@ export class CatalogService {
   }
 
   /**
-   * Update image state (rating, flag, color_label)
+   * Update image state (rating, flag, color_label) - Checkpoint 2
+   * Now accepts an object for better API design
    */
-  static async updateImageState(id: number, rating?: number, flag?: string): Promise<void> {
+  static async updateImageState(
+    id: number,
+    updates?: {
+      rating?: number;
+      flag?: 'pick' | 'reject' | null;
+    },
+  ): Promise<void> {
     try {
       const invoke = this.getInvoke();
       await invoke('update_image_state', {
         id,
-        rating,
-        flag,
+        rating: updates?.rating,
+        flag: updates?.flag,
       });
     } catch (error) {
       throw this.parseError(error);

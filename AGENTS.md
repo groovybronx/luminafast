@@ -1,8 +1,8 @@
 # LuminaFast — Instructions Obligatoires pour Agents IA
 
-> **CE FICHIER DOIT ÊTRE LU ENTIÈREMENT AVANT TOUTE ACTION.**
-> C'est le **hub central** qui renvoit vers les directives spécialisées.
-> Toute violation des règles absolues (section 1) invalide le travail produit.
+  **CE FICHIER DOIT ÊTRE LU ENTIÈREMENT AVANT TOUTE ACTION.**
+  C'est le **hub central** qui renvoit vers les directives spécialisées.
+  Toute violation des règles absolues (section 1) invalide le travail produit.
 
 ---
 
@@ -132,11 +132,11 @@ If blocage non-résolvable dans la sous-phase:
 
 ## 7. RAPPEL FINAL
 
-> **L'objectif est de produire une application de qualité commerciale.**
-> La rapidité ne justifie JAMAIS de sacrifier qualité, robustesse ou cohérence architecturale.
-> En cas de doute : **demander, ne pas deviner.**
->
-> **Règle d'or** : Si tu dois choisir entre vitesse et qualité → choisis qualité. Les agents IA sont ici pour ça.
+  **L'objectif est de produire une application de qualité commerciale.**
+  La rapidité ne justifie JAMAIS de sacrifier qualité, robustesse ou cohérence architecturale.
+  En cas de doute : **demander, ne pas deviner.**
+
+   **Règle d'or** : Si tu dois choisir entre vitesse et qualité → choisis qualité. Les agents IA sont ici pour ça.
 
 ---
 

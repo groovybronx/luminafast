@@ -80,9 +80,7 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: mold
+      - run: sudo apt-get install -y mold
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -139,9 +137,7 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: mold
+      - run: sudo apt-get install -y mold
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -190,9 +186,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: mold
+      - run: sudo apt-get install -y mold
 
       - uses: Swatinem/rust-cache@v2
         with:

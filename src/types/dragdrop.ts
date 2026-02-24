@@ -55,12 +55,24 @@ export interface DropContext {
 export function parseDragData(jsonStr: string): AnyDragData | null {
   try {
     const data = JSON.parse(jsonStr);
-    // Basic validation
+    // Validate type field
+    if (!data || typeof data.type !== 'string') {
+      return null;
+    }
+
+    // Validate based on type
+    if (data.type === 'image' && Array.isArray(data.ids) && data.ids.length > 0) {
+      return data as DragImageData;
+    }
+    if (data.type === 'folder' && typeof data.id === 'number' && typeof data.path === 'string') {
+      return data as DragFolderData;
+    }
     if (
-      data.type &&
-      (data.type === 'image' || data.type === 'folder' || data.type === 'collection')
+      data.type === 'collection' &&
+      typeof data.id === 'number' &&
+      typeof data.name === 'string'
     ) {
-      return data as AnyDragData;
+      return data as DragCollectionData;
     }
   } catch {
     // Silently ignore parse errors
@@ -72,7 +84,7 @@ export function parseDragData(jsonStr: string): AnyDragData | null {
  * Helper to check if drag data contains images
  */
 export function isDragImageData(data: AnyDragData): data is DragImageData {
-  return data.type === 'image';
+  return data.type === 'image' && Array.isArray((data as DragImageData).ids);
 }
 
 /**

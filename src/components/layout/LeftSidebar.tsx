@@ -3,7 +3,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useCollectionStore } from '../../stores/collectionStore';
 import { useFolderStore } from '../../stores/folderStore';
 import type { SmartQuery } from '../../types/collection';
-import type { CollectionDTO, DragImageData } from '../../types';
+import {
+  isDragImageData,
+  parseDragData,
+  type CollectionDTO,
+  type DragImageData,
+} from '../../types';
 import { FolderTree } from '../library/FolderTree';
 import { SmartCollectionBuilder } from '../library/SmartCollectionBuilder';
 
@@ -137,8 +142,9 @@ function CollectionItem({
     try {
       const jsonStr = e.dataTransfer.getData('application/json');
       if (!jsonStr) return;
-      const dragData: DragImageData = JSON.parse(jsonStr);
-      if (dragData.type === 'image' && dragData.ids.length > 0) {
+
+      const dragData = parseDragData(jsonStr);
+      if (dragData && isDragImageData(dragData) && dragData.ids.length > 0) {
         await onDrop(collection.id, dragData);
       }
     } catch {

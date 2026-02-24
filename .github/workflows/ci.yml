@@ -10,6 +10,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 1
+  CARGO_BUILD_JOBS: 4
 
 jobs:
   # Detect which files changed
@@ -77,6 +79,10 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: mold
+
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
@@ -132,6 +138,10 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: mold
+
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
@@ -178,6 +188,10 @@ jobs:
           cache: 'npm'
 
       - uses: dtolnay/rust-toolchain@stable
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: mold
 
       - uses: Swatinem/rust-cache@v2
         with:

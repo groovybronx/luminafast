@@ -43,8 +43,8 @@ Implémenter le réordering interactif des images au sein d'une collection via d
 - Transaction SQL atomique :
   ```sql
   BEGIN TRANSACTION;
-  UPDATE collection_images 
-  SET sort_order = ? 
+  UPDATE collection_images
+  SET sort_order = ?
   WHERE collection_id = ? AND image_id = ?;
   -- Répéter pour chaque image avec sort_order = index (0, 1, 2, ...)
   COMMIT;
@@ -122,7 +122,7 @@ const handleDragStart = (e: React.DragEvent) => {
   const data: DragImage = {
     type: 'image',
     ids,
-    dropMode: activeCollectionId 
+    dropMode: activeCollectionId
       ? 'reorder'  // Au sein d'une collection
       : 'add',     // En dehors (ajouter à collection)
   };
@@ -169,11 +169,11 @@ const handleDropOnGrid = async (e: React.DragEvent) => {
     try {
       // Récupérer l'ordre actuel (activeCollectionImageIds)
       const currentOrder = [...(activeCollectionImageIds || [])];
-      
+
       // Retirer les images en cours de drag
       const draggingIds = new Set(data.ids);
       const remainder = currentOrder.filter(id => !draggingIds.has(id));
-      
+
       // Insérer à la bonne position
       const newOrder = [
         ...remainder.slice(0, dropInsertIndex),
@@ -186,7 +186,7 @@ const handleDropOnGrid = async (e: React.DragEvent) => {
 
       // Backend
       await updateCollectionImagesOrder(activeCollectionId, newOrder);
-      
+
       // Toast de confirmation
       logDev(`✓ ${data.ids.length} image(s) réordonnées`);
     } catch (err) {
@@ -202,7 +202,7 @@ const handleDropOnGrid = async (e: React.DragEvent) => {
 const handleDragOverGrid = (e: React.DragEvent) => {
   e.preventDefault();
   e.dataTransfer.dropEffect = 'move';
-  
+
   // Calculer la position relative du curseur dans la grille
   // → déterminer l'index d'insertion (complexe avec virtualisation)
   // Pour MVP : utiliser drop sur une image = insert avant celle-ci
@@ -250,7 +250,7 @@ Ajouter une action :
 ```typescript
 interface CollectionStore {
   // ... existant
-  
+
   // Nouvelle action async
   updateCollectionImagesOrder: (
     collectionId: number,
@@ -263,7 +263,7 @@ updateCollectionImagesOrder: async (collectionId, imageIdsOrdered) => {
   try {
     set({ isLoading: true, error: null });
     await CatalogService.updateCollectionImagesOrder(collectionId, imageIdsOrdered);
-    
+
     // Update local state
     set((state) => {
       if (state.activeCollectionId === collectionId) {
@@ -374,7 +374,7 @@ mod tests {
 ```typescript
 describe('GridView Reorder', () => {
   // Tests reordering au sein d'une collection
-  
+
   it('should set dropMode="reorder" when activeCollectionId is set', async () => {
     // Rendre GridView avec activeCollectionId = 1
     // Simuler drag d'une image
@@ -534,9 +534,9 @@ Avec grille virtualisée, déterminer la position d'insertion est complexe :
 
 ```typescript
 // GET collection images returns ordered par sort_order
-SELECT image_id 
-FROM collection_images 
-WHERE collection_id = ? 
+SELECT image_id
+FROM collection_images
+WHERE collection_id = ?
 ORDER BY sort_order ASC, imported_at DESC;
 ```
 
@@ -560,8 +560,8 @@ Alternative (Update par UUID) si on veut éviter DELETE/INSERT :
 
 ```sql
 BEGIN TRANSACTION;
-UPDATE collection_images 
-SET sort_order = CASE image_id 
+UPDATE collection_images
+SET sort_order = CASE image_id
   WHEN 1 THEN 0
   WHEN 3 THEN 1
   WHEN 2 THEN 2
@@ -578,13 +578,12 @@ COMMIT;
 
 1. **Reorder + suppression images** : Si user drag image 1, puis supprime image 3 pendant le drag, quel comportement ?
    - → Rejeter drop si image pas dans collection (vérifier avant confirm)
-   
+
 2. **Reorder + ajout images** : Si user drag vers une collection qui est désormais vide ?
    - → OK, reorder revient au INSERT normal
-   
+
 3. **Reorder performance** : 10K+ images, transaction UPDATE CASE très longue ?
    - → Test de benchmark requis avant production
-   
+
 4. **Undo/Redo** : Phase 3.2c inclut-elle undo pour reorder ?
    - → Non (reporté Phase 4.3 Historique)
-

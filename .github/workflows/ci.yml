@@ -40,6 +40,13 @@ jobs:
           workspaces: src-tauri
           shared-key: rust-stable
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+            librsvg2-dev patchelf libssl-dev pkg-config
+
       - run: cd src-tauri && cargo fmt --all -- --check
 
       - run: cd src-tauri && cargo clippy --lib -- -D warnings -A dead_code -A unused_variables

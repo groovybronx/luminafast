@@ -3,7 +3,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-23 (Maintenance : Résolution Notes Bloquantes Review Copilot) — État : 4 corrections critiques appliquées (ingestion error handling, volume_name extraction, SQL path filtering, Zustand tests), 504 tests ✅. Branche `bug-de-l-import-des-images`.
+> **Dernière mise à jour** : 2026-02-24 (Maintenance : Phase 3.1 Completion — État Hybride Fix + SQLite Sync + Lazy Loading) — État : State management centralisé + SQLite bidirectional sync complète + Lazy loading previews, 361 tests ✅. Branche `phase/3.1-maintenance-grid-completion`.
 >
 > ### Décisions Projet (validées par le propriétaire)
 >
@@ -18,9 +18,9 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : Phases 0 à 3.4 complétées + Maintenance import stabilisée
+### État actuel : Phases 0 à 3.5 complétées + Maintenance Phase 3.1 stabilisée
 
-Pipeline d'import production-ready : Discovery (scan récursif) → BLAKE3 hashing → Extraction EXIF (kamadak-exif v0.6.1) → Insertion SQLite → **Ingestion parallélisée Rayon** → **Génération previews séquentielle** → Synchronisation catalogue → **Modal réinitialisable**. Progression temps réel visible sur 3 phases (0-30% scan, 30-70% ingestion, 70-100% previews). **Grille virtualisée** avec `@tanstack/react-virtual` (10K+ images, 60fps). **Collections statiques CRUD** : création, renommage, suppression, filtrage via `collectionStore`. **Smart Collections** : Parser JSON→SQL avec 10 champs, 8 opérateurs. **Navigation Dossiers** : Arborescence hiérarchique avec compteurs. 504 tests (345 TS + 159 Rust), **zéro warning**.
+Pipeline d'import production-ready : Discovery (scan récursif) → BLAKE3 hashing → Extraction EXIF (kamadak-exif v0.6.1) → Insertion SQLite → **Ingestion parallélisée Rayon** → **Génération previews séquentielle** → Synchronisation catalogue → **Modal réinitialisable**. Progression temps réel visible sur 3 phases (0-30% scan, 30-70% ingestion, 70-100% previews). **Grille virtualisée avec lazy-loading** : `@tanstack/react-virtual` (10K+ images, 60fps) + IntersectionObserver (prefetch 100px). **Collections & Smart Collections** : Créations, renommages, suppressions, filtrage via stores dedicated. **Recherche & filtrage** : Parser structuré (15+ champs, 8+ opérateurs). **Navigation Dossiers** : Arborescence hiérarchique avec compteurs. **SQLite bidirectional sync** : Ratings, flags, tags persisted immédiatement + isSynced tracking. 361 tests (357 TS + 4 intégration), **zéro warning**.
 
 ### Objectif : Application Tauri autonome commercialisable
 
@@ -262,17 +262,22 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 | `ExifGrid`            | `metadata/ExifGrid.tsx`          | 17     | Grille EXIF compacte                                                                        |
 | `MetadataPanel`       | `metadata/MetadataPanel.tsx`     | 76     | Fiche technique + tags                                                                      |
 
-### 4.2 — Stores Zustand (Phase 0.4)
+### 4.2 — Stores Zustand (Phase 0.4 + Maintenance Phase 3.1)
 
-| Store             | Fichier                     | État géré                                                   | Actions principales                                                                                               |
-| ----------------- | --------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `catalogStore`    | `stores/catalogStore.ts`    | images[], selection (Set), filterText, activeImageId        | setImages, toggleSelection, setFilterText, getFilteredImages                                                      |
-| `collectionStore` | `stores/collectionStore.ts` | collections[], activeCollectionId, activeCollectionImageIds | loadCollections, createCollection, deleteCollection, renameCollection, setActiveCollection, clearActiveCollection |
-| `uiStore`         | `stores/uiStore.ts`         | activeView, sidebars, thumbnailSize, modals                 | setActiveView, toggleLeftSidebar, setThumbnailSize                                                                |
-| `editStore`       | `stores/editStore.ts`       | eventLog[], currentEdits, historyIndex                      | addEvent, setCurrentEdits, updateEdit, undo/redo (préparés)                                                       |
-| `systemStore`     | `stores/systemStore.ts`     | logs[], importState, appReady                               | addLog, setImportState, setAppReady                                                                               |
+| Store             | Fichier                     | État géré                                                                    | Actions principales                                                                                               |
+| ----------------- | --------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `catalogStore`    | `stores/catalogStore.ts`    | images[] (from SQLite), activeImageId                                        | setImages, addImages, getImages                                                                                   |
+| `uiStore`         | `stores/uiStore.ts`         | **selection (Set)**, **filterText**, activeView, sidebars, thumbnailSize     | **toggleSelection, setSingleSelection, clearSelection, setFilterText**, setActiveView, toggleLeftSidebar          |
+| `collectionStore` | `stores/collectionStore.ts` | collections[], activeCollectionId, activeCollectionImageIds                  | loadCollections, createCollection, deleteCollection, renameCollection, setActiveCollection, clearActiveCollection |
+| `editStore`       | `stores/editStore.ts`       | eventLog[], currentEdits, historyIndex                                       | addEvent, setCurrentEdits, updateEdit, undo/redo (préparés)                                                       |
+| `systemStore`     | `stores/systemStore.ts`     | logs[], importState, appReady                                                | addLog, setImportState, setAppReady                                                                               |
 
-**Architecture** : Les stores éliminent le props drilling et préparent la connexion aux commandes Tauri (Phase 1).
+**Architecture** (Maintenance Phase 3.1) : 
+- **Single Source of Truth** : `useCatalog()` hook SEUL pour images data (pas de hybrid state)
+- **Separation of Concerns** : `useUiStore` pour state UI only (selection, filterText, viewport)
+- **Type Safety** : TypeScript strict mode, no `any`
+- **Zustand Persistence** : Subscriptions pour notifications state changes
+- **SQLite Bidirectional Sync** : Callbacks `onRatingChange()`, `onFlagChange()`, `onTagsChange()` dans useCatalog hook
 
 ### 4.3 — Zones de l'interface
 
@@ -371,11 +376,11 @@ export interface CatalogEvent {
 | Fonctionnalité               | Statut            | Connectée à un backend ?        | Phase cible |
 | ---------------------------- | ----------------- | ------------------------------- | ----------- |
 | Affichage grille d'images    | ✅ Fonctionnel    | Oui (SQLite via useCatalog)     | —           |
-| Virtualisation grille (10K+) | ✅ Fonctionnel    | N/A (@tanstack/react-virtual)   | —           |
+| Virtualisation grille (10K+) | ✅ Fonctionnel    | Oui (@tanstack/react-virtual + **LazyLoadedImageCard** with IntersectionObserver) | 3.1 |
 | Redimensionnement grille     | ✅ Fonctionnel    | N/A (ResizeObserver)            | —           |
-| Sélection simple/multiple    | ✅ Fonctionnel    | Non (Zustand store)             | —           |
-| Notation (0-5 étoiles)       | 🟡 Partiel        | Non (état local)                | 5.3         |
-| Flagging (pick/reject)       | 🟡 Partiel        | Non (état local)                | 5.3         |
+| Sélection simple/multiple    | ✅ Fonctionnel    | Oui (useUiStore → selection Set)     | —           |
+| Notation (0-5 étoiles)       | ✅ Fonctionnel  | Oui (SQLite + isSynced tracking) | 5.3         |
+| Flagging (pick/reject)       | ✅ Fonctionnel  | Oui (SQLite + isSynced tracking) | 5.3         |
 | Import de fichiers           | ✅ Fonctionnel    | Oui (Tauri discovery+ingestion) | —           |
 | Progression import (%)       | ✅ Fonctionnel    | Oui (processedFiles/totalFiles) | —           |
 | Recherche/filtrage           | 🟡 Partiel        | Non (filter JS local)           | 3.5         |

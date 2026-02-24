@@ -2293,7 +2293,7 @@ Phase 1.4 — Gestion du Système de Fichiers (FileSystem service avec watchers 
 
 ---
 
-````markdown
+```markdown
 ### [DATE] — Phase X.Y : Titre de la sous-phase
 
 **Statut** : ✅ Complétée

@@ -73,7 +73,7 @@ Le workflow doit **ignorer automatiquement** :
 ```yaml
 paths-ignore:
   - '**.md'                    # Fichiers Markdown
-  - '.github/**'               # Autres workflows
+  - '.github/workflows/**'     # Autres workflows (pas le principal)
   - 'Docs/**'                  # Documentation
 ```
 
@@ -305,10 +305,8 @@ security:
       run: |
         cargo install --locked cargo-audit
         cd src-tauri && cargo audit --deny warnings
-      continue-on-error: true
     - name: Node.js security audit
       run: npm audit --audit-level high
-      continue-on-error: true
 ```
 
 ---

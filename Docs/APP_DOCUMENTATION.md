@@ -202,8 +202,19 @@ LuminaFast/
 │   │   │   ├── ingestion.rs         # Service ingestion batch (discovery + hashing + EXIF)
 │   │   │   │   └── tests.rs         # Tests ingestion
 │   │   │   ├── filesystem.rs        # Service système de fichiers (watcher, lock)
-│   │   │   ├── preview.rs           # Service génération previews RAW (Phase 3.3)
-│   │   │   ├── preview.rs           # Service génération previews RAW (Phase 3.3, batch + libvips activé, Maint. 2026-02-23)
+│   │   │   ├── preview.rs           # Service génération previews RAW (Phase 3.3, batch + libvips activé).
+│   │   │   └── __tests__/           # Tests integration services
+│   └── icons/                      # Icônes d'application (16 fichiers)
+├── index.html                      # HTML racine
+├── package.json                    # Dépendances npm + scripts tauri
+├── tsconfig.json                   # Config TypeScript strict
+├── tsconfig.node.json              # Config TS pour vite.config.ts
+├── vite.config.ts                  # Configuration Vite + TailwindCSS
+├── eslint.config.js                # Configuration ESLint
+└── .gitignore
+```
+
+---
 ## 6. Commandes Tauri (Mises à jour)
 
 - `generate_previews_batch(images: Vec<ImageId>, config: PreviewConfig)`
@@ -220,19 +231,6 @@ LuminaFast/
 ## 8. Types & Interfaces (Mises à jour)
 
 - `PreviewConfig` (Rust/TS) : champ `use_libvips: bool` activé par défaut
-
-│   │   │   └── __tests__/           # Tests integration services
-│   └── icons/                      # Icônes d'application (16 fichiers)
-├── index.html                      # HTML racine
-├── package.json                    # Dépendances npm + scripts tauri
-├── tsconfig.json                   # Config TypeScript strict
-├── tsconfig.node.json              # Config TS pour vite.config.ts
-├── vite.config.ts                  # Configuration Vite + TailwindCSS
-├── eslint.config.js                # Configuration ESLint
-└── .gitignore
-```
-
----
 
 ## 4. Composants UI (Mockup Actuel)
 
@@ -408,6 +406,7 @@ export interface CatalogEvent {
 - ⬜ Non implémenté = Pas encore dans le code
 
 ---
+
 
 ## 7. Raccourcis Clavier (Mockup)
 

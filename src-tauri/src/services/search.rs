@@ -102,13 +102,12 @@ impl SearchService {
 
         let mut query = "SELECT id, filename, blake3_hash, rating, flag ".to_string();
         query.push_str("FROM images WHERE 1=1");
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
 
-        // Ajouter filtre texte libre si présent
+        // Ajouter filtre texte libre si présent (sécurisé avec paramètre lié)
         if !text.is_empty() {
-            query.push_str(&format!(
-                " AND (filename LIKE '%{}%')",
-                text.replace('\'', "''")
-            ));
+            query.push_str(" AND (filename LIKE ?)");
+            params.push(Box::new(format!("%{}%", text)));
         }
 
         // Ajouter les filtres structurés
@@ -123,8 +122,10 @@ impl SearchService {
             .prepare(&query)
             .map_err(|e| format!("Erreur SQL prepare: {}", e))?;
 
+        // Convertir params en slice de references
+        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
         let results: Vec<SearchResult> = stmt
-            .query_map([], |row| {
+            .query_map(param_refs.as_slice(), |row| {
                 Ok(SearchResult {
                     id: row.get(0)?,
                     filename: row.get(1)?,

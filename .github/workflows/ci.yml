@@ -234,8 +234,6 @@ jobs:
         run: |
           cargo install --locked cargo-audit
           cd src-tauri && cargo audit --deny warnings
-        continue-on-error: true
 
       - name: Node.js security audit
         run: npm audit --audit-level high
-        continue-on-error: true

@@ -99,6 +99,7 @@ export const LazyLoadedImageCard = ({
       ids: idsToSend,
     };
 
+    console.warn(`[DragSource] dragStart with ${idsToSend.length} image(s)`);
     e.dataTransfer.effectAllowed = 'copy';
     e.dataTransfer.setData('application/json', JSON.stringify(dragData));
     e.dataTransfer.setData('text/plain', `${idsToSend.length} image(s)`);
@@ -108,6 +109,7 @@ export const LazyLoadedImageCard = ({
   };
 
   const handleDragEnd = () => {
+    console.warn('[DragSource] dragEnd');
     setIsDragging(false);
   };
 
@@ -119,7 +121,7 @@ export const LazyLoadedImageCard = ({
       onDoubleClick={() => onSetActiveView('develop')}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      className={`shrink-0 bg-zinc-900 border transition-all relative group rounded-lg overflow-hidden cursor-pointer ${
+      className={`shrink-0 bg-zinc-900 border transition-all relative group rounded-lg overflow-hidden cursor-pointer select-none ${
         isDragging ? 'cursor-grabbing opacity-60' : 'cursor-grab'
       } ${
         isSelected
@@ -133,9 +135,10 @@ export const LazyLoadedImageCard = ({
     >
       {hasPreview ? (
         <img
+          draggable={false}
           src={image.url}
           alt={image.filename}
-          className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity"
+          className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity pointer-events-none select-none"
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-zinc-800 animate-pulse">

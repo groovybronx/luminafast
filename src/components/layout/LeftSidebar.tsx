@@ -104,6 +104,9 @@ function CollectionItem({
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
+    console.warn(
+      `[CollectionItem] dragEnter on ${collection.name}, counter before: ${dragCounterRef.current}`,
+    );
     dragCounterRef.current += 1;
     onDragOver();
   };
@@ -111,10 +114,14 @@ function CollectionItem({
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
+    console.warn(`[CollectionItem] dragOver on ${collection.name}`);
   };
 
   const handleDragLeave = (_e: React.DragEvent) => {
     dragCounterRef.current -= 1;
+    console.warn(
+      `[CollectionItem] dragLeave on ${collection.name}, counter after: ${dragCounterRef.current}`,
+    );
     // Only reset if we completely left the container (counter = 0)
     if (dragCounterRef.current === 0) {
       onDragLeave();
@@ -165,7 +172,7 @@ function CollectionItem({
 
   return (
     <div
-      className={`flex items-center gap-1 text-[11px] rounded group transition-colors ${
+      className={`flex items-center gap-1 text-[11px] rounded group transition-colors select-none ${
         isDragOver ? 'bg-blue-500/30 border border-blue-400 border-dashed' : ''
       } ${
         isActive
@@ -287,9 +294,23 @@ export const LeftSidebar = ({
     }
   };
 
+  // Parent drag handlers (required to accept drags and propagate to children)
+  const handleSidebarDragEnter = (e: React.DragEvent) => {
+    console.warn('[LeftSidebar] Parent dragEnter - accepting drop zone');
+    e.preventDefault();
+  };
+
+  const handleSidebarDragOver = (e: React.DragEvent) => {
+    console.warn('[LeftSidebar] Parent dragOver');
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
   return (
     <div
       className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-zinc-900 border-r border-black flex flex-col shrink-0 transition-all duration-300 overflow-hidden`}
+      onDragEnter={handleSidebarDragEnter}
+      onDragOver={handleSidebarDragOver}
     >
       <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
         <section className="mb-8">

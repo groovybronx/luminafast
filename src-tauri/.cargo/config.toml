@@ -1,8 +1,6 @@
 # Cargo configuration for LuminaFast Rust backend
-
-# Use mold linker if available (much faster than GNU ld)
-[build]
-rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+# Note: mold linker is configured via RUSTFLAGS in CI only (GitHub Actions/Linux)
+# Local development uses native linkers (ld64 on macOS, lld on Windows)
 
 # Profile for CI: middle ground between debug and release
 # Faster compilation than release, still optimized

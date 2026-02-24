@@ -15,7 +15,7 @@ interface LazyLoadedImageCardProps {
 /**
  * Lazy-loaded image card with IntersectionObserver
  * Only loads preview when visible in viewport
- * Anti-thrashing: skips loading if scroll velocity too high
+ * Loads each image exactly once when intersection occurs
  * Checkpoint 3 implementation for Phase 3.1 maintenance
  */
 export const LazyLoadedImageCard = ({
@@ -30,29 +30,19 @@ export const LazyLoadedImageCard = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const lastScrollTimeRef = useRef(0);
+  const hasInitializedRef = useRef(false); // Track if we've attempted load once
 
   // Setup IntersectionObserver for lazy loading
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // Track scroll velocity
-    const handleScroll = () => {
-      lastScrollTimeRef.current = Date.now();
-    };
-
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            // Skip if scrolling too fast (< 3ms since last scroll)
-            const timeSinceScroll = Date.now() - lastScrollTimeRef.current;
-            if (timeSinceScroll < 10) {
-              return;
-            }
-
-            // Load image
+          // Load image once when it becomes visible (and only once)
+          if (entry.isIntersecting && !hasInitializedRef.current) {
+            hasInitializedRef.current = true;
             requestAnimationFrame(() => {
               setIsVisible(true);
             });
@@ -64,26 +54,8 @@ export const LazyLoadedImageCard = ({
 
     observer.observe(container);
 
-    // Track scroll events (safely handle when parent doesn't exist)
-    try {
-      const scrollContainer = container.closest('.custom-scrollbar');
-      if (scrollContainer) {
-        scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
-      }
-    } catch {
-      // In tests or environments without scroll container, silently ignore
-    }
-
     return () => {
       observer.disconnect();
-      try {
-        const scrollContainer = container.closest('.custom-scrollbar');
-        if (scrollContainer) {
-          scrollContainer.removeEventListener('scroll', handleScroll);
-        }
-      } catch {
-        // Silently ignore cleanup errors
-      }
     };
   }, []);
 

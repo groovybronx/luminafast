@@ -12,6 +12,7 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 1
   CARGO_BUILD_JOBS: 4
+  RUSTFLAGS: -C link-arg=-fuse-ld=mold
 
 jobs:
   # Detect which files changed

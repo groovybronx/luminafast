@@ -235,7 +235,7 @@ describe('useCatalog', () => {
       });
 
       await act(async () => {
-        await result.current.onFlagChange(1, null as any);
+        await result.current.onFlagChange(1, null);
       });
 
       expect(updateMock).toHaveBeenCalledWith(1, { flag: null });

@@ -45,7 +45,7 @@ export const LazyLoadedImageCard = ({
           if (entry.isIntersecting) {
             // Skip if scrolling too fast (< 3ms since last scroll)
             const timeSinceScroll = Date.now() - lastScrollTimeRef.current;
-            if (timeSinceScroll < 3) {
+            if (timeSinceScroll < 10) {
               return;
             }
 

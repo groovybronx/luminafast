@@ -1,4 +1,4 @@
-# Phase 3.2c — Reorder Images au sein d'une Collection
+# Phase 3.2c — Reorder Images au sein d'une Collection (REPORTÉE    Phase 4.3)
 
 ## Objectif
 

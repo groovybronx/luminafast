@@ -2,19 +2,19 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [main, develop, phase/*]
+    branches: [develop, phase/*]
   pull_request:
-    branches: [develop]
+    branches: [develop, main]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # Quick validation for pushes (non-PR)
+  # Quick validation for pushes and PRs to develop
   validate:
     name: Quick Validation
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.base_ref == 'develop')
 
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +33,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt
+          components: rustfmt, clippy
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -42,11 +42,13 @@ jobs:
 
       - run: cd src-tauri && cargo fmt --all -- --check
 
-  # Optimized frontend pipeline for PRs
+      - run: cd src-tauri && cargo clippy --lib -- -D warnings -A dead_code -A unused_variables
+
+  # Optimized frontend pipeline for PRs to main (non-draft)
   frontend:
     name: Frontend
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && !github.event.pull_request.draft
 
     steps:
       - uses: actions/checkout@v4
@@ -68,11 +70,11 @@ jobs:
           npm run test:ci
           npm run build
 
-  # Optimized backend pipeline for PRs
+  # Optimized backend pipeline for PRs to main (non-draft)
   backend:
     name: Backend
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && !github.event.pull_request.draft
 
     steps:
       - uses: actions/checkout@v4
@@ -107,12 +109,13 @@ jobs:
       - name: Run tests
         run: cd src-tauri && timeout 120 cargo test
 
-  # Integration build (only on merge-ready PRs or labeled)
+  # Integration build (only on merge-ready PRs to main)
   integration:
     name: Integration Build
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'pull_request' &&
+      github.base_ref == 'main' &&
       (contains(github.event.pull_request.labels.*.name, 'run-integration') ||
        github.event.pull_request.mergeable_state == 'clean')
 
@@ -155,14 +158,14 @@ jobs:
           path: src-tauri/target/release/bundle/deb/*.deb
           retention-days: 7
 
-  # Security audit (weekly or on-demand)
+  # Security audit for merge-ready PRs to main
   security:
     name: Security Audit
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'pull_request' &&
-      (contains(github.event.pull_request.labels.*.name, 'security') ||
-       github.base_ref == 'main')
+      github.base_ref == 'main' &&
+      github.event.pull_request.mergeable_state == 'clean'
 
     steps:
       - uses: actions/checkout@v4

@@ -30,6 +30,9 @@ export default function App() {
     refreshCatalog,
     syncAfterImport,
     hasImages,
+    onRatingChange,
+    onFlagChange,
+    onTagsChange,
   } = useCatalog();
 
   // Stores Zustand
@@ -147,32 +150,58 @@ export default function App() {
       };
       addEvent(event);
 
-      // Mettre à jour les images
-      const updatedImages = images.map((img) => {
-        if (selection.includes(img.id)) {
-          const newState = { ...img.state, isSynced: false };
-          if (eventType === 'RATING') newState.rating = payload as number;
-          if (eventType === 'FLAG') newState.flag = payload as FlagType;
-          if (eventType === 'EDIT')
+      // Use SQLite sync callbacks instead of direct setImages
+      // This ensures proper bidirectional sync with database
+      if (eventType === 'RATING') {
+        // Call onRatingChange for each selected image
+        selection.forEach((imageId) => {
+          onRatingChange(imageId, payload as number).catch((err) => {
+            addLog(`Failed to update rating for image ${imageId}: ${err}`, 'error');
+          });
+        });
+      } else if (eventType === 'FLAG') {
+        // Call onFlagChange for each selected image
+        selection.forEach((imageId) => {
+          onFlagChange(imageId, payload as FlagType).catch((err) => {
+            addLog(`Failed to update flag for image ${imageId}: ${err}`, 'error');
+          });
+        });
+      } else if (eventType === 'ADD_TAG' || eventType === 'REMOVE_TAG') {
+        // Handle tags - build current tags for each image
+        selection.forEach((imageId) => {
+          const image = images.find((img) => img.id === imageId);
+          if (image) {
+            let newTags = [...image.state.tags];
+            if (eventType === 'ADD_TAG') {
+              newTags = [...new Set([...newTags, payload as string])];
+            } else {
+              newTags = newTags.filter((t) => t !== payload);
+            }
+            onTagsChange(imageId, newTags).catch((err) => {
+              addLog(`Failed to update tags for image ${imageId}: ${err}`, 'error');
+            });
+          }
+        });
+      } else if (eventType === 'EDIT') {
+        // Edit events stay local for now (EDIT_STATE not synced to SQLite)
+        const { setImages: updateLocalImages } = useCatalogStore.getState();
+        const updatedImages = images.map((img) => {
+          if (selection.includes(img.id)) {
+            const newState = { ...img.state, isSynced: false };
             newState.edits = { ...newState.edits, ...(payload as Partial<EditState>) };
-          if (eventType === 'ADD_TAG')
-            newState.tags = [...new Set([...newState.tags, payload as string])];
-          return { ...img, state: newState };
-        }
-        return img;
-      });
-      // TODO(Checkpoint 2): Replace setImages with onRatingChange/onFlagChange/onTagsChange
-      // for proper SQLite bidirectional sync instead of local-only updates
-      const { setImages: updateLocalImages } = useCatalogStore.getState();
-      updateLocalImages(updatedImages);
+            return { ...img, state: newState };
+          }
+          return img;
+        });
+        updateLocalImages(updatedImages);
+        addLog(`Edit stored for ${selection.length} asset(s)`, 'sqlite');
+      }
 
       if (eventType !== 'EDIT') {
-        addLog(`SQLite: ACID commit for ${selection.length} asset(s) [${eventType}]`, 'sqlite');
-      } else {
-        addLog(`SQLite: Edit stored for ${selection.length} asset(s)`, 'sqlite');
+        addLog(`SQLite sync queued for ${selection.length} asset(s) [${eventType}]`, 'sqlite');
       }
     },
-    [selection, addEvent, images, addLog],
+    [selection, addEvent, images, addLog, onRatingChange, onFlagChange, onTagsChange],
   );
 
   const handleToggleSelection = (id: number, e: React.MouseEvent) => {

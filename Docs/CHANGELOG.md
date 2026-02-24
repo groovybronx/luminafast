@@ -34,6 +34,7 @@
 | Maintenance | —          | Corrections Critiques Phases 0→3.1 (BLOC 1-4)                                             | ✅ Complétée  | 2026-02-21 | Copilot |
 | Infra       | —          | Agents IA dédiés (code-review, pr-verification, phase-implementation, documentation-sync) | ✅ Complétée  | 2026-02-20 | Copilot |
 | 3           | 3.2        | Collections Statiques (CRUD)                                                              | ✅ Complétée  | 2026-02-21 | Copilot |
+| 3           | 3.2b       | Drag & Drop d'Images dans les Collections (MultiSelect Support)                          | ✅ Complétée  | 2026-02-24 | Copilot |
 | 3           | 3.3        | Smart Collections                                                                         | ✅ Complétée  | 2026-02-21 | Copilot |
 | 3           | 3.4        | Navigateur de Dossiers                                                                    | ✅ Complétée  | 2026-02-21 | Copilot |
 | Maintenance | —          | Performance & UX Import (Parallélisme + Progression Multi-Phase)                          | ✅ Complétée  | 2026-02-21 | Copilot |
@@ -97,7 +98,7 @@
 #### Cause Racine
 
 **Symptôme** : Phase 3.1 marquée "complètement" en CHANGELOG mais seulement 60% implémentée.
-- App.tsx utilisait hybrid state (useCatalog + useCatalogStore) → data loss on modifications  
+- App.tsx utilisait hybrid state (useCatalog + useCatalogStore) → data loss on modifications
 - Modifications (ratings/flags) jamais écrites en SQLite
 - Tous les thumbnails chargés simultanément → performance dégradée sur gros catalogues
 - Tests utilisaient mocks hardcodés au lieu de vrais services
@@ -131,7 +132,7 @@
 **Checkpoint 4 : Tests d'Intégration (✅ Complété)**
 - Ajouté 4 tests pour `useCatalog()` callbacks
 - Tests d'intégration avec mocks CatalogService
-- Vérification error handling  
+- Vérification error handling
 - **Commit** : e0502c0
 
 **Checkpoint 5 : Non-Régression + Documentation (✅ Complété)**

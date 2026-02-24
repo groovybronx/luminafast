@@ -1,12 +1,13 @@
 import { Cloud, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { CatalogImage } from '../../types';
+import type { CatalogImage, DragImageData } from '../../types';
 
 interface LazyLoadedImageCardProps {
   image: CatalogImage;
   isSelected: boolean;
   itemWidth: number;
   itemHeight: number;
+  selectedImageIds: number[]; // IDs of all selected images for multi-select drag
   onToggleSelection: (id: number, e: React.MouseEvent) => void;
   onSetActiveView: (view: 'library' | 'develop') => void;
 }
@@ -22,11 +23,13 @@ export const LazyLoadedImageCard = ({
   isSelected,
   itemWidth,
   itemHeight,
+  selectedImageIds,
   onToggleSelection,
   onSetActiveView,
 }: LazyLoadedImageCardProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const lastScrollTimeRef = useRef(0);
 
   // Setup IntersectionObserver for lazy loading
@@ -86,12 +89,41 @@ export const LazyLoadedImageCard = ({
 
   const hasPreview = isVisible && image.url && image.url.length > 0;
 
+  // Handle drag start: serialize selected images (or just this one if not in multi-select)
+  const handleDragStart = (e: React.DragEvent) => {
+    if (!e.dataTransfer) return;
+
+    const idsToSend = isSelected ? selectedImageIds : [image.id];
+    const dragData: DragImageData = {
+      type: 'image',
+      ids: idsToSend,
+    };
+
+    console.warn(`[DragSource] dragStart with ${idsToSend.length} image(s)`);
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.setData('application/json', JSON.stringify(dragData));
+    e.dataTransfer.setData('text/plain', `${idsToSend.length} image(s)`);
+
+    // Optional: Custom drag image (uses default card visual)
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    console.warn('[DragSource] dragEnd');
+    setIsDragging(false);
+  };
+
   return (
     <div
       ref={containerRef}
+      draggable
       onClick={(e) => onToggleSelection(image.id, e)}
       onDoubleClick={() => onSetActiveView('develop')}
-      className={`shrink-0 bg-zinc-900 border transition-all relative group rounded-lg overflow-hidden cursor-pointer ${
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      className={`shrink-0 bg-zinc-900 border transition-all relative group rounded-lg overflow-hidden cursor-pointer select-none ${
+        isDragging ? 'cursor-grabbing opacity-60' : 'cursor-grab'
+      } ${
         isSelected
           ? 'border-blue-500 ring-4 ring-blue-500/20 z-10 scale-[0.97]'
           : 'border-zinc-800 hover:border-zinc-700 shadow-md'
@@ -103,9 +135,10 @@ export const LazyLoadedImageCard = ({
     >
       {hasPreview ? (
         <img
+          draggable={false}
           src={image.url}
           alt={image.filename}
-          className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity"
+          className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity pointer-events-none select-none"
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-zinc-800 animate-pulse">

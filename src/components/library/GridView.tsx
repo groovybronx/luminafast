@@ -130,6 +130,7 @@ export const GridView = ({
                       isSelected={isSelected}
                       itemWidth={itemWidth}
                       itemHeight={itemHeight}
+                      selectedImageIds={selection}
                       onToggleSelection={onToggleSelection}
                       onSetActiveView={onSetActiveView}
                     />

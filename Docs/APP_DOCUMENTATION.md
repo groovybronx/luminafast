@@ -254,6 +254,7 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 | `Toolbar`             | `layout/Toolbar.tsx`             | 54     | Mode, recherche, taille thumbnails                                                          |
 | `Filmstrip`           | `layout/Filmstrip.tsx`           | 36     | Bande défilante                                                                             |
 | `GridView`            | `library/GridView.tsx`           | 46     | Grille d'images virtualisée (@tanstack/react-virtual)                                       |
+| `LazyLoadedImageCard` | `library/LazyLoadedImageCard.tsx`| —      | Carte image avec lazy loading + drag source (Phase 3.2b)                                     |
 | `ImageCard`           | `library/ImageCard.tsx`          | —      | Carte image avec métadonnées, sélection                                                     |
 | `DevelopView`         | `develop/DevelopView.tsx`        | 38     | Image + mode avant/après                                                                    |
 | `DevelopSliders`      | `develop/DevelopSliders.tsx`     | 37     | Sliders de réglage                                                                          |
@@ -378,6 +379,7 @@ export interface CatalogEvent {
 | Affichage grille d'images    | ✅ Fonctionnel    | Oui (SQLite via useCatalog)     | —           |
 | Virtualisation grille (10K+) | ✅ Fonctionnel    | Oui (@tanstack/react-virtual + **LazyLoadedImageCard** with IntersectionObserver) | 3.1 |
 | Redimensionnement grille     | ✅ Fonctionnel    | N/A (ResizeObserver)            | —           |
+| Drag & Drop (ajouter à collection) | ✅ Fonctionnel | Oui (HTML5 DnD + collection store) | 3.2b      |
 | Sélection simple/multiple    | ✅ Fonctionnel    | Oui (useUiStore → selection Set)     | —           |
 | Notation (0-5 étoiles)       | ✅ Fonctionnel  | Oui (SQLite + isSynced tracking) | 5.3         |
 | Flagging (pick/reject)       | ✅ Fonctionnel  | Oui (SQLite + isSynced tracking) | 5.3         |

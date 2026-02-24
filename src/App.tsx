@@ -2,7 +2,8 @@ import { useEffect, useCallback, useMemo, useRef } from 'react';
 import type { FlagType, EditState, CatalogEvent, EventPayload, EventType } from './types';
 import { safeID } from './lib/helpers';
 
-import { useCatalogStore, useUiStore, useEditStore, useSystemStore } from './stores';
+import { useUiStore, useEditStore, useSystemStore } from './stores';
+import { useCatalogStore } from './stores/catalogStore';
 import { useCollectionStore } from './stores/collectionStore';
 import { useFolderStore } from './stores/folderStore';
 import { useCatalog } from './hooks/useCatalog';
@@ -34,12 +35,11 @@ export default function App() {
   // Stores Zustand
   const activeView = useUiStore((state) => state.activeView);
   const setActiveView = useUiStore((state) => state.setActiveView);
-  const setImages = useCatalogStore((state) => state.setImages);
-  const selectionSet = useCatalogStore((state) => state.selection);
-  const toggleSelection = useCatalogStore((state) => state.toggleSelection);
-  const setSingleSelection = useCatalogStore((state) => state.setSingleSelection);
-  const filterText = useCatalogStore((state) => state.filterText);
-  const setFilterText = useCatalogStore((state) => state.setFilterText);
+  const selectionSet = useUiStore((state) => state.selection);
+  const toggleSelection = useUiStore((state) => state.toggleSelection);
+  const setSingleSelection = useUiStore((state) => state.setSingleSelection);
+  const filterText = useUiStore((state) => state.filterText);
+  const setFilterText = useUiStore((state) => state.setFilterText);
 
   // Collection active (filtre par collection)
   const activeCollectionImageIds = useCollectionStore((state) => state.activeCollectionImageIds);
@@ -161,7 +161,10 @@ export default function App() {
         }
         return img;
       });
-      setImages(updatedImages);
+      // TODO(Checkpoint 2): Replace setImages with onRatingChange/onFlagChange/onTagsChange
+      // for proper SQLite bidirectional sync instead of local-only updates
+      const { setImages: updateLocalImages } = useCatalogStore.getState();
+      updateLocalImages(updatedImages);
 
       if (eventType !== 'EDIT') {
         addLog(`SQLite: ACID commit for ${selection.length} asset(s) [${eventType}]`, 'sqlite');
@@ -169,7 +172,7 @@ export default function App() {
         addLog(`SQLite: Edit stored for ${selection.length} asset(s)`, 'sqlite');
       }
     },
-    [selection, addEvent, images, setImages, addLog],
+    [selection, addEvent, images, addLog],
   );
 
   const handleToggleSelection = (id: number, e: React.MouseEvent) => {

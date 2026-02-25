@@ -7,3 +7,4 @@ pub mod iptc;
 pub mod preview;
 pub mod search;
 pub mod smart_query_parser;
+pub mod event_sourcing;

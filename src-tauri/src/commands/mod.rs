@@ -5,3 +5,4 @@ pub mod filesystem;
 pub mod hashing;
 pub mod preview;
 pub mod search;
+pub mod event_sourcing;

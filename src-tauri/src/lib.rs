@@ -147,6 +147,10 @@ pub fn run() {
             commands::preview::get_preview_config,
             // Search commands (Phase 3.5)
             commands::search::search_images,
+            // Event Sourcing commands
+            commands::event_sourcing::append_event,
+            commands::event_sourcing::get_events,
+            commands::event_sourcing::replay_events,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -352,13 +352,13 @@ mod tests {
         db.initialize()?;
         db.initialize()?;
 
-        // 4 migrations: 001_initial, 002_ingestion_sessions, 003_previews, 004_add_folder_online_status
+        // 5 migrations: 001_initial, 002_ingestion_sessions, 003_previews, 004_add_folder_online_status, 005_edit_events
         let migration_count: i64 = db
             .connection()
             .prepare("SELECT COUNT(*) FROM migrations")?
             .query_row([], |row| row.get(0))?;
 
-        assert_eq!(migration_count, 4);
+        assert_eq!(migration_count, 5);
 
         Ok(())
     }

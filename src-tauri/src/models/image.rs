@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)] // Utilisé à partir de Phase 4.2 (image rendering pipeline) et Phase 5+ (édition, EXIF)
 pub struct Image {
     pub id: Option<i64>,
     pub filename: String,
@@ -11,25 +12,26 @@ pub struct Image {
     pub captured_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    
+
     // Métadonnées EXIF (JSON)
     pub exif_data: Option<ExifData>,
-    
+
     // État utilisateur
     pub rating: i32,
     pub flag: Option<ImageFlag>,
     pub color_label: Option<ColorLabel>,
-    
+
     // Édition
     pub edit_data: Option<EditData>,
     pub edit_version: i32,
-    
+
     // Sync
     pub is_synced: bool,
     pub sync_revision: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)] // Utilisé à partir de Phase 5.1 (panneau EXIF connecté)
 pub struct ExifData {
     pub iso: Option<i32>,
     pub fstop: Option<f64>,
@@ -43,6 +45,7 @@ pub struct ExifData {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)] // Utilisé à partir de Phase 4.2 (pipeline de rendu image) et Phase 5+ (édition)
 pub struct EditData {
     pub exposure: Option<f64>,
     pub contrast: Option<f64>,
@@ -59,6 +62,7 @@ pub struct EditData {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
+#[allow(dead_code)] // Utilisé à partir de Phase 5.3 (rating & flagging persistants)
 pub enum ImageFlag {
     Pick,
     Reject,
@@ -66,6 +70,7 @@ pub enum ImageFlag {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
+#[allow(dead_code)] // Utilisé à partir de Phase 5.3 (système de tagging hiérarchique et labels)
 pub enum ColorLabel {
     Red,
     Yellow,
@@ -76,6 +81,7 @@ pub enum ColorLabel {
 
 /// New image for insertion (without id and timestamps)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)] // Utilisé en Phase 2.1 (ingestion) et Phase 4.2+ (API image complète)
 pub struct NewImage {
     pub filename: String,
     pub filepath: String,
@@ -87,6 +93,7 @@ pub struct NewImage {
 
 /// Image update payload
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)] // Utilisé à partir de Phase 4.2 (pipeline de rendu image) et Phase 5+ (édition/tagging)
 pub struct ImageUpdate {
     pub rating: Option<i32>,
     pub flag: Option<Option<ImageFlag>>, // None means no change, Some(None) means clear flag
@@ -100,7 +107,7 @@ pub struct ImageUpdate {
 mod tests {
     use super::*;
     use chrono::Utc;
-    
+
     #[test]
     fn test_image_serialization() {
         let image = Image {
@@ -143,11 +150,11 @@ mod tests {
             is_synced: false,
             sync_revision: None,
         };
-        
+
         // Test serialization
         let json = serde_json::to_string(&image).unwrap();
         let deserialized: Image = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(image.filename, deserialized.filename);
         assert_eq!(image.rating, deserialized.rating);
         assert_eq!(image.flag, deserialized.flag);

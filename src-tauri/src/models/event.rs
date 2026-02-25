@@ -138,6 +138,7 @@ pub enum TargetType {
 
 /// New event for insertion
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)] // Utilisé à partir de Phase 4.2 (pipeline de rendu image) et Phase 5+ (historique avec snapshots)
 pub struct NewEvent {
     pub event_type: EventType,
     pub payload: EventPayload,
@@ -147,6 +148,7 @@ pub struct NewEvent {
 }
 
 impl NewEvent {
+    #[allow(dead_code)] // Constructeur utilis\u00e9 \u00e0 partir de Phase 4.2 (cr\u00e9ation d'\u00e9v\u00e9nements en production)
     pub fn new(
         event_type: EventType,
         payload: EventPayload,
@@ -161,13 +163,16 @@ impl NewEvent {
             user_id: None, // Future: multi-user support
         }
     }
-    
+
+    #[allow(dead_code)] // Utilisé à partir de Phase 5+ (multi-user support)
     pub fn with_user(mut self, user_id: String) -> Self {
+        // Utilisé à partir de Phase 5+ (multi-user support)
         self.user_id = Some(user_id);
         self
     }
-    
+
     /// Convert to Event with generated ID and timestamps
+    #[allow(dead_code)] // Utilisé à partir de Phase 4.2 (création d'événements en production)
     pub fn to_event(self) -> Event {
         let now = Utc::now();
         Event {
@@ -186,8 +191,9 @@ impl NewEvent {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[allow(unused_imports)] // Utilis\u00e9 dans les tests d'\u00e9v\u00e9nements li\u00e9s au flagging
     use crate::models::image::ImageFlag;
-    
+
     #[test]
     fn test_event_serialization() {
         let event = Event {
@@ -204,14 +210,14 @@ mod tests {
             user_id: None,
             created_at: Utc::now(),
         };
-        
+
         let json = serde_json::to_string(&event).unwrap();
         let deserialized: Event = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(event.target_id, deserialized.target_id);
         assert_eq!(event.event_type, deserialized.event_type);
     }
-    
+
     #[test]
     fn test_new_event_creation() {
         let new_event = NewEvent::new(
@@ -224,9 +230,9 @@ mod tests {
             TargetType::Image,
             1,
         );
-        
+
         let event = new_event.to_event();
-        
+
         assert!(!event.id.is_empty());
         assert!(event.timestamp > 0);
         assert_eq!(event.target_id, 1);

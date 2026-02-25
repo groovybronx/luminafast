@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 /// Simplified image type for Tauri commands
+/// Note: Prévu pour Phase 4.2+ (image rendering pipeline avec historique)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct TauriImage {
     pub id: i64,
     pub filename: String,
@@ -35,7 +37,9 @@ pub struct TauriCollection {
 }
 
 /// New image for insertion
+/// Note: Prévu pour Phase 4.2+ (création d'images via API complète Tauri)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct TauriNewImage {
     pub filename: String,
     pub filepath: String,
@@ -46,7 +50,9 @@ pub struct TauriNewImage {
 }
 
 /// Image update payload
+/// Note: Prévu pour Phase 4.2+ (pipeline de rendu image) et Phase 5+ (édition/tagging)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct TauriImageUpdate {
     pub rating: Option<i32>,
     pub flag: Option<Option<String>>,

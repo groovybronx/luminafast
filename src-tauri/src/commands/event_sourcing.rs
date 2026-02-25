@@ -1,6 +1,6 @@
 use crate::commands::catalog::AppState;
 use crate::models::event::Event;
-use crate::services::event_sourcing::EventStore;
+use crate::services::event_sourcing::{EventStore, EventStoreError};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -16,22 +16,67 @@ pub struct EventDTO {
     pub created_at: String,
 }
 
-#[tauri::command]
-pub fn append_event(event: EventDTO, state: State<AppState>) -> Result<(), String> {
-    let mut db_guard = state.db.lock().map_err(|e| format!("DB lock: {}", e))?;
-    let conn = db_guard.connection();
-    let event: Event = serde_json::from_value(serde_json::to_value(event).unwrap())
-        .map_err(|e| format!("Invalid event: {}", e))?;
-    let store = EventStore::new(conn);
-    store.append_event(&event).map_err(|e| e.to_string())
+#[derive(Debug, Serialize)]
+pub struct CommandError {
+    pub message: String,
+}
+
+impl From<EventStoreError> for CommandError {
+    fn from(err: EventStoreError) -> Self {
+        CommandError {
+            message: err.to_string(),
+        }
+    }
 }
 
 #[tauri::command]
-pub fn get_events(state: State<AppState>) -> Result<Vec<EventDTO>, String> {
-    let mut db_guard = state.db.lock().map_err(|e| format!("DB lock: {}", e))?;
+pub fn append_event(event: EventDTO, state: State<AppState>) -> Result<(), CommandError> {
+    let mut db_guard = state.db.lock().map_err(|e| CommandError {
+        message: format!("DB lock: {}", e),
+    })?;
+    let conn = db_guard.connection();
+
+    // Convert DTO to Event
+    let event_to_store =
+        Event {
+            id: event.id,
+            timestamp: event.timestamp,
+            event_type: serde_json::from_value(serde_json::Value::String(event.event_type))
+                .map_err(|e| CommandError {
+                    message: format!("Invalid event_type: {}", e),
+                })?,
+            payload: serde_json::from_value(event.payload).map_err(|e| CommandError {
+                message: format!("Invalid payload: {}", e),
+            })?,
+            target_type: serde_json::from_value(serde_json::Value::String(event.target_type))
+                .map_err(|e| CommandError {
+                    message: format!("Invalid target_type: {}", e),
+                })?,
+            target_id: event.target_id,
+            user_id: event.user_id,
+            created_at: chrono::DateTime::parse_from_rfc3339(&event.created_at)
+                .map_err(|e| CommandError {
+                    message: format!("Invalid created_at: {}", e),
+                })?
+                .with_timezone(&chrono::Utc),
+        };
+
+    let store = EventStore::new(conn);
+    store
+        .append_event(&event_to_store)
+        .map_err(CommandError::from)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_events(state: State<AppState>) -> Result<Vec<EventDTO>, CommandError> {
+    let mut db_guard = state.db.lock().map_err(|e| CommandError {
+        message: format!("DB lock: {}", e),
+    })?;
     let conn = db_guard.connection();
     let store = EventStore::new(conn);
-    let events = store.get_events().map_err(|e| e.to_string())?;
+    let events = store.get_events().map_err(CommandError::from)?;
+
     let dtos = events
         .into_iter()
         .map(|e| {
@@ -52,11 +97,13 @@ pub fn get_events(state: State<AppState>) -> Result<Vec<EventDTO>, String> {
 }
 
 #[tauri::command]
-pub fn replay_events(state: State<AppState>) -> Result<(), String> {
-    let mut db_guard = state.db.lock().map_err(|e| format!("DB lock: {}", e))?;
+pub fn replay_events(state: State<AppState>) -> Result<(), CommandError> {
+    let mut db_guard = state.db.lock().map_err(|e| CommandError {
+        message: format!("DB lock: {}", e),
+    })?;
     let conn = db_guard.connection();
     let store = EventStore::new(conn);
-    let events = store.get_events().map_err(|e| e.to_string())?;
+    let events = store.get_events().map_err(CommandError::from)?;
     // TODO: Appliquer chaque événement au modèle (idempotent)
     for _event in events {
         // ... logique de replay à implémenter ...

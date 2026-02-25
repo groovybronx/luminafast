@@ -1,4 +1,56 @@
+
+
 # LuminaFast — Documentation de l'Application
+
+
+## Table des matières
+
+1. [Vue d’Ensemble](#1-vue-densemble)
+2. [Stack Technique Actuelle](#2-stack-technique-actuelle)
+3. [Architecture des Fichiers](#3-architecture-des-fichiers)
+4. [Composants UI](#4-composants-ui)
+  - [4.1 Composants](#41--composants)
+  - [4.2 Stores Zustand](#42--stores-zustand)
+  - [4.3 Zones de l’interface](#43--zones-de-linterface)
+5. [Modèle de Données](#5-modèle-de-données)
+  - [5.1 Structure d’une Image](#51--structure-dune-image)
+  - [5.2 Structure d’un Event](#52--structure-dun-event)
+6. [Fonctionnalités — État Actuel](#6-fonctionnalités--état-actuel)
+7. [Raccourcis Clavier](#7-raccourcis-clavier)
+8. [Dépendances npm](#8-dépendances-npm)
+9. [Dépendances Rust](#9-dépendances-rust)
+10. [Configuration](#10-configuration)
+11. [Schéma et Base de Données SQLite](#11-schéma-et-base-de-données-sqlite)
+  - [11.1 Architecture du Catalogue](#111--architecture-du-catalogue)
+  - [11.2 Configuration SQLite](#112--configuration-sqlite)
+  - [11.3 Système de Migrations](#113--système-de-migrations)
+  - [11.4 Types Rust](#114--types-rust)
+  - [11.5 Tests Unitaires](#115--tests-unitaires)
+12. [Outils de Qualité et CI/CD](#12-outils-de-qualité-et-cicd)
+  - [12.1 Linting et Formatting](#121--linting-et-formatting)
+  - [12.2 Tests et Coverage](#122--tests-et-coverage)
+  - [12.3 Pipeline CI/CD](#123--pipeline-cicd)
+  - [12.4 Scripts de Développement](#124--scripts-de-développement)
+13. [Services EXIF/IPTC](#13-services-exifiptc)
+  - [13.1 Architecture EXIF](#131--architecture-exif)
+  - [13.2 Métadonnées EXIF](#132--métadonnées-exif)
+  - [13.3 Métadonnées IPTC](#133--métadonnées-iptc)
+  - [13.4 Performance et Intégration](#134--performance-et-intégration)
+14. [Service Filesystem](#14-service-filesystem)
+  - [14.1 Architecture du Service](#141--architecture-du-service)
+  - [14.2 Types Unifiés](#142--types-unifiés)
+  - [14.3 Concurrence et Performance](#143--concurrence-et-performance)
+  - [14.4 Commandes Tauri](#144--commandes-tauri)
+  - [14.5 Tests et Validation](#145--tests-et-validation)
+15. [Commandes Tauri (Mises à jour)](#15-commandes-tauri-mises-à-jour)
+16. [Services Frontend (Mises à jour)](#16-services-frontend-mises-à-jour)
+17. [Types & Interfaces (Mises à jour)](#17-types--interfaces-mises-à-jour)
+18. [Historique des Modifications](#18-historique-des-modifications)
+
+**Annexes** :
+- [Smart Collections : Logique SQL et compatibilité parser](#smart-collections--logique-sql-et-compatibilité-parser)
+- [Phase 3.4 : Folder Navigator](#phase-34--folder-navigator--architecture-et-schéma)
+- [Phase 3.5 : Recherche & Filtrage](#phase-35--recherche--filtrage--architecture-et-parser)
 
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
@@ -6,11 +58,13 @@
 > **Dernière mise à jour** : 2026-02-24 (Maintenance : Phase 3.1 Completion — État Hybride Fix + SQLite Sync + Lazy Loading) — État : State management centralisé + SQLite bidirectional sync complète + Lazy loading previews, 361 tests ✅. Branche `phase/3.1-maintenance-grid-completion`.
 >
 > ### Décisions Projet (validées par le propriétaire)
->
+
 > - **Phase 8 (Cloud/Sync)** : Reportée post-lancement
 > - **Plateforme MVP** : macOS-first (Windows/Linux secondaire)
-> - **Formats RAW prioritaires** : Canon (.CR3), Fuji (.RAF), Sony (.ARW)
+> - **Formats RAW supportés** : Canon (.CR3), Fuji (.RAF), Sony (.ARW), Nikon (.NEF), Olympus (.ORF), Pentax (.PEF), Panasonic (.RW2), Adobe (.DNG)
+> - **Formats standard** : JPG, JPEG, PNG (via preview service)
 > - **Phase 2.2 IPTC** : Extraction reportée Phase 5.4 (Sidecar XMP) — Skeleton créé
+
 
 ---
 
@@ -20,7 +74,48 @@
 
 ### État actuel : Phases 0 à 3.5 complétées + Maintenance Phase 3.1 stabilisée
 
-Pipeline d'import production-ready : Discovery (scan récursif) → BLAKE3 hashing → Extraction EXIF (kamadak-exif v0.6.1) → Insertion SQLite → **Ingestion parallélisée Rayon** → **Génération previews séquentielle** → Synchronisation catalogue → **Modal réinitialisable**. Progression temps réel visible sur 3 phases (0-30% scan, 30-70% ingestion, 70-100% previews). **Grille virtualisée avec lazy-loading** : `@tanstack/react-virtual` (10K+ images, 60fps) + IntersectionObserver (prefetch 100px). **Collections & Smart Collections** : Créations, renommages, suppressions, filtrage via stores dedicated. **Recherche & filtrage** : Parser structuré (15+ champs, 8+ opérateurs). **Navigation Dossiers** : Arborescence hiérarchique avec compteurs. **SQLite bidirectional sync** : Ratings, flags, tags persisted immédiatement + isSynced tracking. 361 tests (357 TS + 4 intégration), **zéro warning**.
+
+**Pipeline d'import production-ready** :
+
+- **Discovery** (scan récursif)
+- **BLAKE3 hashing**
+- **Extraction EXIF** (`kamadak-exif v0.6.1`)
+- **Insertion SQLite**
+- **Ingestion parallélisée** (Rayon)
+- **Génération previews séquentielle**
+- **Synchronisation catalogue**
+- **Modal réinitialisable**
+
+Progression temps réel visible sur 3 phases :
+- **0-30%** : scan
+- **30-70%** : ingestion
+- **70-100%** : previews
+
+**Pipeline d'import production-ready** :
+
+- **Discovery** (scan récursif)
+- **BLAKE3 hashing**
+- **Extraction EXIF** (`kamadak-exif v0.6.1`)
+- **Insertion SQLite**
+- **Ingestion parallélisée** (Rayon)
+- **Génération previews séquentielle** (libvips)
+- **Synchronisation catalogue**
+- **Modal réinitialisable**
+
+ **Progression temps réel visible sur 3 phases** :
+- **0-30%** : scan
+- **30-70%** : ingestion + hashing + EXIF
+- **70-100%** : previews
+
+**État actuel de l'application** (Phases 0 → 3.5 complétées + Maintenance Phase 3.1 stabilisée) :
+
+- **Grille virtualisée avec lazy-loading** : `@tanstack/react-virtual` (10K+ images, 60fps) + IntersectionObserver (prefetch 100px)
+- **Collections & Smart Collections** : créations, renommages, suppressions, filtrage via stores dédiés (Phase 3.2)
+- **Recherche & filtrage** : parser structuré (15+ champs, 8+ opérateurs) (Phase 3.5)
+- **Navigation Dossiers** : arborescence hiérarchique avec compteurs (Phase 3.4)
+- **SQLite bidirectional sync** : ratings, flags, tags persistés immédiatement + isSynced tracking
+- **504 tests** (345 TypeScript + 159 Rust), **zéro warning**, **coverage 98%+**
+
 
 ### Objectif : Application Tauri autonome commercialisable
 
@@ -30,25 +125,26 @@ Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructiv
 
 ## 2. Stack Technique Actuelle
 
-| Couche              | Technologie         | Version         | Statut                      |
-| ------------------- | ------------------- | --------------- | --------------------------- |
-| Framework frontend  | React               | 19.2.0          | ✅ En place                 |
-| Bundler             | Vite                | 7.3.1           | ✅ En place                 |
-| Styling             | TailwindCSS         | 4.1.18          | ✅ En place                 |
-| Icônes              | Lucide React        | 0.563.0         | ✅ En place                 |
-| Langage             | TypeScript (TSX)    | strict          | ✅ Complété (Phase 0.1)     |
-| Shell natif         | Tauri v2            | 2.10.2          | ✅ Complété (Phase 0.2)     |
-| Backend             | Rust                | stable          | ✅ Complété (Phase 0.2)     |
-| State management    | Zustand             | 5.0.11          | ✅ Complété (Phase 0.4)     |
-| Linting             | ESLint + TypeScript | 9.39.1          | ✅ Complété (Phase 0.5)     |
-| Tests               | Vitest + jsdom      | 4.0.18          | ✅ Complété (Phase 0.5)     |
-| CI/CD               | GitHub Actions      | —               | ✅ Complété (Phase 0.5)     |
-| DB transactionnelle | SQLite              | rusqlite 0.31.0 | ✅ Complété (Phase 1.1)     |
-| DB analytique       | DuckDB              | —               | ⬜ Non installé (Phase 6.2) |
-| Hashing             | BLAKE3              | —               | ✅ Complété (Phase 1.3)     |
-| EXIF/IPTC           | kamadak-exif        | 0.6.1           | ✅ Complété (Phase 2.2)     |
+| Couche                | Technologie           | Version           | Statut                        |
+|----------------------|----------------------|-------------------|------------------------------|
+| Framework frontend   | React                | 19.2.0            | ✅ En place                  |
+| Bundler              | Vite                 | 7.3.1             | ✅ En place                  |
+| Styling              | TailwindCSS          | 4.1.18            | ✅ En place                  |
+| Icônes               | Lucide React         | 0.563.0           | ✅ En place                  |
+| Langage              | TypeScript (TSX)     | strict            | ✅ Complété (Phase 0.1)      |
+| Shell natif          | Tauri v2             | 2.10.2            | ✅ Complété (Phase 0.2)      |
+| Backend              | Rust                 | stable            | ✅ Complété (Phase 0.2)      |
+| State management     | Zustand              | 5.0.11            | ✅ Complété (Phase 0.4)      |
+| Linting              | ESLint + TypeScript  | 9.39.1            | ✅ Complété (Phase 0.5)      |
+| Tests                | Vitest + jsdom       | 4.0.18            | ✅ Complété (Phase 0.5)      |
+| CI/CD                | GitHub Actions       | —                 | ✅ Complété (Phase 0.5)      |
+| DB transactionnelle  | SQLite               | rusqlite 0.31.0   | ✅ Complété (Phase 1.1)      |
+| DB analytique        | DuckDB               | —                 | ⬜ Non installé (Phase 6.2)  |
+| Hashing              | BLAKE3               | —                 | ✅ Complété (Phase 1.3)      |
+| EXIF/IPTC            | kamadak-exif         | 0.6.1             | ✅ Complété (Phase 2.2)      |
 
 ---
+
 
 ## 3. Architecture des Fichiers (État Actuel)
 
@@ -67,13 +163,14 @@ LuminaFast/
 │   │   ├── recommendations.md      # Stack moderne recommandée
 │   │   └── luminafast_developement_plan.md # Plan détaillé du projet
 │   ├── briefs/                       # Briefs des phases de développement
-│   │   ├── PHASE-0.1.md → PHASE-3.2.md # Briefs implémentées
-│   │   └── PHASE-3.3.md → ...      # Briefs futures
-│   ├── AI_INSTRUCTIONS.md          # Directives pour agents IA
+│   │   ├── PHASE-0.1.md → PHASE-3.5.md # Briefs implémentées
+│   │   ├── BRIEF_TEMPLATE.md       # Template pour nouveaux briefs
+│   │   └── PHASE-3.6.md → ...      # Briefs futures
+│   ├── AGENTS.md                   # Directives documentation + briefs
 │   ├── CHANGELOG.md                # Suivi d'avancement par sous-phase
 │   ├── TESTING_STRATEGY.md         # Stratégie de tests (Vitest + Rust)
 │   ├── GOVERNANCE.md               # Règles de gouvernance
-│   └── APP_DOCUMENTATION.md        # Ce fichier
+│   └── APP_DOCUMENTATION.md        # Ce fichier — source de vérité état app
 ├── public/
 │   └── vite.svg
 ├── scripts/                        # Utilitaires scripts
@@ -86,27 +183,35 @@ LuminaFast/
 │   ├── assets/                     # Ressources statiques
 │   │   └── react.svg               # Logo React
 │   ├── stores/                     # Stores Zustand (state management)
+│   │   ├── AGENTS.md               # Conventions Zustand + types stores
 │   │   ├── index.ts                # Re-export central
-│   │   ├── catalogStore.ts         # Images, sélection, filtres
-│   │   ├── collectionStore.ts      # Collections CRUD + collection active (Phase 3.2)
-│   │   ├── uiStore.ts              # UI (vues, sidebars, modals)
+│   │   ├── catalogStore.ts         # Images SQLite + activeImageId
+│   │   ├── uiStore.ts              # UI : selection (Set), filterText, activeView, sidebars
+│   │   ├── collectionStore.ts      # Collections CRUD + activeCollectionId + activeCollectionImageIds (Phase 3.2)
+│   │   ├── folderStore.ts          # Dossiers : tree, activeFolderId, activeFolder ImageIds (Phase 3.4)
 │   │   ├── editStore.ts            # Événements, edits, historique
-│   │   └── systemStore.ts          # Logs, import, état système
+│   │   ├── systemStore.ts          # Logs, import, état système
+│   │   └── __tests__/             # Tests stores (4 fichiers)
 │   ├── lib/                        # Utilitaires et données mock
 │   │   ├── helpers.ts              # safeID()
+│   │   ├── searchParser.ts         # parseSearchQuery() — parser Phase 3.5
 │   │   └── mockData.ts             # generateImages, INITIAL_IMAGES (MockEvent supprimé)
-│   ├── services/                   # Services TypeScript (Phase 1.2 + 2.2 + 3.3)
-│   │   ├── catalogService.ts       # Wrapper Tauri avec gestion d'erreurs collections CRUD
-│   │   ├── exifService.ts           # Service EXIF/IPTC avec invoke direct
+│   ├── services/                   # Services TypeScript (Phase 1.2 + 2.2 + 3.3 + 3.5)
+│   │   ├── AGENTS.md               # Conventions services front + mocks
+│   │   ├── catalogService.ts       # Wrapper Tauri CRUD images + collections + folders
+│   │   ├── searchService.ts        # Wrapper Tauri search_images (Phase 3.5)
+│   │   ├── exifService.ts           # Service EXIF/IPTC invoke direct
 │   │   ├── discoveryService.ts     # Service discovery/ingestion
 │   │   ├── filesystemService.ts     # Service système de fichiers
 │   │   ├── hashingService.ts        # Service BLAKE3 hashing
 │   │   ├── previewService.ts        # Service génération previews RAW + event listeners (Phase 3.3)
-│   │   └── __tests__/             # Tests unitaires services
+│   │   └── __tests__/             # Tests unitaires services (5 fichiers)
 │   ├── types/                      # Types TypeScript du domaine
 │   │   ├── index.ts                # Re-export central
 │   │   ├── image.ts                # CatalogImage, ExifData, EditState
 │   │   ├── collection.ts           # Collection, SmartQuery, CollectionType (Phase 3.2)
+│   │   ├── folder.ts               # FolderTreeNode, FolderStore (Phase 3.4)
+│   │   ├── search.ts               # SearchQuery, ParsedFilter, SearchResponse (Phase 3.5)
 │   │   ├── events.ts               # CatalogEvent, EventType
 │   │   ├── ui.ts                   # ActiveView, LogEntry
 │   │   ├── dto.ts                  # DTOs Tauri (Phase 1.2)
@@ -115,18 +220,20 @@ LuminaFast/
 │   │   ├── filesystem.ts           # Types système de fichiers
 │   │   ├── preview.ts              # Types génération previews (Phase 3.3)
 │   │   ├── hashing.ts              # Types BLAKE3 hashing
-│   │   └── __tests__/             # Tests types (types.test.ts, hashing.test.ts, etc.)
+│   │   └── __tests__/             # Tests types (6 fichiers)
 │   ├── components/
+│   │   ├── AGENTS.md               # Conventions composants + props typing
 │   │   ├── layout/                 # Structure de la page
 │   │   │   ├── TopNav.tsx          # Navigation supérieure
 │   │   │   ├── LeftSidebar.tsx     # Catalogue, collections, folders
 │   │   │   ├── RightSidebar.tsx    # Panneau droit (orchestrateur)
-│   │   │   ├── Toolbar.tsx         # Mode, recherche, taille
+│   │   │   ├── Toolbar.tsx         # Mode, recherche (Phase 3.5), taille
 │   │   │   └── Filmstrip.tsx       # Bande défilante
 │   │   ├── library/                # Mode bibliothèque
-│   │   │   ├── GridView.tsx        # Grille d'images virtualisée (@tanstack/react-virtual)
+│   │   │   ├── GridView.tsx        # Grille virtualisée (@tanstack/react-virtual, 60fps 10K+)
+│   │   │   ├── LazyLoadedImageCard.tsx # Carte avec IntersectionObserver prefetch (Phase 3.1)
 │   │   │   ├── ImageCard.tsx       # Carte image avec métadonnées
-│   │   │   └── __tests__/         # Tests GridView et ImageCard
+│   │   │   └── __tests__/         # Tests composants (2 fichiers)
 │   │   ├── develop/                # Mode développement
 │   │   │   ├── DevelopView.tsx     # Vue développement + avant/après
 │   │   │   ├── DevelopSliders.tsx  # Sliders de réglage
@@ -138,25 +245,28 @@ LuminaFast/
 │   │   └── shared/                 # Composants partagés
 │   │       ├── GlobalStyles.tsx    # Styles CSS inline
 │   │       ├── ArchitectureMonitor.tsx # Console monitoring
-│   │       ├── ImportModal.tsx     # Modal d'import
+│   │       ├── ImportModal.tsx     # Modal d'import avec progression 0-30-70-100%
 │   │       ├── BatchBar.tsx        # Actions batch : pick, favoris, ajout collection (FolderPlus popover), clear
 │   │       ├── KeyboardOverlay.tsx # Indicateurs raccourcis clavier
-│   │       └── __tests__/         # Tests composants partagés
+│   │       └── __tests__/         # Tests composants partagés (1 fichier)
 │   └── hooks/                       # Hooks React personnalisés
-│       ├── useCatalog.ts           # Hook principal catalogue (mapping DTO→CatalogImage + EXIF)
-│       ├── useDiscovery.ts         # Hook discovery/ingestion (reset() cleanup, preview séquentiel)
-│       └── __tests__/             # Tests hooks (useCatalog.test.ts, useDiscovery.test.ts)
+│       ├── AGENTS.md               # Conventions hooks + async patterns
+│       ├── useCatalog.ts           # Hook principal catalogue (mapping DTO→CatalogImage, EXIF, isSynced, callbacks)
+│       ├── useDiscovery.ts         # Hook discovery (reset cleanup, preview séquentiel)
+│       ├── useSearch.ts            # Hook search (debounce 500ms, query parsing)
+│       └── __tests__/             # Tests hooks (3 fichiers)
 │   ├── test/                       # Infrastructure tests et mocks
-│   │   ├── setup.ts                # Configuration tests globale
-│   │   ├── storeUtils.ts           # Utilitaires stores tests
+│   │   ├── setup.ts                # Configuration tests globale (setupFilesAfterEnv)
+│   │   ├── storeUtils.ts           # Utilitaires stores tests (resetStores)
 │   │   ├── mocks/
 │   │   │   ├── tauri-api.ts        # Mock API Tauri principal
 │   │   │   └── tauri-api/
 │   │   │       ├── core.ts         # Mocks core Tauri
 │   │   │       └── tauri.ts        # Mocks invoke Tauri
-│   │   └── __tests__/             # Tests infrastructure
+│   │   └── __tests__/             # Tests infrastructure (1 fichier)
 ├── src-tauri/                         # Backend Rust Tauri
-│   ├── Cargo.toml                    # Dépendances Rust (rusqlite, etc.)
+│   ├── AGENTS.md                   # Conventions Rust + error handling obligatoire
+│   ├── Cargo.toml                    # Dépendances Rust (rusqlite 0.31.0, tokio, blake3, etc.)
 │   ├── tauri.conf.json              # Configuration Tauri
 │   ├── build.rs                      # Build script
 │   ├── capabilities/
@@ -164,73 +274,76 @@ LuminaFast/
 │   ├── src/
 │   │   ├── main.rs                 # Point d'entrée Rust
 │   │   ├── lib.rs                  # Module library + plugins + init DB + commandes
-│   │   ├── database.rs               # Gestion SQLite, migrations, PRAGMA
-│   │   ├── commands/                 # Commandes Tauri CRUD (Phase 1.2 + 2.2 + 3.3)
+│   │   ├── database.rs               # Gestion SQLite, migrations, PRAGMA WAL+NORMAL
+│   │   ├── commands/                 # Commandes Tauri CRUD (Phase 1.2 + 2.2 + 3.2 + 3.4 + 3.5)
+│   │   │   ├── AGENTS.md           # Conventions commandes Tauri
 │   │   │   ├── mod.rs               # Export et enregistrement des commandes
 │   │   │   ├── catalog.rs           # 17 commandes CRUD images+collections (Phase 3.2)
+│   │   │   ├── folder.rs            # 4 commandes folders : tree, images, backfill, volume_status (Phase 3.4)
+│   │   │   ├── search.rs            # 1 commande search_images (Phase 3.5)
 │   │   │   ├── exif.rs              # Commandes EXIF/IPTC extraction (Phase 2.2)
 │   │   │   ├── filesystem.rs        # Commandes système de fichiers
 │   │   │   ├── discovery.rs         # Commandes ingestion + découverte (Phase 2.1)
 │   │   │   ├── hashing.rs           # Commandes BLAKE3 batch
-│   │   │   ├── preview.rs           # Commandes génération previews RAW (Phase 3.3)
-│   │   │   ├── __tests__/preview_performance.rs # Tests de performance batch vs séquentiel (Maint. 2026-02-23)
-│   │   │   ├── __tests__/preview_unit.rs        # Tests unitaires preview pyramide (Maint. 2026-02-23)
+│   │   │   ├── preview.rs           # Commandes génération previews RAW (Phase 3.3, batch + libvips)
+│   │   │   ├── __tests__/preview_performance.rs # Tests perf batch vs séquentiel
+│   │   │   ├── __tests__/preview_unit.rs        # Tests unitaires preview pyramide
 │   │   │   └── types.rs             # Types réponse partagés
-│   │   ├── models/                   # Types Rust du domaine (sérializables)
+│   │   ├── models/                   # Types Rust du domaine (sérializables #[derive(Serialize)])
+│   │   │   ├── AGENTS.md           # Conventions models Rust
 │   │   │   ├── mod.rs               # Export des modèles
 │   │   │   ├── catalog.rs           # Image, Folder, CollectionType (base)
 │   │   │   ├── collection.rs        # Collection CRUD models (Phase 3.2)
+│   │   │   ├── folder.rs            # FolderTreeNode, FolderUpdate (Phase 3.4)
+│   │   │   ├── search.rs            # SearchRequest, SearchResponse, SearchResult (Phase 3.5)
 │   │   │   ├── image.rs             # Image détails, metadata (Phase 3.3)
 │   │   │   ├── event.rs             # CatalogEvent, EventType (Phase 4.3)
-│   │   │   ├── exif.rs              # ExifMetadata, IptcMetadata (Phase 2.2)
-│   │   │   ├── iptc.rs              # IptcMetadata détails (skeleton Phase 5.4)
+│   │   │   ├── exif.rs              # ExifMetadata structuré (Phase 2.2)
+│   │   │   ├── iptc.rs              # IptcMetadata skeleton (Phase 5.4)
 │   │   │   ├── discovery.rs         # DiscoveredFile, DiscoverySession (Phase 2.1)
 │   │   │   ├── filesystem.rs        # FileEvent, FileLock, WatcherConfig
 │   │   │   ├── hashing.rs           # HashResult, BatchHashResult
-│   │   │   ├── preview.rs           # PreviewData, PreviewFormat (Phase 3.3)
-│   │   │   ├── dto.rs                # DTOs Tauri avec serde pour invoke
-│   │   │   └── __tests__/           # Tests unitaires models
+│   │   │   ├── preview.rs           # PreviewData, PreviewFormat, PreviewConfig (Phase 3.3)
+│   │   │   ├── dto.rs                # DTOs Tauri avec serde snake_case
+│   │   │   └── __tests__/           # Tests unitaires models (4 fichiers)
 │   │   ├── migrations/               # Scripts de migration SQL
-│   │   │   └── 001_initial.sql      # Schéma complet du catalogue
-│   │   ├── services/                 # Services métier (Layer logique entre DB et commandes)
+│   │   │   ├── 001_initial.sql      # Schéma complet du catalogue (9 tables)
+│   │   │   ├── 002_ingestion.sql    # Tables ingestion_file_status
+│   │   │   ├── 003_previews.sql     # Table previews (libvips)
+│   │   │   └── 004_folders.sql      # Colonnes is_online, name sur folders (Phase 3.4)
+│   │   ├── services/                 # Services métier (Layer logique DB→commandes)
+│   │   │   ├── AGENTS.md           # Conventions services Rust
 │   │   │   ├── mod.rs               # Export des services
 │   │   │   ├── blake3.rs            # Service BLAKE3 hashing (Phase 1.3)
 │   │   │   ├── exif.rs              # Service extraction EXIF kamadak-exif (Phase 2.2)
-│   │   │   ├── iptc.rs              # Service IPTC skeleton (reporté Phase 5.4)
+│   │   │   ├── iptc.rs              # Service IPTC skeleton (Phase 5.4)
 │   │   │   ├── discovery.rs         # Service découverte fichiers récursive
-│   │   │   │   └── tests.rs         # Tests discovery
+│   │   │   │   └── tests.rs         # Tests discovery (18 tests)
 │   │   │   ├── ingestion.rs         # Service ingestion batch (discovery + hashing + EXIF)
-│   │   │   │   └── tests.rs         # Tests ingestion
+│   │   │   │   └── tests.rs         # Tests ingestion (24 tests)
+│   │   │   ├── collection.rs        # Service collections CRUD + smart queries (Phase 3.2)
+│   │   │   │   └── tests.rs         # Tests collections (28 tests)
+│   │   │   ├── folder.rs            # Service folders tree + images + backfill (Phase 3.4)
+│   │   │   │   └── tests.rs         # Tests folders (6 tests)
+│   │   │   ├── search.rs            # Service search + build_where_clause (Phase 3.5)
+│   │   │   │   └── tests.rs         # Tests search (6 tests)
 │   │   │   ├── filesystem.rs        # Service système de fichiers (watcher, lock)
-│   │   │   ├── preview.rs           # Service génération previews RAW (Phase 3.3, batch + libvips activé).
-│   │   │   └── __tests__/           # Tests integration services
+│   │   │   ├── preview.rs           # Service génération previews RAW (Phase 3.3)
+│   │   │   │   └── tests.rs         # Tests preview pyramide (27 tests)
+│   │   │   └── __tests__/           # Tests integration transversales
 │   └── icons/                      # Icônes d'application (16 fichiers)
 ├── index.html                      # HTML racine
 ├── package.json                    # Dépendances npm + scripts tauri
-├── tsconfig.json                   # Config TypeScript strict
+├── tsconfig.json                   # Config TypeScript strict (no `any`)
 ├── tsconfig.node.json              # Config TS pour vite.config.ts
-├── vite.config.ts                  # Configuration Vite + TailwindCSS
-├── eslint.config.js                # Configuration ESLint
+├── vite.config.ts                  # Configuration Vite + TailwindCSS plugin
+├── eslint.config.js                # Configuration ESLint strict React Hooks
 └── .gitignore
 ```
 
+
 ---
-## 6. Commandes Tauri (Mises à jour)
 
-- `generate_previews_batch(images: Vec<ImageId>, config: PreviewConfig)`
-  - Génère les previews pyramidales en batch (Promise.all côté frontend, batch 4 côté Rust)
-  - Utilise libvips par défaut (configurable)
-  - Retourne la liste des previews générées et les erreurs éventuelles
-
-## 7. Services Frontend (Mises à jour)
-
-- `previewService.generatePreviewsBatch(images: CatalogImage[])`
-  - Appelle la commande Tauri batch, gère Promise.all côté frontend
-  - Retourne les résultats de génération (succès/erreurs)
-
-## 8. Types & Interfaces (Mises à jour)
-
-- `PreviewConfig` (Rust/TS) : champ `use_libvips: bool` activé par défaut
 
 ## 4. Composants UI (Mockup Actuel)
 
@@ -429,38 +542,38 @@ export interface CatalogEvent {
 
 ### Production
 
-| Package        | Version  | Usage        |
-| -------------- | -------- | ------------ |
-| `react`        | ^19.2.0  | Framework UI |
-| `react-dom`    | ^19.2.0  | Rendu DOM    |
-| `lucide-react` | ^0.563.0 | Icônes SVG   |
+| Package         | Version   | Usage         |
+|-----------------|-----------|--------------|
+| `react`         | ^19.2.0   | Framework UI |
+| `react-dom`     | ^19.2.0   | Rendu DOM    |
+| `lucide-react`  | ^0.563.0  | Icônes SVG   |
 
 ### Développement
 
-| Package                       | Version | Usage                              |
-| ----------------------------- | ------- | ---------------------------------- |
-| `vite`                        | ^7.3.1  | Bundler                            |
-| `@vitejs/plugin-react`        | ^5.1.1  | Plugin React pour Vite             |
-| `tailwindcss`                 | ^4.1.18 | Utilitaires CSS                    |
-| `@tailwindcss/vite`           | ^4.1.18 | Plugin TailwindCSS pour Vite       |
-| `postcss`                     | ^8.5.6  | Post-processeur CSS                |
-| `eslint`                      | ^9.39.1 | Linter                             |
-| `eslint-plugin-react-hooks`   | ^7.0.1  | Règles hooks React                 |
-| `eslint-plugin-react-refresh` | ^0.4.24 | React Fast Refresh                 |
-| `globals`                     | ^16.5.0 | Globales ESLint                    |
-| `@types/react`                | ^19.2.7 | Types React (non utilisés — JS)    |
-| `@types/react-dom`            | ^19.2.3 | Types ReactDOM (non utilisés — JS) |
-| `typescript`                  | ^5.6.3  | TypeScript strict                  |
-| `typescript-eslint`           | ^8.55.0 | ESLint pour TypeScript             |
-| `@testing-library/react`      | ^16.1.0 | Tests React                        |
-| `@vitest/coverage-v8`         | ^1.6.0  | Coverage tests                     |
-| `vitest`                      | ^2.1.8  | Framework de tests                 |
-| `jsdom`                       | ^25.0.1 | Environnement DOM tests            |
-| `zustand`                     | ^5.0.2  | State management                   |
-| `@tauri-apps/api`             | ^2.2.0  | API Tauri frontend                 |
-| `@tauri-apps/plugin-fs`       | ^2.2.0  | Plugin filesystem                  |
-| `@tauri-apps/plugin-dialog`   | ^2.2.0  | Plugin dialogues                   |
-| `@tauri-apps/plugin-shell`    | ^2.2.0  | Plugin shell                       |
+| Package                        | Version   | Usage                              |
+|--------------------------------|-----------|------------------------------------|
+| `vite`                         | ^7.3.1    | Bundler                            |
+| `@vitejs/plugin-react`         | ^5.1.1    | Plugin React pour Vite             |
+| `tailwindcss`                  | ^4.1.18   | Utilitaires CSS                    |
+| `@tailwindcss/vite`            | ^4.1.18   | Plugin TailwindCSS pour Vite       |
+| `postcss`                      | ^8.5.6    | Post-processeur CSS                |
+| `eslint`                       | ^9.39.1   | Linter                             |
+| `eslint-plugin-react-hooks`     | ^7.0.1    | Règles hooks React                 |
+| `eslint-plugin-react-refresh`   | ^0.4.24   | React Fast Refresh                 |
+| `globals`                      | ^16.5.0   | Globales ESLint                    |
+| `@types/react`                 | ^19.2.7   | Types React (non utilisés — JS)    |
+| `@types/react-dom`             | ^19.2.3   | Types ReactDOM (non utilisés — JS) |
+| `typescript`                   | ^5.6.3    | TypeScript strict                  |
+| `typescript-eslint`            | ^8.55.0   | ESLint pour TypeScript             |
+| `@testing-library/react`       | ^16.1.0   | Tests React                        |
+| `@vitest/coverage-v8`          | ^1.6.0    | Coverage tests                     |
+| `vitest`                       | ^2.1.8    | Framework de tests                 |
+| `jsdom`                        | ^25.0.1   | Environnement DOM tests            |
+| `zustand`                      | ^5.0.2    | State management                   |
+| `@tauri-apps/api`              | ^2.2.0    | API Tauri frontend                 |
+| `@tauri-apps/plugin-fs`        | ^2.2.0    | Plugin filesystem                  |
+| `@tauri-apps/plugin-dialog`    | ^2.2.0    | Plugin dialogues                   |
+| `@tauri-apps/plugin-shell`     | ^2.2.0    | Plugin shell                       |
 
 ---
 
@@ -624,71 +737,7 @@ npm run build:tauri    # Build Tauri production
 
 ---
 
-## 12. Base de Données SQLite
 
-> ✅ **Implémenté en Phase 1.1** — Schéma complet et migrations fonctionnelles
-
-### 12.1 — Schéma du Catalogue
-
-**Tables principales** :
-
-- `images` : Table pivot avec BLAKE3 hash, métadonnées de base
-- `folders` : Structure hiérarchique des dossiers importés
-- `exif_metadata` : Métadonnées EXIF complètes (ISO, ouverture, objectif, GPS)
-- `iptc_metadata` : Métadonnées IPTC (copyright, keywords, description) - Phase 2.2
-- `collections` : Collections statiques/smart/quick avec requêtes JSON
-- `collection_images` : Relation many-to-many avec ordre de tri
-- `image_state` : Rating (0-5), flags (pick/reject), color labels
-- `tags` + `image_tags` : Système de tags hiérarchique
-- `migrations` : Tracking des migrations appliquées
-
-**Index stratégiques** :
-
-- Index sur `blake3_hash` (détection doublons)
-- Index sur `filename`, `captured_at`, `imported_at`
-- Index sur `folders.path`, `collections.type`
-- Index sur `image_state.rating`, `image_state.flag`
-
-### 12.2 — Configuration SQLite
-
-**PRAGMA optimisés** :
-
-- `journal_mode = WAL` : Concurrency optimale pour lectures/écritures simultanées
-- `synchronous = NORMAL` : Équilibre performance/sécurité des données
-- `cache_size = -20000` : Cache 20MB en mémoire pour performance
-- `page_size = 4096` : Taille de page optimisée pour les métadonnées images
-- `temp_store = memory` : Tables temporaires en RAM
-- `foreign_keys = ON` : Contraintes référentielles activées
-
-### 12.3 — Système de Migrations
-
-- **Automatique** : Migration `001_initial` appliquée au démarrage
-- **Idempotent** : Les migrations peuvent être réappliquées sans erreur
-- **Tracking** : Table `migrations` enregistre les versions appliquées
-- **Tests** : 11 tests unitaires valident le système complet
-
-### 12.4 — Types Rust
-
-**Modèles sérialisables** (`src-tauri/src/models/`) :
-
-- `catalog.rs` : `Image`, `Folder`, `Collection`, `CollectionType`
-- `exif.rs` : `ExifMetadata`, `IptcMetadata`, `ExtractionConfig` (Phase 2.2)
-- `discovery.rs` : `DiscoveredFile`, `DiscoverySession` (Phase 2.1)
-- `filesystem.rs` : `FileEvent`, `FileLock`, `WatcherConfig`
-- `hashing.rs` : `HashResult`, `BatchHashResult`
-- DTOs pour insertion : `NewImage`, `NewExifMetadata`, `NewIptcMetadata`
-- Support complet `serde::Serialize/Deserialize`
-
-### 12.5 — Tests Unitaires
-
-**11 tests Rust** (100% passants) :
-
-- Tests de création et initialisation de la base de données
-- Tests de migration et idempotence
-- Tests CRUD basiques (insertion, requête)
-- Tests de contraintes de clés étrangères
-- Tests de validation d'index
-- Tests de sérialisation des types
 
 ---
 
@@ -874,7 +923,25 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 
 ---
 
-## 14. Historique des Modifications de ce Document
+
+## 15. Commandes Tauri (Mises à jour)
+
+- `generate_previews_batch(images: Vec<ImageId>, config: PreviewConfig)`
+  - Génère les previews pyramidales en batch (Promise.all côté frontend, batch 4 côté Rust)
+  - Utilise libvips par défaut (configurable)
+  - Retourne la liste des previews générées et les erreurs éventuelles
+
+## 16. Services Frontend (Mises à jour)
+
+- `previewService.generatePreviewsBatch(images: CatalogImage[])`
+  - Appelle la commande Tauri batch, gère Promise.all côté frontend
+  - Retourne les résultats de génération (succès/erreurs)
+
+## 17. Types & Interfaces (Mises à jour)
+
+- `PreviewConfig` (Rust/TS) : champ `use_libvips: bool` activé par défaut
+
+## 18. Historique des Modifications de ce Document
 
 | Date       | Phase               | Modification                                                       | Raison                                         |
 | ---------- | ------------------- | ------------------------------------------------------------------ | ---------------------------------------------- |

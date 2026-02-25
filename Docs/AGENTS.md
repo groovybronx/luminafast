@@ -1,3 +1,4 @@
+
 # LuminaFast Agents — Documentation & Briefs
 
 > **Directives spécialisées pour la documentation du projet.**
@@ -13,8 +14,7 @@
 
 ### 1.2 — Quand Mettre à Jour
 
-Après **CHAQUE sous-phase** qui modifie:
-
+Après **CHAQUE sous-phase** qui modifie :
 - L'architecture ou l'organisation des fichiers
 - Les APIs/commands Tauri
 - Le schéma de base de données
@@ -22,45 +22,62 @@ Après **CHAQUE sous-phase** qui modifie:
 - Les dépendances majeures
 - Le statut des phases/sous-phases
 
-**N'PAS mettre à jour** pour:
+**Ne PAS mettre à jour** pour :
 - Refactoring interne (logs, constantes)
 - Corrections de bugs mineures
 - Changements de noms de variables locales
 
-### 1.3 — Structure du Document
+### 1.3 — Structure du Document (doit correspondre à la table des matières réelle)
 
 ```markdown
 # LuminaFast — Documentation de l'Application
 
-## 1. Vue d'Ensemble
-- État actuel (phases complétées)
-- Objectif du projet
-- Date de dernière mise à jour
-
+## 1. Vue d’Ensemble
 ## 2. Stack Technique Actuelle
-- Tableau avec technos, versions, statut
-
 ## 3. Architecture des Fichiers
-- Structure complète `src/`, `src-tauri/`, et modifié depuis dernière maj
+## 4. Composants UI
+  - 4.1 Composants
+  - 4.2 Stores Zustand
+  - 4.3 Zones de l’interface
+## 5. Modèle de Données
+  - 5.1 Structure d’une Image
+  - 5.2 Structure d’un Event
+## 6. Fonctionnalités — État Actuel
+## 7. Raccourcis Clavier
+## 8. Dépendances npm
+## 9. Dépendances Rust
+## 10. Configuration
+## 11. Schéma et Base de Données SQLite
+  - 11.1 Architecture du Catalogue
+  - 11.2 Configuration SQLite
+  - 11.3 Système de Migrations
+  - 11.4 Types Rust
+  - 11.5 Tests Unitaires
+## 12. Outils de Qualité et CI/CD
+  - 12.1 Linting et Formatting
+  - 12.2 Tests et Coverage
+  - 12.3 Pipeline CI/CD
+  - 12.4 Scripts de Développement
+## 13. Services EXIF/IPTC
+  - 13.1 Architecture EXIF
+  - 13.2 Métadonnées EXIF
+  - 13.3 Métadonnées IPTC
+  - 13.4 Performance et Intégration
+## 14. Service Filesystem
+  - 14.1 Architecture du Service
+  - 14.2 Types Unifiés
+  - 14.3 Concurrence et Performance
+  - 14.4 Commandes Tauri
+  - 14.5 Tests et Validation
+## 15. Commandes Tauri (Mises à jour)
+## 16. Services Frontend (Mises à jour)
+## 17. Types & Interfaces (Mises à jour)
+## 18. Historique des Modifications
 
-## 4. Stack de Tests
-- Couverture actuelle
-- Stratégies utilisées
-
-## 5. Schéma de Base de Données
-- ERD ou liste des tables
-
-## 6. APIs Tauri Commands
-- Chaque command avec arguments + retours
-
-## 7. Modules Clés
-- Description de chaque module majeur
-
-## 8. Décisions de Projet
-- Décisions architecturales validées
-
-## 9. État des Phases
-- Tableau récapitulatif du CHANGELOG
+**Annexes** :
+- Smart Collections : Logique SQL et compatibilité parser
+- Phase 3.4 : Folder Navigator
+- Phase 3.5 : Recherche & Filtrage
 ```
 
 ### 1.4 — Exemple de Mise à Jour
@@ -181,7 +198,7 @@ export interface EventDTO {
 - Utiliser les enums Rust pour les types d'events
 - Snapshots sérialisés en JSON dans la DB
 - Replay atomique (tout ou rien)
-```
+
 
 ### 3.3 — Template Officiel
 
@@ -226,7 +243,7 @@ function foo() {
 | En-tête 1 | En-tête 2 |
 |-----------|-----------|
 | Ligne 1   | Valeur 1  |
-```
+
 
 ### 4.3 — Listes
 

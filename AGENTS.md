@@ -60,7 +60,7 @@ Documenter dans le commit et le CHANGELOG.
 
 1. **Tous les tests passent** (unitaires + intégration + non-régression)
 2. **Mettre à jour** : `Docs/CHANGELOG.md` (nouvelle entrée)
-3. **Mettre à jour** : `Docs/APP_DOCUMENTATION.md` (si architecture change)
+3. **Mettre à jour** : `Docs/APP_DOCUMENTATION.md` en respectant la structure existante
 4. **Créer le brief suivant** : `Docs/briefs/PHASE-X.(Y+1).md`
 
 ---

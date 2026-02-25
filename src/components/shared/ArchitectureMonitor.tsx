@@ -16,7 +16,7 @@ export const ArchitectureMonitor = ({ logs }: ArchitectureMonitorProps) => {
 
   return (
     <div
-      className={`fixed bottom-4 right-4 bg-zinc-950/95 backdrop-blur border border-zinc-800 rounded-lg shadow-2xl overflow-hidden text-[10px] font-mono z-[100] transition-all hover:opacity-100 opacity-80 pointer-events-none ${isMinimized ? 'w-12 h-12' : 'w-80'}`}
+      className={`fixed bottom-4 right-4 bg-zinc-950/95 backdrop-blur border border-zinc-800 rounded-lg shadow-2xl overflow-hidden text-[10px] font-mono z-100 transition-all hover:opacity-100 opacity-80 pointer-events-none ${isMinimized ? 'w-12 h-12' : 'w-80'}`}
     >
       <div className="bg-zinc-900 px-3 py-2 border-b border-zinc-800 flex justify-between items-center">
         <span className="text-zinc-400 font-bold flex items-center gap-2">

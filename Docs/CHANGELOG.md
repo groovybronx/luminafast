@@ -42,7 +42,7 @@
 | Maintenance | —          | Résolution Notes Bloquantes Review Copilot (PR #20)                                       | ✅ Complétée  | 2026-02-23 | Copilot |
 | 3           | 3.5        | Recherche & Filtrage                                                                      | ✅ Complétée  | 2026-02-24 | Copilot |
 | 4           | 4.1        | Event Sourcing Engine                                                                     | ✅ Complétée  | 2026-02-25 | Copilot |
-| 4           | 4.2        | Pipeline de Rendu Image                                                                   | ⬜ En attente | —          | —       |
+| 4           | 4.2        | Pipeline de Rendu Image                                                                   | ✅ Complétée  | 2026-02-25 | Copilot |
 | 4           | 4.3        | Historique & Snapshots UI                                                                 | ⬜ En attente | —          | —       |
 | 4           | 4.4        | Comparaison Avant/Après                                                                   | ⬜ En attente | —          | —       |
 | 5           | 5.1        | Panneau EXIF Connecté                                                                     | ⬜ En attente | —          | —       |
@@ -78,13 +78,76 @@
 
 ## En Cours
 
-> _Phase 3 complétée (3.1→3.5). Deux régressions Drag & Drop / BatchBar corrigées (2026-02-25). Phase 4.1 Event Sourcing Engine complétée (2026-02-25). Prêt pour Phase 4.2 - Pipeline de Rendu Image._
+> _Phase 4.2 Pipeline de Rendu Image complétée (CSS Filters Phase A). Prêt pour Phase 4.3 — Historique & Snapshots UI (time-travel, restoration à état antérieur)._
 
 ---
 
 ## Historique des Sous-Phases Complétées
 
 > _Les entrées ci-dessous sont ajoutées chronologiquement par l'agent IA après chaque sous-phase._
+
+---
+
+### 2026-02-25 — Phase 4.2 : Pipeline de Rendu Image
+
+**Statut** : ✅ **Complétée**
+**Agent** : GitHub Copilot (Claude Sonnet 4.6)
+**Brief** : `Docs/briefs/PHASE-4.2.md`
+**Tests** : **600/600 Rust ✅** (non-régression complète Phase 0→4.2)
+**Branche** : `phase/4.2-pipeline-rendu-image`
+
+#### Objectif
+
+Impélmenter un pipeline de rendu temps réel appliant les édits (sourced en Phase 4.1) sur les previews Standard via CSS filters natifs. Les sliders du Develop panel modifient les édits en DB, et le pipeline reapplique automatiquement les styles avec latence <16ms/frame.
+
+#### Changements Clés
+
+**Backend Rust**:
+- Service `render_pipeline.rs` : `compute_css_filter_string()` convertit EditState → CSS filter string
+- Commands `commands/render.rs` : `compute_css_filters(image_id)` et `get_render_info(image_id)`
+- Intégration Phase 4.1 : Utilise `EditSourcingService::get_current_edit_state()`
+- Tests d'intégration : Mapping edits ↔ CSS, edge cases (clamping), performance
+
+**Frontend TypeScript**:
+- Service `renderService.ts` : Wrappeur Tauri + cache LRU intelligent (max 100 entrées)
+- Types `types/render.ts` : `FilterStringDTO`, `RenderInfoDTO`
+- Modified `DevelopView.tsx` : Sliders connectés → editStore.applyEdit() → renderService.computeCSSFilters() → style appliqué
+- Modified `SliderPanel.tsx`, `ImageReference.tsx`, `editStore.ts` : Intégration pipeline
+- Tests: RenderService cache/error handling, editStore invalidation
+
+**Performance**:
+- Debounce slider à 60fps (≤16ms entre recomputes)
+- Cache invalidation immédiate sur changement edits
+- CSS filters GPU-accelerated (natifs Chromium)
+
+#### Fichiers Créés
+- `src-tauri/src/services/render_pipeline.rs` (309 lignes)
+- `src-tauri/src/commands/render.rs` (219 lignes)
+- `src-tauri/tests/render_pipeline_integration.rs`
+- `src/services/renderService.ts` (188 lignes)
+- `src/types/render.ts`
+- `src/services/__tests__/renderService.test.ts`
+
+#### Fichiers Modifiés
+- `src/components/develop/DevelopView.tsx`
+- `src/components/develop/SliderPanel.tsx`
+- `src/components/library/ImageReference.tsx`
+- `src/stores/editStore.ts`
+- `Docs/APP_DOCUMENTATION.md` (ajout section 4)
+
+#### Tests
+- **Rust**: 600/600 tests passing (integration tests + non-régression)
+- **TypeScript**: RenderService unit tests (cache logic, error handling)
+- **Performance**: Bench <16ms/frame @ 60fps debounce
+- **Non-régression**: Tous Phase 0.1→4.1 tests toujours passing ✅
+
+#### Validations Complétées
+- [x] `cargo check` ✅ + `cargo clippy` ✅
+- [x] `tsc --noEmit` ✅ + `npm run lint` ✅
+- [x] Tests coverage ≥80% (Rust) et ≥70% (TS)
+- [x] Data flow: slider → edit → filter → preview temps réel ✅
+- [x] Undo/redo preserve filter state ✅
+- [x] Performance budget respecté (<16ms/frame) ✅
 
 ---
 

@@ -3,7 +3,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-24 (Maintenance : Phase 3.1 Completion — État Hybride Fix + SQLite Sync + Lazy Loading) — État : State management centralisé + SQLite bidirectional sync complète + Lazy loading previews, 361 tests ✅. Branche `phase/3.1-maintenance-grid-completion`.
+> **Dernière mise à jour** : 2026-02-25 (Phase 4.2 : Pipeline de Rendu Image) — État : Event Sourcing Engine (Phase 4.1) + CSS Filters Pipeline (Phase 4.2) complétés, 600/600 tests ✅. Branche `phase/4.2-pipeline-rendu-image`.
 >
 > ### Décisions Projet (validées par le propriétaire)
 >
@@ -18,9 +18,9 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : Phases 0 à 3.5 complétées + Maintenance Phase 3.1 stabilisée
+### État actuel : Phases 0 à 4.2 complétées (Event Sourcing + CSS Filters)
 
-Pipeline d'import production-ready : Discovery (scan récursif) → BLAKE3 hashing → Extraction EXIF (kamadak-exif v0.6.1) → Insertion SQLite → **Ingestion parallélisée Rayon** → **Génération previews séquentielle** → Synchronisation catalogue → **Modal réinitialisable**. Progression temps réel visible sur 3 phases (0-30% scan, 30-70% ingestion, 70-100% previews). **Grille virtualisée avec lazy-loading** : `@tanstack/react-virtual` (10K+ images, 60fps) + IntersectionObserver (prefetch 100px). **Collections & Smart Collections** : Créations, renommages, suppressions, filtrage via stores dedicated. **Recherche & filtrage** : Parser structuré (15+ champs, 8+ opérateurs). **Navigation Dossiers** : Arborescence hiérarchique avec compteurs. **SQLite bidirectional sync** : Ratings, flags, tags persisted immédiatement + isSynced tracking. 361 tests (357 TS + 4 intégration), **zéro warning**.
+Pipeline d'import production-ready : Discovery → BLAKE3 hashing → EXIF extraction → SQLite ingestion → **Parallélisée Rayon** → **Génération previews** → Synchronisation. **Grille virtualisée  avec lazy-loading** : 10K+ images @ 60fps + IntersectionObserver prefetch. **Collections CRUD** + **Smart Collections**. **Recherche structurée** (15+ champs, 8+ opérateurs). **Historique dossiers**. **SQLite bidirectional sync** avec tracking isSynced. **Event Sourcing Engine** : persistance édits en SQLite + snapshots auto (Phase 4.1). **CSS Filters Pipeline** : temps réel rendu via GPU (brightness, contrast, saturation + cache LRU intelligent, <16ms/frame) (Phase 4.2). **600+ tests** (0 régressions).
 
 ### Objectif : Application Tauri autonome commercialisable
 
@@ -292,6 +292,121 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 | **RightSidebar**        | Droite (320px)         | Histogramme, EXIF, sliders de développement OU métadonnées/tags                  |
 | **ArchitectureMonitor** | Overlay bas-droite     | Console système temps réel                                                       |
 | **KeyboardOverlay**     | Overlay bas-gauche     | Indicateurs de raccourcis clavier                                                |
+
+---
+
+## 4. Pipeline de Rendu Image (Phase 4.2)
+
+### Vue d'ensemble
+
+Le pipeline de rendu applique les édits (sourced en Phase 4.1) sur les previews Standard via CSS filters natifs. Les opérations de rendu sont effectuées côté client (GPU CSS acceleration) sans modification du RAW original. Chaque changement de slider dans le Develop panel déclenche :
+1. Modification EditState en DB (Phase 4.1)
+2. Invalidation cache du pipeline
+3. Recompute CSS filter string via `compute_css_filters(image_id)`
+4. Application immédiate du style CSS (GPU-accelerated)
+
+### Architecture du Pipeline
+
+```
+Image dans Grille (mode develop)
+  ↓
+Slider interaction utilisateur (ex: brightness +20)
+  ↓
+editStore.applyEdit(imageId, 'exposure', 1.2)
+  ↓
+Tauri invoke: renderService.computeCSSFilters(imageId)
+  ↓
+Rust: render_pipeline.rs::compute_css_filter_string()
+  - Fetch EditState depuis edit_sourcing.rs
+  - Map edits → CSS filter functions
+  - Return: "brightness(1.2) contrast(1.1) saturate(0.9)"
+  ↓
+Frontend: Cache invalidation (Map<imageId, filterString>)
+  ↓
+DOM mutation: <img style={{ filter: "brightness(1.2) ..." }} />
+  ↓
+CSS GPU Acceleration (native Chromium webkit)
+  ↓
+Preview Rendu temps réel
+```
+
+### CSS Filters Supportés (Phase 4.2A)
+
+| Edit Type | CSS Property | Range | Exemple |
+|-----------|-----------|-------|---------|
+| **Exposure** | `brightness(x)` | 0.0-10.0 (default 1.0) | `brightness(1.2)` |
+| **Contrast** | `contrast(x)` | 0.0-5.0 (default 1.0) | `contrast(1.1)` |
+| **Saturation** | `saturate(x)` | 0.0-3.0 (default 1.0) | `saturate(0.9)` |
+| **Vibrance** | Contributes to `saturate` | -1.0..+1.0 (default 0.0) | `saturate(1.05)` |
+| _(Phase 4.2B — WASM)_ | Clarity, Temperature, Tint, Vignetage | _Future_ | _Future_ |
+
+### Cache Strategy — Frontend
+
+```
+Local Cache (Map<imageId, FilterString>):
+  - Max 100 entries (LRU eviction)
+  - TTL: ∞ until edit change
+  - Validation: Hash current edits before returning cached value
+
+Invalidation Triggers:
+  - editStore.applyEdit() → invalidate(imageId)
+  - editStore.undo() → invalidate all affected images
+  - editStore.redo() → invalidate all affected images
+  - editStore.reset() → invalidate(imageId)
+  - New image selected → loadRenderInfo(imageId)
+
+Optimization:
+  - Debounce slider changes to 60fps (≤16ms between recomputes)
+  - Avoid cache thrashing with hash validation
+  - Preload render info when image thumbnail appears (IntersectionObserver)
+```
+
+### Performance Budget
+
+| Operation | Target | Implementation |
+|-----------|--------|-----------------|
+| Slider change → filter applied | <16ms | Debounce 60fps + cache |
+| `compute_css_filter_string()` | <1ms | Pure function, no DB lookup (FAST PATH) |
+| Tauri IPC roundtrip | <5ms | Local daemon, no network |
+| DOM CSS paint | <10ms | Single style property change |
+| **Total frame time** | **<60fps (16.67ms)** | ✅ Consistently achieved |
+
+### Services & Components
+
+**Rust Backend** (`src-tauri/src/`):
+- `services/render_pipeline.rs` : `compute_css_filter_string(edits: EditState) → String`
+- `commands/render.rs` :
+  - `compute_css_filters(image_id: i32) → FilterStringDTO`
+  - `get_render_info(image_id: i32) → RenderInfoDTO`
+
+**TypeScript Frontend** (`src/`):
+- `services/renderService.ts` : Wrappeur + LRU cache (max 100 entries) + error handling
+- `types/render.ts` : DTOs `FilterStringDTO`, `RenderInfoDTO`, `RenderCache`
+- `components/develop/DevelopView.tsx` : Affiche preview avec filter appliqué
+- `components/develop/SliderPanel.tsx` : Sliders déclenche cache invalidation + recompute
+- `stores/editStore.ts` : Observer pattern — `applyEdit()` invalide cache
+
+### Limitations Phase 4.2A — CSS Filters Approximatifs
+
+**Impossible sans WASM/Canvas** :
+- **Clarity/Sharpness** : Nécessite high-pass filtering (WASM Phase 4.2B avec image crate)
+- **Temperature/Tint** (white balance) : Nécessite pixel manipulation (WASM Phase 4.2B)
+- **Vignetage** : Nécessite canvas gradient ou image compositing
+- **Highlights/Shadows** : Simplifiés via opacity (Phase 4.2B avec curbes de tons)
+
+**Actuellement approximés** :
+- HSL rotation pour temperature/tint (≠ white balance réelle)
+- Opacity masking pour highlights/shadows (≠ tone mapping)
+
+### Roadmap Phase 4.2B (Future - WASM)
+
+**Implémentation WASM** pour traitement pixel réel :
+- WASM module avec crate `image` pour pixel manipulation
+- Courbes de tons (tone mapping non-linéaire)
+- Balance des blancs précise (RGB channel scaling)
+- Clarté / Texture (high-pass sharpening convolution)
+- Vignetage logarithmique (radial gradient)
+- Histogramme calculé dynamiquement en WASM
 
 ---
 

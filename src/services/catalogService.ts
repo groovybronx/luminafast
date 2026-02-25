@@ -105,8 +105,8 @@ export class CatalogService {
       const invoke = this.getInvoke();
       const result = await invoke('create_collection', {
         name,
-        collection_type: collectionType,
-        parent_id: parentId,
+        collectionType,
+        parentId,
       });
       return result as CollectionDTO;
     } catch (error) {
@@ -122,13 +122,13 @@ export class CatalogService {
       const invoke = this.getInvoke();
       if (import.meta.env.DEV) {
         console.warn('[CatalogService] addImagesToCollection:', {
-          collection_id: collectionId,
-          image_ids: imageIds,
+          collectionId,
+          imageIds,
         });
       }
       await invoke('add_images_to_collection', {
-        collection_id: collectionId,
-        image_ids: imageIds,
+        collectionId,
+        imageIds,
       });
       if (import.meta.env.DEV) {
         console.warn('[CatalogService] addImagesToCollection success');
@@ -144,7 +144,7 @@ export class CatalogService {
   static async deleteCollection(id: number): Promise<void> {
     try {
       const invoke = this.getInvoke();
-      await invoke('delete_collection', { collection_id: id });
+      await invoke('delete_collection', { collectionId: id });
     } catch (error) {
       throw this.parseError(error);
     }
@@ -156,7 +156,7 @@ export class CatalogService {
   static async renameCollection(id: number, name: string): Promise<void> {
     try {
       const invoke = this.getInvoke();
-      await invoke('rename_collection', { collection_id: id, name });
+      await invoke('rename_collection', { collectionId: id, name });
     } catch (error) {
       throw this.parseError(error);
     }
@@ -169,8 +169,8 @@ export class CatalogService {
     try {
       const invoke = this.getInvoke();
       await invoke('remove_images_from_collection', {
-        collection_id: collectionId,
-        image_ids: imageIds,
+        collectionId,
+        imageIds,
       });
     } catch (error) {
       throw this.parseError(error);
@@ -185,7 +185,7 @@ export class CatalogService {
   ): Promise<import('../types/dto').ImageDTO[]> {
     try {
       const invoke = this.getInvoke();
-      const result = await invoke('get_collection_images', { collection_id: collectionId });
+      const result = await invoke('get_collection_images', { collectionId });
       return result as import('../types/dto').ImageDTO[];
     } catch (error) {
       throw this.parseError(error);
@@ -207,8 +207,8 @@ export class CatalogService {
       const invoke = this.getInvoke();
       const result = await invoke('create_smart_collection', {
         name,
-        smart_query: smartQuery,
-        parent_id: parentId,
+        smartQuery,
+        parentId,
       });
       return result as CollectionDTO;
     } catch (error) {
@@ -225,7 +225,7 @@ export class CatalogService {
   ): Promise<import('../types/dto').ImageDTO[]> {
     try {
       const invoke = this.getInvoke();
-      const result = await invoke('get_smart_collection_results', { collection_id: collectionId });
+      const result = await invoke('get_smart_collection_results', { collectionId });
       return result as import('../types/dto').ImageDTO[];
     } catch (error) {
       throw this.parseError(error);
@@ -240,10 +240,7 @@ export class CatalogService {
   static async updateSmartCollection(collectionId: number, smartQuery: string): Promise<void> {
     try {
       const invoke = this.getInvoke();
-      await invoke('update_smart_collection', {
-        collection_id: collectionId,
-        smart_query: smartQuery,
-      });
+      await invoke('update_smart_collection', { collectionId, smartQuery });
     } catch (error) {
       throw this.parseError(error);
     }

@@ -471,7 +471,7 @@ CREATE INDEX idx_snapshots_created ON edit_snapshots(created_at);
     timestamp: string;
     is_cancelled: bool;
   }
-  
+
   export interface SnapshotDTO {
     id: i32;
     image_id: i32;

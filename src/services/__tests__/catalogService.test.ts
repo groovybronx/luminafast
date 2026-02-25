@@ -21,7 +21,7 @@ describe('CatalogService — Collection Methods (Phase 3.2)', () => {
 
       await CatalogService.deleteCollection(42);
 
-      expect(mockTauriInvoke).toHaveBeenCalledWith('delete_collection', { collectionId: 42 });
+      expect(mockTauriInvoke).toHaveBeenCalledWith('delete_collection', { collection_id: 42 });
     });
 
     it('should throw an error when collection is not found', async () => {
@@ -39,7 +39,7 @@ describe('CatalogService — Collection Methods (Phase 3.2)', () => {
       await CatalogService.renameCollection(3, 'New Name');
 
       expect(mockTauriInvoke).toHaveBeenCalledWith('rename_collection', {
-        collectionId: 3,
+        collection_id: 3,
         name: 'New Name',
       });
     });
@@ -61,8 +61,8 @@ describe('CatalogService — Collection Methods (Phase 3.2)', () => {
       await CatalogService.removeImagesFromCollection(5, [10, 20, 30]);
 
       expect(mockTauriInvoke).toHaveBeenCalledWith('remove_images_from_collection', {
-        collectionId: 5,
-        imageIds: [10, 20, 30],
+        collection_id: 5,
+        image_ids: [10, 20, 30],
       });
     });
 
@@ -98,7 +98,7 @@ describe('CatalogService — Collection Methods (Phase 3.2)', () => {
 
       const result = await CatalogService.getCollectionImages(7);
 
-      expect(mockTauriInvoke).toHaveBeenCalledWith('get_collection_images', { collectionId: 7 });
+      expect(mockTauriInvoke).toHaveBeenCalledWith('get_collection_images', { collection_id: 7 });
       expect(result).toHaveLength(2);
       expect(result[0]!.id).toBe(10);
       expect(result[1]!.id).toBe(20);

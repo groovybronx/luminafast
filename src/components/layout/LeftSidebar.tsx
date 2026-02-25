@@ -134,6 +134,7 @@ function CollectionItem({
   };
 
   const handleDrop = async (e: React.DragEvent) => {
+    console.warn(`[CollectionItem.handleDrop] Drop on ${collection.name}`);
     e.preventDefault();
     e.stopPropagation();
     dragCounterRef.current = 0;
@@ -141,13 +142,27 @@ function CollectionItem({
 
     try {
       const jsonStr = e.dataTransfer.getData('application/json');
-      if (!jsonStr) return;
+      console.warn(`[CollectionItem.handleDrop] jsonStr:`, jsonStr);
+      if (!jsonStr) {
+        console.warn(`[CollectionItem.handleDrop] No JSON data found`);
+        return;
+      }
 
       const dragData = parseDragData(jsonStr);
+      console.warn(`[CollectionItem.handleDrop] dragData:`, dragData);
       if (dragData && isDragImageData(dragData) && dragData.ids.length > 0) {
+        console.warn(
+          `[CollectionItem.handleDrop] Valid drag data, calling onDrop with ids:`,
+          dragData.ids,
+        );
         await onDrop(collection.id, dragData);
+      } else {
+        console.warn(
+          `[CollectionItem.handleDrop] Invalid drag data or empty ids. dragData=${dragData ? 'exists' : 'null'}.`,
+        );
       }
-    } catch {
+    } catch (err) {
+      console.error(`[CollectionItem.handleDrop] Error:`, err);
       // Silently ignore invalid drag data (not logged by design)
     }
   };

@@ -1,7 +1,31 @@
 use crate::database::Database;
 use crate::models::edit::{EditEventDTO, EditStateDTO};
+use log;
 use rusqlite::params;
 use std::collections::HashMap;
+use thiserror::Error;
+
+/// Erreurs spécifiques au service Event Sourcing
+#[derive(Error, Debug)]
+pub enum EditSourcingError {
+    #[error("Database operation failed: {0}")]
+    DatabaseError(String),
+
+    #[error("Failed to parse JSON payload: {0}")]
+    PayloadParseError(String),
+
+    #[error("Image not found (id: {0})")]
+    ImageNotFound(i64),
+
+    #[error("No events found for image {0}")]
+    NoEventsFound(i64),
+
+    #[error("Invalid event state: {0}")]
+    InvalidEventState(String),
+}
+
+/// Alias pour les résultats du service Event Sourcing
+pub type EditSourcingResult<T> = Result<T, EditSourcingError>;
 
 /// Service Event Sourcing pour les éditions non-destructives d'images.
 /// L'état courant est toujours reconstruit par rejeu des events (+ snapshot optionnel).
@@ -274,14 +298,19 @@ impl EditSourcingService {
 
         let events: Vec<EditEventDTO> = rows
             .into_iter()
-            .map(|(id, event_type, payload_str, is_undone_int, created_at)| {
-                let payload = serde_json::from_str(&payload_str).unwrap_or(serde_json::Value::Null);
-                EditEventDTO {
-                    id,
-                    event_type,
-                    payload,
-                    is_undone: is_undone_int != 0,
-                    created_at,
+            .filter_map(|(id, event_type, payload_str, is_undone_int, created_at)| {
+                match serde_json::from_str::<serde_json::Value>(&payload_str) {
+                    Ok(payload) => Some(EditEventDTO {
+                        id,
+                        event_type,
+                        payload,
+                        is_undone: is_undone_int != 0,
+                        created_at,
+                    }),
+                    Err(e) => {
+                        log::warn!("Failed to parse edit event payload for event id {}: {}", id, e);
+                        None
+                    }
                 }
             })
             .collect();

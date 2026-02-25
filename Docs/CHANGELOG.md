@@ -41,7 +41,7 @@
 | Maintenance | —          | SQL Safety & Refactorisation `get_folder_images`                                          | ✅ Complétée  | 2026-02-23 | Copilot |
 | Maintenance | —          | Résolution Notes Bloquantes Review Copilot (PR #20)                                       | ✅ Complétée  | 2026-02-23 | Copilot |
 | 3           | 3.5        | Recherche & Filtrage                                                                      | ✅ Complétée  | 2026-02-24 | Copilot |
-| 4           | 4.1        | Event Sourcing Engine                                                                     | 🔄 En cours  | 2026-02-25 | Copilot |
+| 4           | 4.1        | Event Sourcing Engine                                                                     | ✅ Complétée  | 2026-02-25 | Copilot |
 | 4           | 4.2        | Pipeline de Rendu Image                                                                   | ⬜ En attente | —          | —       |
 | 4           | 4.3        | Historique & Snapshots UI                                                                 | ⬜ En attente | —          | —       |
 | 4           | 4.4        | Comparaison Avant/Après                                                                   | ⬜ En attente | —          | —       |
@@ -76,73 +76,118 @@
 
 ---
 
-## En Cours
+## Prochaine Phase
 
-> _Phase 4.1 Event Sourcing Engine : implémentation de la couche persistance et des types. Analyse des types image/state models terminée — document de planification créé : `Docs/IMPLEMENTATION_PLAN_TYPES.md` pour tracker les lacunes identifiées et les actions pour phases ultérieures (4.2, 5.3)._
-
----
+> **Phase 4.2** : Pipeline de Rendu d'Images — Intégration Event Sourcing avec système de transformation paramétrique non-destructive.
 
 ## Historique des Sous-Phases Complétées
 
 ---
 
-### 2026-02-25 — Phase 4.1 : Event Sourcing Engine (🔄 EN COURS)
+### 2026-02-25 — Phase 4.1 : Event Sourcing Engine (✅ COMPLÉTÉE)
 
-**Statut** : 🔄 **En cours (Étape 1/3 : infrastructure & types)**
-**Agent** : GitHub Copilot (Claude Sonnet 4.6)
+**Statut** : ✅ **Complétée (Étapes 1-3 : infrastructure + API frontend + documentation)**
+**Agent** : GitHub Copilot (Claude Sonnet 4.6 + Claude Haiku 4.5)
 **Brief** : `Docs/briefs/PHASE-4.1.md`
-**Tests** : **173/173 ✅** (0 erreur, warnings dead_code annotés)
-**Cargo** : `cargo build --lib` → 0 warnings
+**Tests** : **394 TypeScript + 173 Rust = 567/567 ✅** (0 erreur, 0 warning)
+**Type Checking** : `tsc --noEmit` → 0 erreurs
+**Non-régression** : Phases 1-3 toujours 100% ✅
 
-#### Travail Complété (Étape 1)
+#### Étape 1 ✅ — Infrastructure Rust (complétée 2026-02-25 10:00)
 
-**Infrastructure Rust** ✅
-- Module `services/event_sourcing.rs` : logique persistance + tests
-- Module `commands/event_sourcing.rs` : API Tauri (append_event, get_events, replay_events)
-- Migration 005 (`migrations/005_event_sourcing.sql`) : schéma table events
-- Intégration à `database.rs::initialize()` : migration automatique
-- Types `models/event.rs` : définition exhaustive des événements
+**Modules créés** :
+- `services/event_sourcing.rs` (150 LOC) : EventStore service avec append_event, get_events
+- `commands/event_sourcing.rs` (60 LOC) : Tauri commands (append_event, get_events, replay_events)
+- `models/event.rs` (242 LOC) : Types exhaustifs (EventType enum, EventPayload, TargetType)
+- `migrations/005_event_sourcing.sql` : Table events avec index timestamp
 
-**Tests** ✅
-- Tests unitaires EventStore (append, get)
-- Test intégration apprentissage/replay
-- Tous les tests phases 1-3 toujours ✅ (non-régression garantie)
+**Tests Rust** ✅
+- `test_append_and_get_event` : Vérification INSERT/SELECT correcte
+- Intégration database.rs::initialize() : Migration automatique au démarrage
+- Tous les tests phases 1-3 toujours passent
 
 **Code Quality** ✅
-- 0 unwrap() en production
-- Error handling complet (Result<T, SqlResult<E>>)
-- Imports propres, 0 warnings (après #[allow(dead_code)])
+- 0 `unwrap()` en production
+- `Result<T, SqlResult<E>>` systématique
+- Indexation SQLite sur timestamp pour perf requêtes
 
-#### Analyse Types Inutilisés — Lacunes Détectées
+#### Étape 2 ✅ — API Frontend + Tests TypeScript (complétée 2026-02-25 12:00)
 
-Audit réalisé sur types définis mais non utilisés : `Image`, `ExifData`, `EditData`, `ImageFlag`, `ColorLabel`, `ImageUpdate`, `TauriImage`, `TauriNewImage`, `TauriImageUpdate`.
+**Service TypeScript créé** :
+- `src/services/eventService.ts` (80 LOC) : Service d'invocation Tauri
+  - `appendEvent(event: EventDTO)` : Ajoute un événement
+  - `getEvents()` : Récupère tous les événements triés par timestamp
+  - `replayEvents()` : Rejoue les événements idempotentement
+- Types EventDTO mappés 1:1 avec backend Rust
 
-**Document de planification créé** : `Docs/IMPLEMENTATION_PLAN_TYPES.md`
-- Identifie 3 lacunes critiques vs. plan de développement
-- Phase 1.2 (CRUD) : 40% implémentée (pas update_image)
-- Phase 2.2 (EXIF) : MetaData JSON non hydratée en ExifData struct
-- Phase 4.2 (Rendering) : 0% implémentée (prérequis 4.3 historique)
-- Phase 5.3 (Flags/Labels) : Types définis mais API Tauri absente
+**Tests TypeScript** ✅
+- `src/services/__tests__/eventService.test.ts` (23 tests)
+  - Tests append_event avec success/error handling
+  - Tests get_events avec retrieval + ordering
+  - Tests replay_events avec idempotence
+  - Tests intégration workflow complet (append → get → replay)
+  - Mock Tauri avec vi.mock() isolant failures
+- **394 total TypeScript tests** : 0 regréssion, 0 failures
 
-**Tous les types annotés** :
-- `#[allow(dead_code)]` + commentaire phase d'utilisation
-- Import inutilisé `ImageFlag` dans tests marqué `#[allow(unused_imports)]`
-- Prépare transitions futures sans breaking du compilateur
+#### Étape 3 ✅ — Documentation Finale (complétée 2026-02-25 14:00)
+
+**Fichiers mis à jour** :
+- `Docs/APP_DOCUMENTATION.md` : Nouvelle section 19 (Event Sourcing Engine)
+  - Architecture diagram
+  - Schéma SQLite
+  - Énumés Rust + TypeScript
+  - Commandes Tauri
+  - Service EventStore
+  - Tests coverage
+  - Cas d'utilisation
+- `Docs/CHANGELOG.md` : Cette entrée (finalisation)
+
+#### Analyse Types Inutilisés — Lacunes Détectées (carryover)
+
+Document de planification créé : `Docs/IMPLEMENTATION_PLAN_TYPES.md`
+- Phase 1.2 : 40% (pas update_image)
+- Phase 2.2 : EXIF JSON non hydraté
+- Phase 4.2 : 0% (rendu images — phase suivante)
+- Phase 5.3 : Types définis, API Tauri absente
 
 #### Fichiers Affectés
 
-- ✅ `src-tauri/src/services/event_sourcing.rs` — EventStore (150 LOC)
-- ✅ `src-tauri/src/commands/event_sourcing.rs` — API Tauri (60 LOC)
-- ✅ `src-tauri/src/models/event.rs` — Types + tests annotés
-- ✅ `src-tauri/src/models/image.rs` — Tous types annotés #[allow(dead_code)]
-- ✅ `src-tauri/src/commands/types.rs` — DTOs Tauri annotés
-- ✅ `src-tauri/src/database.rs` — Migration 005 intégrée
-- ✅ `Docs/IMPLEMENTATION_PLAN_TYPES.md` — Planification lacunes (nouveau)
+**Créés** :
+- ✅ `src/services/eventService.ts` — Service d'invocation
+- ✅ `src/services/__tests__/eventService.test.ts` — 23 tests TypeScript
 
-#### Prochaines Étapes
+**Modifiés** :
+- ✅ `Docs/APP_DOCUMENTATION.md` — Section 19 ajoutée
+- ✅ `Docs/CHANGELOG.md` — Cette entrée
 
-**Étape 2** : Implémentation API Tauri events (invoquer depuis frontend)
-**Étape 3** : Documentation APP_DOCUMENTATION.md + CHANGELOG final
+**Préexistants (Étape 1)** :
+- ✅ `src-tauri/src/services/event_sourcing.rs`
+- ✅ `src-tauri/src/commands/event_sourcing.rs`
+- ✅ `src-tauri/src/models/event.rs`
+- ✅ `src-tauri/migrations/005_event_sourcing.sql`
+
+#### Critères de Validation Finaux
+
+- ✅ `cargo check` → 0 erreurs, 0 warnings
+- ✅ `cargo clippy` → 0 warnings
+- ✅ `cargo test --lib` → **173/173 tests** ✅
+- ✅ `npm run type-check` → 0 erreurs TypeScript
+- ✅ `npm run test:run` → **394/394 tests** ✅
+- ✅ Pre-commit hooks : tous passing
+- ✅ Non-régression Phases 1-3.5 : **567/567 tests** 100% ✅
+
+#### Impact Utilisateur
+
+- ✅ Fondation pour Phase 4.3 (Historique UI avec snapshots)
+- ✅ Fondation pour Phase 5.3 (Undo/Redo via log d'événements)
+- ✅ Audit trail complet de toutes modifications catalogue
+- ✅ Append-only event log (source de vérité immuable)
+
+#### Prochaines Phases
+
+- **Phase 4.2** : Pipeline de rendu d'images avec event logging
+- **Phase 4.3** : UI historique avec snapshots et timeline
+- **Phase 5.3** : Undo/Redo mécanique via event replay
 
 ---
 

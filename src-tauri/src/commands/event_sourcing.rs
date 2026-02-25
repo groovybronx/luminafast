@@ -1,8 +1,8 @@
-use tauri::State;
-use crate::services::event_sourcing::EventStore;
-use crate::models::event::Event;
-use serde::{Deserialize, Serialize};
 use crate::commands::catalog::AppState;
+use crate::models::event::Event;
+use crate::services::event_sourcing::EventStore;
+use serde::{Deserialize, Serialize};
+use tauri::State;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventDTO {
@@ -32,19 +32,22 @@ pub fn get_events(state: State<AppState>) -> Result<Vec<EventDTO>, String> {
     let conn = db_guard.connection();
     let store = EventStore::new(conn);
     let events = store.get_events().map_err(|e| e.to_string())?;
-    let dtos = events.into_iter().map(|e| {
-        let payload = serde_json::to_value(&e.payload).unwrap_or(serde_json::Value::Null);
-        EventDTO {
-            id: e.id,
-            timestamp: e.timestamp,
-            event_type: format!("{:?}", e.event_type),
-            payload,
-            target_type: format!("{:?}", e.target_type),
-            target_id: e.target_id,
-            user_id: e.user_id,
-            created_at: e.created_at.to_rfc3339(),
-        }
-    }).collect();
+    let dtos = events
+        .into_iter()
+        .map(|e| {
+            let payload = serde_json::to_value(&e.payload).unwrap_or(serde_json::Value::Null);
+            EventDTO {
+                id: e.id,
+                timestamp: e.timestamp,
+                event_type: format!("{:?}", e.event_type),
+                payload,
+                target_type: format!("{:?}", e.target_type),
+                target_id: e.target_id,
+                user_id: e.user_id,
+                created_at: e.created_at.to_rfc3339(),
+            }
+        })
+        .collect();
     Ok(dtos)
 }
 

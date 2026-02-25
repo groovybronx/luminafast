@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(dead_code)] // Utilisé à partir de Phase 4.2 (image rendering pipeline) et Phase 5+ (édition, EXIF)

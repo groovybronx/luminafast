@@ -1,10 +1,10 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Event {
-    pub id: String, // UUID
+    pub id: String,     // UUID
     pub timestamp: i64, // Unix timestamp
     pub event_type: EventType,
     pub payload: EventPayload,
@@ -173,7 +173,7 @@ impl NewEvent {
 
     /// Convert to Event with generated ID and timestamps
     #[allow(dead_code)] // Utilisé à partir de Phase 4.2 (création d'événements en production)
-    pub fn to_event(self) -> Event {
+    pub fn into_event(self) -> Event {
         let now = Utc::now();
         Event {
             id: Uuid::new_v4().to_string(),
@@ -191,7 +191,8 @@ impl NewEvent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[allow(unused_imports)] // Utilis\u00e9 dans les tests d'\u00e9v\u00e9nements li\u00e9s au flagging
+    #[allow(unused_imports)]
+    // Utilis\u00e9 dans les tests d'\u00e9v\u00e9nements li\u00e9s au flagging
     use crate::models::image::ImageFlag;
 
     #[test]
@@ -231,7 +232,7 @@ mod tests {
             1,
         );
 
-        let event = new_event.to_event();
+        let event = new_event.into_event();
 
         assert!(!event.id.is_empty());
         assert!(event.timestamp > 0);

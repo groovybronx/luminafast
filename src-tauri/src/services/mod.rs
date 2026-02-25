@@ -1,5 +1,6 @@
 pub mod blake3;
 pub mod discovery;
+pub mod event_sourcing;
 pub mod exif;
 pub mod filesystem;
 pub mod ingestion;
@@ -7,4 +8,3 @@ pub mod iptc;
 pub mod preview;
 pub mod search;
 pub mod smart_query_parser;
-pub mod event_sourcing;

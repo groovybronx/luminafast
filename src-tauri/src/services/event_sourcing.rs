@@ -1,5 +1,5 @@
 use crate::models::event::Event;
-use chrono::{Utc, DateTime};
+use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, Result as SqlResult};
 
 pub struct EventStore<'a> {
@@ -47,7 +47,9 @@ impl<'a> EventStore<'a> {
                 target_type: serde_json::from_str(&target_type).unwrap(),
                 target_id: row.get(5)?,
                 user_id: row.get(6).ok(),
-                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(7)?).unwrap().with_timezone(&Utc),
+                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(7)?)
+                    .unwrap()
+                    .with_timezone(&Utc),
             })
         })?;
         Ok(rows.filter_map(Result::ok).collect())
@@ -57,12 +59,13 @@ impl<'a> EventStore<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::event::{Event, EventType, EventPayload, TargetType, ImageAddedPayload};
+    use crate::models::event::{Event, EventPayload, EventType, ImageAddedPayload, TargetType};
     use uuid::Uuid;
 
     fn setup_db() -> Connection {
         let conn = Connection::open_in_memory().unwrap();
-        conn.execute_batch(r#"
+        conn.execute_batch(
+            r#"
             CREATE TABLE events (
                 id TEXT PRIMARY KEY,
                 timestamp INTEGER,
@@ -73,7 +76,9 @@ mod tests {
                 user_id TEXT,
                 created_at TEXT
             );
-        "#).unwrap();
+        "#,
+        )
+        .unwrap();
         conn
     }
 

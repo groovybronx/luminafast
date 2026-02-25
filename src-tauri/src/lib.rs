@@ -157,6 +157,14 @@ pub fn run() {
             // Render commands (Phase 4.2)
             commands::render::compute_css_filters,
             commands::render::get_render_info,
+            // History commands (Phase 4.3)
+            commands::history::get_event_timeline,
+            commands::history::create_snapshot,
+            commands::history::get_snapshots,
+            commands::history::restore_to_event,
+            commands::history::restore_to_snapshot,
+            commands::history::delete_snapshot,
+            commands::history::count_events_since_import,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

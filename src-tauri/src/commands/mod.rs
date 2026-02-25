@@ -4,6 +4,7 @@ pub mod edit;
 pub mod exif;
 pub mod filesystem;
 pub mod hashing;
+pub mod history;
 pub mod preview;
 pub mod render;
 pub mod search;

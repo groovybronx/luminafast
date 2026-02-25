@@ -3,6 +3,7 @@ pub mod discovery;
 pub mod edit_sourcing;
 pub mod exif;
 pub mod filesystem;
+pub mod history_service;
 pub mod ingestion;
 pub mod iptc;
 pub mod preview;

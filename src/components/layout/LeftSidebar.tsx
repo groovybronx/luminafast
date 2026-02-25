@@ -95,8 +95,6 @@ function CollectionItem({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(collection.name);
   const inputRef = useRef<HTMLInputElement>(null);
-  const dragCounterRef = useRef(0); // Track drag enter/leave to handle child elements
-
   useEffect(() => {
     if (isEditing) inputRef.current?.focus();
   }, [isEditing]);
@@ -109,61 +107,38 @@ function CollectionItem({
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
-    console.warn(
-      `[CollectionItem] dragEnter on ${collection.name}, counter before: ${dragCounterRef.current}`,
-    );
-    dragCounterRef.current += 1;
     onDragOver();
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
-    console.warn(`[CollectionItem] dragOver on ${collection.name}`);
   };
 
-  const handleDragLeave = (_e: React.DragEvent) => {
-    dragCounterRef.current -= 1;
-    console.warn(
-      `[CollectionItem] dragLeave on ${collection.name}, counter after: ${dragCounterRef.current}`,
-    );
-    // Only reset if we completely left the container (counter = 0)
-    if (dragCounterRef.current === 0) {
+  const handleDragLeave = (e: React.DragEvent) => {
+    const related = e.relatedTarget as Node | null;
+    const container = e.currentTarget as Node;
+    // Only fire leave when pointer truly exits the container (not moving to a child)
+    if (!related || !container.contains(related)) {
       onDragLeave();
     }
   };
 
   const handleDrop = async (e: React.DragEvent) => {
-    console.warn(`[CollectionItem.handleDrop] Drop on ${collection.name}`);
     e.preventDefault();
     e.stopPropagation();
-    dragCounterRef.current = 0;
     onDragLeave();
 
     try {
       const jsonStr = e.dataTransfer.getData('application/json');
-      console.warn(`[CollectionItem.handleDrop] jsonStr:`, jsonStr);
-      if (!jsonStr) {
-        console.warn(`[CollectionItem.handleDrop] No JSON data found`);
-        return;
-      }
+      if (!jsonStr) return;
 
       const dragData = parseDragData(jsonStr);
-      console.warn(`[CollectionItem.handleDrop] dragData:`, dragData);
       if (dragData && isDragImageData(dragData) && dragData.ids.length > 0) {
-        console.warn(
-          `[CollectionItem.handleDrop] Valid drag data, calling onDrop with ids:`,
-          dragData.ids,
-        );
         await onDrop(collection.id, dragData);
-      } else {
-        console.warn(
-          `[CollectionItem.handleDrop] Invalid drag data or empty ids. dragData=${dragData ? 'exists' : 'null'}.`,
-        );
       }
     } catch (err) {
-      console.error(`[CollectionItem.handleDrop] Error:`, err);
-      // Silently ignore invalid drag data (not logged by design)
+      console.error(`[CollectionItem] Drop error:`, err);
     }
   };
 
@@ -317,12 +292,10 @@ export const LeftSidebar = ({
 
   // Parent drag handlers (required to accept drags and propagate to children)
   const handleSidebarDragEnter = (e: React.DragEvent) => {
-    console.warn('[LeftSidebar] Parent dragEnter - accepting drop zone');
     e.preventDefault();
   };
 
   const handleSidebarDragOver = (e: React.DragEvent) => {
-    console.warn('[LeftSidebar] Parent dragOver');
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
   };

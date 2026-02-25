@@ -71,7 +71,6 @@ export const LazyLoadedImageCard = ({
       ids: idsToSend,
     };
 
-    console.warn(`[DragSource] dragStart with ${idsToSend.length} image(s)`);
     e.dataTransfer.effectAllowed = 'copy';
     e.dataTransfer.setData('application/json', JSON.stringify(dragData));
     e.dataTransfer.setData('text/plain', `${idsToSend.length} image(s)`);
@@ -81,7 +80,6 @@ export const LazyLoadedImageCard = ({
   };
 
   const handleDragEnd = () => {
-    console.warn('[DragSource] dragEnd');
     setIsDragging(false);
   };
 

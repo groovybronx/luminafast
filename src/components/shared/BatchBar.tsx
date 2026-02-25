@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Check, Star, Tag, RefreshCw, X, FolderPlus, ChevronUp } from 'lucide-react';
 import type { EditState } from '../../types';
 import { useCollectionStore } from '../../stores/collectionStore';
-import { useCatalogStore } from '../../stores/catalogStore';
+import { useUiStore } from '../../stores/uiStore';
 
 interface BatchBarProps {
   selectionCount: number;
@@ -25,7 +25,7 @@ export const BatchBar = ({
 
   const collections = useCollectionStore((state) => state.collections);
   const addImagesToCollection = useCollectionStore((state) => state.addImagesToCollection);
-  const getSelectionArray = useCatalogStore((state) => state.getSelectionArray);
+  const selection = useUiStore((state) => state.selection);
 
   // Fermer le picker si clic en dehors
   useEffect(() => {
@@ -41,7 +41,7 @@ export const BatchBar = ({
   }, [showCollectionPicker]);
 
   const handleAddToCollection = async (collectionId: number, collectionName: string) => {
-    const ids = getSelectionArray();
+    const ids = Array.from(selection);
     try {
       await addImagesToCollection(collectionId, ids);
       onAddLog(`Added ${ids.length} image(s) to "${collectionName}"`, 'sqlite');
@@ -59,7 +59,7 @@ export const BatchBar = ({
       {showCollectionPicker && (
         <div
           ref={pickerRef}
-          className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl py-1 min-w-[200px] max-h-52 overflow-y-auto"
+          className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl py-1 min-w-50 max-h-52 overflow-y-auto"
         >
           {collections.length === 0 ? (
             <p className="px-4 py-3 text-[11px] text-zinc-500 italic">

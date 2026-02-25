@@ -25,5 +25,3 @@ coverage
 *.sw?
 .obsidian/*
 
-
-.obsidian/workspace.json

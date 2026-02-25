@@ -63,6 +63,8 @@
 | 8           | 8.3        | Résolution de Conflits                                                                    | ⬜ En attente | —          | —       |
 
 | Maintenance | — | Accélération Génération Previews (libvips + batch) | ✅ Complétée | 2026-02-23 | Copilot |
+| Maintenance | — | Régression Tauri IPC camelCase → snake_case (opérations collection) | ✅ Complétée | 2026-02-25 | Copilot |
+| Maintenance | — | Régression BatchBar sélection vide + Drag & Drop détection collection | ✅ Complétée | 2026-02-25 | Copilot |
 
 ### Légende des statuts
 
@@ -76,13 +78,72 @@
 
 ## En Cours
 
-> _Phase 3 Gestion Collections & Navigation complétée (3.1-3.5). Recherche & Filtrage avec parser structuré (iso, star, camera, lens), debounce 500ms. Prêt pour Phase 4 - Event Sourcing._
+> _Phase 3 complétée (3.1→3.5). Deux régressions Drag & Drop / BatchBar corrigées (2026-02-25). Prêt pour Phase 4 - Event Sourcing._
 
 ---
 
 ## Historique des Sous-Phases Complétées
 
 > _Les entrées ci-dessous sont ajoutées chronologiquement par l'agent IA après chaque sous-phase._
+
+---
+
+### 2026-02-25 — Maintenance : Régression Tauri IPC camelCase → snake_case
+
+**Statut** : ✅ **Complétée**
+**Agent** : GitHub Copilot (Claude Sonnet 4.6)
+**Brief** : `Docs/briefs/MAINTENANCE-DRAGDROP-TAURI-REGRESSION.md`
+**Tests** : **551/551 ✅** (0 régression)
+**Commits** : `c151bf5`
+
+#### Cause Racine
+
+**Symptôme** : Toutes les opérations de collection échouent silencieusement après le commit `b37e79e` (add images, delete, rename…).
+
+**Cause** : Le commit `b37e79e` avait changé les paramètres `invoke()` de camelCase vers snake_case en croyant corriger une erreur. Or Tauri v2 `#[tauri::command]` **convertit automatiquement** `collectionId` (JS) → `collection_id` (Rust). En envoyant déjà snake_case, les clés ne matchaient plus → échec silencieux IPC.
+
+**Correction** : Rétabli camelCase (`collectionId`, `imageIds`, `collectionType`, `parentId`, `smartQuery`) dans les 6 méthodes affectées de `catalogService.ts` + tests mis à jour.
+
+#### Règle Architecturale
+
+> **Toujours utiliser camelCase dans `invoke()` frontend — Tauri v2 gère la conversion automatique vers snake_case Rust.**
+
+#### Fichiers Affectés
+
+- ✅ `src/services/catalogService.ts` — camelCase restauré sur 6 méthodes
+- ✅ `src/services/__tests__/catalogService.test.ts` — assertions corrigées
+
+---
+
+### 2026-02-25 — Maintenance : BatchBar Sélection Vide + Drag & Drop Détection Collection
+
+**Statut** : ✅ **Complétée**
+**Agent** : GitHub Copilot (Claude Sonnet 4.6)
+**Brief** : `Docs/briefs/MAINTENANCE-DRAGDROP-TAURI-REGRESSION.md`
+**Tests** : **551/551 ✅** (0 régression)
+**Commits** : `c703555`
+
+#### Cause Racine #1 — BatchBar 0 images
+
+**Symptôme** : L'ArchitectureMonitor affiche `Added 0 image(s) to "collection"` quelle que soit la sélection.
+
+**Cause** : `BatchBar.tsx` lisait `useCatalogStore(state => state.getSelectionArray)()` qui retourne toujours `[]`. La sélection avait été migrée vers `uiStore` lors de la Phase 3.1 Maintenance Checkpoint 1, mais `BatchBar` n'avait pas été mis à jour.
+
+**Correction** : `BatchBar` lit maintenant `useUiStore(state => state.selection)`.
+
+#### Cause Racine #2 — Drag & Drop pas de highlight
+
+**Symptôme** : Aucune zone de collection ne réagit visuellement lors du drag d'images depuis la grille.
+
+**Cause** : `CollectionItem` utilisait un `dragCounterRef` incrémental pour détecter enter/leave sur les éléments enfants. Quand le curseur passait sur un bouton enfant, `dragleave` bubblait et décrémentait le compteur à 0 prématurément → `onDragLeave()` appelé alors que le curseur restait dans la zone.
+
+**Correction** : Remplacé par `e.relatedTarget`/`container.contains(related)` — robuste sans compteur fragile.
+
+#### Fichiers Affectés
+
+- ✅ `src/components/shared/BatchBar.tsx` — lecture sélection depuis `useUiStore`
+- ✅ `src/components/layout/LeftSidebar.tsx` — `handleDragLeave` robuste, suppression debug logs
+- ✅ `src/components/library/LazyLoadedImageCard.tsx` — suppression `console.warn` debug
 
 ---
 

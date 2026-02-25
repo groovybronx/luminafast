@@ -154,6 +154,9 @@ pub fn run() {
             commands::edit::undo_edit,
             commands::edit::redo_edit,
             commands::edit::reset_edits,
+            // Render commands (Phase 4.2)
+            commands::render::compute_css_filters,
+            commands::render::get_render_info,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

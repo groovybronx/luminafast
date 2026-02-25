@@ -375,7 +375,7 @@ Optimization:
 
 **Rust Backend** (`src-tauri/src/`):
 - `services/render_pipeline.rs` : `compute_css_filter_string(edits: EditState) → String`
-- `commands/render.rs` : 
+- `commands/render.rs` :
   - `compute_css_filters(image_id: i32) → FilterStringDTO`
   - `get_render_info(image_id: i32) → RenderInfoDTO`
 

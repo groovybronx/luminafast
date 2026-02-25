@@ -308,7 +308,11 @@ impl EditSourcingService {
                         created_at,
                     }),
                     Err(e) => {
-                        log::warn!("Failed to parse edit event payload for event id {}: {}", id, e);
+                        log::warn!(
+                            "Failed to parse edit event payload for event id {}: {}",
+                            id,
+                            e
+                        );
                         None
                     }
                 }

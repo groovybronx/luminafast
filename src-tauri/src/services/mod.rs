@@ -1,5 +1,6 @@
 pub mod blake3;
 pub mod discovery;
+pub mod event_sourcing;
 pub mod exif;
 pub mod filesystem;
 pub mod ingestion;

@@ -101,6 +101,9 @@ impl Database {
         // Run folder online status migration
         self.run_migration("004_add_folder_online_status")?;
 
+        // Run event sourcing migration
+        self.run_migration("005_event_sourcing")?;
+
         Ok(())
     }
 
@@ -145,6 +148,7 @@ impl Database {
             "004_add_folder_online_status" => {
                 include_str!("../migrations/004_add_folder_online_status.sql")
             }
+            "005_event_sourcing" => include_str!("../migrations/005_event_sourcing.sql"),
             _ => {
                 return Err(DatabaseError::MigrationFailed(format!(
                     "Unknown migration version: {}",
@@ -346,13 +350,13 @@ mod tests {
         db.initialize()?;
         db.initialize()?;
 
-        // 4 migrations: 001_initial, 002_ingestion_sessions, 003_previews, 004_add_folder_online_status
+        // 5 migrations: 001_initial, 002_ingestion_sessions, 003_previews, 004_add_folder_online_status, 005_event_sourcing
         let migration_count: i64 = db
             .connection()
             .prepare("SELECT COUNT(*) FROM migrations")?
             .query_row([], |row| row.get(0))?;
 
-        assert_eq!(migration_count, 4);
+        assert_eq!(migration_count, 5);
 
         Ok(())
     }

@@ -1,5 +1,6 @@
 pub mod catalog;
 pub mod discovery;
+pub mod event_sourcing;
 pub mod exif;
 pub mod filesystem;
 pub mod hashing;

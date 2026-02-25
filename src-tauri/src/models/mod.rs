@@ -1,7 +1,9 @@
 pub mod catalog;
 pub mod discovery;
 pub mod dto;
+pub mod event;
 pub mod exif;
 pub mod filesystem;
 pub mod hashing;
+pub mod image;
 pub mod preview;

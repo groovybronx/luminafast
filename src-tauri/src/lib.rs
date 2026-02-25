@@ -147,6 +147,13 @@ pub fn run() {
             commands::preview::get_preview_config,
             // Search commands (Phase 3.5)
             commands::search::search_images,
+            // Edit commands (Phase 4.1)
+            commands::edit::apply_edit,
+            commands::edit::get_edit_history,
+            commands::edit::get_current_edit_state,
+            commands::edit::undo_edit,
+            commands::edit::redo_edit,
+            commands::edit::reset_edits,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

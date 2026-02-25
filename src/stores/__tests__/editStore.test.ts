@@ -1,203 +1,279 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act } from '@testing-library/react';
 import { useEditStore } from '../editStore';
-import type { CatalogEvent } from '../../types';
+import type { EditStateDTO } from '../../types/edit';
 
-describe('editStore', () => {
+// Mock du service editService
+vi.mock('@/services/editService', () => ({
+  getCurrentEditState: vi.fn(),
+  applyEdit: vi.fn(),
+  undoEdit: vi.fn(),
+  redoEdit: vi.fn(),
+  resetEdits: vi.fn(),
+  getEditHistory: vi.fn(),
+}));
+
+import * as editService from '@/services/editService';
+
+// Fixtures
+const mockStateLoaded: EditStateDTO = {
+  image_id: 42,
+  state: { exposure: 0.5, contrast: -0.2 },
+  can_undo: true,
+  can_redo: false,
+  event_count: 3,
+};
+
+const mockStateAfterUndo: EditStateDTO = {
+  image_id: 42,
+  state: { exposure: 0.3 },
+  can_undo: false,
+  can_redo: true,
+  event_count: 1,
+};
+
+const mockStateEmpty: EditStateDTO = {
+  image_id: 42,
+  state: {},
+  can_undo: false,
+  can_redo: false,
+  event_count: 0,
+};
+
+describe('editStore (Phase 4.1 — Event Sourcing)', () => {
   beforeEach(() => {
-    // Reset store before each test
+    vi.clearAllMocks();
     act(() => {
       useEditStore.setState({
-        eventLog: [],
+        selectedImageId: null,
         currentEdits: {},
-        historyIndex: -1,
+        canUndo: false,
+        canRedo: false,
+        eventCount: 0,
+        isLoading: false,
+        error: null,
       });
     });
   });
 
-  it('should initialize with empty state', () => {
+  // ─── État initial ──────────────────────────────────────────────────────────
+
+  it('should initialize with correct default state', () => {
     const store = useEditStore.getState();
-    expect(store.eventLog).toEqual([]);
+    expect(store.selectedImageId).toBeNull();
     expect(store.currentEdits).toEqual({});
-    expect(store.historyIndex).toBe(-1);
+    expect(store.canUndo).toBe(false);
+    expect(store.canRedo).toBe(false);
+    expect(store.eventCount).toBe(0);
+    expect(store.isLoading).toBe(false);
+    expect(store.error).toBeNull();
   });
 
-  it('should add events to log', () => {
-    const mockEvent: CatalogEvent = {
-      id: 'test-event-1',
-      timestamp: Date.now(),
-      type: 'RATING',
-      payload: { type: 'RATING', value: 5 },
-      targets: [1],
-    };
+  // ─── setSelectedImageId ───────────────────────────────────────────────────
 
+  it('should update selectedImageId', () => {
     act(() => {
-      useEditStore.getState().addEvent(mockEvent);
+      useEditStore.getState().setSelectedImageId(42);
     });
-
-    expect(useEditStore.getState().eventLog).toHaveLength(1);
-    expect(useEditStore.getState().eventLog[0]).toEqual(mockEvent);
+    expect(useEditStore.getState().selectedImageId).toBe(42);
   });
 
-  it('should add multiple events in chronological order', () => {
-    const event1: CatalogEvent = {
-      id: 'test-event-1',
-      timestamp: 1000,
-      type: 'RATING',
-      payload: { type: 'RATING', value: 3 },
-      targets: [1],
-    };
-
-    const event2: CatalogEvent = {
-      id: 'test-event-2',
-      timestamp: 2000,
-      type: 'FLAG',
-      payload: { type: 'FLAG', value: 'pick' },
-      targets: [1],
-    };
-
+  it('should allow clearing selectedImageId to null', () => {
     act(() => {
-      useEditStore.getState().addEvent(event1);
-      useEditStore.getState().addEvent(event2);
+      useEditStore.setState({ selectedImageId: 42 });
+      useEditStore.getState().setSelectedImageId(null);
     });
-
-    expect(useEditStore.getState().eventLog).toHaveLength(2);
-    expect(useEditStore.getState().eventLog[0]).toEqual(event2); // Most recent first
-    expect(useEditStore.getState().eventLog[1]).toEqual(event1);
+    expect(useEditStore.getState().selectedImageId).toBeNull();
   });
 
-  it('should set current edits', () => {
-    const edits = {
-      exposure: 0.5,
-      contrast: -0.2,
-      saturation: 0.3,
-    };
+  // ─── loadEditState ────────────────────────────────────────────────────────
 
-    act(() => {
-      useEditStore.getState().setCurrentEdits(edits);
+  it('should load edit state from backend and update store', async () => {
+    vi.mocked(editService.getCurrentEditState).mockResolvedValue(mockStateLoaded);
+
+    await act(async () => {
+      await useEditStore.getState().loadEditState(42);
     });
 
-    expect(useEditStore.getState().currentEdits).toEqual(edits);
-    expect(Object.keys(useEditStore.getState().currentEdits)).toHaveLength(3);
+    const store = useEditStore.getState();
+    expect(editService.getCurrentEditState).toHaveBeenCalledWith(42);
+    expect(store.selectedImageId).toBe(42);
+    expect(store.currentEdits).toEqual({ exposure: 0.5, contrast: -0.2 });
+    expect(store.canUndo).toBe(true);
+    expect(store.canRedo).toBe(false);
+    expect(store.eventCount).toBe(3);
+    expect(store.isLoading).toBe(false);
   });
 
-  it('should update individual edit parameter', () => {
-    // Set initial edits
-    act(() => {
-      useEditStore.getState().setCurrentEdits({ exposure: 0.5, contrast: -0.2 });
+  it('should set error when loadEditState fails', async () => {
+    vi.mocked(editService.getCurrentEditState).mockRejectedValue(new Error('Backend error'));
+
+    await act(async () => {
+      await useEditStore.getState().loadEditState(42);
     });
 
-    // Update one parameter
-    act(() => {
-      useEditStore.getState().updateEdit('exposure', 0.8);
-    });
-
-    expect(useEditStore.getState().currentEdits.exposure).toBe(0.8);
-    expect(useEditStore.getState().currentEdits.contrast).toBe(-0.2); // Unchanged
-
-    // Add new parameter
-    act(() => {
-      useEditStore.getState().updateEdit('saturation', 0.3);
-    });
-
-    expect(useEditStore.getState().currentEdits.saturation).toBe(0.3);
-    expect(useEditStore.getState().currentEdits).toEqual({
-      exposure: 0.8,
-      contrast: -0.2,
-      saturation: 0.3,
-    });
+    expect(useEditStore.getState().error).toBe('Backend error');
+    expect(useEditStore.getState().isLoading).toBe(false);
   });
 
-  it('should reset edits', () => {
-    act(() => {
-      useEditStore.getState().setCurrentEdits({
-        exposure: 0.5,
-        contrast: -0.2,
-        saturation: 0.3,
-      });
+  // ─── applyEdit ────────────────────────────────────────────────────────────
+
+  it('should apply edit when selectedImageId is set', async () => {
+    vi.mocked(editService.applyEdit).mockResolvedValue({
+      ...mockStateLoaded,
+      state: { exposure: 0.7 },
+      event_count: 4,
+    });
+    act(() => useEditStore.setState({ selectedImageId: 42 }));
+
+    await act(async () => {
+      await useEditStore.getState().applyEdit('exposure', 0.7);
     });
 
-    expect(Object.keys(useEditStore.getState().currentEdits)).toHaveLength(3);
-
-    act(() => {
-      useEditStore.getState().resetEdits();
+    expect(editService.applyEdit).toHaveBeenCalledWith(42, 'EXPOSURE', {
+      param: 'exposure',
+      value: 0.7,
     });
-
-    expect(useEditStore.getState().currentEdits).toEqual({});
+    expect(useEditStore.getState().currentEdits).toEqual({ exposure: 0.7 });
+    expect(useEditStore.getState().eventCount).toBe(4);
   });
 
-  it('should handle undo and redo placeholders', () => {
-    // These are placeholders for now, but should not crash
-    expect(() => useEditStore.getState().undo()).not.toThrow();
-    expect(() => useEditStore.getState().redo()).not.toThrow();
-
-    // Getters should work
-    expect(typeof useEditStore.getState().canUndo()).toBe('boolean');
-    expect(typeof useEditStore.getState().canRedo()).toBe('boolean');
+  it('should not call backend if selectedImageId is null', async () => {
+    await act(async () => {
+      await useEditStore.getState().applyEdit('exposure', 0.5);
+    });
+    expect(editService.applyEdit).not.toHaveBeenCalled();
   });
 
-  it('should track undo/redo capability based on history index', () => {
-    // Initially should not be able to undo or redo
-    expect(useEditStore.getState().canUndo()).toBe(false);
-    expect(useEditStore.getState().canRedo()).toBe(false);
+  it('should infer eventType from param name', async () => {
+    vi.mocked(editService.applyEdit).mockResolvedValue(mockStateLoaded);
+    act(() => useEditStore.setState({ selectedImageId: 1 }));
 
-    // Add events to history (simulated)
-    act(() => {
-      useEditStore.getState().addEvent({
-        id: 'test-1',
-        timestamp: Date.now(),
-        type: 'RATING',
-        payload: { type: 'RATING', value: 5 },
-        targets: [1],
-      });
+    await act(async () => {
+      await useEditStore.getState().applyEdit('saturation', 0.3);
     });
 
-    // History index logic will be implemented in Phase 4.1
-    // For now, just ensure the getters don't crash
-    expect(typeof useEditStore.getState().canUndo()).toBe('boolean');
-    expect(typeof useEditStore.getState().canRedo()).toBe('boolean');
+    expect(editService.applyEdit).toHaveBeenCalledWith(
+      1,
+      'SATURATION',
+      expect.objectContaining({ param: 'saturation', value: 0.3 }),
+    );
   });
 
-  it('should handle complex edit scenarios', () => {
-    // Start with some edits
+  // ─── updateEdit (local, sans persistance) ────────────────────────────────
+
+  it('should update currentEdits locally without calling backend', () => {
     act(() => {
-      useEditStore.getState().setCurrentEdits({ exposure: 0.0 });
+      useEditStore.getState().updateEdit('exposure', 0.4);
+    });
+    expect(useEditStore.getState().currentEdits.exposure).toBe(0.4);
+    expect(editService.applyEdit).not.toHaveBeenCalled();
+  });
 
-      // Add events while editing
-      useEditStore.getState().addEvent({
-        id: 'edit-1',
-        timestamp: Date.now(),
-        type: 'EDIT',
-        payload: { type: 'EDIT', value: { exposure: 0.2 } },
-        targets: [1],
-      });
+  // ─── undo ─────────────────────────────────────────────────────────────────
 
-      // Update edits
-      useEditStore.getState().updateEdit('exposure', 0.3);
-      useEditStore.getState().updateEdit('contrast', 0.1);
+  it('should call undoEdit and update store state', async () => {
+    vi.mocked(editService.undoEdit).mockResolvedValue(mockStateAfterUndo);
+    act(() => useEditStore.setState({ selectedImageId: 42 }));
 
-      // Add another event
-      useEditStore.getState().addEvent({
-        id: 'edit-2',
-        timestamp: Date.now(),
-        type: 'EDIT',
-        payload: { type: 'EDIT', value: { exposure: 0.3, contrast: 0.1 } },
-        targets: [1],
-      });
+    await act(async () => {
+      await useEditStore.getState().undo();
     });
 
-    // Verify state
-    expect(useEditStore.getState().eventLog).toHaveLength(2);
-    expect(useEditStore.getState().currentEdits).toEqual({
-      exposure: 0.3,
-      contrast: 0.1,
+    expect(editService.undoEdit).toHaveBeenCalledWith(42);
+    const store = useEditStore.getState();
+    expect(store.currentEdits).toEqual({ exposure: 0.3 });
+    expect(store.canUndo).toBe(false);
+    expect(store.canRedo).toBe(true);
+  });
+
+  it('should not call undoEdit if no image selected', async () => {
+    await act(async () => {
+      await useEditStore.getState().undo();
+    });
+    expect(editService.undoEdit).not.toHaveBeenCalled();
+  });
+
+  // ─── redo ─────────────────────────────────────────────────────────────────
+
+  it('should call redoEdit with eventId and update state', async () => {
+    vi.mocked(editService.redoEdit).mockResolvedValue(mockStateLoaded);
+    act(() => useEditStore.setState({ selectedImageId: 42 }));
+
+    await act(async () => {
+      await useEditStore.getState().redo(7);
     });
 
-    // Reset and verify
-    act(() => {
-      useEditStore.getState().resetEdits();
+    expect(editService.redoEdit).toHaveBeenCalledWith(42, 7);
+    expect(useEditStore.getState().canUndo).toBe(true);
+  });
+
+  it('should not call redoEdit if no image selected', async () => {
+    await act(async () => {
+      await useEditStore.getState().redo(7);
     });
-    expect(useEditStore.getState().currentEdits).toEqual({});
-    expect(useEditStore.getState().eventLog).toHaveLength(2); // Events remain in log
+    expect(editService.redoEdit).not.toHaveBeenCalled();
+  });
+
+  // ─── resetEdits ───────────────────────────────────────────────────────────
+
+  it('should call resetEdits and clear local state', async () => {
+    vi.mocked(editService.resetEdits).mockResolvedValue(undefined);
+    act(() =>
+      useEditStore.setState({
+        selectedImageId: 42,
+        currentEdits: { exposure: 0.5 },
+        canUndo: true,
+        eventCount: 3,
+      }),
+    );
+
+    await act(async () => {
+      await useEditStore.getState().resetEdits();
+    });
+
+    expect(editService.resetEdits).toHaveBeenCalledWith(42);
+    const store = useEditStore.getState();
+    expect(store.currentEdits).toEqual({});
+    expect(store.canUndo).toBe(false);
+    expect(store.canRedo).toBe(false);
+    expect(store.eventCount).toBe(0);
+  });
+
+  it('should not call resetEdits backend if no image selected', async () => {
+    await act(async () => {
+      await useEditStore.getState().resetEdits();
+    });
+    expect(editService.resetEdits).not.toHaveBeenCalled();
+  });
+
+  // ─── error handling ───────────────────────────────────────────────────────
+
+  it('should set error string on applyEdit failure', async () => {
+    vi.mocked(editService.applyEdit).mockRejectedValue(new Error('DB error'));
+    act(() => useEditStore.setState({ selectedImageId: 42 }));
+
+    await act(async () => {
+      await useEditStore.getState().applyEdit('exposure', 0.5);
+    });
+
+    expect(useEditStore.getState().error).toBe('DB error');
+    expect(useEditStore.getState().isLoading).toBe(false);
+  });
+
+  // ─── Etat vide après reset avec mockStateEmpty ────────────────────────────
+
+  it('should correctly represent an empty initial DB state', async () => {
+    vi.mocked(editService.getCurrentEditState).mockResolvedValue(mockStateEmpty);
+
+    await act(async () => {
+      await useEditStore.getState().loadEditState(42);
+    });
+
+    const store = useEditStore.getState();
+    expect(store.currentEdits).toEqual({});
+    expect(store.canUndo).toBe(false);
+    expect(store.canRedo).toBe(false);
+    expect(store.eventCount).toBe(0);
   });
 });

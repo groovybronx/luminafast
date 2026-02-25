@@ -41,7 +41,7 @@
 | Maintenance | —          | SQL Safety & Refactorisation `get_folder_images`                                          | ✅ Complétée  | 2026-02-23 | Copilot |
 | Maintenance | —          | Résolution Notes Bloquantes Review Copilot (PR #20)                                       | ✅ Complétée  | 2026-02-23 | Copilot |
 | 3           | 3.5        | Recherche & Filtrage                                                                      | ✅ Complétée  | 2026-02-24 | Copilot |
-| 4           | 4.1        | Event Sourcing Engine                                                                     | ⬜ En attente | —          | —       |
+| 4           | 4.1        | Event Sourcing Engine                                                                     | ✅ Complétée  | 2026-02-25 | Copilot |
 | 4           | 4.2        | Pipeline de Rendu Image                                                                   | ⬜ En attente | —          | —       |
 | 4           | 4.3        | Historique & Snapshots UI                                                                 | ⬜ En attente | —          | —       |
 | 4           | 4.4        | Comparaison Avant/Après                                                                   | ⬜ En attente | —          | —       |
@@ -78,13 +78,70 @@
 
 ## En Cours
 
-> _Phase 3 complétée (3.1→3.5). Deux régressions Drag & Drop / BatchBar corrigées (2026-02-25). Prêt pour Phase 4 - Event Sourcing._
+> _Phase 3 complétée (3.1→3.5). Deux régressions Drag & Drop / BatchBar corrigées (2026-02-25). Phase 4.1 Event Sourcing Engine complétée (2026-02-25). Prêt pour Phase 4.2 - Pipeline de Rendu Image._
 
 ---
 
 ## Historique des Sous-Phases Complétées
 
 > _Les entrées ci-dessous sont ajoutées chronologiquement par l'agent IA après chaque sous-phase._
+
+---
+
+### 2026-02-25 — Phase 4.1 : Event Sourcing Engine
+
+**Statut** : ✅ **Complétée**
+**Agent** : GitHub Copilot (Claude Sonnet 4.6)
+**Brief** : `Docs/briefs/PHASE-4.1.md`
+**Tests** : **185/185 Rust ✅ + 399/399 TypeScript ✅** (0 régression)
+**Branche** : `phase/4.1-event-sourcing-engine`
+
+#### Objectif
+
+Implémenter le moteur d'édition non-destructive basé sur Event Sourcing : persistance des événements d'édition en SQLite, rejeu pour reconstruire l'état courant, snapshots automatiques, et commandes Tauri exposées au frontend.
+
+#### Cause Racine (Correction Borrow Checker)
+
+**Symptôme** : Erreur de compilation Rust `E0597` dans `edit_sourcing.rs` à la collecte des payloads.
+
+**Cause** : `stmt.query_map(...)?.collect()?` dans un bloc `{}` — l'opérateur `?` crée un temporaire `ControlFlow` qui référence encore `MappedRows` (emprunté depuis `stmt`). Quand le bloc se ferme, `stmt` est droppé avant que le temporaire soit libéré.
+
+**Correction** : Pattern `let result = ...; result` dans le bloc pour forcer le drop du temporaire avant la fin du scope.
+
+#### Fichiers Créés
+
+- `src-tauri/migrations/005_edit_events.sql` — Tables `edit_events` + `edit_snapshots` + index
+- `src-tauri/src/models/edit.rs` — Structs Rust: `EditEvent`, `EditSnapshot`, `EditStateDTO`, `EditEventDTO`
+- `src-tauri/src/services/edit_sourcing.rs` — Service Event Sourcing + 30+ tests intégrés
+- `src-tauri/src/commands/edit.rs` — 6 commandes Tauri: `apply_edit`, `get_edit_history`, `get_current_edit_state`, `undo_edit`, `redo_edit`, `reset_edits`
+- `src/types/edit.ts` — `EditEventType`, `EditPayload`, `EditEventDTO`, `EditStateDTO`
+- `src/services/editService.ts` — Wrappeurs `invoke()` camelCase
+- `src/services/__tests__/editService.test.ts` — Tests unitaires service
+- `src/stores/__tests__/editStore.test.ts` — Tests store refactoré
+
+#### Fichiers Modifiés
+
+- `src-tauri/src/models/mod.rs` — Exposé `mod edit`
+- `src-tauri/src/services/mod.rs` — Exposé `mod edit_sourcing`
+- `src-tauri/src/commands/mod.rs` — Exposé `mod edit`
+- `src-tauri/src/lib.rs` — 6 commandes edit enregistrées dans `invoke_handler`
+- `src/stores/editStore.ts` — Refactoring complet : undo/redo/apply connectés au backend via editService; `eventLog`/`addEvent` conservés localement (Phase 4.3 les connectera au backend)
+
+#### Architecture Event Sourcing
+
+```
+Frontend (editStore)  →  editService.ts  →  Tauri invoke()
+                                              ↓
+                              Rust: edit.rs commands
+                                              ↓
+                     edit_sourcing.rs service
+                     - apply_edit_event()      → INSERT edit_events
+                     - replay_events()         → snapshot + events → HashMap<param, f64>
+                     - undo_last_edit()        → is_undone=1 + invalide snapshot
+                     - redo_edit()             → is_undone=0
+                     - reset_edits()           → DELETE all events + snapshot
+                     - auto-snapshot tous les 20 events actifs
+```
 
 ---
 

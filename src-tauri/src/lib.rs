@@ -26,12 +26,15 @@ pub fn run() {
             let app_data_dir = app
                 .path()
                 .app_data_dir()
-                .expect("Failed to get app data dir");
-            std::fs::create_dir_all(&app_data_dir).expect("Failed to create app data directory");
+                .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+            std::fs::create_dir_all(&app_data_dir)
+                .map_err(|e| format!("Failed to create app data directory: {}", e))?;
 
             let db_path = app_data_dir.join("luminafast.db");
-            let mut db = Database::new(&db_path).expect("Failed to initialize database");
-            db.initialize().expect("Failed to run database migrations");
+            let mut db = Database::new(&db_path)
+                .map_err(|e| format!("Failed to initialize database: {}", e))?;
+            db.initialize()
+                .map_err(|e| format!("Failed to run database migrations: {}", e))?;
 
             log::info!("Database initialized at: {:?}", db_path);
 

@@ -318,8 +318,6 @@ impl HistoryService {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_get_event_timeline_empty() {
         // Test will be in integration tests with actual DB

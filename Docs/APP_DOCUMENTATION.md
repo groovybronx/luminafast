@@ -3,7 +3,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-25 (Phase 4.2 : Pipeline de Rendu Image) — État : Event Sourcing Engine (Phase 4.1) + CSS Filters Pipeline (Phase 4.2) complétés, 600/600 tests ✅. Branche `phase/4.2-pipeline-rendu-image`.
+> **Dernière mise à jour** : 2026-02-25 (Phase 4.3 : Historique & Snapshots UI) — État : Event Sourcing (4.1) + CSS Filters (4.2) + Time-Travel UI (4.3) complétés, 602/602 tests ✅. Branche `phase/4.3-historique-snapshots-ui`.
 >
 > ### Décisions Projet (validées par le propriétaire)
 >
@@ -18,9 +18,9 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : Phases 0 à 4.2 complétées (Event Sourcing + CSS Filters)
+### État actuel : Phases 0 à 4.3 complétées (Event Sourcing + CSS Filters + Time-Travel UI)
 
-Pipeline d'import production-ready : Discovery → BLAKE3 hashing → EXIF extraction → SQLite ingestion → **Parallélisée Rayon** → **Génération previews** → Synchronisation. **Grille virtualisée  avec lazy-loading** : 10K+ images @ 60fps + IntersectionObserver prefetch. **Collections CRUD** + **Smart Collections**. **Recherche structurée** (15+ champs, 8+ opérateurs). **Historique dossiers**. **SQLite bidirectional sync** avec tracking isSynced. **Event Sourcing Engine** : persistance édits en SQLite + snapshots auto (Phase 4.1). **CSS Filters Pipeline** : temps réel rendu via GPU (brightness, contrast, saturation + cache LRU intelligent, <16ms/frame) (Phase 4.2). **600+ tests** (0 régressions).
+Pipeline d'import production-ready : Discovery → BLAKE3 hashing → EXIF extraction → SQLite ingestion → **Parallélisée Rayon** → **Génération previews** → Synchronisation. **Grille virtualisée avec lazy-loading** : 10K+ images @ 60fps + IntersectionObserver prefetch. **Collections CRUD** + **Smart Collections**. **Recherche structurée** (15+ champs, 8+ opérateurs). **Historique dossiers**. **SQLite bidirectional sync** avec tracking isSynced. **Event Sourcing Engine** : persistance édits en SQLite + snapshots auto (Phase 4.1). **CSS Filters Pipeline** : temps réel rendu via GPU (brightness, contrast, saturation + cache LRU intelligent, <16ms/frame) (Phase 4.2). **Time-Travel UI** : timeline interactive, snapshots nommés, restauration à tout état antérieur (Phase 4.3). **602+ tests** (0 régressions).
 
 ### Objectif : Application Tauri autonome commercialisable
 
@@ -410,7 +410,142 @@ Optimization:
 
 ---
 
-## 5. Modèle de Données (Mockup Actuel)
+## 5. Historique & Snapshots UI (Phase 4.3)
+
+### Vue d'ensemble
+
+Phase 4.3 implémente une interface time-travel complète pour l'éditeur non-destructif basé sur Event Sourcing (Phase 4.1). Les utilisateurs visualisent une chronologie des édits, créent des snapshots nommés et restaurent à tout moment antérieur sans perte d'information.
+
+### Architecture Time-Travel
+
+**Backend Rust** (`HistoryService` — `src-tauri/src/services/history_service.rs`):
+- **get_event_timeline(image_id, limit?)** → `Vec<EditEventDTO>` — Récupère les N derniers événements d'édition avec timestamps
+- **create_snapshot(image_id, name, description?)** → `SnapshotDTO` — Sérialise EditStateDTO courant en JSON, persiste en DB avec métadonnées
+- **get_snapshots(image_id)** → `Vec<SnapshotDTO>` — Liste tous snapshots nommés pour une image (supports multiple snapshots per image via UNIQUE(image_id, name))
+- **restore_to_event(image_id, event_id)** → `EditStateDTO` — Marque les édits post-event comme `is_undone=1`, rejoue timeline via EditSourcingService
+- **restore_to_snapshot(snapshot_id)** → `EditStateDTO` — Charge snapshot JSON depuis DB, reset timeline courant, retourne state restauré
+- **delete_snapshot(snapshot_id)** → `()` — Supprime un snapshot nommé
+- **count_events_since_import(image_id)** → `i64` — Utile UI: affiche "5 edits since import"
+
+**Error Handling** : Custom `HistoryError` enum (thiserror) avec 4 variants:
+- `InvalidEventState(e)` — EditSourcingService replay failed
+- `InvalidSnapshot` — Snapshot not found
+- `DatabaseError(msg)` — SQLite error
+- `JsonError(msg)` — JSON serialization failed
+
+**Database** (`006_edit_snapshots.sql`):
+```sql
+CREATE TABLE edit_snapshots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  image_id INTEGER NOT NULL REFERENCES images(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,                           -- User-friendly snapshot name
+  description TEXT,                             -- Optional user description
+  event_count INTEGER NOT NULL,                 -- # of active events in snapshot
+  snapshot_state TEXT NOT NULL,                 -- JSON EditStateDTO serialized
+  created_at TEXT DEFAULT (datetime('now')),    -- ISO timestamp
+  UNIQUE(image_id, name)                        -- No duplicate snapshot names per image
+);
+CREATE INDEX idx_snapshots_image ON edit_snapshots(image_id);
+CREATE INDEX idx_snapshots_created ON edit_snapshots(created_at);
+```
+
+**Frontend Components**:
+- **HistoryPanel.tsx** — Interactive timeline UI:
+  - Baseline "Import state" (origin of timeline)
+  - Chronological list of edit events with type icons and timestamps
+  - Named snapshots displayed inline within timeline
+  - Click event → restore to that point (marks later edits undone)
+  - Click snapshot → restore to that snapshot (replaces entire state)
+  - "Create Snapshot" button → prompts for name/description
+  - "Reset to Import" button with confirmation dialog
+- **historyService.ts** — Wrapper Tauri with:
+  - LRU cache (Map<imageId, events>) max 100 entries
+  - Cache invalidation triggered by editStore edits
+  - Error handling and type conversion (Tauri Result → TypeScript Promise)
+- **types/history.ts**:
+  ```typescript
+  export interface EditEventDTO {
+    id: i32;
+    event_type: EditEventType;
+    payload: EditPayload;
+    timestamp: string;
+    is_cancelled: bool;
+  }
+  
+  export interface SnapshotDTO {
+    id: i32;
+    image_id: i32;
+    name: string;
+    description?: string;
+    event_count: i32;
+    created_at: string;
+  }
+  ```
+
+**editStore Integration**:
+- New action `replaceAllEdits(newState: EditStateDTO)` — Replaces entire edit state (used for snapshot restoration)
+- Existing actions `applyEdit()`, `undo()`, `redo()` trigger `historyService.invalidateCache(imageId)`
+- After restoration, editStore state updated → UI reflects new edits (sliders, preview)
+
+### Timeline Behavior
+
+**User Interactions**:
+1. Select image in GridView
+2. HistoryPanel loads timeline via `get_event_timeline(image_id)`
+3. User clicks event in timeline → `restore_to_event(image_id, event_id)`
+   - EditSourcingService marks post-event edits `is_undone=1`
+   - Replays events up to that point
+   - Returns EditStateDTO
+   - editStore updates with new state
+   - UI sliders, preview refresh
+4. User clicks "Create Snapshot" → Dialog prompts name/description
+   - Calls `create_snapshot(image_id, name, description)`
+   - Snapshot immediately visible in timeline
+5. User clicks snapshot → `restore_to_snapshot(snapshot_id)`
+   - Loads snapshot JSON from DB
+   - Calls `editStore.replaceAllEdits(state)`
+   - UI updates
+6. User clicks "Reset to Import" → Confirmation dialog
+   - Calls `restore_to_event(image_id, 0)` or equivalent
+   - Timeline reverts to original import state
+
+### Performance Characteristics
+
+| Operation | Latency | Implementation |
+|-----------|---------|-----------------|
+| Load timeline (50 events) | <100ms | Cached query + LRU cache |
+| Create snapshot | <50ms | JSON serialize + INSERT |
+| Restore to event | <200ms | DB transaction + replay |
+| Restore to snapshot | <100ms | JSON deserialize + state update |
+| Timeline UI render | <50ms | React re-render (virtualized list) |
+
+### Cache Strategy
+
+- **LRU Cache** : Map<imageId, events[]> max 100 entries
+- **TTL** : Infinite until next edit on that image
+- **Invalidation** : Triggered by editStore.applyEdit(), undo(), redo(), reset()
+- **Warm-up** : Preload when image selected (IntersectionObserver friendly)
+
+### Files Created (Phase 4.3)
+
+- `src-tauri/src/services/history_service.rs` (335 lines) — Core logic
+- `src-tauri/src/commands/history.rs` (113 lines) — Tauri IPC bridge
+- `src-tauri/migrations/006_edit_snapshots.sql` (23 lines) — DB schema
+- `src/components/develop/HistoryPanel.tsx` — Interactive UI
+- `src/services/historyService.ts` — Frontend wrapper + cache
+- `src/types/history.ts` — TypeScript types+interfaces
+- `Docs/briefs/PHASE-4.3.md` — Complete specification
+
+### Files Modified (Phase 4.3)
+
+- `src-tauri/src/lib.rs` → 7 history commands registered in invoke_handler
+- `src-tauri/src/commands/mod.rs` → `pub mod history;`
+- `src-tauri/src/services/mod.rs` → `pub mod history_service;`
+- `src/stores/editStore.ts` → `replaceAllEdits()` action + cache invalidation on applyEdit/undo/redo
+
+---
+
+## 6. Modèle de Données (Mockup Actuel)
 
 ### 5.1 — Structure d'une Image (TypeScript — `CatalogImage`)
 

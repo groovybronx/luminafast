@@ -433,7 +433,7 @@ Phase 4.3 implémente une interface time-travel complète pour l'éditeur non-de
 - `DatabaseError(msg)` — SQLite error
 - `JsonError(msg)` — JSON serialization failed
 
-**Database** (`006_edit_snapshots.sql`):
+**Database** (`005_edit_events.sql` — Extended with Phase 4.3 multi-snapshot schema):
 ```sql
 CREATE TABLE edit_snapshots (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -530,7 +530,7 @@ CREATE INDEX idx_snapshots_created ON edit_snapshots(created_at);
 
 - `src-tauri/src/services/history_service.rs` (335 lines) — Core logic
 - `src-tauri/src/commands/history.rs` (113 lines) — Tauri IPC bridge
-- `src-tauri/migrations/006_edit_snapshots.sql` (23 lines) — DB schema
+- `src-tauri/migrations/005_edit_events.sql` (Extended for Phase 4.3) — DB schema
 - `src/components/develop/HistoryPanel.tsx` — Interactive UI
 - `src/services/historyService.ts` — Frontend wrapper + cache
 - `src/types/history.ts` — TypeScript types+interfaces

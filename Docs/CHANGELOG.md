@@ -180,7 +180,7 @@ Implémenter une interface time-travel pour l'éditeur non-destructif : chronolo
 - **historyService.ts** — Wrapper Tauri avec cache LRU (Map<imageId, events>) + invalidation
 - **editStore integration** — `replaceAllEdits(newState)` action pour snapshots restoration
 
-**Database** (`006_edit_snapshots.sql`):
+**Database** (`005_edit_events.sql` — Extended with Phase 4.3 multi-snapshot schema):
 - Table `edit_snapshots` avec multi-snapshots par image (uniqueness: image_id + name)
 - Indices sur image_id, created_at pour performance
 - JSON storage: snapshot_state = EditStateDTO sérializé
@@ -188,7 +188,7 @@ Implémenter une interface time-travel pour l'éditeur non-destructif : chronolo
 #### Fichiers Créés
 - `src-tauri/src/services/history_service.rs` (335 lignes)
 - `src-tauri/src/commands/history.rs` (113 lignes)
-- `src-tauri/migrations/006_edit_snapshots.sql`
+- `src-tauri/migrations/005_edit_events.sql` (Extended for Phase 4.3)
 - `src/components/develop/HistoryPanel.tsx`
 - `src/services/historyService.ts`
 - `src/types/history.ts`

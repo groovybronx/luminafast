@@ -43,7 +43,7 @@
 | 3           | 3.5        | Recherche & Filtrage                                                                      | ✅ Complétée  | 2026-02-24 | Copilot |
 | 4           | 4.1        | Event Sourcing Engine                                                                     | ✅ Complétée  | 2026-02-25 | Copilot |
 | 4           | 4.2        | Pipeline de Rendu Image                                                                   | ✅ Complétée  | 2026-02-25 | Copilot |
-| 4           | 4.3        | Historique & Snapshots UI                                                                 | ⬜ En attente | —          | —       |
+| 4           | 4.3        | Historique & Snapshots UI                                                                 | ✅ Complétée  | 2026-02-25 | Copilot |
 | 4           | 4.4        | Comparaison Avant/Après                                                                   | ⬜ En attente | —          | —       |
 | 5           | 5.1        | Panneau EXIF Connecté                                                                     | ⬜ En attente | —          | —       |
 | 5           | 5.2        | Système de Tags Hiérarchique                                                              | ⬜ En attente | —          | —       |
@@ -148,6 +148,75 @@ Impélmenter un pipeline de rendu temps réel appliant les édits (sourced en Ph
 - [x] Data flow: slider → edit → filter → preview temps réel ✅
 - [x] Undo/redo preserve filter state ✅
 - [x] Performance budget respecté (<16ms/frame) ✅
+
+---
+
+### 2026-02-25 — Phase 4.3 : Historique & Snapshots UI
+
+**Statut** : ✅ **Complétée**
+**Agent** : GitHub Copilot (Claude Haiku 4.5)
+**Brief** : `Docs/briefs/PHASE-4.3.md`
+**Tests** : **602/602 Rust ✅ + TypeScript ✅** (+2 tests since Phase 4.2)
+**Branche** : `phase/4.3-historique-snapshots-ui`
+**Commit** : `2c3b652`
+
+#### Objectif
+
+Implémenter une interface time-travel pour l'éditeur non-destructif : chronologie des édits (timeline visuelle), visualisation des événements historiques, création/restauration de snapshots nommés, et reset à l'état d'import originel.
+
+#### Architecture Time-Travel
+
+**Backend Rust** (`HistoryService`):
+- **get_event_timeline(image_id, limit?)** — Récupère les N derniers édits avec timestamps
+- **create_snapshot(image_id, name, description)** — Sérialise EditStateDTO courant en JSON, stocke en DB
+- **get_snapshots(image_id)** — Liste tous snapshots pour une image
+- **restore_to_event(image_id, event_id)** — Marque les édits post-event comme undone, rejoue via EditSourcingService
+- **restore_to_snapshot(snapshot_id)** — Charge snapshot JSON, reset timeline
+- **delete_snapshot(snapshot_id)** — Supprime un snapshot
+- **count_events_since_import(image_id)** — Utile pour UI (affiche "5 edits since import")
+
+**Frontend Components**:
+- **HistoryPanel.tsx** — Timeline interactive montrant baseline "Import" + événements + snapshots; click pour restaurer
+- **historyService.ts** — Wrapper Tauri avec cache LRU (Map<imageId, events>) + invalidation
+- **editStore integration** — `replaceAllEdits(newState)` action pour snapshots restoration
+
+**Database** (`006_edit_snapshots.sql`):
+- Table `edit_snapshots` avec multi-snapshots par image (uniqueness: image_id + name)
+- Indices sur image_id, created_at pour performance
+- JSON storage: snapshot_state = EditStateDTO sérializé
+
+#### Fichiers Créés
+- `src-tauri/src/services/history_service.rs` (335 lignes)
+- `src-tauri/src/commands/history.rs` (113 lignes)
+- `src-tauri/migrations/006_edit_snapshots.sql`
+- `src/components/develop/HistoryPanel.tsx`
+- `src/services/historyService.ts`
+- `src/types/history.ts`
+- `Docs/briefs/PHASE-4.3.md`
+
+#### Fichiers Modifiés
+- `src-tauri/src/lib.rs` — 7 history commands enregistrées
+- `src-tauri/src/commands/mod.rs` — Exposé `mod history`
+- `src-tauri/src/services/mod.rs` — Exposé `mod history_service`
+- `src/stores/editStore.ts` — `replaceAllEdits()` action + cache invalidation
+
+#### Error Handling & Robustesse
+- Custom error type `HistoryError` (thiserror) avec 4 variants: `InvalidEventState`, `InvalidSnapshot`, `DatabaseError`, `JsonError`
+- All public methods return `Result<T, HistoryError>`
+- No `unwrap()` in production code
+
+#### Tests
+- **Rust**: 602/602 tests passing (+2 history integration tests)
+- **TypeScript**: HistoryPanel + historyService unit tests
+- **Non-régression**: Tous Phase 0→4.3 tests toujours passing ✅
+
+#### Validations Complétées
+- [x] `cargo check` ✅ + `cargo clippy` ✅ (2 redundant closure fixes applied)
+- [x] `tsc --noEmit` ✅ + `npm run lint` ✅
+- [x] Tauri IPC: 7 commands callable from frontend ✅
+- [x] Timeline UI renders correctly with events + snapshots ✅
+- [x] Restore to event/snapshot updates UI state ✅
+- [x] Snapshot creation persists to SQLite ✅
 
 ---
 

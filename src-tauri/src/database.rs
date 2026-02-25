@@ -148,6 +148,9 @@ impl Database {
             "004_add_folder_online_status" => {
                 include_str!("../migrations/004_add_folder_online_status.sql")
             }
+            "005_edit_events" => {
+                include_str!("../migrations/005_edit_events.sql")
+            }
             _ => {
                 return Err(DatabaseError::MigrationFailed(format!(
                     "Unknown migration version: {}",

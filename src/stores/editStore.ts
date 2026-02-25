@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import * as editService from '@/services/editService';
-import type { EditPayload } from '@/types/edit';
+import type { EditPayload, EditStateDTO } from '@/types/edit';
 import type { CatalogEvent } from '@/types';
 
 /** Déduit le type d'événement Tauri depuis le nom du paramètre d'édition */
@@ -86,6 +86,12 @@ interface EditStore {
    * Supprime tous les événements d'édition de l'image courante (reset complet).
    */
   resetEdits: () => Promise<void>;
+
+  /**
+   * Remplace complètement l'état courant (utilisé lors de restauration snapshot/event).
+   * Phase 4.3 — appelé par HistoryPanel après restauration.
+   */
+  replaceAllEdits: (editState: EditStateDTO) => void;
 
   /**
    * Ajoute un événement au journal local (pour le panneau History).
@@ -213,6 +219,19 @@ export const useEditStore = create<EditStore>((set, get) => ({
       const message = err instanceof Error ? err.message : String(err);
       set({ error: message, isLoading: false });
     }
+  },
+
+  /**
+   * Remplace complètement l'état courant (utilisé lors de restauration snapshot/event).
+   * Phase 4.3 — appelé par HistoryPanel après restauration.
+   */
+  replaceAllEdits: (editState: EditStateDTO) => {
+    set({
+      currentEdits: editState.state,
+      canUndo: editState.can_undo,
+      canRedo: editState.can_redo,
+      eventCount: editState.event_count,
+    });
   },
 
   // Journal local d'événements utilisateur — Phase 4.3 connectera au backend

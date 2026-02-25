@@ -50,3 +50,13 @@ export interface EditStateDTO {
   can_redo: boolean;
   event_count: number;
 }
+
+/** DTO d'un snapshot nommé (Phase 4.3) */
+export interface SnapshotDTO {
+  id: number;
+  image_id: number;
+  name: string;
+  description?: string;
+  event_count: number;
+  created_at: string;
+}

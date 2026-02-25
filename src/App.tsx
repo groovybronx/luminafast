@@ -87,7 +87,6 @@ export default function App() {
 
   const logs = useSystemStore((state) => state.logs);
   const addLog = useSystemStore((state) => state.addLog);
-  const eventLog = useEditStore((state) => state.eventLog);
   const addEvent = useEditStore((state) => state.addEvent);
   const showImport = useUiStore((state) => state.showImport);
   const setShowImport = useUiStore((state) => state.setShowImport);
@@ -373,7 +372,6 @@ export default function App() {
         <RightSidebar
           activeView={activeView}
           activeImg={displayImg}
-          eventLog={eventLog}
           onDispatchEvent={dispatchEvent}
         />
       </div>

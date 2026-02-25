@@ -41,7 +41,7 @@
 | Maintenance | —          | SQL Safety & Refactorisation `get_folder_images`                                          | ✅ Complétée  | 2026-02-23 | Copilot |
 | Maintenance | —          | Résolution Notes Bloquantes Review Copilot (PR #20)                                       | ✅ Complétée  | 2026-02-23 | Copilot |
 | 3           | 3.5        | Recherche & Filtrage                                                                      | ✅ Complétée  | 2026-02-24 | Copilot |
-| 4           | 4.1        | Event Sourcing Engine                                                                     | ⬜ En attente | —          | —       |
+| 4           | 4.1        | Event Sourcing Engine                                                                     | 🔄 En cours  | 2026-02-25 | Copilot |
 | 4           | 4.2        | Pipeline de Rendu Image                                                                   | ⬜ En attente | —          | —       |
 | 4           | 4.3        | Historique & Snapshots UI                                                                 | ⬜ En attente | —          | —       |
 | 4           | 4.4        | Comparaison Avant/Après                                                                   | ⬜ En attente | —          | —       |
@@ -78,13 +78,71 @@
 
 ## En Cours
 
-> _Phase 3 complétée (3.1→3.5). Deux régressions Drag & Drop / BatchBar corrigées (2026-02-25). Prêt pour Phase 4 - Event Sourcing._
+> _Phase 4.1 Event Sourcing Engine : implémentation de la couche persistance et des types. Analyse des types image/state models terminée — document de planification créé : `Docs/IMPLEMENTATION_PLAN_TYPES.md` pour tracker les lacunes identifiées et les actions pour phases ultérieures (4.2, 5.3)._
 
 ---
 
 ## Historique des Sous-Phases Complétées
 
-> _Les entrées ci-dessous sont ajoutées chronologiquement par l'agent IA après chaque sous-phase._
+---
+
+### 2026-02-25 — Phase 4.1 : Event Sourcing Engine (🔄 EN COURS)
+
+**Statut** : 🔄 **En cours (Étape 1/3 : infrastructure & types)**
+**Agent** : GitHub Copilot (Claude Sonnet 4.6)
+**Brief** : `Docs/briefs/PHASE-4.1.md`
+**Tests** : **173/173 ✅** (0 erreur, warnings dead_code annotés)
+**Cargo** : `cargo build --lib` → 0 warnings
+
+#### Travail Complété (Étape 1)
+
+**Infrastructure Rust** ✅
+- Module `services/event_sourcing.rs` : logique persistance + tests
+- Module `commands/event_sourcing.rs` : API Tauri (append_event, get_events, replay_events)
+- Migration 005 (`migrations/005_event_sourcing.sql`) : schéma table events
+- Intégration à `database.rs::initialize()` : migration automatique
+- Types `models/event.rs` : définition exhaustive des événements
+
+**Tests** ✅
+- Tests unitaires EventStore (append, get)
+- Test intégration apprentissage/replay
+- Tous les tests phases 1-3 toujours ✅ (non-régression garantie)
+
+**Code Quality** ✅
+- 0 unwrap() en production
+- Error handling complet (Result<T, SqlResult<E>>)
+- Imports propres, 0 warnings (après #[allow(dead_code)])
+
+#### Analyse Types Inutilisés — Lacunes Détectées
+
+Audit réalisé sur types définis mais non utilisés : `Image`, `ExifData`, `EditData`, `ImageFlag`, `ColorLabel`, `ImageUpdate`, `TauriImage`, `TauriNewImage`, `TauriImageUpdate`.
+
+**Document de planification créé** : `Docs/IMPLEMENTATION_PLAN_TYPES.md`
+- Identifie 3 lacunes critiques vs. plan de développement
+- Phase 1.2 (CRUD) : 40% implémentée (pas update_image)
+- Phase 2.2 (EXIF) : MetaData JSON non hydratée en ExifData struct
+- Phase 4.2 (Rendering) : 0% implémentée (prérequis 4.3 historique)
+- Phase 5.3 (Flags/Labels) : Types définis mais API Tauri absente
+
+**Tous les types annotés** :
+- `#[allow(dead_code)]` + commentaire phase d'utilisation
+- Import inutilisé `ImageFlag` dans tests marqué `#[allow(unused_imports)]`
+- Prépare transitions futures sans breaking du compilateur
+
+#### Fichiers Affectés
+
+- ✅ `src-tauri/src/services/event_sourcing.rs` — EventStore (150 LOC)
+- ✅ `src-tauri/src/commands/event_sourcing.rs` — API Tauri (60 LOC)
+- ✅ `src-tauri/src/models/event.rs` — Types + tests annotés
+- ✅ `src-tauri/src/models/image.rs` — Tous types annotés #[allow(dead_code)]
+- ✅ `src-tauri/src/commands/types.rs` — DTOs Tauri annotés
+- ✅ `src-tauri/src/database.rs` — Migration 005 intégrée
+- ✅ `Docs/IMPLEMENTATION_PLAN_TYPES.md` — Planification lacunes (nouveau)
+
+#### Prochaines Étapes
+
+**Étape 2** : Implémentation API Tauri events (invoquer depuis frontend)
+**Étape 3** : Documentation APP_DOCUMENTATION.md + CHANGELOG final
 
 ---
 

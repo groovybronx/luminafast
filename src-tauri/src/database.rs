@@ -101,6 +101,9 @@ impl Database {
         // Run folder online status migration
         self.run_migration("004_add_folder_online_status")?;
 
+        // Run edit events migration (Event Sourcing + snapshots - Phase 4.1/4.3)
+        self.run_migration("005_edit_events")?;
+
         Ok(())
     }
 

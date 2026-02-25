@@ -2,11 +2,21 @@
 # LuminaFast Agents — Documentation & Briefs
 
 > **Directives spécialisées pour la documentation du projet.**
-> Lisez d'abord `AGENTS.md` racine pour les règles absolues globales.
+> Lisez d’abord `AGENTS.md` (racine) pour les règles absolues globales et le protocole général.
 
 ---
 
-## 1. Documentation Vivante (APP_DOCUMENTATION.md)
+## Sommaire
+
+1. Documentation vivante (APP_DOCUMENTATION.md)
+2. CHANGELOG.md
+3. Structure des briefs
+4. Cohérence docs ↔ code
+5. Gouvernance
+
+---
+
+## 1. Documentation vivante (APP_DOCUMENTATION.md)
 
 ### 1.1 — But
 

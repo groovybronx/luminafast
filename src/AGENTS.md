@@ -1,13 +1,24 @@
+
 # LuminaFast Agents — Frontend (TypeScript/React)
 
 > **Directives spécialisées pour la couche Frontend.**
-> Lisez d'abord `AGENTS.md` racine pour les règles absolues globales.
+> Lisez d’abord `AGENTS.md` (racine) pour les règles absolues globales et le protocole général.
 
 ---
 
-## 1. Conventions TypeScript Strictes
+## Sommaire
 
-### 1.1 — Types & Interfaces
+1. Conventions TypeScript strictes
+2. Gestion d’état (Zustand)
+3. Services Tauri (intégration backend)
+4. Tests Vitest
+5. Intégration backend
+
+---
+
+## 1. Conventions TypeScript strictes
+
+### 1.1 — Types & interfaces
 
 - **Strict mode obligatoire** : `tsconfig.json` a `"strict": true`
 - **Pas de `any`** — utiliser `unknown` + type guards si nécessaire
@@ -52,20 +63,20 @@ export function GridView(props: any) {
 
 ### 1.3 — Nommage
 
-| Élément | Convention | Exemple |
-|---------|-----------|---------|
-| Fichier composant | PascalCase | `GridView.tsx` |
-| Fichier hook | camelCase | `useCatalog.ts` |
-| Fichier service | camelCase | `catalogService.ts` |
-| Fonction/variable | camelCase | `handleImageClick()` |
-| Type/Interface | PascalCase | `ImageDTO`, `GridViewProps` |
-| Constante | SCREAMING_SNAKE_CASE | `MAX_IMAGE_SIZE`, `THUMBNAIL_WIDTH` |
+| Élément            | Convention      | Exemple                    |
+|--------------------|----------------|----------------------------|
+| Fichier composant  | PascalCase     | `GridView.tsx`             |
+| Fichier hook       | camelCase      | `useCatalog.ts`            |
+| Fichier service    | camelCase      | `catalogService.ts`        |
+| Fonction/variable  | camelCase      | `handleImageClick()`       |
+| Type/Interface     | PascalCase     | `ImageDTO`, `GridViewProps`|
+| Constante          | SCREAMING_SNAKE_CASE | `MAX_IMAGE_SIZE`, `THUMBNAIL_WIDTH` |
 
 ---
 
-## 2. Gestion d'État (Zustand)
+## 2. Gestion d’état (Zustand)
 
-### 2.1 — Structure des Stores
+### 2.1 — Structure des stores
 
 Chaque store dans `src/stores/` représente un **domaine métier** :
 
@@ -75,7 +86,7 @@ Chaque store dans `src/stores/` représente un **domaine métier** :
 - `editStore.ts` — Événements, édits, historique
 - `systemStore.ts` — Logs, import progress
 
-### 2.2 — Exemple de Store
+### 2.2 — Exemple de store
 
 ```typescript
 // ✅ BON
@@ -108,9 +119,9 @@ export const useCatalogStore = create<CatalogState>((set) => ({
 
 ---
 
-## 3. Services Tauri (Invokation Backend)
+## 3. Services Tauri (intégration backend)
 
-### 3.1 — Gestion d'Erreurs Obligatoire
+### 3.1 — Gestion d’erreurs obligatoire
 
 ```typescript
 // ✅ BON

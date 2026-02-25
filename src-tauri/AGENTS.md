@@ -3,11 +3,44 @@
 > **Directives spécialisées pour la couche Backend Rust.**
 > Lisez d'abord `AGENTS.md` racine pour les règles absolues globales.
 
+├── preview.rs             # Génération previews
+├── discovery.rs           # Scan fichiers
+├── exif.rs                # Extraction EXIF/IPTC
+├── errors.rs              # Types d'erreur globaux
+├── database.rs            # Gestion SQLite
+└── commands/
+    ├── mod.rs             # Re-export commands
+    ├── catalog.rs         # Commands #[tauri::command]
+    ├── collection.rs      # Commands collections
+    ├── discovery.rs       # Commands discovery/import
+    └── dev.rs             # Commands développement (si applicable)
+```
+
+### 2.2 — Modules Internes avec Tests
+
+Chaque module Rust contient ses tests unitaires :
+
+# LuminaFast Agents — Backend (Rust/Tauri)
+
+> **Directives spécialisées pour la couche Backend Rust.**
+> Lisez d’abord `AGENTS.md` (racine) pour les règles absolues globales et le protocole général.
+
 ---
 
-## 1. Conventions Rust Strictes
+## Sommaire
 
-### 1.1 — Error Handling Obligatoire
+1. Conventions Rust strictes
+2. Structure des modules
+3. Tauri commands
+4. SQLite & migrations
+5. Session tracking
+6. Tests unitaires/intégration
+
+---
+
+## 1. Conventions Rust strictes
+
+### 1.1 — Error handling obligatoire
 
 **JAMAIS de `unwrap()`, `expect()` ou `panic!()` en code de production.**
 
@@ -26,15 +59,15 @@ fn load_image(path: &Path) -> Image {
 }
 ```
 
-### 1.2 — Résultats & Types d'Erreur
+### 1.2 — Résultats & types d’erreur
 
-Utiliser `thiserror` pour les types d'erreur personnalisés :
+Utiliser `thiserror` pour les types d’erreur personnalisés :
 
 ```rust
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum CatalogError {
+// ✅ BON
     #[error("Database error: {0}")]
     DatabaseError(String),
 
@@ -45,24 +78,24 @@ pub enum CatalogError {
     HashMismatch { path: String, expected: String, actual: String },
 }
 
-pub type CatalogResult<T> = Result<T, CatalogError>;
+#[tauri::command]
 ```
 
 ### 1.3 — Nommage
 
-| Élément | Convention | Exemple |
-|---------|-----------|---------|
-| Fichier module | snake_case | `blake3_hasher.rs` |
-| Struct/Enum | PascalCase | `Image`, `CatalogError` |
-| Fonction/méthode | snake_case | `compute_blake3()`, `load_from_db()` |
-| Constante | SCREAMING_SNAKE_CASE | `THUMBNAIL_WIDTH = 240` |
-| Trait | PascalCase | `HashProvider`, `ImageProcessor` |
+| Élément         | Convention         | Exemple                    |
+|-----------------|-------------------|----------------------------|
+| Fichier module  | snake_case        | `blake3_hasher.rs`         |
+| Struct/Enum     | PascalCase        | `Image`, `CatalogError`    |
+| Fonction/méthode| snake_case        | `compute_blake3()`, `load_from_db()` |
+| Constante       | SCREAMING_SNAKE_CASE | `THUMBNAIL_WIDTH = 240` |
+| Trait           | PascalCase        | `HashProvider`, `ImageProcessor` |
 
 ---
 
-## 2. Structure des Modules
+## 2. Structure des modules
 
-### 2.1 — Organisation par Domaine
+### 2.1 — Organisation par domaine
 
 ```
 src-tauri/src/
@@ -73,7 +106,7 @@ src-tauri/src/
 ├── preview.rs             # Génération previews
 ├── discovery.rs           # Scan fichiers
 ├── exif.rs                # Extraction EXIF/IPTC
-├── errors.rs              # Types d'erreur globaux
+├── errors.rs              # Types d’erreur globaux
 ├── database.rs            # Gestion SQLite
 └── commands/
     ├── mod.rs             # Re-export commands
@@ -83,7 +116,7 @@ src-tauri/src/
     └── dev.rs             # Commands développement (si applicable)
 ```
 
-### 2.2 — Modules Internes avec Tests
+### 2.2 — Modules internes avec tests
 
 Chaque module Rust contient ses tests unitaires :
 
@@ -116,15 +149,8 @@ mod tests {
 
 ---
 
-## 3. Tauri Commands
+## 3. Tauri commands
 
-### 3.1 — Conventions de Nommage
-
-Les commands Rust doivent utiliser **snake_case** et être déclarées avec `#[tauri::command]` :
-
-```rust
-// ✅ BON
-#[tauri::command]
 pub fn get_all_images(filter: Option<String>) -> CatalogResult<Vec<ImageDTO>> {
     // Implementation
 }

@@ -1,11 +1,24 @@
+
 # LuminaFast Agents — CI/CD & Infrastructure
 
 > **Directives spécialisées pour GitHub Actions et infrastructure.**
-> Lisez d'abord `AGENTS.md` racine pour les règles absolues globales.
+> Lisez d’abord `AGENTS.md` (racine) pour les règles absolues globales et le protocole général.
 
 ---
 
-## 1. GitHub Actions Workflow
+## Sommaire
+
+1. GitHub Actions workflow
+2. Détection de changements
+3. Quick validation jobs
+4. Path filtering
+5. Timeouts
+6. Caching & artifacts
+7. Checklist pré-commit
+
+---
+
+## 1. GitHub Actions workflow
 
 ### 1.1 — Philosophie
 

@@ -1,0 +1,15 @@
+{
+  "name": "luminafast-wasm",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "luminafast_wasm_bg.wasm",
+    "luminafast_wasm.js",
+    "luminafast_wasm.d.ts"
+  ],
+  "main": "luminafast_wasm.js",
+  "types": "luminafast_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

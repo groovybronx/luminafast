@@ -127,6 +127,73 @@ impl<'a> EventStore<'a> {
 
         Ok(events)
     }
+
+    pub fn get_events_for_target(
+        &self,
+        target_type: crate::models::event::TargetType,
+        target_id: i64,
+    ) -> Result<Vec<Event>, EventStoreError> {
+        let target_type_str = serde_json::to_string(&target_type)?;
+        let mut stmt = self.conn.prepare(
+            "SELECT id, timestamp, event_type, payload, target_type, target_id, user_id, created_at \
+             FROM events \
+             WHERE target_type = ?1 AND target_id = ?2 \
+             ORDER BY timestamp ASC",
+        )?;
+        let rows = stmt.query_map(params![target_type_str, target_id], |row| {
+            let event_type: String = row.get(2)?;
+            let payload: String = row.get(3)?;
+            let target_type: String = row.get(4)?;
+            let created_at_str: String = row.get(7)?;
+            Ok((
+                event_type,
+                payload,
+                target_type,
+                created_at_str,
+                row.get(0)?,
+                row.get(1)?,
+                row.get(5)?,
+                row.get::<_, Option<String>>(6)?,
+            ))
+        })?;
+
+        let mut events = Vec::new();
+        for row_result in rows {
+            let (
+                event_type_str,
+                payload_str,
+                target_type_str,
+                created_at_str,
+                id,
+                timestamp,
+                target_id,
+                user_id,
+            ) = row_result?;
+
+            let event_type: crate::models::event::EventType =
+                serde_json::from_str(&event_type_str).map_err(EventStoreError::Deserialization)?;
+            let payload: crate::models::event::EventPayload =
+                serde_json::from_str(&payload_str).map_err(EventStoreError::Deserialization)?;
+            let target_type: crate::models::event::TargetType =
+                serde_json::from_str(&target_type_str).map_err(EventStoreError::Deserialization)?;
+            let created_at = DateTime::parse_from_rfc3339(&created_at_str)
+                .map_err(EventStoreError::DateParsing)?
+                .with_timezone(&Utc);
+
+            events.push(Event {
+                id,
+                timestamp,
+                event_type,
+                payload,
+                target_type,
+                target_id,
+                user_id,
+                created_at,
+            });
+        }
+
+        Ok(events)
+    }
 }
 
 #[cfg(test)]
@@ -178,5 +245,32 @@ mod tests {
         let events = store.get_events().unwrap();
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].event_type, EventType::ImageAdded);
+    }
+
+    #[test]
+    fn test_get_events_for_target_filters() {
+        let conn = setup_db();
+        let store = EventStore::new(&conn);
+        let event = Event {
+            id: Uuid::new_v4().to_string(),
+            timestamp: Utc::now().timestamp(),
+            event_type: EventType::ImageAdded,
+            payload: EventPayload::ImageAdded(ImageAddedPayload {
+                image_id: 7,
+                filename: "test.jpg".to_string(),
+                file_hash: "abc123".to_string(),
+                captured_at: None,
+            }),
+            target_type: TargetType::Image,
+            target_id: 7,
+            user_id: None,
+            created_at: Utc::now(),
+        };
+
+        store.append_event(&event).unwrap();
+
+        let events = store.get_events_for_target(TargetType::Image, 7).unwrap();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].target_id, 7);
     }
 }

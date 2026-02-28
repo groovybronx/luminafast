@@ -5,6 +5,7 @@
 ## Raison d'Être
 
 Cette crate est **intentionnellement séparée** de `src-tauri/` pour éviter les conflits de dépendances entre :
+
 - Desktop targets (`x86_64-apple-darwin`, `x86_64-pc-windows-msvc`) → utilisent `uuid`, `tauri`, `rusqlite`
 - WASM target (`wasm32-unknown-unknown`) → zéro dépendances desktop, seulement `wasm-bindgen`
 
@@ -26,6 +27,7 @@ wasm-pack build --target web --release
 ### Configuration wasm-opt
 
 Le fichier `Cargo.toml` configure automatiquement wasm-opt avec les flags modern features WASM :
+
 - `--enable-bulk-memory` : Operations mémoire efficaces (memory.copy)
 - `--enable-nontrapping-float-to-int` : Conversions float→int saturées
 - `--enable-sign-ext` : Extension de signe
@@ -34,6 +36,7 @@ Le fichier `Cargo.toml` configure automatiquement wasm-opt avec les flags modern
 ## Output
 
 Après compilation, les fichiers générés dans `pkg/` sont copiés vers `src/wasm/` :
+
 ```
 src/wasm/
 ├── luminafast_wasm_bg.wasm   (19KB) — Module WASM optimisé
@@ -52,9 +55,15 @@ await loadWasmModule();
 
 // Utilisation
 const filters = new PixelFiltersWasm(
-  exposure, contrast, saturation,
-  highlights, shadows, clarity, vibrance,
-  colorTemp, tint
+  exposure,
+  contrast,
+  saturation,
+  highlights,
+  shadows,
+  clarity,
+  vibrance,
+  colorTemp,
+  tint,
 );
 const processed = filters.apply_filters(pixels, width, height);
 ```
@@ -68,12 +77,14 @@ Le wrapper TypeScript est testé dans `src/services/__tests__/wasmRenderingServi
 
 ⚠️ **Ce module est une COPIE du code `src-tauri/src/services/image_processing.rs`**.
 Toute modification des algorithmes pixel doit être **synchronisée manuellement** dans les deux endroits :
+
 1. `src-tauri/src/services/image_processing.rs` (source de vérité, tests)
 2. `luminafast-wasm/src/image_processing.rs` (copie WASM)
 
 ## CI/CD
 
 Le module WASM doit être recompilé avant chaque build de production :
+
 ```bash
 npm run build:wasm  # Alias pour ./scripts/build-wasm.sh
 npm run build       # Build Vite frontend (inclut src/wasm/)

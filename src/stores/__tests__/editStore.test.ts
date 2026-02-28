@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { act } from '@testing-library/react';
 import { useEditStore } from '../editStore';
 import type { CatalogEvent } from '../../types';
+import type { EventDTO } from '@/services/eventService';
 
 describe('editStore', () => {
   beforeEach(() => {
@@ -11,6 +12,7 @@ describe('editStore', () => {
         eventLog: [],
         currentEdits: {},
         historyIndex: -1,
+        editEventsByImage: {},
       });
     });
   });
@@ -20,6 +22,7 @@ describe('editStore', () => {
     expect(store.eventLog).toEqual([]);
     expect(store.currentEdits).toEqual({});
     expect(store.historyIndex).toBe(-1);
+    expect(store.editEventsByImage).toEqual({});
   });
 
   it('should add events to log', () => {
@@ -199,5 +202,28 @@ describe('editStore', () => {
     });
     expect(useEditStore.getState().currentEdits).toEqual({});
     expect(useEditStore.getState().eventLog).toHaveLength(2); // Events remain in log
+  });
+
+  it('should compute applied edits from edit events', () => {
+    const events: EventDTO[] = [
+      {
+        id: 'evt-1',
+        timestamp: 123,
+        eventType: 'ImageEdited',
+        payload: {
+          edits: { exposure: 0.5, saturation: 1.2 },
+        },
+        targetType: 'Image',
+        targetId: 1,
+        userId: undefined,
+        createdAt: new Date().toISOString(),
+      },
+    ];
+
+    useEditStore.getState().setEditEvents(1, events);
+
+    const filters = useEditStore.getState().getAppliedEdits(1);
+    expect(filters.exposure).toBe(0.5);
+    expect(filters.saturation).toBe(1.2);
   });
 });

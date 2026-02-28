@@ -74,8 +74,8 @@ export class FilesystemService {
     // Mock fallback for tests
     return async (command: string, args?: Record<string, unknown>) => {
       FilesystemService.logDev(
-        `[FilesystemService] Tauri not available, mocking command: ${command}`,
-        { args },
+        '[MOCK] FilesystemService: Tauri non disponible, fallback mock utilisé',
+        { command, args },
       );
       throw new Error(`Tauri not available: ${command}`);
     };

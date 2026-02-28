@@ -1,4 +1,3 @@
-
 # LuminaFast Agents — Documentation & Briefs
 
 > **Directives spécialisées pour la documentation du projet.**
@@ -25,6 +24,7 @@
 ### 1.2 — Quand Mettre à Jour
 
 Après **CHAQUE sous-phase** qui modifie :
+
 - L'architecture ou l'organisation des fichiers
 - Les APIs/commands Tauri
 - Le schéma de base de données
@@ -33,6 +33,7 @@ Après **CHAQUE sous-phase** qui modifie :
 - Le statut des phases/sous-phases
 
 **Ne PAS mettre à jour** pour :
+
 - Refactoring interne (logs, constantes)
 - Corrections de bugs mineures
 - Changements de noms de variables locales
@@ -43,48 +44,72 @@ Après **CHAQUE sous-phase** qui modifie :
 # LuminaFast — Documentation de l'Application
 
 ## 1. Vue d’Ensemble
+
 ## 2. Stack Technique Actuelle
+
 ## 3. Architecture des Fichiers
+
 ## 4. Composants UI
-  - 4.1 Composants
-  - 4.2 Stores Zustand
-  - 4.3 Zones de l’interface
+
+- 4.1 Composants
+- 4.2 Stores Zustand
+- 4.3 Zones de l’interface
+
 ## 5. Modèle de Données
-  - 5.1 Structure d’une Image
-  - 5.2 Structure d’un Event
+
+- 5.1 Structure d’une Image
+- 5.2 Structure d’un Event
+
 ## 6. Fonctionnalités — État Actuel
+
 ## 7. Raccourcis Clavier
+
 ## 8. Dépendances npm
+
 ## 9. Dépendances Rust
+
 ## 10. Configuration
+
 ## 11. Schéma et Base de Données SQLite
-  - 11.1 Architecture du Catalogue
-  - 11.2 Configuration SQLite
-  - 11.3 Système de Migrations
-  - 11.4 Types Rust
-  - 11.5 Tests Unitaires
+
+- 11.1 Architecture du Catalogue
+- 11.2 Configuration SQLite
+- 11.3 Système de Migrations
+- 11.4 Types Rust
+- 11.5 Tests Unitaires
+
 ## 12. Outils de Qualité et CI/CD
-  - 12.1 Linting et Formatting
-  - 12.2 Tests et Coverage
-  - 12.3 Pipeline CI/CD
-  - 12.4 Scripts de Développement
+
+- 12.1 Linting et Formatting
+- 12.2 Tests et Coverage
+- 12.3 Pipeline CI/CD
+- 12.4 Scripts de Développement
+
 ## 13. Services EXIF/IPTC
-  - 13.1 Architecture EXIF
-  - 13.2 Métadonnées EXIF
-  - 13.3 Métadonnées IPTC
-  - 13.4 Performance et Intégration
+
+- 13.1 Architecture EXIF
+- 13.2 Métadonnées EXIF
+- 13.3 Métadonnées IPTC
+- 13.4 Performance et Intégration
+
 ## 14. Service Filesystem
-  - 14.1 Architecture du Service
-  - 14.2 Types Unifiés
-  - 14.3 Concurrence et Performance
-  - 14.4 Commandes Tauri
-  - 14.5 Tests et Validation
+
+- 14.1 Architecture du Service
+- 14.2 Types Unifiés
+- 14.3 Concurrence et Performance
+- 14.4 Commandes Tauri
+- 14.5 Tests et Validation
+
 ## 15. Commandes Tauri (Mises à jour)
+
 ## 16. Services Frontend (Mises à jour)
+
 ## 17. Types & Interfaces (Mises à jour)
+
 ## 18. Historique des Modifications
 
 **Annexes** :
+
 - Smart Collections : Logique SQL et compatibilité parser
 - Phase 3.4 : Folder Navigator
 - Phase 3.5 : Recherche & Filtrage
@@ -117,31 +142,32 @@ Tracker l'avancement des phases/sous-phases en temps réel. Source de vérité p
 ### 2.2 — Format
 
 ```markdown
-| Phase | Sous-Phase | Description | Statut | Date | Agent |
-|-------|-----------|-------------|--------|------|-------|
-| 4 | 4.1 | Event Sourcing Engine | ✅ Complétée | 2026-02-25 | Agent-X |
+| Phase | Sous-Phase | Description           | Statut       | Date       | Agent   |
+| ----- | ---------- | --------------------- | ------------ | ---------- | ------- |
+| 4     | 4.1        | Event Sourcing Engine | ✅ Complétée | 2026-02-25 | Agent-X |
 ```
 
 ### 2.3 — Statuts Possibles
 
-| Statut | Couleur | Signification |
-|--------|--------|--------------|
-| ✅ Complétée | Vert | Livrée, testée, intégrée |
-| 🟡 En cours | Orange | En développement actif |
-| ⬜ En attente | Gris | N'a pas encore commencé |
-| ⚠️ Bloquée | Rouge | Attend une décision/ressource |
-| ❌ Annulée | Noir | Rejetée/abandonnée |
+| Statut        | Couleur | Signification                 |
+| ------------- | ------- | ----------------------------- |
+| ✅ Complétée  | Vert    | Livrée, testée, intégrée      |
+| 🟡 En cours   | Orange  | En développement actif        |
+| ⬜ En attente | Gris    | N'a pas encore commencé       |
+| ⚠️ Bloquée    | Rouge   | Attend une décision/ressource |
+| ❌ Annulée    | Noir    | Rejetée/abandonnée            |
 
 ### 2.4 — Entrée d'une Sous-Phase
 
 Quand une sous-phase est **complétée**, ajouter une entrée avec:
 
 ```markdown
-| Phase | Sous-Phase | Description | Statut | Date | Agent |
-|-------|-----------|-------------|--------|------|-------|
-| 4 | 4.1 | Event Sourcing Engine | ✅ Complétée | 2026-02-25 | Copilot |
+| Phase | Sous-Phase | Description           | Statut       | Date       | Agent   |
+| ----- | ---------- | --------------------- | ------------ | ---------- | ------- |
+| 4     | 4.1        | Event Sourcing Engine | ✅ Complétée | 2026-02-25 | Copilot |
 
 **Détails (Phase 4.1)**:
+
 - Fichiers créés: `src-tauri/src/event_sourcing.rs`, `src-tauri/src/replay.rs`
 - Fichiers modifiés: `src-tauri/src/commands/catalog.rs`
 - Tests créés: `src-tauri/src/event_sourcing.rs::tests` (12 cas)
@@ -160,23 +186,27 @@ Chaque sous-phase a un **brief dédié** qui sert de "prompt" pour l'agent IA. L
 
 ### 3.2 — Sections Obligatoires
 
-```markdown
+````markdown
 # PHASE-X.Y — [Titre Descriptif]
 
 ## Objectif
+
 (2-3 lignes max)
 
 ## Dépendances
+
 - PHASE-X.X doit être ✅ complétée
 - PHASE-X.(Y-1) doit être ✅ complétée
 
 ## Fichiers à Créer/Modifier
+
 - src/types/event.ts (nouveau)
 - src-tauri/src/event_sourcing.rs (nouveau)
 - src-tauri/migrations/003_events.sql (nouveau)
 - src/stores/editStore.ts (modifier)
 
 ## Interfaces Publiques
+
 (Types/signatures qu'on expose)
 
 ```typescript
@@ -192,8 +222,10 @@ export interface EventDTO {
   data: unknown;
 }
 ```
+````
 
 ## Critères de Validation
+
 - [ ] Event sourcing engine émet tous les 5 types d'event
 - [ ] Replay fonctionne et produit l'état identique
 - [ ] 12+ tests unitaires (events, snapshots, replay)
@@ -205,10 +237,10 @@ export interface EventDTO {
 [Extrait pertinent des docs]
 
 ## Notes d'Implémentation
+
 - Utiliser les enums Rust pour les types d'events
 - Snapshots sérialisés en JSON dans la DB
 - Replay atomique (tout ou rien)
-
 
 ### 3.3 — Template Officiel
 
@@ -230,30 +262,36 @@ Avant **CHAQUE** nouvelle sous-phase:
 
 ```markdown
 # Titre principal (H1) — Utilisé une seule fois par document
+
 ## Section principale (H2) — Grandes sections
+
 ### Sous-section (H3) — Détails spécifiques
+
 #### Détail fin (H4) — Listes imbriquées
 ```
 
 ### 4.2 — Code & Blocs
 
-```markdown
+````markdown
 # Bon pour les extraits courts
+
 `function foo() { }`
 
 # Bon pour les extraits longs
+
 ```typescript
 // Code complet avec contexte
 function foo() {
   return bar();
 }
 ```
+````
 
 # Tableau
-| En-tête 1 | En-tête 2 |
-|-----------|-----------|
-| Ligne 1   | Valeur 1  |
 
+| En-tête 1 | En-tête 2 |
+| --------- | --------- |
+| Ligne 1   | Valeur 1  |
 
 ### 4.3 — Listes
 
@@ -269,10 +307,12 @@ function foo() {
 
 ```markdown
 # Interne
+
 [Lien texte](relative/path/file.md)
 [Lien vers section](#sous-section)
 
 # Externe
+
 [GitHub](https://github.com/...)
 ```
 
@@ -328,6 +368,7 @@ Event sourcing nécessite une table events_snapshots pour performance.
 Cela impacte le schéma DB de Phase 4.1.
 
 **Options Considérées**:
+
 1. Ajouter snapshots dans 4.1 (requis pour 4.2)
 2. Reporter snapshots à 4.2 (risque de performance)
 
@@ -346,13 +387,13 @@ Avant d'écrire **tout test** (unitaire, intégration, E2E).
 
 ### 7.2 — Structure de Tests par Couche
 
-| Couche | Type Test | Framework | Location |
-|--------|-----------|-----------|----------|
-| Frontend | Unitaire | Vitest + Testing Library | `src/__tests__/` |
-| Frontend | Composant | Vitest + Testing Library | `src/components/**/__tests__/` |
-| Backend | Unitaire | `#[cfg(test)]` | `src-tauri/src/` |
-| Backend | Intégration | Rust test runner | `src-tauri/tests/` |
-| E2E | - | Playwright (futur) | `e2e/` |
+| Couche   | Type Test   | Framework                | Location                       |
+| -------- | ----------- | ------------------------ | ------------------------------ |
+| Frontend | Unitaire    | Vitest + Testing Library | `src/__tests__/`               |
+| Frontend | Composant   | Vitest + Testing Library | `src/components/**/__tests__/` |
+| Backend  | Unitaire    | `#[cfg(test)]`           | `src-tauri/src/`               |
+| Backend  | Intégration | Rust test runner         | `src-tauri/tests/`             |
+| E2E      | -           | Playwright (futur)       | `e2e/`                         |
 
 ---
 

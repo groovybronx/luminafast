@@ -92,6 +92,10 @@ jobs:
           packages: libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libssl-dev pkg-config
           version: 1.0
 
+      - name: Create dist placeholder
+        run: mkdir -p dist && echo '<!DOCTYPE html><html><body>CI</body></html>' > dist/index.html
+
+
       - run: cd src-tauri && cargo fmt --all -- --check
 
       - run: cd src-tauri && cargo clippy --lib -- -D warnings -A dead_code -A unused_variables

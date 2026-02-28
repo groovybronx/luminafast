@@ -11,6 +11,7 @@
 **CHANGELOG.md prétend** : "455 tests passants ✅ (22 nouveaux tests Phase 3.2, +105 suite corrections)"
 
 **Réalité** (validation `npm run test:run 2026-02-24) : **361 tests passants**
+
 - 357 tests existants (prior to Phase 3.1 Maintenance)
 - +4 tests Phase 3.1 Maintenance (nouveaux)
 - **=== 361 total ===**
@@ -18,13 +19,12 @@
 **Phase 3.2 n'a PAS apporté les 22 tests supplémentaires mentionnés dans CHANGELOG.**
 
 Cela signifie que :
+
 - ✅ Code CRUD est implémenté (complète)
 - ⚠️ Couverture de tests est INCOMPLÈTE (13 tests presence confirmé par audit, pas 22 promis)
 - ⚠️ CHANGELOG contient des chiffres erronés/optimistes
 
 ---
-
-
 
 Phase 3.2 a été marquée comme **complètement implémentée** le 2026-02-21 selon CHANGELOG.md. Audit du code réel montre que **tous les critères du brief sont satisfaits** :
 
@@ -49,6 +49,7 @@ Phase 3.2 a été marquée comme **complètement implémentée** le 2026-02-21 s
 **Fichier** : `src-tauri/src/commands/catalog.rs:490-517`
 
 **Implémentation** :
+
 ```rust
 pub async fn delete_collection(collection_id: u32, state: State<'_, AppState>) -> CommandResult<()> {
     // ✅ Vérifie existence collection
@@ -58,6 +59,7 @@ pub async fn delete_collection(collection_id: u32, state: State<'_, AppState>) -
 ```
 
 **Tests** (3 tests) :
+
 - ✅ `test_delete_collection_success` : ligne 1319
 - ✅ `test_delete_collection_not_found` : ligne 1354
 - ✅ `test_delete_collection_cascades_images` : ligne 1365
@@ -69,6 +71,7 @@ pub async fn delete_collection(collection_id: u32, state: State<'_, AppState>) -
 **Fichier** : `src-tauri/src/commands/catalog.rs:520-552`
 
 **Implémentation** :
+
 ```rust
 pub async fn rename_collection(collection_id: u32, name: String, state: State<'_, AppState>) -> CommandResult<()> {
     // ✅ Valide que name n'est pas vide
@@ -78,6 +81,7 @@ pub async fn rename_collection(collection_id: u32, name: String, state: State<'_
 ```
 
 **Tests** (2 tests) :
+
 - ✅ `test_rename_collection_success` : ligne 1446
 - ✅ `test_rename_collection_not_found` : ligne 1476
 
@@ -88,6 +92,7 @@ pub async fn rename_collection(collection_id: u32, name: String, state: State<'_
 **Fichier** : `src-tauri/src/commands/catalog.rs:555-591`
 
 **Implémentation** :
+
 ```rust
 pub async fn remove_images_from_collection(collection_id: u32, image_ids: Vec<u32>, state) -> CommandResult<()> {
     // ✅ Vérifie existence collection
@@ -97,6 +102,7 @@ pub async fn remove_images_from_collection(collection_id: u32, image_ids: Vec<u3
 ```
 
 **Tests** (1 test) :
+
 - ✅ `test_remove_images_from_collection` : ligne 1491
 
 **Verdict** : ✅ **Complète**
@@ -106,6 +112,7 @@ pub async fn remove_images_from_collection(collection_id: u32, image_ids: Vec<u3
 **Fichier** : `src-tauri/src/commands/catalog.rs:593-652`
 
 **Implémentation** :
+
 ```rust
 pub async fn get_collection_images(collection_id: u32, state) -> CommandResult<Vec<ImageDTO>> {
     // ✅ Vérifie existence collection
@@ -116,6 +123,7 @@ pub async fn get_collection_images(collection_id: u32, state) -> CommandResult<V
 ```
 
 **Tests** (2 tests) :
+
 - ✅ `test_get_collection_images_empty` : ligne 1555
 - ✅ `test_get_collection_images_with_data` : ligne 1580
 
@@ -145,24 +153,25 @@ generate_handler![
 **Fichier** : `src/stores/collectionStore.ts` (160 lignes)
 
 **Interface implémentée** :
+
 ```typescript
 interface CollectionStore {
   // État
-  collections: CollectionDTO[];                    // ✅ Présent
-  activeCollectionId: number | null;               // ✅ Présent
-  activeCollectionImageIds: number[] | null;       // ✅ Présent
-  isLoading: boolean;                              // ✅ Présent
-  error: string | null;                            // ✅ Présent
+  collections: CollectionDTO[]; // ✅ Présent
+  activeCollectionId: number | null; // ✅ Présent
+  activeCollectionImageIds: number[] | null; // ✅ Présent
+  isLoading: boolean; // ✅ Présent
+  error: string | null; // ✅ Présent
 
   // ActionsAsync
-  loadCollections: () => Promise<void>;             // ✅ Ligne 43-52
-  createCollection: (name, parentId?) => Promise;  // ✅ Ligne 54-63
-  deleteCollection: (id) => Promise;               // ✅ Ligne 74-89
-  renameCollection: (id, name) => Promise;         // ✅ Ligne 91-98
-  addImagesToCollection: (col_id, img_ids) => P;  // ✅ Ligne 100-116
-  removeImagesFromCollection: (col_id, img_ids) => P;  // ✅ Ligne 118-133
-  setActiveCollection: (id) => Promise;            // ✅ Ligne 135-158
-  clearActiveCollection: () => void;               // ✅ Ligne 160
+  loadCollections: () => Promise<void>; // ✅ Ligne 43-52
+  createCollection: (name, parentId?) => Promise; // ✅ Ligne 54-63
+  deleteCollection: (id) => Promise; // ✅ Ligne 74-89
+  renameCollection: (id, name) => Promise; // ✅ Ligne 91-98
+  addImagesToCollection: (col_id, img_ids) => P; // ✅ Ligne 100-116
+  removeImagesFromCollection: (col_id, img_ids) => P; // ✅ Ligne 118-133
+  setActiveCollection: (id) => Promise; // ✅ Ligne 135-158
+  clearActiveCollection: () => void; // ✅ Ligne 160
 }
 ```
 
@@ -173,6 +182,7 @@ interface CollectionStore {
 **Fichier** : `src/services/catalogService.ts:135-226`
 
 **Méthodes collection implémentées** :
+
 ```typescript
 static async deleteCollection(id: number): Promise<void>
 static async renameCollection(id: number, name: string): Promise<void>
@@ -197,6 +207,7 @@ static async getSmartCollectionResults(id: number): Promise<ImageDTO[]>
 1. **Import du store** : Ligne 7 → ✅ `import { useCollectionStore }`
 
 2. **Chargement collections au montage** : Ligne 188 → ✅
+
 ```typescript
 useEffect(() => {
   void loadCollections();
@@ -204,6 +215,7 @@ useEffect(() => {
 ```
 
 3. **Affichage collections réelles** : Ligne 276-290 → ✅
+
 ```typescript
 collections.map((collection) => (
   <CollectionItem
@@ -218,6 +230,7 @@ collections.map((collection) => (
 ```
 
 4. **Création inline** : Ligne 195-200 → ✅
+
 ```typescript
 const name = prompt('Nom de la collection');
 if (name?.trim()) {
@@ -226,16 +239,19 @@ if (name?.trim()) {
 ```
 
 5. **Bouton trash (suppression)** : Ligne 283 → ✅
+
 ```typescript
 onDelete={(id) => void deleteCollection(id)}
 ```
 
 6. **Indicateur collection active** : Ligne 265 → ✅
+
 ```typescript
 className={isActive ? 'bg-blue-500 text-white' : '...'}
 ```
 
 7. **"Toutes les photos"** : Ligne 340-343 → ✅
+
 ```typescript
 onClick={() => {
   clearActiveCollection();
@@ -252,6 +268,7 @@ onClick={() => {
 **Fichier** : `src/App.tsx:48-86`
 
 **Implémentation** :
+
 ```typescript
 const activeCollectionImageIds = useCollectionStore((state) => state.activeCollectionImageIds);
 
@@ -283,17 +300,17 @@ const filteredImages = useMemo(() => {
 
 **Réalité** :
 
-| Test | Ligne | Statut |
-|------|-------|--------|
-| `test_delete_collection_success` | 1319 | ✅ |
-| `test_delete_collection_not_found` | 1354 | ✅ |
-| `test_delete_collection_cascades_images` | 1365 | ✅ |
-| `test_rename_collection_success` | 1446 | ✅ |
-| `test_rename_collection_not_found` | 1476 | ✅ |
-| `test_rename_collection_empty_name` | ? | ⚠️ Non trouvé |
-| `test_remove_images_from_collection` | 1491 | ✅ |
-| `test_get_collection_images_empty` | 1555 | ✅ |
-| `test_get_collection_images_with_data` | 1580 | ✅ |
+| Test                                     | Ligne | Statut        |
+| ---------------------------------------- | ----- | ------------- |
+| `test_delete_collection_success`         | 1319  | ✅            |
+| `test_delete_collection_not_found`       | 1354  | ✅            |
+| `test_delete_collection_cascades_images` | 1365  | ✅            |
+| `test_rename_collection_success`         | 1446  | ✅            |
+| `test_rename_collection_not_found`       | 1476  | ✅            |
+| `test_rename_collection_empty_name`      | ?     | ⚠️ Non trouvé |
+| `test_remove_images_from_collection`     | 1491  | ✅            |
+| `test_get_collection_images_empty`       | 1555  | ✅            |
+| `test_get_collection_images_with_data`   | 1580  | ✅            |
 
 **Trouvés** : 8/9 tests ✅
 **Manquant** : 1 test validation (empty_name) ⚠️
@@ -306,16 +323,16 @@ const filteredImages = useMemo(() => {
 
 **Réalité** : 13+ tests dans le fichier (audit a confirmé présence, names spécifiques non exhaustivement listé)
 
-| Test | Présent |
-|------|---------|
-| `should initialize with empty state` | ✅ |
-| `should load collections` | ✅ |
-| `should create a collection` | ✅ |
-| `should delete a collection and update list` | ✅ |
-| `should rename a collection` | ✅ |
-| `should set active collection and store image IDs` | ✅ |
-| `should clear active collection` | ✅ |
-| (6+ tests additionnels pour edge cases) | ✅ |
+| Test                                               | Présent |
+| -------------------------------------------------- | ------- |
+| `should initialize with empty state`               | ✅      |
+| `should load collections`                          | ✅      |
+| `should create a collection`                       | ✅      |
+| `should delete a collection and update list`       | ✅      |
+| `should rename a collection`                       | ✅      |
+| `should set active collection and store image IDs` | ✅      |
+| `should clear active collection`                   | ✅      |
+| (6+ tests additionnels pour edge cases)            | ✅      |
 
 **Trouvés** : 13/13 tests ✅
 
@@ -325,24 +342,24 @@ const filteredImages = useMemo(() => {
 
 ## 📊 État de Validation Contre Brief
 
-| Critère | Brief | Réalité | Statut |
-|---------|-------|---------|--------|
-| `cargo check` 0 erreurs | ✅ | ✅ | ✅ |
-| `cargo test` 127 tests | ✅ | ✅ (8.5/9 tests) | ✅ |
-| `tsc --noEmit` 0 erreurs | ✅ | ✅ | ✅ |
-| `npm test` 455 tests | ✅ (planning) | ⚠️ 361 actuels | ⚠️ |
-| 4 commandes Rust implémentées | ✅ | ✅ | ✅ |
-| 4 commandes enregistrées lib.rs | ✅ | ✅ | ✅ |
-| Store Zustand créé | ✅ | ✅ | ✅ |
-| 4 méthodes CatalogService | ✅ | ✅ (7 total) | ✅ |
-| LeftSidebar collections réelles | ✅ | ✅ | ✅ |
-| Création collection UI | ✅ | ✅ | ✅ |
-| Suppression collection UI | ✅ | ✅ | ✅ |
-| Filtrage par collection App.tsx | ✅ | ✅ | ✅ |
-| "Toutes les photos" réinitialise | ✅ | ✅ | ✅ |
-| Renommage collection UI | ✅ | ✅ | ✅ |
-| Aucun `any` TypeScript | ✅ | ✅ | ✅ |
-| Aucun `unwrap()` production | ✅ | ✅ | ✅ |
+| Critère                          | Brief         | Réalité          | Statut |
+| -------------------------------- | ------------- | ---------------- | ------ |
+| `cargo check` 0 erreurs          | ✅            | ✅               | ✅     |
+| `cargo test` 127 tests           | ✅            | ✅ (8.5/9 tests) | ✅     |
+| `tsc --noEmit` 0 erreurs         | ✅            | ✅               | ✅     |
+| `npm test` 455 tests             | ✅ (planning) | ⚠️ 361 actuels   | ⚠️     |
+| 4 commandes Rust implémentées    | ✅            | ✅               | ✅     |
+| 4 commandes enregistrées lib.rs  | ✅            | ✅               | ✅     |
+| Store Zustand créé               | ✅            | ✅               | ✅     |
+| 4 méthodes CatalogService        | ✅            | ✅ (7 total)     | ✅     |
+| LeftSidebar collections réelles  | ✅            | ✅               | ✅     |
+| Création collection UI           | ✅            | ✅               | ✅     |
+| Suppression collection UI        | ✅            | ✅               | ✅     |
+| Filtrage par collection App.tsx  | ✅            | ✅               | ✅     |
+| "Toutes les photos" réinitialise | ✅            | ✅               | ✅     |
+| Renommage collection UI          | ✅            | ✅               | ✅     |
+| Aucun `any` TypeScript           | ✅            | ✅               | ✅     |
+| Aucun `unwrap()` production      | ✅            | ✅               | ✅     |
 
 ---
 
@@ -362,6 +379,7 @@ Tous les **critères fonctionnels** du brief PHASE-3.2.md sont satisfaits :
 ### ⚠️ MAIS : Lacune de Tests Documentée
 
 **CHANGELOG réclame 455 tests** mais la réalité montre **361 tests** :
+
 - Phase 3.2 devait apporter 22 nouveaux tests
 - Phase 3.2 en a apporté : **0** (les tests discovery/collection existent mais n'ont pas été ajoutés en Phase 3.2 lui-même)
 - **Couverture = 361/361 actuels (pas 455)**
@@ -374,13 +392,13 @@ Le brief Phase 3.2 spécifie clairement **"Glisser-déposer vers collection → 
 
 ### Grille de Complétude
 
-| Aspect | Statut |
-|--------|--------|
-| **Fonctionnalité** | ✅ 100% Complète |
-| **Tests** | ⚠️ 50% Complète (361/700 théoriques) |
-| **Documentation** | ✅ À jour |
-| **Code Quality** | ✅ Strict mode |
-| **Périmètre** | ✅ Respecté |
+| Aspect             | Statut                               |
+| ------------------ | ------------------------------------ |
+| **Fonctionnalité** | ✅ 100% Complète                     |
+| **Tests**          | ⚠️ 50% Complète (361/700 théoriques) |
+| **Documentation**  | ✅ À jour                            |
+| **Code Quality**   | ✅ Strict mode                       |
+| **Périmètre**      | ✅ Respecté                          |
 
 ### Verdict Final
 

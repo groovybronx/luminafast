@@ -9,23 +9,23 @@
 
 ### 1.1 — Types du Modèle (`models/image.rs`)
 
-| Type | Statut | Problème | Priorité |
-|------|--------|---------|----------|
-| `Image` (struct) | ✅ Défini, testé, #[allow(dead_code)] | Planifié Phase 4.2 (rendering pipeline) + Phase 5+ | 📋 **PLANIFIÉ** |
-| `ExifData` | ✅ Défini, testé, #[allow(dead_code)] | Planifié Phase 5.1 (EXIF panel connecté) | 📋 **PLANIFIÉ** |
-| `EditData` | Défini, tests uniquement | Pas d'intégration pipeline édition | 🟠 **HIGH** |
-| `ImageFlag` (enum) | Défini, référencé seulement | Pas de test update_image_state avec flags | 🟠 **HIGH** |
-| `ColorLabel` (enum) | Défini, référencé seulement | Pas de test color_label | 🟠 **HIGH** |
-| `NewImage` | ✅ Utilisé (ingestion.rs) | — | ✅ OK |
-| `ImageUpdate` | Défini, JAMAIS utilisé | Aucun test/code | 🟠 **HIGH** |
+| Type                | Statut                                | Problème                                           | Priorité        |
+| ------------------- | ------------------------------------- | -------------------------------------------------- | --------------- |
+| `Image` (struct)    | ✅ Défini, testé, #[allow(dead_code)] | Planifié Phase 4.2 (rendering pipeline) + Phase 5+ | 📋 **PLANIFIÉ** |
+| `ExifData`          | ✅ Défini, testé, #[allow(dead_code)] | Planifié Phase 5.1 (EXIF panel connecté)           | 📋 **PLANIFIÉ** |
+| `EditData`          | Défini, tests uniquement              | Pas d'intégration pipeline édition                 | 🟠 **HIGH**     |
+| `ImageFlag` (enum)  | Défini, référencé seulement           | Pas de test update_image_state avec flags          | 🟠 **HIGH**     |
+| `ColorLabel` (enum) | Défini, référencé seulement           | Pas de test color_label                            | 🟠 **HIGH**     |
+| `NewImage`          | ✅ Utilisé (ingestion.rs)             | —                                                  | ✅ OK           |
+| `ImageUpdate`       | Défini, JAMAIS utilisé                | Aucun test/code                                    | 🟠 **HIGH**     |
 
 ### 1.2 — Types DTO Tauri (`commands/types.rs`)
 
-| Type | Statut | Problème | Priorité |
-|------|--------|---------|----------|
-| `TauriImage` | Défini, JAMAIS utilisé | Pas de commande Tauri l'invoquant | 🟠 **HIGH** |
-| `TauriNewImage` | Défini, JAMAIS utilisé | Pas d'intégration API création | 🟠 **HIGH** |
-| `TauriImageUpdate` | Défini, JAMAIS utilisé | Pas d'intégration API édition | 🟠 **HIGH** |
+| Type               | Statut                 | Problème                          | Priorité    |
+| ------------------ | ---------------------- | --------------------------------- | ----------- |
+| `TauriImage`       | Défini, JAMAIS utilisé | Pas de commande Tauri l'invoquant | 🟠 **HIGH** |
+| `TauriNewImage`    | Défini, JAMAIS utilisé | Pas d'intégration API création    | 🟠 **HIGH** |
+| `TauriImageUpdate` | Défini, JAMAIS utilisé | Pas d'intégration API édition     | 🟠 **HIGH** |
 
 ---
 
@@ -34,11 +34,13 @@
 ### 2.1 — Phase 1.2 (Tauri Commands CRUD) ❌ Lacune Détectée
 
 **Prévu** : CRUD complet (Create, Read, Update, Delete) sur images
+
 - `get_image_detail` : Devrait retourner `TauriImage` (ou `ImageDTO`)
 - `update_image` : Devrait accepter `TauriImageUpdate`
 - Mapping bidirectionnel Model ↔ DTO
 
 **État Réel** : Pas d'implémentation
+
 - Pas de commande `update_image`
 - Pas de test de modification (rating, flag, color_label)
 
@@ -47,10 +49,12 @@
 ### 2.2 — Phase 2.2 (EXIF Harvesting) ⚠️ Partielle
 
 **Prévu** : Extraction + stockage EXIF métadonnées
+
 - `ExifData` structure définie ✓
 - Extraction via `extract_exif`, `extract_exif_batch` ✓
 
 **État Réel** : EXIF extrait mais = JSON brut, pas mapping `ExifData`
+
 - Métadonnées stockées dans `exif_metadata` table ✓
 - Mais pas d'hydration en struct `ExifData` lors du fetch
 
@@ -59,11 +63,13 @@
 ### 2.3 — Phase 4.2 (Image Rendering Pipeline) ❌ Totalement Absent
 
 **Prévu** : Pipeline pour édition + rendu
+
 - Charge `Image` + `EditData`
 - Applique modifications
 - Retourne résultat rendu
 
 **État Réel** : Aucune implémentation
+
 - Commands CRUD d'édition (`update_image_edit_data`) n'existe pas
 - `EditData` jamais utilisée
 - Pas de test d'édition
@@ -73,11 +79,13 @@
 ### 2.4 — Phase 5.3 (Rating & Flagging) ❌ Lacune Majeure
 
 **Prévu** : Persistance `ImageFlag` et `ColorLabel`
+
 - Modification via API Tauri
 - Persistance en DB
 - Tests complets
 
 **État Réel** : Types définis mais 0 usage
+
 - Pas de commande Tauri pour modifier flags/labels
 - Table `image_state` existe mais pas d'usage via DTOs
 - Test `test_image_state_operations` existe mais n'exercice pas les flags
@@ -103,6 +111,7 @@ Phase 1.2 Ajout / Modification :
 ```
 
 **Critères de Validation** :
+
 - `cargo test --lib` : 100% pass
 - Mapping bidirectionnel sans perte de données
 - DTOs contrastent clairement entités métier (Model)

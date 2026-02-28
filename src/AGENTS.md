@@ -1,3 +1,17 @@
+9. Logging développeur (logDev)
+
+### 9. Logging développeur (logDev)
+
+Pour faciliter le debug UI, utilisez la fonction logDev (src/lib/logDev.ts) :
+
+```typescript
+import { logDev } from '@/lib/logDev';
+logDev('App monté');
+logDev('Erreur catalogue', error);
+```
+
+Les logs sont affichés uniquement en mode développement (import.meta.env.DEV).
+Ajoutez logDev dans les composants, stores et services critiques pour tracer les étapes, erreurs et interactions.
 
 # LuminaFast Agents — Frontend (TypeScript/React)
 
@@ -9,6 +23,20 @@
 ## Sommaire
 
 1. Conventions TypeScript strictes
+
+### 1.4 — Conventions CSS/Tailwind
+
+- Utilisez toujours la forme canonique des classes Tailwind (ex : z-100, p-4, m-2).
+- N'utilisez les crochets (ex : z-[100]) que pour des valeurs dynamiques ou non standards.
+- Vérifiez et corrigez les classes pour respecter la syntaxe canonique.
+
+Exemple :
+// ✅ BON
+
+<div className="z-100" />
+// ❌ MAUVAIS
+// classe non canonique (ex : z-[valeur])
+
 2. Gestion d’état (Zustand)
 3. Services Tauri (intégration backend)
 4. Tests Vitest
@@ -63,14 +91,14 @@ export function GridView(props: any) {
 
 ### 1.3 — Nommage
 
-| Élément            | Convention      | Exemple                    |
-|--------------------|----------------|----------------------------|
-| Fichier composant  | PascalCase     | `GridView.tsx`             |
-| Fichier hook       | camelCase      | `useCatalog.ts`            |
-| Fichier service    | camelCase      | `catalogService.ts`        |
-| Fonction/variable  | camelCase      | `handleImageClick()`       |
-| Type/Interface     | PascalCase     | `ImageDTO`, `GridViewProps`|
-| Constante          | SCREAMING_SNAKE_CASE | `MAX_IMAGE_SIZE`, `THUMBNAIL_WIDTH` |
+| Élément           | Convention           | Exemple                             |
+| ----------------- | -------------------- | ----------------------------------- |
+| Fichier composant | PascalCase           | `GridView.tsx`                      |
+| Fichier hook      | camelCase            | `useCatalog.ts`                     |
+| Fichier service   | camelCase            | `catalogService.ts`                 |
+| Fonction/variable | camelCase            | `handleImageClick()`                |
+| Type/Interface    | PascalCase           | `ImageDTO`, `GridViewProps`         |
+| Constante         | SCREAMING_SNAKE_CASE | `MAX_IMAGE_SIZE`, `THUMBNAIL_WIDTH` |
 
 ---
 
@@ -110,9 +138,10 @@ export const useCatalogStore = create<CatalogState>((set) => ({
   filterText: '',
 
   setImages: (images) => set({ images }),
-  toggleSelect: (id) => set((state) => ({
-    selectedIds: new Set([...state.selectedIds, id])
-  })),
+  toggleSelect: (id) =>
+    set((state) => ({
+      selectedIds: new Set([...state.selectedIds, id]),
+    })),
   setFilterText: (text) => set({ filterText: text }),
 }));
 ```
@@ -161,12 +190,12 @@ Les arguments sont passés en **camelCase** (même si la Rust command utilise sn
 await invoke('create_collection', {
   collectionType: 'static',
   parentId: null,
-  name: 'My Collection'
+  name: 'My Collection',
 });
 
 // ❌ MAUVAIS
 await invoke('create_collection', {
-  collection_type: 'static' // snake_case invalide
+  collection_type: 'static', // snake_case invalide
 });
 ```
 
@@ -205,7 +234,7 @@ describe('catalogStore', () => {
     useCatalogStore.setState({
       images: [],
       selectedIds: new Set(),
-      filterText: ''
+      filterText: '',
     });
   });
 
@@ -250,8 +279,8 @@ export interface ImageDTO {
   filename: string;
   width: number;
   height: number;
-  blake3_hash: string;      // snake_case du backend
-  captured_at: string;      // ISO date string
+  blake3_hash: string; // snake_case du backend
+  captured_at: string; // ISO date string
 }
 
 // Mapping
@@ -260,7 +289,7 @@ function mapImageDTOToImage(dto: ImageDTO): Image {
     id: dto.id,
     filename: dto.filename,
     width: dto.width,
-    height: dto.height
+    height: dto.height,
   };
 }
 ```
@@ -276,7 +305,7 @@ async function getImportProgress(sessionId: string) {
   return {
     phase: session.current_phase,
     progress: session.progress_percent,
-    duration: session.elapsed_ms
+    duration: session.elapsed_ms,
   };
 }
 
@@ -312,15 +341,15 @@ export class PreviewService {
 
 ## 7. Dépendances Autorisées
 
-| Package | Version | Justification |
-|---------|---------|--------------|
-| react | 19.2.0 | Framework frontend |
-| zustand | 5.0.11 | State management |
-| @tanstack/react-virtual | latest | Virtualisation grille |
-| tailwindcss | 4.1.18 | Styling |
-| lucide-react | 0.563.0 | Icones |
-| vitest | 4.0.18+ | Tests |
-| @testing-library/react | latest | Test utils |
+| Package                 | Version | Justification         |
+| ----------------------- | ------- | --------------------- |
+| react                   | 19.2.0  | Framework frontend    |
+| zustand                 | 5.0.11  | State management      |
+| @tanstack/react-virtual | latest  | Virtualisation grille |
+| tailwindcss             | 4.1.18  | Styling               |
+| lucide-react            | 0.563.0 | Icones                |
+| vitest                  | 4.0.18+ | Tests                 |
+| @testing-library/react  | latest  | Test utils            |
 
 **Aucune autre dépendance** sans approbation propriétaire.
 

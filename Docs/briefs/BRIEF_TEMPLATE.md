@@ -33,16 +33,19 @@ Délimiter IN/OUT strictement.
 ## Périmètre
 
 ### ✅ Inclus dans cette phase
+
 - Feature A spécifiquement définie
 - Composant B avec ces responsabilités
 - Table DB C avec ce schéma
 
 ### ❌ Exclus intentionnellement
+
 - Feature D (reportée à phase X.Z)
 - Optimisation E (reporter à maintenance)
 - Feature F (dépendance manquante)
 
 ### 📋 Reporté à partir Z.W
+
 - Feature G (dépend de découverte)
 ```
 
@@ -52,13 +55,16 @@ Délimiter IN/OUT strictement.
 ## Dépendances
 
 ### Phases
+
 - Phase X.(Y-1) ✅ complétée
 - Phase X.(Y-2) ✅ complétée
 
 ### Ressources Externes
+
 - Aucune (ou liste ce qu'on dépend)
 
 ### Test Infrastructure
+
 - Vitest + Testing Library installés
 - Rust test framework prêt
 ```
@@ -88,7 +94,7 @@ Délimiter IN/OUT strictement.
 
 Les types/signatures exposées (backend→frontend ou module→module).
 
-```markdown
+````markdown
 ## Interfaces Publiques
 
 ### Tauri Commands
@@ -97,6 +103,7 @@ Les types/signatures exposées (backend→frontend ou module→module).
 #[tauri::command]
 pub fn get_data(id: String) -> Result<DataDTO, String>;
 ```
+````
 
 ### TypeScript DTOs
 
@@ -113,7 +120,8 @@ export interface DataDTO {
 // Dans catalogStore
 setData: (data: Data[]) => void;
 ```
-```
+
+````
 
 ### 7. Contraintes Techniques
 
@@ -138,13 +146,13 @@ Non-negotiables pour cette phase.
 - Migrations séquentielles (001, 002, ...)
 - Foreign keys avec CASCADE
 - Indexes sur colonnes fréquemment queryées
-```
+````
 
 ### 8. Architecture Cible
 
 Schémas, diagrammes, flux clés.
 
-```markdown
+````markdown
 ## Architecture Cible
 
 ### Schéma DB (si applicable)
@@ -156,6 +164,7 @@ CREATE TABLE images (
     ...
 );
 ```
+````
 
 ### Flux de Données
 
@@ -170,7 +179,8 @@ SQLite (persist)
   ↓
 Response back to Frontend
 ```
-```
+
+````
 
 ### 9. Dépendances Externes
 
@@ -188,7 +198,7 @@ Packages/crates à installer, versions.
 
 ### System
 - libssl-dev (Ubuntu) — Pour OpenSSL
-```
+````
 
 ### 10. Checkpoints de Validation
 
@@ -212,15 +222,18 @@ Blocages potentiels observés avant.
 ## Pièges & Risques
 
 ### Pièges Courants
+
 - Oublier les migrations DB à l'init (les anciennes connections ne voient pas la modif)
 - Confusion entre types TS (camelCase) et DTOs Rust (snake_case)
 - Async/await sans gestion d'erreur (Promise.catch())
 
 ### Risques Potentiels
+
 - Performance: Si >10K images, tester avec données réelles
 - DB locks: Risque de deadlock en transactions longues (timeout 120s)
 
 ### Solutions Préventives
+
 - Toujours tester avec dataset de taille réelle
 - Utiliser transactions pour multi-step DB operations
 - Mock les commandes Tauri côté test frontend
@@ -230,28 +243,31 @@ Blocages potentiels observés avant.
 
 Entrées CHANGELOG + sections APP_DOCUMENTATION.
 
-```markdown
+````markdown
 ## Documentation Attendue
 
 ### CHANGELOG.md Entry
 
 ```markdown
-| Phase | Sous-Phase | Description | Statut | Date | Agent |
-|-------|-----------|-------------|--------|------|-------|
-| X | X.Y | [Titre descriptif] | ✅ Complétée | YYYY-MM-DD | Agent-X |
+| Phase | Sous-Phase | Description        | Statut       | Date       | Agent   |
+| ----- | ---------- | ------------------ | ------------ | ---------- | ------- |
+| X     | X.Y        | [Titre descriptif] | ✅ Complétée | YYYY-MM-DD | Agent-X |
 
 **Détails (Phase X.Y)**:
+
 - Files créés: [list]
 - Tests créés: [N test cases, what they validate]
 - Migrations: [schema changes summary]
 ```
+````
 
 ### APP_DOCUMENTATION.md Sections to Update
 
 - Section "3. Architecture des Fichiers" — Ajouter nouvelles entrées
 - Section "2. Stack Technique Actuelle" — Maj si nouvelles dépendances
 - Section "5. Schéma de Base de Données" — Si modif du schéma
-```
+
+````
 
 ### 13. Critères de Complétion
 
@@ -276,7 +292,7 @@ Tous DOIVENT être cochés pour valider la phase.
 - [ ] Tous tests phases précédentes passent (non-régression)
 - [ ] APP_DOCUMENTATION et CHANGELOG mis à jour
 - [ ] Code compile sans warning aucun
-```
+````
 
 ---
 
@@ -293,6 +309,7 @@ Tous DOIVENT être cochés pour valider la phase.
 ## Comparaison BEFORE/AFTER
 
 Le template sera maintenant **auto-suffisant** pour des agents IA:
+
 - ✅ Savent exactement QUOI faire (périmètre + objectif)
 - ✅ Savent QUELS fichiers créer/modifier (détaillé)
 - ✅ Savent COMMENT valider (checkpoints + critères)

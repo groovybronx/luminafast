@@ -1,3 +1,4 @@
+import { logDev } from '../lib/logDev';
 import { create } from 'zustand';
 import type { CatalogImage } from '../types';
 
@@ -32,12 +33,17 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
   activeImageId: null,
 
   // Actions
-  setImages: (images: CatalogImage[]) => set({ images }),
+  setImages: (images: CatalogImage[]) => {
+    logDev('catalogStore: setImages', images);
+    set({ images });
+  },
 
-  addImages: (newImages: CatalogImage[]) =>
+  addImages: (newImages: CatalogImage[]) => {
+    logDev('catalogStore: addImages', newImages);
     set((state) => ({
       images: [...state.images, ...newImages],
-    })),
+    }));
+  },
 
   toggleSelection: (id: number, isMultiSelect = false) =>
     set((state) => {

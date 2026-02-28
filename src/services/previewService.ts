@@ -69,7 +69,8 @@ export class PreviewService {
 
     // Mock fallback for tests
     return async (command: string, args?: Record<string, unknown>) => {
-      PreviewService.logDev(`[PreviewService] Tauri not available, mocking command: ${command}`, {
+      PreviewService.logDev('[MOCK] PreviewService: Tauri non disponible, fallback mock utilisé', {
+        command,
         args,
       });
       throw new Error(`Tauri not available: ${command}`);
@@ -117,7 +118,8 @@ export class PreviewService {
       _handler: (event: { payload: T }) => void,
     ): Promise<() => void> => {
       PreviewService.logDev(
-        `[PreviewService] Tauri event system not available, mocking listen for event: ${_event}`,
+        '[MOCK] PreviewService: event system non disponible, fallback mock listen',
+        { event: _event },
       );
       // Return a no-op unlisten function
       return () => {

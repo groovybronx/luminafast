@@ -4,17 +4,19 @@
  * Phase 4.2 — Pipeline de Rendu Image
  */
 
-import { useEffect, useRef, useState } from 'react';
-import { eventsToCSSFilters, applyCSSFilters } from '@/services/renderingService';
-import { getEvents } from '@/services/eventService';
-import type { CSSFilterState } from '@/types/rendering';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { applyCSSFilters, eventsToPixelFilters } from '@/services/renderingService';
+import { renderWithWasm } from '@/services/wasmRenderingService';
+import { useEditStore } from '@/stores/editStore';
+import { useSystemStore } from '@/stores/systemStore';
+import type { CSSFilterState, PixelFilterState } from '@/types/rendering';
 
 interface PreviewRendererProps {
   imageId: number;
   previewUrl: string;
   className?: string;
   isSelected?: boolean;
-  useWasm?: boolean; // Phase B: toggle WASM vs CSS fallback (not used in Phase A)
+  useWasm?: boolean; // Phase B: toggle WASM vs CSS fallback
 }
 
 /**
@@ -34,16 +36,34 @@ export const PreviewRenderer: React.FC<PreviewRendererProps> = ({
   previewUrl,
   className = '',
   isSelected = false,
-  useWasm: _useWasm = false, // Phase B will use this
+  useWasm = false,
 }) => {
   const imgRef = useRef<HTMLImageElement>(null);
-  const [filters, setFilters] = useState<CSSFilterState>({
-    exposure: 0,
-    contrast: 0,
-    saturation: 1,
-  });
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const loadEditEvents = useEditStore((state) => state.loadEditEvents);
+  const editEvents = useEditStore((state) => state.editEventsByImage[imageId] ?? []);
+  const [useWasmRenderer, setUseWasmRenderer] = useState(useWasm);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const addLog = useSystemStore((state) => state.addLog);
+
+  const appliedEdits: PixelFilterState = useMemo(
+    () => eventsToPixelFilters(editEvents),
+    [editEvents],
+  );
+
+  const cssFilters: CSSFilterState = useMemo(
+    () => ({
+      exposure: appliedEdits.exposure,
+      contrast: appliedEdits.contrast,
+      saturation: appliedEdits.saturation,
+    }),
+    [appliedEdits],
+  );
+
+  useEffect(() => {
+    setUseWasmRenderer(useWasm);
+  }, [useWasm]);
 
   // Load and apply filters on mount and when imageId changes
   useEffect(() => {
@@ -54,23 +74,11 @@ export const PreviewRenderer: React.FC<PreviewRendererProps> = ({
         setIsLoading(true);
         setError(null);
 
-        // Récupérer tous les événements depuis Event Sourcing
-        const events = await getEvents();
-
-        // Filtrer les événements pour cette image (by targetId)
-        const imageEvents = events.filter((e) => e.targetId === imageId);
-
-        // Convertir en filtres CSS
-        const cssFilters = eventsToCSSFilters(imageEvents);
-
-        if (isMounted) {
-          setFilters(cssFilters);
-        }
+        await loadEditEvents(imageId);
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
         if (isMounted) {
           setError(errorMsg);
-          // Log mais ne pas fail l'affichage de l'image
           if (import.meta.env.DEV) {
             console.warn(`[PreviewRenderer] Failed to load filters for image ${imageId}:`, err);
           }
@@ -87,31 +95,97 @@ export const PreviewRenderer: React.FC<PreviewRendererProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [imageId]);
+  }, [imageId, loadEditEvents]);
 
-  // Apply filters to DOM element when they change
+  // Apply CSS filters to DOM element when they change
   useEffect(() => {
-    applyCSSFilters(imgRef.current, filters);
-  }, [filters]);
+    if (useWasmRenderer) {
+      return;
+    }
+    applyCSSFilters(imgRef.current, cssFilters);
+  }, [cssFilters, useWasmRenderer]);
+
+  // Render with WASM when enabled
+  useEffect(() => {
+    if (!useWasmRenderer) {
+      return;
+    }
+
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const width = Math.max(1, Math.round(rect.width));
+    const height = Math.max(1, Math.round(rect.height));
+
+    // Avoid rendering with undersized canvases (e.g. not yet laid out)
+    if (width <= 1 || height <= 1) {
+      if (import.meta.env.DEV) {
+        console.warn(
+          `[PreviewRenderer] Skipping WASM render for image ${imageId} due to small canvas size: ${width}x${height}`,
+        );
+      }
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+
+    renderWithWasm(canvas, previewUrl, appliedEdits, width, height)
+      .catch((err) => {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        setError(errorMsg);
+        setUseWasmRenderer(false);
+        // Log développeur
+        console.warn(`[PreviewRenderer] WASM render failed for image ${imageId}:`, err);
+        // Log système pour ArchitectureMonitor
+        addLog(
+          `Rendu WASM indisponible pour image ${imageId} : fallback CSS activé (${errorMsg})`,
+          'error',
+        );
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [appliedEdits, imageId, previewUrl, useWasmRenderer, addLog]);
 
   return (
     <div className={`preview-renderer${isSelected ? ' selected' : ''}${error ? ' error' : ''}`}>
-      <img
-        ref={imgRef}
-        src={previewUrl}
-        alt={`Preview for image ${imageId}`}
-        className={className}
-        data-testid={`preview-renderer-${imageId}`}
-        onError={() => {
-          setError('Failed to load image');
-          if (import.meta.env.DEV) {
-            console.error(`[PreviewRenderer] Image load error: ${previewUrl}`);
-          }
-        }}
-      />
-      {error && import.meta.env.DEV && (
-        <div title={error} style={{ position: 'absolute', background: 'rgba(255,0,0,0.3)' }}>
-          ⚠️
+      {useWasmRenderer ? (
+        <canvas ref={canvasRef} className={className} data-testid={`preview-renderer-${imageId}`} />
+      ) : (
+        <img
+          ref={imgRef}
+          src={previewUrl}
+          alt={`Preview for image ${imageId}`}
+          className={className}
+          data-testid={`preview-renderer-${imageId}`}
+          onError={() => {
+            setError('Failed to load image');
+            if (import.meta.env.DEV) {
+              console.error(`[PreviewRenderer] Image load error: ${previewUrl}`);
+            }
+          }}
+        />
+      )}
+      {error && (
+        <div
+          title={error}
+          style={{
+            position: 'absolute',
+            background: 'rgba(255,0,0,0.3)',
+            zIndex: 10,
+            padding: '4px',
+            borderRadius: '4px',
+            color: '#900',
+            fontWeight: 'bold',
+            fontSize: '0.9em',
+          }}
+        >
+          ⚠️ Rendu WASM indisponible&nbsp;: fallback CSS activé
+          <br />
+          <span style={{ fontSize: '0.8em' }}>{error}</span>
         </div>
       )}
       {isLoading && <div className="loading-indicator" />}

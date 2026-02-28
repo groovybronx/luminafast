@@ -203,7 +203,10 @@ export class HashingService {
     }
 
     // Fallback pour développement/testing
-    this.logDev(`Tauri not available, mocking command: ${command}`, args);
+    this.logDev('[MOCK] HashingService: Tauri non disponible, fallback mock utilisé', {
+      command,
+      args,
+    });
     return this.mockTauriCommand(command, args);
   }
 

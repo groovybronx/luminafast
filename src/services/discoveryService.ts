@@ -144,7 +144,8 @@ export class DiscoveryService {
     // Mock fallback for tests
     return async (command: string, args?: Record<string, unknown>) => {
       if (import.meta.env.DEV) {
-        console.warn(`[DiscoveryService] Tauri not available, mocking command: ${command}`, {
+        console.warn('[MOCK] DiscoveryService: Tauri non disponible, fallback mock utilisé', {
+          command,
           args,
         });
       }

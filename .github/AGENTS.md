@@ -1,4 +1,3 @@
-
 # LuminaFast Agents — CI/CD & Infrastructure
 
 > **Directives spécialisées pour GitHub Actions et infrastructure.**
@@ -23,6 +22,7 @@
 ### 1.1 — Philosophie
 
 Le workflow doit être:
+
 - **Rapide** : Feedback immédiat aux devs (< 10 min pour quick validation)
 - **Économe** : Pas d'exécution inutile (path filtering)
 - **Fiable** : Tous les tests passent avant merge
@@ -60,20 +60,20 @@ Chaque job DOIT avoir un `timeout-minutes` :
 ```yaml
 jobs:
   validate-frontend:
-    timeout-minutes: 10    # ← Obligatoire
+    timeout-minutes: 10 # ← Obligatoire
     runs-on: ubuntu-latest
     # ...
 ```
 
-| Job | Timeout Max |
-|-----|------------|
-| detect-changes | 5 min |
-| validate-frontend | 10 min |
-| validate-backend | 10 min |
-| frontend | 15 min |
-| backend | 15 min |
-| integration | 30 min |
-| security | 15 min |
+| Job               | Timeout Max |
+| ----------------- | ----------- |
+| detect-changes    | 5 min       |
+| validate-frontend | 10 min      |
+| validate-backend  | 10 min      |
+| frontend          | 15 min      |
+| backend           | 15 min      |
+| integration       | 30 min      |
+| security          | 15 min      |
 
 ---
 
@@ -85,9 +85,9 @@ Le workflow doit **ignorer automatiquement** :
 
 ```yaml
 paths-ignore:
-  - '**.md'                    # Fichiers Markdown
-  - '.github/workflows/**'     # Autres workflows (pas le principal)
-  - 'Docs/**'                  # Documentation
+  - '**.md' # Fichiers Markdown
+  - '.github/workflows/**' # Autres workflows (pas le principal)
+  - 'Docs/**' # Documentation
 ```
 
 ### 2.2 — Job `detect-changes`
@@ -192,8 +192,8 @@ frontend:
   runs-on: ubuntu-latest
   timeout-minutes: 15
   if: github.event_name == 'pull_request' &&
-      github.base_ref == 'main' &&
-      !github.event.pull_request.draft
+    github.base_ref == 'main' &&
+    !github.event.pull_request.draft
 
   steps:
     - uses: actions/checkout@v4
@@ -218,8 +218,8 @@ backend:
   runs-on: ubuntu-latest
   timeout-minutes: 15
   if: github.event_name == 'pull_request' &&
-      github.base_ref == 'main' &&
-      !github.event.pull_request.draft
+    github.base_ref == 'main' &&
+    !github.event.pull_request.draft
 
   steps:
     - uses: actions/checkout@v4
@@ -261,9 +261,9 @@ integration:
   timeout-minutes: 30
   needs: [frontend, backend]
   if: github.event_name == 'pull_request' &&
-      github.base_ref == 'main' &&
-      (contains(github.event.pull_request.labels.*.name, 'run-integration') ||
-       github.event.pull_request.mergeable_state == 'clean')
+    github.base_ref == 'main' &&
+    (contains(github.event.pull_request.labels.*.name, 'run-integration') ||
+    github.event.pull_request.mergeable_state == 'clean')
 
   steps:
     - uses: actions/checkout@v4
@@ -304,8 +304,8 @@ security:
   runs-on: ubuntu-latest
   timeout-minutes: 15
   if: github.event_name == 'pull_request' &&
-      github.base_ref == 'main' &&
-      github.event.pull_request.mergeable_state == 'clean'
+    github.base_ref == 'main' &&
+    github.event.pull_request.mergeable_state == 'clean'
 
   steps:
     - uses: actions/checkout@v4
@@ -346,7 +346,7 @@ Utiliser `Swatinem/rust-cache@v2` :
   with:
     workspaces: src-tauri
     shared-key: rust-stable
-    cache-on-failure: true  # Important pour les builds qui échouent
+    cache-on-failure: true # Important pour les builds qui échouent
 ```
 
 ### 6.3 — Artefacts
@@ -371,7 +371,7 @@ Utiliser `Swatinem/rust-cache@v2` :
 ```yaml
 on:
   push:
-    branches-ignore: [main]           # Aucun push direct sur main
+    branches-ignore: [main] # Aucun push direct sur main
     paths-ignore: ['**.md', '.github/**', 'Docs/**']
   pull_request:
     branches: [develop, main]
@@ -380,15 +380,15 @@ on:
 
 ### 7.2 — Conditions de Jobs
 
-| Job | Quand s'exécute |
-|-----|-----------------|
-| detect-changes | Toujours (rapide) |
-| validate-frontend | Si src/ changé + (push OU PR vers develop) |
-| validate-backend | Si src-tauri/ changé + (push OU PR vers develop) |
-| frontend | PR vers main non-draft |
-| backend | PR vers main non-draft |
-| integration | PR vers main merge-ready (labeled OU clean status) |
-| security | PR vers main merge-ready |
+| Job               | Quand s'exécute                                    |
+| ----------------- | -------------------------------------------------- |
+| detect-changes    | Toujours (rapide)                                  |
+| validate-frontend | Si src/ changé + (push OU PR vers develop)         |
+| validate-backend  | Si src-tauri/ changé + (push OU PR vers develop)   |
+| frontend          | PR vers main non-draft                             |
+| backend           | PR vers main non-draft                             |
+| integration       | PR vers main merge-ready (labeled OU clean status) |
+| security          | PR vers main merge-ready                           |
 
 ---
 

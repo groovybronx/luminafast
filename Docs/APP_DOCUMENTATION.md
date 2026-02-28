@@ -1,7 +1,4 @@
-
-
 # LuminaFast — Documentation de l'Application
-
 
 ## Table des matières
 
@@ -9,45 +6,58 @@
 2. [Stack Technique Actuelle](#2-stack-technique-actuelle)
 3. [Architecture des Fichiers](#3-architecture-des-fichiers)
 4. [Composants UI](#4-composants-ui)
-  - [4.1 Composants](#41--composants)
-  - [4.2 Stores Zustand](#42--stores-zustand)
-  - [4.3 Zones de l’interface](#43--zones-de-linterface)
+
+- [4.1 Composants](#41--composants)
+- [4.2 Stores Zustand](#42--stores-zustand)
+- [4.3 Zones de l’interface](#43--zones-de-linterface)
+
 5. [Modèle de Données](#5-modèle-de-données)
-  - [5.1 Structure d’une Image](#51--structure-dune-image)
-  - [5.2 Structure d’un Event](#52--structure-dun-event)
+
+- [5.1 Structure d’une Image](#51--structure-dune-image)
+- [5.2 Structure d’un Event](#52--structure-dun-event)
+
 6. [Fonctionnalités — État Actuel](#6-fonctionnalités--état-actuel)
 7. [Raccourcis Clavier](#7-raccourcis-clavier)
 8. [Dépendances npm](#8-dépendances-npm)
 9. [Dépendances Rust](#9-dépendances-rust)
 10. [Configuration](#10-configuration)
 11. [Schéma et Base de Données SQLite](#11-schéma-et-base-de-données-sqlite)
-  - [11.1 Architecture du Catalogue](#111--architecture-du-catalogue)
-  - [11.2 Configuration SQLite](#112--configuration-sqlite)
-  - [11.3 Système de Migrations](#113--système-de-migrations)
-  - [11.4 Types Rust](#114--types-rust)
-  - [11.5 Tests Unitaires](#115--tests-unitaires)
+
+- [11.1 Architecture du Catalogue](#111--architecture-du-catalogue)
+- [11.2 Configuration SQLite](#112--configuration-sqlite)
+- [11.3 Système de Migrations](#113--système-de-migrations)
+- [11.4 Types Rust](#114--types-rust)
+- [11.5 Tests Unitaires](#115--tests-unitaires)
+
 12. [Outils de Qualité et CI/CD](#12-outils-de-qualité-et-cicd)
-  - [12.1 Linting et Formatting](#121--linting-et-formatting)
-  - [12.2 Tests et Coverage](#122--tests-et-coverage)
-  - [12.3 Pipeline CI/CD](#123--pipeline-cicd)
-  - [12.4 Scripts de Développement](#124--scripts-de-développement)
+
+- [12.1 Linting et Formatting](#121--linting-et-formatting)
+- [12.2 Tests et Coverage](#122--tests-et-coverage)
+- [12.3 Pipeline CI/CD](#123--pipeline-cicd)
+- [12.4 Scripts de Développement](#124--scripts-de-développement)
+
 13. [Services EXIF/IPTC](#13-services-exifiptc)
-  - [13.1 Architecture EXIF](#131--architecture-exif)
-  - [13.2 Métadonnées EXIF](#132--métadonnées-exif)
-  - [13.3 Métadonnées IPTC](#133--métadonnées-iptc)
-  - [13.4 Performance et Intégration](#134--performance-et-intégration)
+
+- [13.1 Architecture EXIF](#131--architecture-exif)
+- [13.2 Métadonnées EXIF](#132--métadonnées-exif)
+- [13.3 Métadonnées IPTC](#133--métadonnées-iptc)
+- [13.4 Performance et Intégration](#134--performance-et-intégration)
+
 14. [Service Filesystem](#14-service-filesystem)
-  - [14.1 Architecture du Service](#141--architecture-du-service)
-  - [14.2 Types Unifiés](#142--types-unifiés)
-  - [14.3 Concurrence et Performance](#143--concurrence-et-performance)
-  - [14.4 Commandes Tauri](#144--commandes-tauri)
-  - [14.5 Tests et Validation](#145--tests-et-validation)
+
+- [14.1 Architecture du Service](#141--architecture-du-service)
+- [14.2 Types Unifiés](#142--types-unifiés)
+- [14.3 Concurrence et Performance](#143--concurrence-et-performance)
+- [14.4 Commandes Tauri](#144--commandes-tauri)
+- [14.5 Tests et Validation](#145--tests-et-validation)
+
 15. [Commandes Tauri (Mises à jour)](#15-commandes-tauri-mises-à-jour)
 16. [Services Frontend (Mises à jour)](#16-services-frontend-mises-à-jour)
 17. [Types & Interfaces (Mises à jour)](#17-types--interfaces-mises-à-jour)
 18. [Historique des Modifications](#18-historique-des-modifications)
 
 **Annexes** :
+
 - [Smart Collections : Logique SQL et compatibilité parser](#smart-collections--logique-sql-et-compatibilité-parser)
 - [Phase 3.4 : Folder Navigator](#phase-34--folder-navigator--architecture-et-schéma)
 - [Phase 3.5 : Recherche & Filtrage](#phase-35--recherche--filtrage--architecture-et-parser)
@@ -65,7 +75,6 @@
 > - **Formats standard** : JPG, JPEG, PNG (via preview service)
 > - **Phase 2.2 IPTC** : Extraction reportée Phase 5.4 (Sidecar XMP) — Skeleton créé
 
-
 ---
 
 ## 1. Vue d'Ensemble
@@ -73,7 +82,6 @@
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
 ### État actuel : Phases 0 à 3.5 complétées + Maintenance Phase 3.1 stabilisée
-
 
 **Pipeline d'import production-ready** :
 
@@ -87,6 +95,7 @@
 - **Modal réinitialisable**
 
 Progression temps réel visible sur 3 phases :
+
 - **0-30%** : scan
 - **30-70%** : ingestion
 - **70-100%** : previews
@@ -102,7 +111,8 @@ Progression temps réel visible sur 3 phases :
 - **Synchronisation catalogue**
 - **Modal réinitialisable**
 
- **Progression temps réel visible sur 3 phases** :
+  **Progression temps réel visible sur 3 phases** :
+
 - **0-30%** : scan
 - **30-70%** : ingestion + hashing + EXIF
 - **70-100%** : previews
@@ -116,7 +126,6 @@ Progression temps réel visible sur 3 phases :
 - **SQLite bidirectional sync** : ratings, flags, tags persistés immédiatement + isSynced tracking
 - **504 tests** (345 TypeScript + 159 Rust), **zéro warning**, **coverage 98%+**
 
-
 ### Objectif : Application Tauri autonome commercialisable
 
 Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructive, catalogue SQLite, et gestion de bibliothèques photographiques massives.
@@ -125,26 +134,25 @@ Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructiv
 
 ## 2. Stack Technique Actuelle
 
-| Couche                | Technologie           | Version           | Statut                        |
-|----------------------|----------------------|-------------------|------------------------------|
-| Framework frontend   | React                | 19.2.0            | ✅ En place                  |
-| Bundler              | Vite                 | 7.3.1             | ✅ En place                  |
-| Styling              | TailwindCSS          | 4.1.18            | ✅ En place                  |
-| Icônes               | Lucide React         | 0.563.0           | ✅ En place                  |
-| Langage              | TypeScript (TSX)     | strict            | ✅ Complété (Phase 0.1)      |
-| Shell natif          | Tauri v2             | 2.10.2            | ✅ Complété (Phase 0.2)      |
-| Backend              | Rust                 | stable            | ✅ Complété (Phase 0.2)      |
-| State management     | Zustand              | 5.0.11            | ✅ Complété (Phase 0.4)      |
-| Linting              | ESLint + TypeScript  | 9.39.1            | ✅ Complété (Phase 0.5)      |
-| Tests                | Vitest + jsdom       | 4.0.18            | ✅ Complété (Phase 0.5)      |
-| CI/CD                | GitHub Actions       | —                 | ✅ Complété (Phase 0.5)      |
-| DB transactionnelle  | SQLite               | rusqlite 0.31.0   | ✅ Complété (Phase 1.1)      |
-| DB analytique        | DuckDB               | —                 | ⬜ Non installé (Phase 6.2)  |
-| Hashing              | BLAKE3               | —                 | ✅ Complété (Phase 1.3)      |
-| EXIF/IPTC            | kamadak-exif         | 0.6.1             | ✅ Complété (Phase 2.2)      |
+| Couche              | Technologie         | Version         | Statut                      |
+| ------------------- | ------------------- | --------------- | --------------------------- |
+| Framework frontend  | React               | 19.2.0          | ✅ En place                 |
+| Bundler             | Vite                | 7.3.1           | ✅ En place                 |
+| Styling             | TailwindCSS         | 4.1.18          | ✅ En place                 |
+| Icônes              | Lucide React        | 0.563.0         | ✅ En place                 |
+| Langage             | TypeScript (TSX)    | strict          | ✅ Complété (Phase 0.1)     |
+| Shell natif         | Tauri v2            | 2.10.2          | ✅ Complété (Phase 0.2)     |
+| Backend             | Rust                | stable          | ✅ Complété (Phase 0.2)     |
+| State management    | Zustand             | 5.0.11          | ✅ Complété (Phase 0.4)     |
+| Linting             | ESLint + TypeScript | 9.39.1          | ✅ Complété (Phase 0.5)     |
+| Tests               | Vitest + jsdom      | 4.0.18          | ✅ Complété (Phase 0.5)     |
+| CI/CD               | GitHub Actions      | —               | ✅ Complété (Phase 0.5)     |
+| DB transactionnelle | SQLite              | rusqlite 0.31.0 | ✅ Complété (Phase 1.1)     |
+| DB analytique       | DuckDB              | —               | ⬜ Non installé (Phase 6.2) |
+| Hashing             | BLAKE3              | —               | ✅ Complété (Phase 1.3)     |
+| EXIF/IPTC           | kamadak-exif        | 0.6.1           | ✅ Complété (Phase 2.2)     |
 
 ---
-
 
 ## 3. Architecture des Fichiers (État Actuel)
 
@@ -341,9 +349,7 @@ LuminaFast/
 └── .gitignore
 ```
 
-
 ---
-
 
 ## 4. Composants UI (Mockup Actuel)
 
@@ -351,40 +357,41 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 
 ### 4.1 — Composants (après décomposition Phase 0.3)
 
-| Composant             | Fichier                          | Lignes | Description                                                                                 |
-| --------------------- | -------------------------------- | ------ | ------------------------------------------------------------------------------------------- |
-| `App`                 | `src/App.tsx`                    | 152    | Orchestrateur pur (stores Zustand, callbacks)                                               |
-| `GlobalStyles`        | `shared/GlobalStyles.tsx`        | 16     | Styles CSS inline                                                                           |
-| `ArchitectureMonitor` | `shared/ArchitectureMonitor.tsx` | 54     | Console monitoring système                                                                  |
-| `ImportModal`         | `shared/ImportModal.tsx`         | 68     | Modal d'import avec progression                                                             |
-| `BatchBar`            | `shared/BatchBar.tsx`            | —      | Actions batch : pick, favoris, ajout à une collection (popover FolderPlus), clear sélection |
-| `KeyboardOverlay`     | `shared/KeyboardOverlay.tsx`     | 9      | Indicateurs raccourcis                                                                      |
-| `TopNav`              | `layout/TopNav.tsx`              | 29     | Navigation supérieure                                                                       |
-| `LeftSidebar`         | `layout/LeftSidebar.tsx`         | 64     | Catalogue, collections, folders                                                             |
-| `RightSidebar`        | `layout/RightSidebar.tsx`        | 36     | Panneau droit (orchestrateur)                                                               |
-| `Toolbar`             | `layout/Toolbar.tsx`             | 54     | Mode, recherche, taille thumbnails                                                          |
-| `Filmstrip`           | `layout/Filmstrip.tsx`           | 36     | Bande défilante                                                                             |
-| `GridView`            | `library/GridView.tsx`           | 46     | Grille d'images virtualisée (@tanstack/react-virtual)                                       |
-| `LazyLoadedImageCard` | `library/LazyLoadedImageCard.tsx`| —      | Carte image avec lazy loading + drag source (Phase 3.2b)                                     |
-| `ImageCard`           | `library/ImageCard.tsx`          | —      | Carte image avec métadonnées, sélection                                                     |
-| `DevelopView`         | `develop/DevelopView.tsx`        | 38     | Image + mode avant/après                                                                    |
-| `DevelopSliders`      | `develop/DevelopSliders.tsx`     | 37     | Sliders de réglage                                                                          |
-| `HistoryPanel`        | `develop/HistoryPanel.tsx`       | 25     | Historique des events                                                                       |
-| `Histogram`           | `metadata/Histogram.tsx`         | 18     | Histogramme simulé                                                                          |
-| `ExifGrid`            | `metadata/ExifGrid.tsx`          | 17     | Grille EXIF compacte                                                                        |
-| `MetadataPanel`       | `metadata/MetadataPanel.tsx`     | 76     | Fiche technique + tags                                                                      |
+| Composant             | Fichier                           | Lignes | Description                                                                                 |
+| --------------------- | --------------------------------- | ------ | ------------------------------------------------------------------------------------------- |
+| `App`                 | `src/App.tsx`                     | 152    | Orchestrateur pur (stores Zustand, callbacks)                                               |
+| `GlobalStyles`        | `shared/GlobalStyles.tsx`         | 16     | Styles CSS inline                                                                           |
+| `ArchitectureMonitor` | `shared/ArchitectureMonitor.tsx`  | 54     | Console monitoring système                                                                  |
+| `ImportModal`         | `shared/ImportModal.tsx`          | 68     | Modal d'import avec progression                                                             |
+| `BatchBar`            | `shared/BatchBar.tsx`             | —      | Actions batch : pick, favoris, ajout à une collection (popover FolderPlus), clear sélection |
+| `KeyboardOverlay`     | `shared/KeyboardOverlay.tsx`      | 9      | Indicateurs raccourcis                                                                      |
+| `TopNav`              | `layout/TopNav.tsx`               | 29     | Navigation supérieure                                                                       |
+| `LeftSidebar`         | `layout/LeftSidebar.tsx`          | 64     | Catalogue, collections, folders                                                             |
+| `RightSidebar`        | `layout/RightSidebar.tsx`         | 36     | Panneau droit (orchestrateur)                                                               |
+| `Toolbar`             | `layout/Toolbar.tsx`              | 54     | Mode, recherche, taille thumbnails                                                          |
+| `Filmstrip`           | `layout/Filmstrip.tsx`            | 36     | Bande défilante                                                                             |
+| `GridView`            | `library/GridView.tsx`            | 46     | Grille d'images virtualisée (@tanstack/react-virtual)                                       |
+| `LazyLoadedImageCard` | `library/LazyLoadedImageCard.tsx` | —      | Carte image avec lazy loading + drag source (Phase 3.2b)                                    |
+| `ImageCard`           | `library/ImageCard.tsx`           | —      | Carte image avec métadonnées, sélection                                                     |
+| `DevelopView`         | `develop/DevelopView.tsx`         | 38     | Image + mode avant/après                                                                    |
+| `DevelopSliders`      | `develop/DevelopSliders.tsx`      | 37     | Sliders de réglage                                                                          |
+| `HistoryPanel`        | `develop/HistoryPanel.tsx`        | 25     | Historique des events                                                                       |
+| `Histogram`           | `metadata/Histogram.tsx`          | 18     | Histogramme simulé                                                                          |
+| `ExifGrid`            | `metadata/ExifGrid.tsx`           | 17     | Grille EXIF compacte                                                                        |
+| `MetadataPanel`       | `metadata/MetadataPanel.tsx`      | 76     | Fiche technique + tags                                                                      |
 
 ### 4.2 — Stores Zustand (Phase 0.4 + Maintenance Phase 3.1)
 
-| Store             | Fichier                     | État géré                                                                    | Actions principales                                                                                               |
-| ----------------- | --------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `catalogStore`    | `stores/catalogStore.ts`    | images[] (from SQLite), activeImageId                                        | setImages, addImages, getImages                                                                                   |
-| `uiStore`         | `stores/uiStore.ts`         | **selection (Set)**, **filterText**, activeView, sidebars, thumbnailSize     | **toggleSelection, setSingleSelection, clearSelection, setFilterText**, setActiveView, toggleLeftSidebar          |
-| `collectionStore` | `stores/collectionStore.ts` | collections[], activeCollectionId, activeCollectionImageIds                  | loadCollections, createCollection, deleteCollection, renameCollection, setActiveCollection, clearActiveCollection |
-| `editStore`       | `stores/editStore.ts`       | eventLog[], currentEdits, historyIndex                                       | addEvent, setCurrentEdits, updateEdit, undo/redo (préparés)                                                       |
-| `systemStore`     | `stores/systemStore.ts`     | logs[], importState, appReady                                                | addLog, setImportState, setAppReady                                                                               |
+| Store             | Fichier                     | État géré                                                                | Actions principales                                                                                               |
+| ----------------- | --------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `catalogStore`    | `stores/catalogStore.ts`    | images[] (from SQLite), activeImageId                                    | setImages, addImages, getImages                                                                                   |
+| `uiStore`         | `stores/uiStore.ts`         | **selection (Set)**, **filterText**, activeView, sidebars, thumbnailSize | **toggleSelection, setSingleSelection, clearSelection, setFilterText**, setActiveView, toggleLeftSidebar          |
+| `collectionStore` | `stores/collectionStore.ts` | collections[], activeCollectionId, activeCollectionImageIds              | loadCollections, createCollection, deleteCollection, renameCollection, setActiveCollection, clearActiveCollection |
+| `editStore`       | `stores/editStore.ts`       | eventLog[], currentEdits, historyIndex                                   | addEvent, setCurrentEdits, updateEdit, undo/redo (préparés)                                                       |
+| `systemStore`     | `stores/systemStore.ts`     | logs[], importState, appReady                                            | addLog, setImportState, setAppReady                                                                               |
 
 **Architecture** (Maintenance Phase 3.1) :
+
 - **Single Source of Truth** : `useCatalog()` hook SEUL pour images data (pas de hybrid state)
 - **Separation of Concerns** : `useUiStore` pour state UI only (selection, filterText, viewport)
 - **Type Safety** : TypeScript strict mode, no `any`
@@ -485,32 +492,32 @@ export interface CatalogEvent {
 
 ## 6. Fonctionnalités — État Actuel
 
-| Fonctionnalité               | Statut            | Connectée à un backend ?        | Phase cible |
-| ---------------------------- | ----------------- | ------------------------------- | ----------- |
-| Affichage grille d'images    | ✅ Fonctionnel    | Oui (SQLite via useCatalog)     | —           |
-| Virtualisation grille (10K+) | ✅ Fonctionnel    | Oui (@tanstack/react-virtual + **LazyLoadedImageCard** with IntersectionObserver) | 3.1 |
-| Redimensionnement grille     | ✅ Fonctionnel    | N/A (ResizeObserver)            | —           |
-| Drag & Drop (ajouter à collection) | ✅ Fonctionnel | Oui (HTML5 DnD + collection store) | 3.2b      |
-| Sélection simple/multiple    | ✅ Fonctionnel    | Oui (useUiStore → selection Set)     | —           |
-| Notation (0-5 étoiles)       | ✅ Fonctionnel  | Oui (SQLite + isSynced tracking) | 5.3         |
-| Flagging (pick/reject)       | ✅ Fonctionnel  | Oui (SQLite + isSynced tracking) | 5.3         |
-| Import de fichiers           | ✅ Fonctionnel    | Oui (Tauri discovery+ingestion) | —           |
-| Progression import (%)       | ✅ Fonctionnel    | Oui (processedFiles/totalFiles) | —           |
-| Recherche/filtrage           | 🟡 Partiel        | Non (filter JS local)           | 3.5         |
-| Smart Collections            | 🟡 Mock           | Non (liens statiques)           | 3.3         |
-| Sliders de développement     | 🟡 Mock           | Non (CSS filters)               | 4.2         |
-| Histogramme                  | 🟡 Mock           | Non (Math.sin)                  | 5.1         |
-| EXIF display                 | ✅ Fonctionnel    | Oui (SQLite LEFT JOIN)          | —           |
-| Tags/mots-clés               | 🟡 Mock           | Non (état local)                | 5.2         |
-| Historique d'events          | 🟡 Partiel        | Non (CatalogEvent typé)         | 4.3         |
-| Avant/Après                  | 🟡 Mock           | Non (CSS filters)               | 4.4         |
-| Filmstrip                    | 🟡 Partiel        | Partiel (images SQLite)         | 3.1         |
-| Batch operations             | ⬜ Non implémenté | Non (boutons disabled)          | 3.2         |
-| Raccourcis clavier           | ✅ Fonctionnel    | N/A (event listeners)           | —           |
-| Monitoring système           | ✅ Fonctionnel    | Oui (logs SQLite réels)         | —           |
-| Cloud sync status            | ⬜ Non implémenté | Non (badge SQLite)              | 8.2         |
-| Taille thumbnails            | ✅ Fonctionnel    | N/A (CSS grid)                  | —           |
-| Navigation Library/Develop   | ✅ Fonctionnel    | N/A (state local)               | —           |
+| Fonctionnalité                     | Statut            | Connectée à un backend ?                                                          | Phase cible |
+| ---------------------------------- | ----------------- | --------------------------------------------------------------------------------- | ----------- |
+| Affichage grille d'images          | ✅ Fonctionnel    | Oui (SQLite via useCatalog)                                                       | —           |
+| Virtualisation grille (10K+)       | ✅ Fonctionnel    | Oui (@tanstack/react-virtual + **LazyLoadedImageCard** with IntersectionObserver) | 3.1         |
+| Redimensionnement grille           | ✅ Fonctionnel    | N/A (ResizeObserver)                                                              | —           |
+| Drag & Drop (ajouter à collection) | ✅ Fonctionnel    | Oui (HTML5 DnD + collection store)                                                | 3.2b        |
+| Sélection simple/multiple          | ✅ Fonctionnel    | Oui (useUiStore → selection Set)                                                  | —           |
+| Notation (0-5 étoiles)             | ✅ Fonctionnel    | Oui (SQLite + isSynced tracking)                                                  | 5.3         |
+| Flagging (pick/reject)             | ✅ Fonctionnel    | Oui (SQLite + isSynced tracking)                                                  | 5.3         |
+| Import de fichiers                 | ✅ Fonctionnel    | Oui (Tauri discovery+ingestion)                                                   | —           |
+| Progression import (%)             | ✅ Fonctionnel    | Oui (processedFiles/totalFiles)                                                   | —           |
+| Recherche/filtrage                 | 🟡 Partiel        | Non (filter JS local)                                                             | 3.5         |
+| Smart Collections                  | 🟡 Mock           | Non (liens statiques)                                                             | 3.3         |
+| Sliders de développement           | 🟡 Mock           | Non (CSS filters)                                                                 | 4.2         |
+| Histogramme                        | 🟡 Mock           | Non (Math.sin)                                                                    | 5.1         |
+| EXIF display                       | ✅ Fonctionnel    | Oui (SQLite LEFT JOIN)                                                            | —           |
+| Tags/mots-clés                     | 🟡 Mock           | Non (état local)                                                                  | 5.2         |
+| Historique d'events                | 🟡 Partiel        | Non (CatalogEvent typé)                                                           | 4.3         |
+| Avant/Après                        | 🟡 Mock           | Non (CSS filters)                                                                 | 4.4         |
+| Filmstrip                          | 🟡 Partiel        | Partiel (images SQLite)                                                           | 3.1         |
+| Batch operations                   | ⬜ Non implémenté | Non (boutons disabled)                                                            | 3.2         |
+| Raccourcis clavier                 | ✅ Fonctionnel    | N/A (event listeners)                                                             | —           |
+| Monitoring système                 | ✅ Fonctionnel    | Oui (logs SQLite réels)                                                           | —           |
+| Cloud sync status                  | ⬜ Non implémenté | Non (badge SQLite)                                                                | 8.2         |
+| Taille thumbnails                  | ✅ Fonctionnel    | N/A (CSS grid)                                                                    | —           |
+| Navigation Library/Develop         | ✅ Fonctionnel    | N/A (state local)                                                                 | —           |
 
 **Légende** :
 
@@ -519,7 +526,6 @@ export interface CatalogEvent {
 - ⬜ Non implémenté = Pas encore dans le code
 
 ---
-
 
 ## 7. Raccourcis Clavier (Mockup)
 
@@ -542,38 +548,38 @@ export interface CatalogEvent {
 
 ### Production
 
-| Package         | Version   | Usage         |
-|-----------------|-----------|--------------|
-| `react`         | ^19.2.0   | Framework UI |
-| `react-dom`     | ^19.2.0   | Rendu DOM    |
-| `lucide-react`  | ^0.563.0  | Icônes SVG   |
+| Package        | Version  | Usage        |
+| -------------- | -------- | ------------ |
+| `react`        | ^19.2.0  | Framework UI |
+| `react-dom`    | ^19.2.0  | Rendu DOM    |
+| `lucide-react` | ^0.563.0 | Icônes SVG   |
 
 ### Développement
 
-| Package                        | Version   | Usage                              |
-|--------------------------------|-----------|------------------------------------|
-| `vite`                         | ^7.3.1    | Bundler                            |
-| `@vitejs/plugin-react`         | ^5.1.1    | Plugin React pour Vite             |
-| `tailwindcss`                  | ^4.1.18   | Utilitaires CSS                    |
-| `@tailwindcss/vite`            | ^4.1.18   | Plugin TailwindCSS pour Vite       |
-| `postcss`                      | ^8.5.6    | Post-processeur CSS                |
-| `eslint`                       | ^9.39.1   | Linter                             |
-| `eslint-plugin-react-hooks`     | ^7.0.1    | Règles hooks React                 |
-| `eslint-plugin-react-refresh`   | ^0.4.24   | React Fast Refresh                 |
-| `globals`                      | ^16.5.0   | Globales ESLint                    |
-| `@types/react`                 | ^19.2.7   | Types React (non utilisés — JS)    |
-| `@types/react-dom`             | ^19.2.3   | Types ReactDOM (non utilisés — JS) |
-| `typescript`                   | ^5.6.3    | TypeScript strict                  |
-| `typescript-eslint`            | ^8.55.0   | ESLint pour TypeScript             |
-| `@testing-library/react`       | ^16.1.0   | Tests React                        |
-| `@vitest/coverage-v8`          | ^1.6.0    | Coverage tests                     |
-| `vitest`                       | ^2.1.8    | Framework de tests                 |
-| `jsdom`                        | ^25.0.1   | Environnement DOM tests            |
-| `zustand`                      | ^5.0.2    | State management                   |
-| `@tauri-apps/api`              | ^2.2.0    | API Tauri frontend                 |
-| `@tauri-apps/plugin-fs`        | ^2.2.0    | Plugin filesystem                  |
-| `@tauri-apps/plugin-dialog`    | ^2.2.0    | Plugin dialogues                   |
-| `@tauri-apps/plugin-shell`     | ^2.2.0    | Plugin shell                       |
+| Package                       | Version | Usage                              |
+| ----------------------------- | ------- | ---------------------------------- |
+| `vite`                        | ^7.3.1  | Bundler                            |
+| `@vitejs/plugin-react`        | ^5.1.1  | Plugin React pour Vite             |
+| `tailwindcss`                 | ^4.1.18 | Utilitaires CSS                    |
+| `@tailwindcss/vite`           | ^4.1.18 | Plugin TailwindCSS pour Vite       |
+| `postcss`                     | ^8.5.6  | Post-processeur CSS                |
+| `eslint`                      | ^9.39.1 | Linter                             |
+| `eslint-plugin-react-hooks`   | ^7.0.1  | Règles hooks React                 |
+| `eslint-plugin-react-refresh` | ^0.4.24 | React Fast Refresh                 |
+| `globals`                     | ^16.5.0 | Globales ESLint                    |
+| `@types/react`                | ^19.2.7 | Types React (non utilisés — JS)    |
+| `@types/react-dom`            | ^19.2.3 | Types ReactDOM (non utilisés — JS) |
+| `typescript`                  | ^5.6.3  | TypeScript strict                  |
+| `typescript-eslint`           | ^8.55.0 | ESLint pour TypeScript             |
+| `@testing-library/react`      | ^16.1.0 | Tests React                        |
+| `@vitest/coverage-v8`         | ^1.6.0  | Coverage tests                     |
+| `vitest`                      | ^2.1.8  | Framework de tests                 |
+| `jsdom`                       | ^25.0.1 | Environnement DOM tests            |
+| `zustand`                     | ^5.0.2  | State management                   |
+| `@tauri-apps/api`             | ^2.2.0  | API Tauri frontend                 |
+| `@tauri-apps/plugin-fs`       | ^2.2.0  | Plugin filesystem                  |
+| `@tauri-apps/plugin-dialog`   | ^2.2.0  | Plugin dialogues                   |
+| `@tauri-apps/plugin-shell`    | ^2.2.0  | Plugin shell                       |
 
 ---
 
@@ -736,8 +742,6 @@ npm run build:tauri    # Build Tauri production
 ```
 
 ---
-
-
 
 ---
 
@@ -923,7 +927,6 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 
 ---
 
-
 ## 15. Commandes Tauri (Mises à jour)
 
 - `generate_previews_batch(images: Vec<ImageId>, config: PreviewConfig)`
@@ -1001,30 +1004,24 @@ Le mapping des champs EXIF, rating, flag, etc. est synchronisé entre Rust et Ty
 
 ### Migration 004 : Colonnes `is_online` et `name` sur `folders`
 
-```sql
 ALTER TABLE folders ADD COLUMN is_online BOOLEAN DEFAULT 1 NOT NULL;
 ALTER TABLE folders ADD COLUMN name TEXT;
-```
 
 Ces colonnes permettent de tracker le statut en ligne des volumes externes et de stocker le nom du volume pour le regroupement dans l'arborescence.
 
-### DTO `FolderTreeNode`
-
 **⚠️ CONVENTION PROJET** : Les DTOs utilisent **snake_case** (pas camelCase) côté Rust ET TypeScript pour éviter le mapping. La sérialisation serde par défaut produit du snake_case.
 
-```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FolderTreeNode {
-    pub id: u32,
-    pub name: String,
-    pub path: String,
-    pub volume_name: String,
-    pub is_online: bool,
-    pub image_count: u32,
-    pub total_image_count: u32,
-    pub children: Vec<FolderTreeNode>,
+pub id: u32,
+pub path: String,
+pub volume_name: String,
+pub is_online: bool,
+pub total_image_count: u32,
+pub children: Vec<FolderTreeNode>,
 }
-```
+
+````
 
 ```typescript
 export interface FolderTreeNode {
@@ -1037,7 +1034,7 @@ export interface FolderTreeNode {
   total_image_count: number;
   children: FolderTreeNode[];
 }
-```
+````
 
 ### Commandes Tauri — Phase 3.4
 
@@ -1439,14 +1436,14 @@ Moteur Event Sourcing côté backend pour traçabilité complète des modificati
 
 ### 19.1 — Composants
 
-| Composant | Fichier | Statut |
-|-----------|---------|--------|
-| Service Rust | `src-tauri/src/services/event_sourcing.rs` | ✅ 150 LOC |
-| Commandes Tauri | `src-tauri/src/commands/event_sourcing.rs` | ✅ 60 LOC |
-| Types Rust | `src-tauri/src/models/event.rs` | ✅ 242 LOC |
-| Migration SQL | `src-tauri/migrations/005_event_sourcing.sql` | ✅ |
-| Service TS | `src/services/eventService.ts` | ✅ 80 LOC |
-| Tests TS | `src/services/__tests__/eventService.test.ts` | ✅ 23 tests |
+| Composant       | Fichier                                       | Statut      |
+| --------------- | --------------------------------------------- | ----------- |
+| Service Rust    | `src-tauri/src/services/event_sourcing.rs`    | ✅ 150 LOC  |
+| Commandes Tauri | `src-tauri/src/commands/event_sourcing.rs`    | ✅ 60 LOC   |
+| Types Rust      | `src-tauri/src/models/event.rs`               | ✅ 242 LOC  |
+| Migration SQL   | `src-tauri/migrations/005_event_sourcing.sql` | ✅          |
+| Service TS      | `src/services/eventService.ts`                | ✅ 80 LOC   |
+| Tests TS        | `src/services/__tests__/eventService.test.ts` | ✅ 23 tests |
 
 ### 19.2 — Tests
 
@@ -1462,7 +1459,7 @@ Moteur Event Sourcing côté backend pour traçabilité complète des modificati
 Status: COMPLETED (Étapes 1-3 ✅)
 
 - Event Store Rust service (150 LOC)
-- Tauri commands: append_event, get_events, replay_events  
+- Tauri commands: append_event, get_events, replay_events
 - TypeScript eventService with full test coverage
 - Migration 005 + tests (173 Rust + 394 TypeScript)
 - Non-regression: 0 failures on Phases 1-3

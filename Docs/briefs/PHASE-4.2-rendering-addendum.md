@@ -51,6 +51,7 @@
 #### Tests Phase A ✅
 
 **File** : `src/services/__tests__/renderingService.test.ts`
+
 - **Total** : 25/25 tests ✅
 - Conversion events → filters (exposure, contrast, saturation)
 - CSS string generation avec clamping (extreme values)
@@ -140,6 +141,7 @@ pub fn apply_filters(
 #### Tests Phase B ✅
 
 **Rust** : `src-tauri/src/services/image_processing.rs`
+
 - **Total** : 5/5 tests ✅
 - `test_apply_exposure_brighten` : Validation luminosité
 - `test_apply_saturation_desaturate` : Validation saturation
@@ -148,6 +150,7 @@ pub fn apply_filters(
 - `test_apply_filters_idempotent_with_zero_exposure` : Idempotence
 
 **TypeScript** : `src/services/__tests__/wasmRenderingService.test.ts`
+
 - **Total** : 18/18 tests ✅
   - Tous les tests type completeness résolus (PixelFilterState 9 champs)
   - Tests Canvas context graceful handling (jsdom limitation acceptée)
@@ -159,15 +162,15 @@ pub fn apply_filters(
 
 ## Comparatif Phase A vs Phase B
 
-| Aspect | Phase A (CSS) | Phase B (WASM) |
-|--------|---------------|----------------|
+| Aspect                  | Phase A (CSS)                      | Phase B (WASM)                                                          |
+| ----------------------- | ---------------------------------- | ----------------------------------------------------------------------- |
 | **Filtres disponibles** | 3 (brightness, contrast, saturate) | 9 complets (+ highlights, shadows, clarity, vibrance, color_temp, tint) |
-| **Contrôle** | Linéaire global | Per-pixel luma-based |
-| **Latency** | <1ms | <16ms |
-| **Memory** | 0 allocation | 2× pixels |
-| **Fallback** | N/A | CSS Phase A si WASM indisponible |
-| **Status Production** | ✅ ACTIF | ⏳ Code complete (WASM compilation pending) |
-| **Usage Prioritaire** | Production immédiate | Phase 4.3+ (historique + snapshots) |
+| **Contrôle**            | Linéaire global                    | Per-pixel luma-based                                                    |
+| **Latency**             | <1ms                               | <16ms                                                                   |
+| **Memory**              | 0 allocation                       | 2× pixels                                                               |
+| **Fallback**            | N/A                                | CSS Phase A si WASM indisponible                                        |
+| **Status Production**   | ✅ ACTIF                           | ⏳ Code complete (WASM compilation pending)                             |
+| **Usage Prioritaire**   | Production immédiate               | Phase 4.3+ (historique + snapshots)                                     |
 
 ---
 
@@ -192,6 +195,7 @@ Canvas display (Phase B)
 ```
 
 **Flow Complet** :
+
 1. EditStore émet event ImageEdited
 2. PreviewRenderer listener déclenche
 3. eventsToCSSFilters() crée CSSFilterState
@@ -204,6 +208,7 @@ Canvas display (Phase B)
 ## Non-Régression & Validation
 
 ✅ **Phase A & B Combined** :
+
 - 208 tests TypeScript (25 Phase A + 18 Phase B + 165 autres modules)
 - 5 tests Rust (image_processing)
 - 0 failures
@@ -218,12 +223,14 @@ Canvas display (Phase B)
 **Actuel** : Installation wasm-pack bloquée (environnement offline)
 
 **Statut Code** :
+
 - ✅ Rust modules : Compilent sans erreur (`cargo check --lib`)
 - ✅ TypeScript wrapper : Prêt et testé (18/18)
 - ✅ Fallback CSS : Actif et transparent
 - ⏳ wasm-pack build : Pending (non-bloquant pour Phase 4.2)
 
 **Impact** :
+
 - **Zéro** : Phase 4.2 fonctionne complètement avec Phase A CSS filters
 - Phase B (WASM) "dormante" jusqu'à compilation finale
 - Fallback CSS transparent pour l'utilisateur
@@ -237,7 +244,7 @@ Canvas display (Phase B)
 - ✅ Phase A type definitions (rendering.ts)
 - ✅ Phase A tests (25/25 ✅)
 - ✅ Phase B Rust backend (image_processing.rs)
-- ✅ Phase B WASM module (wasm/*)
+- ✅ Phase B WASM module (wasm/\*)
 - ✅ Phase B TypeScript wrapper (wasmRenderingService.ts)
 - ✅ Phase B tests (5 Rust + 18 TypeScript)
 - ✅ Event Sourcing integration

@@ -8,6 +8,8 @@ repository = ""
 edition = "2021"
 rust-version = "1.77.2"
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [lib]
 name = "luminafast_lib"
 path = "src/lib.rs"
@@ -25,20 +27,30 @@ tauri-plugin-log = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-shell = "2"
+
+# Database dependencies
 rusqlite = { version = "0.31.0", features = ["bundled", "chrono"] }
 thiserror = "1.0"
 chrono = { version = "0.4.38", features = ["serde"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# Hashing dependencies
 blake3 = "1.5"
 rayon = "1.10"
 tokio = { version = "1.40", features = ["rt-multi-thread", "fs", "io-util", "macros"] }
+
+# Filesystem dependencies
 notify = "7.0"
 parking_lot = "0.12"
 walkdir = "2.5"
+
+# Preview/RAW processing dependencies
 rsraw = "0.1"
 image = { version = "0.25", features = ["jpeg", "png"] }
 num_cpus = "1.16"
 dirs = "5.0"
+
+# EXIF extraction dependencies
 kamadak-exif = "0.6.1"
 
 [dev-dependencies]

@@ -1,3 +1,4 @@
+import { logDev } from './lib/logDev';
 import { useEffect, useCallback, useMemo, useRef } from 'react';
 import type { FlagType, EditState, CatalogEvent, EventPayload, EventType } from './types';
 import { safeID } from './lib/helpers';
@@ -22,6 +23,23 @@ import { GridView } from './components/library/GridView';
 import { DevelopView } from './components/develop/DevelopView';
 
 export default function App() {
+  // Handler global pour erreurs JS et promesses non gérées
+  useEffect(() => {
+    const handleError = (e: ErrorEvent) => {
+      logDev('[Global Error]', e);
+    };
+    const handleUnhandledRejection = (e: PromiseRejectionEvent) => {
+      logDev('[Global Unhandled Promise]', e);
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
   // Catalog hook - loads images from SQLite
   const {
     images,
@@ -34,6 +52,12 @@ export default function App() {
     onFlagChange,
     onTagsChange,
   } = useCatalog();
+  useEffect(() => {
+    logDev('App monté');
+    if (catalogError) {
+      logDev('Erreur catalogue', catalogError);
+    }
+  }, [catalogError]);
 
   // Stores Zustand
   const activeView = useUiStore((state) => state.activeView);

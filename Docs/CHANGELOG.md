@@ -34,7 +34,7 @@
 | Maintenance | —          | Corrections Critiques Phases 0→3.1 (BLOC 1-4)                                             | ✅ Complétée  | 2026-02-21 | Copilot |
 | Infra       | —          | Agents IA dédiés (code-review, pr-verification, phase-implementation, documentation-sync) | ✅ Complétée  | 2026-02-20 | Copilot |
 | 3           | 3.2        | Collections Statiques (CRUD)                                                              | ✅ Complétée  | 2026-02-21 | Copilot |
-| 3           | 3.2b       | Drag & Drop d'Images dans les Collections (MultiSelect Support)                          | ✅ Complétée  | 2026-02-24 | Copilot |
+| 3           | 3.2b       | Drag & Drop d'Images dans les Collections (MultiSelect Support)                           | ✅ Complétée  | 2026-02-24 | Copilot |
 | 3           | 3.3        | Smart Collections                                                                         | ✅ Complétée  | 2026-02-21 | Copilot |
 | 3           | 3.4        | Navigateur de Dossiers                                                                    | ✅ Complétée  | 2026-02-21 | Copilot |
 | Maintenance | —          | Performance & UX Import (Parallélisme + Progression Multi-Phase)                          | ✅ Complétée  | 2026-02-21 | Copilot |
@@ -42,8 +42,8 @@
 | Maintenance | —          | Résolution Notes Bloquantes Review Copilot (PR #20)                                       | ✅ Complétée  | 2026-02-23 | Copilot |
 | 3           | 3.5        | Recherche & Filtrage                                                                      | ✅ Complétée  | 2026-02-24 | Copilot |
 | 4           | 4.1        | Event Sourcing Engine                                                                     | ✅ Complétée  | 2026-02-25 | Copilot |
-| 4           | 4.2        | Pipeline de Rendu Image (CSS Filters + WASM Pixel Processing)                            | ✅ Complétée  | 2026-02-26 | Copilot |
-| Maintenance | —          | Correction Formule Exposure CSS (0.35 → 0.3)                                             | ✅ Complétée  | 2026-02-26 | Copilot |
+| 4           | 4.2        | Pipeline de Rendu Image (CSS Filters + WASM Pixel Processing)                             | ✅ Complétée  | 2026-02-26 | Copilot |
+| Maintenance | —          | Correction Formule Exposure CSS (0.35 → 0.3)                                              | ✅ Complétée  | 2026-02-26 | Copilot |
 | 4           | 4.3        | Historique & Snapshots UI                                                                 | ⬜ En attente | —          | —       |
 | 4           | 4.4        | Comparaison Avant/Après                                                                   | ⬜ En attente | —          | —       |
 | 5           | 5.1        | Panneau EXIF Connecté                                                                     | ⬜ En attente | —          | —       |
@@ -97,17 +97,20 @@
 #### Étape 1 ✅ — Infrastructure Rust (complétée 2026-02-25 10:00)
 
 **Modules créés** :
+
 - `services/event_sourcing.rs` (150 LOC) : EventStore service avec append_event, get_events
 - `commands/event_sourcing.rs` (60 LOC) : Tauri commands (append_event, get_events, replay_events)
 - `models/event.rs` (242 LOC) : Types exhaustifs (EventType enum, EventPayload, TargetType)
 - `migrations/005_event_sourcing.sql` : Table events avec index timestamp
 
 **Tests Rust** ✅
+
 - `test_append_and_get_event` : Vérification INSERT/SELECT correcte
 - Intégration database.rs::initialize() : Migration automatique au démarrage
 - Tous les tests phases 1-3 toujours passent
 
 **Code Quality** ✅
+
 - 0 `unwrap()` en production
 - `Result<T, SqlResult<E>>` systématique
 - Indexation SQLite sur timestamp pour perf requêtes
@@ -115,6 +118,7 @@
 #### Étape 2 ✅ — API Frontend + Tests TypeScript (complétée 2026-02-25 12:00)
 
 **Service TypeScript créé** :
+
 - `src/services/eventService.ts` (80 LOC) : Service d'invocation Tauri
   - `appendEvent(event: EventDTO)` : Ajoute un événement
   - `getEvents()` : Récupère tous les événements triés par timestamp
@@ -122,6 +126,7 @@
 - Types EventDTO mappés 1:1 avec backend Rust
 
 **Tests TypeScript** ✅
+
 - `src/services/__tests__/eventService.test.ts` (23 tests)
   - Tests append_event avec success/error handling
   - Tests get_events avec retrieval + ordering
@@ -133,6 +138,7 @@
 #### Étape 3 ✅ — Documentation Finale (complétée 2026-02-25 14:00)
 
 **Fichiers mis à jour** :
+
 - `Docs/APP_DOCUMENTATION.md` : Nouvelle section 19 (Event Sourcing Engine)
   - Architecture diagram
   - Schéma SQLite
@@ -146,6 +152,7 @@
 #### Analyse Types Inutilisés — Lacunes Détectées (carryover)
 
 Document de planification créé : `Docs/IMPLEMENTATION_PLAN_TYPES.md`
+
 - Phase 1.2 : 40% (pas update_image)
 - Phase 2.2 : EXIF JSON non hydraté
 - Phase 4.2 : 0% (rendu images — phase suivante)
@@ -154,14 +161,17 @@ Document de planification créé : `Docs/IMPLEMENTATION_PLAN_TYPES.md`
 #### Fichiers Affectés
 
 **Créés** :
+
 - ✅ `src/services/eventService.ts` — Service d'invocation
 - ✅ `src/services/__tests__/eventService.test.ts` — 23 tests TypeScript
 
 **Modifiés** :
+
 - ✅ `Docs/APP_DOCUMENTATION.md` — Section 19 ajoutée
 - ✅ `Docs/CHANGELOG.md` — Cette entrée
 
 **Préexistants (Étape 1)** :
+
 - ✅ `src-tauri/src/services/event_sourcing.rs`
 - ✅ `src-tauri/src/commands/event_sourcing.rs`
 - ✅ `src-tauri/src/models/event.rs`
@@ -263,6 +273,7 @@ Document de planification créé : `Docs/IMPLEMENTATION_PLAN_TYPES.md`
 #### Cause Racine
 
 **Symptôme** : Phase 3.1 marquée "complètement" en CHANGELOG mais seulement 60% implémentée.
+
 - App.tsx utilisait hybrid state (useCatalog + useCatalogStore) → data loss on modifications
 - Modifications (ratings/flags) jamais écrites en SQLite
 - Tous les thumbnails chargés simultanément → performance dégradée sur gros catalogues
@@ -275,12 +286,14 @@ Document de planification créé : `Docs/IMPLEMENTATION_PLAN_TYPES.md`
 #### Déroulement Implémentation
 
 **Checkpoint 1 : État Centralisé (✅ Complété)**
+
 - Déplacé `selection` + `filterText` de `useCatalogStore` vers `useUiStore`
 - App.tsx utilise maintenant SEUL `useCatalog()` hook pour images data
 - Eliminé hybrid state pattern → single source of truth
 - **Commit** : 3fc748b
 
 **Checkpoint 2 : Synchronisation SQLite Bidi (✅ Complété)**
+
 - Implémenté `onRatingChange()`, `onFlagChange()`, `onTagsChange()` callbacks
 - App.tsx appelle maintenant ces callbacks au lieu de `setImages()` directement
 - Chaque modification écrit immédiatement en SQLite via Tauri command
@@ -288,6 +301,7 @@ Document de planification créé : `Docs/IMPLEMENTATION_PLAN_TYPES.md`
 - **Commits** : 01c682f + 29dce17
 
 **Checkpoint 3 : Lazy Loading Previews (✅ Complété)**
+
 - Créé nouvelle composante `LazyLoadedImageCard` (163 lignes)
 - IntersectionObserver avec `rootMargin='100px'` pour prefetch
 - Anti-thrashing logic : skip images if scroll velocity > 3ms
@@ -295,12 +309,14 @@ Document de planification créé : `Docs/IMPLEMENTATION_PLAN_TYPES.md`
 - **Commit** : 9381447
 
 **Checkpoint 4 : Tests d'Intégration (✅ Complété)**
+
 - Ajouté 4 tests pour `useCatalog()` callbacks
 - Tests d'intégration avec mocks CatalogService
 - Vérification error handling
 - **Commit** : e0502c0
 
 **Checkpoint 5 : Non-Régression + Documentation (✅ Complété)**
+
 - 361/361 tests passent (357 frontend + 4 nouveaux tests)
 - Pre-commit hooks tous ✅
 - TypeScript strict mode 0 erreurs
@@ -334,6 +350,7 @@ GridView (virtualized)
 #### Fichiers Affectés
 
 **Frontend** :
+
 - ✅ `src/App.tsx` — Import onRatingChange/onFlagChange/onTagsChange; call in dispatchEvent()
 - ✅ `src/stores/uiStore.ts` — Ajout selection + filterText (Checkpoint 1)
 - ✅ `src/hooks/useCatalog.ts` — Callbacks + bidirectional SQLite sync (Checkpoint 2)
@@ -344,6 +361,7 @@ GridView (virtualized)
 - ✅ `src/hooks/__tests__/useCatalog.test.ts` — 4 nouveaux tests callbacks (Checkpoint 4)
 
 **Documentation** :
+
 - ✅ `Docs/CHANGELOG.md` — Entrée de maintenance ajoutée (ce fichier)
 
 #### Critères de Validation Remplis
@@ -358,11 +376,13 @@ GridView (virtualized)
 #### Impact Utilisateur
 
 **Avant** (60% complète) :
+
 - ❌ Clique sur rating → state local change → click refresh grid → rating revient à zéro
 - ❌ Flag toggle → toggle revient après refresh
 - ❌ Scroll sur 1000 images → UI freeze pendant chargement 80 previews simultanées
 
 **Après** (100% complète) :
+
 - ✅ Clique sur rating → immédiatement écrit en SQLite + local state updated
 - ✅ Flag toggle → immédiatement persiste en SQLite
 - ✅ Scroll smooth : previews chargées à la demande avec prefetch intelligent
@@ -371,14 +391,17 @@ GridView (virtualized)
 #### Test Coverage
 
 **Tests Unitaires** :
+
 - `GridView.test.tsx` → Rendering + selection + IntersectionObserver mock ✅
 - `useCatalog.test.ts` → Callbacks + SQLite sync + error handling ✅
 
 **Tests Intégration** :
+
 - `App.tsx` dispatch events → useCatalog callbacks → CatalogService.updateImageState() ✅
 - Store updates async + isSynced flag ✅
 
 **Non-Régression** :
+
 - Tous tests Phase 1-3 toujours passent ✅
 - Aucun changement comportement existant ✅
 
@@ -2033,27 +2056,16 @@ Implémentation complète du système de génération de previews avec pyramide 
 
 #### Fichiers créés/modifiés
 
-```
+````
 src-tauri/src/
 ├── models/preview.rs (365 lignes) - Modèles complets avec sérialisation
 ├── services/preview.rs (512 lignes) - Service principal avec concurrence
 ├── commands/preview.rs (239 lignes) - 8 commandes Tauri
 └── Cargo.toml - Dépendances rsraw, image, num_cpus, dirs
 
-src/
+
 ├── types/preview.ts (376 lignes) - Types TypeScript stricts
-└── services/previewService.ts (440 lignes) - Service frontend
-```
-
-#### Tests
-
-- **20 tests unitaires Rust** passants
-- Tests de sérialisation pour tous les types
-- Tests d'intégration service + cache
-- Mock complet pour tests frontend
-
 #### Performance
-
 - Thumbnail: <200ms, Standard: <500ms
 - Cache hiérarchique par hash prefix
 - Concurrency configurable (Rayon + Tokio)
@@ -2896,7 +2908,8 @@ const reset = useCallback((): void => {
     error: null,
   });
 }, [setImportState, cleanupProgressListener, cleanupIngestionListener]);
-```
+````
+
 ````
 
 **Intégrations** :
@@ -3393,3 +3406,4 @@ const brightness = 1 + filters.exposure * 0.35; // ❌ INCORRECT
 ```
 
 ```
+````

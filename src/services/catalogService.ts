@@ -1,4 +1,5 @@
 import type { CollectionDTO, ImageDTO, ImageDetailDTO, ImageFilter } from '../types/dto';
+import type { EventDTO } from './eventService';
 import type { FolderTreeNode } from '../types/folder';
 
 /**
@@ -67,6 +68,24 @@ export class CatalogService {
     } catch (error) {
       console.error(`Failed to get image detail for ID ${id}:`, error);
       throw error;
+    }
+  }
+
+  /**
+   * Get edit events for a single image (Phase 4.2)
+   */
+  static async getEditEvents(imageId: number): Promise<EventDTO[]> {
+    try {
+      const invoke = this.getInvoke();
+      const result = await invoke('get_edit_events', { imageId });
+
+      if (typeof result === 'string') {
+        throw new Error(result);
+      }
+
+      return result as EventDTO[];
+    } catch (error) {
+      throw this.parseError(error);
     }
   }
 

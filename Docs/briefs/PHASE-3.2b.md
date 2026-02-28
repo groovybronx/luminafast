@@ -59,6 +59,7 @@ interface DragImage {
 ```
 
 **Détails:**
+
 - ✅ `draggable={true}` sur le conteneur principal
 - ✅ `onDragStart` : sérialise les IDs en JSON
 - ✅ Support multi-select : si image sélectionnée + sélection multiple, drag toute la sélection
@@ -136,6 +137,7 @@ const handleDragOverCollection = (e: React.DragEvent) => {
 ```
 
 **Détails:**
+
 - ✅ `onDragOver` : `e.preventDefault()` pour activer drop
 - ✅ `onDragLeave` : réinitialiser feedback visuel
 - ✅ `onDrop` : parser JSON + appeler `addImagesToCollection`
@@ -194,14 +196,14 @@ Ou gérer localement dans LeftSidebar (plus simple).
 
 ### 5. Contraintes & Cas Limites
 
-| Cas | Comportement |
-|-----|-------------|
-| Drop sur quick collection | Ajouter à la quick (sélection temporaire) |
-| Drop sur smart collection | Refuser silencieusement (collections dynamiques) |
-| Même image 2x | `collection_images` a PRIMARY KEY unique → pas de doublons |
-| Archive/readonly collection | Désactiver drop (futur) |
-| 1000+ images en multi-select | Ajouter toutes les IDs (perf OK, batch operation) |
-| Drop en dehors collection | Aucun effet, drop refusé |
+| Cas                          | Comportement                                               |
+| ---------------------------- | ---------------------------------------------------------- |
+| Drop sur quick collection    | Ajouter à la quick (sélection temporaire)                  |
+| Drop sur smart collection    | Refuser silencieusement (collections dynamiques)           |
+| Même image 2x                | `collection_images` a PRIMARY KEY unique → pas de doublons |
+| Archive/readonly collection  | Désactiver drop (futur)                                    |
+| 1000+ images en multi-select | Ajouter toutes les IDs (perf OK, batch operation)          |
+| Drop en dehors collection    | Aucun effet, drop refusé                                   |
 
 ---
 

@@ -1,4 +1,3 @@
-
 # Phase 4.1 — Event Sourcing Engine
 
 > **Statut** : 🔄 **En cours (Étape 1/3 : infrastructure backend)**
@@ -12,6 +11,7 @@ Mettre en place un moteur d'Event Sourcing côté backend (Rust/Tauri) pour assu
 ## Périmètre
 
 ### ✅ Inclus dans cette phase
+
 - Module Rust Event Sourcing (logique + tests)
 - Types d’événements exhaustifs (image, collection, tag, rating, edit)
 - Table events (migration SQLite)
@@ -19,28 +19,34 @@ Mettre en place un moteur d'Event Sourcing côté backend (Rust/Tauri) pour assu
 - Tests unitaires Rust (≥80% coverage)
 
 ### ❌ Exclus intentionnellement
+
 - UI d’historique (phase 4.3)
 - Optimisation performance (phase 6.1)
 - DuckDB/OLAP (phase 6.2)
 
 ### 📋 Reporté à partir 3.5
+
 - Aucun
 
 ## Dépendances
 
 ### Phases
+
 - Phase 3.5 ✅ complétée
 
 ### Ressources Externes
+
 - Aucune
 
 ## Fichiers
 
 ### À créer
+
 - `src-tauri/src/services/event_sourcing.rs` — Logique Event Sourcing + tests
 - `src-tauri/migrations/005_event_sourcing.sql` — Table events
 
 ### À modifier
+
 - `src-tauri/src/services/mod.rs` — Ajout du module
 - `Docs/APP_DOCUMENTATION.md` — Section architecture + schéma DB
 - `Docs/CHANGELOG.md` — Entrée phase 4.1
@@ -48,6 +54,7 @@ Mettre en place un moteur d'Event Sourcing côté backend (Rust/Tauri) pour assu
 ## Interfaces Publiques
 
 ### Tauri Commands
+
 ```rust
 #[tauri::command]
 pub fn append_event(event: EventDTO) -> Result<(), String>;
@@ -58,34 +65,38 @@ pub fn replay_events() -> Result<(), String>;
 ```
 
 ### TypeScript DTOs
+
 ```typescript
 export interface EventDTO {
-	id: string;
-	timestamp: number;
-	event_type: string;
-	payload: any;
-	target_type: string;
-	target_id: number;
-	user_id?: string;
-	created_at: string;
+  id: string;
+  timestamp: number;
+  event_type: string;
+  payload: any;
+  target_type: string;
+  target_id: number;
+  user_id?: string;
+  created_at: string;
 }
 ```
 
 ## Contraintes Techniques
 
 ### Rust Backend
+
 - Pas de unwrap()/panic! en prod
 - Result<T, E> systématique
 - thiserror pour erreurs custom
 - Tests unitaires pour chaque fonction publique
 
 ### Database
+
 - Migration séquentielle (005)
 - Index sur timestamp
 
 ## Architecture Cible
 
 ### Schéma DB
+
 ```sql
 CREATE TABLE events (
 		id TEXT PRIMARY KEY,
@@ -101,6 +112,7 @@ CREATE INDEX idx_events_timestamp ON events(timestamp);
 ```
 
 ### Flux de Données
+
 ```
 Frontend (invoke append_event)
 	↓
@@ -114,9 +126,11 @@ get_events/replay_events
 ## Dépendances Externes
 
 ### Rust
+
 - chrono, uuid, serde, rusqlite
 
 ## Checkpoints
+
 - [ ] Code compile (`cargo check`)
 - [ ] Tests unitaires Rust (≥80% coverage)
 - [ ] API Tauri accessible

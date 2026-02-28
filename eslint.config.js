@@ -16,6 +16,9 @@ export default defineConfig([
     'coverage',
     '*.local.ts',
     '*.config.local.ts',
+    'luminafast-wasm/pkg/*.js',
+    'luminafast-wasm/pkg/*.d.ts',
+    'src/wasm/*.js',
   ]),
 
   // JavaScript/JSX files
@@ -31,8 +34,11 @@ export default defineConfig([
       prettier: prettierPlugin,
     },
     languageOptions: {
-      ecmaVersion: 2020,
-      globals: globals.browser,
+      ecmaVersion: 2021,
+      globals: {
+        ...globals.browser,
+        FinalizationRegistry: 'readonly',
+      },
       parserOptions: {
         ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },

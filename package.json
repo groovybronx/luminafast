@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:all": "npm-run-all --parallel dev tauri:dev",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
@@ -20,6 +21,7 @@
     "test:workflow:all": "bash ./scripts/test-workflow.sh all",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
+    "tauri:build:open": "tauri build && open ./src-tauri/target/release/bundle/macos/",
     "rust:check": "cd src-tauri && cargo check",
     "rust:build": "cd src-tauri && cargo build",
     "rust:test": "cd src-tauri && cargo test",
@@ -64,6 +66,7 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "jsdom": "^28.0.0",
+    "npm-run-all": "^4.1.5",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",

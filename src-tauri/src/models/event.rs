@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::Map;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,6 +26,7 @@ pub enum EventType {
     ColorLabelChanged,
     TagAdded,
     TagRemoved,
+    ImageEdited,
     EditApplied,
     CollectionCreated,
     CollectionUpdated,
@@ -43,6 +45,7 @@ pub enum EventPayload {
     ColorLabelChanged(ColorLabelChangedPayload),
     TagAdded(TagAddedPayload),
     TagRemoved(TagRemovedPayload),
+    ImageEdited(ImageEditedPayload),
     EditApplied(EditAppliedPayload),
     CollectionCreated(CollectionCreatedPayload),
     ImageAddedToCollection(ImageAddedToCollectionPayload),
@@ -97,6 +100,12 @@ pub struct TagRemovedPayload {
     pub image_id: i64,
     pub tag_id: i64,
     pub tag_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImageEditedPayload {
+    pub image_id: i64,
+    pub edits: Map<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

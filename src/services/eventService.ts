@@ -75,6 +75,26 @@ export async function getEvents(): Promise<EventDTO[]> {
 }
 
 /**
+ * Retrieves edit events for a specific image (Phase 4.2A)
+ * Filters events where targetId matches the imageId
+ * @param imageId - The ID of the image to get edits for
+ * @throws Error if the Tauri command fails
+ * @returns Promise that resolves with events for the specified image
+ */
+export async function getEditEvents(imageId: number): Promise<EventDTO[]> {
+  try {
+    if (import.meta.env.DEV) {
+      console.warn(`[EventService] getEditEvents called for imageId=${imageId}`);
+    }
+    return await invoke<EventDTO[]>('get_edit_events', { image_id: imageId });
+  } catch (error) {
+    throw new Error(
+      `Failed to retrieve edit events: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+/**
  * Replays all events idempotently
  * This reconstructs the complete state from the event log
  * @throws Error if the Tauri command fails

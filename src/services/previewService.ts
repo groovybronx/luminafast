@@ -4,6 +4,8 @@
  * Respect strict de TDD : tests développés en parallèle du code
  */
 
+import { invoke } from '@tauri-apps/api/core';
+import { listen as tauriListen } from '@tauri-apps/api/event';
 import {
   PreviewType,
   PreviewResult,
@@ -16,9 +18,6 @@ import {
   CacheCleanupConfig,
   PreviewConfig,
 } from '../types';
-
-// Import Tauri API - utilise le pattern de pont existant comme les autres services
-// Note: Using bridge pattern instead of direct imports for better testability and fallback handling
 
 /**
  * Service de gestion des previews avec wrapper Tauri
@@ -44,86 +43,54 @@ export class PreviewService {
   }
 
   /**
-   * Get Tauri invoke function (handle both __TAURI__ and __TAURI_INTERNALS__)
+   * Get Tauri invoke function using @tauri-apps/api
+   * Works reliably across platforms (including macOS) where window.__TAURI__ injection may not work
    */
   private static getInvoke() {
-    if (typeof window !== 'undefined') {
-      // Try __TAURI__ first (normal case)
-      const tauriWindow = window as unknown as {
-        __TAURI__?: {
-          invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>;
-        };
-        __TAURI_INTERNALS__?: {
-          invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>;
-        };
-      };
-
-      if (tauriWindow.__TAURI__?.invoke) {
-        return tauriWindow.__TAURI__.invoke;
-      }
-      // Fallback to __TAURI_INTERNALS__ (brownfield pattern)
-      if (tauriWindow.__TAURI_INTERNALS__?.invoke) {
-        return tauriWindow.__TAURI_INTERNALS__.invoke;
-      }
-    }
-
-    // Mock fallback for tests
-    return async (command: string, args?: Record<string, unknown>) => {
-      PreviewService.logDev(`[PreviewService] Tauri not available, mocking command: ${command}`, {
-        args,
+    try {
+      // Use @tauri-apps/api which is the official Tauri v2 way
+      return invoke;
+    } catch (error) {
+      // Fallback: return mock if for some reason @tauri-apps/api fails
+      PreviewService.logDev('[PreviewService] @tauri-apps/api not available, using mock', {
+        error,
       });
-      throw new Error(`Tauri not available: ${command}`);
-    };
+      return async (command: string, args?: Record<string, unknown>) => {
+        PreviewService.logDev(`[PreviewService] Tauri not available, mocking command: ${command}`, {
+          args,
+        });
+        throw new Error(`Tauri not available: ${command}`);
+      };
+    }
   }
 
   /**
-   * Get Tauri listen function (handle both __TAURI__ and __TAURI_INTERNALS__)
-   * Bridge architecture pattern for event listeners
+   * Get Tauri listen function using @tauri-apps/api
+   * Works reliably across platforms (including macOS) where window.__TAURI__ injection may not work
    */
   private static getListen() {
-    if (typeof window !== 'undefined') {
-      // Try __TAURI__ first (normal case)
-      const tauriWindow = window as unknown as {
-        __TAURI__?: {
-          event?: {
-            listen: <T>(
-              event: string,
-              handler: (event: { payload: T }) => void,
-            ) => Promise<() => void>;
-          };
-        };
-        __TAURI_INTERNALS__?: {
-          event?: {
-            listen: <T>(
-              event: string,
-              handler: (event: { payload: T }) => void,
-            ) => Promise<() => void>;
-          };
+    try {
+      // Use @tauri-apps/api event.listen which is the official Tauri v2 way
+      return tauriListen;
+    } catch (error) {
+      // Fallback: return mock if for some reason @tauri-apps/api fails
+      PreviewService.logDev('[PreviewService] @tauri-apps/api event not available, using mock', {
+        error,
+      });
+      // Mock fallback for tests - returns a promise that resolves to an unlisten function
+      return async <T>(
+        _event: string,
+        _handler: (event: { payload: T }) => void,
+      ): Promise<() => void> => {
+        PreviewService.logDev(
+          `[PreviewService] Tauri event system not available, mocking listen for event: ${_event}`,
+        );
+        // Return a no-op unlisten function
+        return () => {
+          PreviewService.logDev(`[PreviewService] Mock unlisten called for event: ${_event}`);
         };
       };
-
-      if (tauriWindow.__TAURI__?.event?.listen) {
-        return tauriWindow.__TAURI__.event.listen;
-      }
-      // Fallback to __TAURI_INTERNALS__ (brownfield pattern)
-      if (tauriWindow.__TAURI_INTERNALS__?.event?.listen) {
-        return tauriWindow.__TAURI_INTERNALS__.event.listen;
-      }
     }
-
-    // Mock fallback for tests - returns a promise that resolves to an unlisten function
-    return async <T>(
-      _event: string,
-      _handler: (event: { payload: T }) => void,
-    ): Promise<() => void> => {
-      PreviewService.logDev(
-        `[PreviewService] Tauri event system not available, mocking listen for event: ${_event}`,
-      );
-      // Return a no-op unlisten function
-      return () => {
-        PreviewService.logDev(`[PreviewService] Mock unlisten called for event: ${_event}`);
-      };
-    };
   }
 
   /**

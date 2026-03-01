@@ -106,13 +106,13 @@ export const LazyLoadedImageCard = ({
     >
       {hasPreview ? (
         <>
-          {(() => {
+          {/*      {(() => {
             // Log console pour traçabilité phase 4.2a
             if (import.meta.env.DEV) {
               console.warn(`PreviewRenderer applied for imageId=${image.id}`);
             }
             return null;
-          })()}
+          })()} */}
           <PreviewRenderer
             imageId={image.id}
             previewUrl={image.url}

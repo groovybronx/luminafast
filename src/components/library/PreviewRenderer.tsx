@@ -6,7 +6,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { eventsToCSSFilters, applyCSSFilters } from '@/services/renderingService';
-import { getEvents } from '@/services/eventService';
+import { CatalogService } from '@/services/catalogService';
+import { useEditStore } from '@/stores/editStore';
 import type { CSSFilterState } from '@/types/rendering';
 
 interface PreviewRendererProps {
@@ -45,6 +46,10 @@ export const PreviewRenderer: React.FC<PreviewRendererProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Get edit store actions (Phase 4.2-B.2)
+  const setEditEventsForImage = useEditStore((state) => state.setEditEventsForImage);
+  const clearEditEventsForImage = useEditStore((state) => state.clearEditEventsForImage);
+
   // Load and apply filters on mount and when imageId changes
   useEffect(() => {
     let isMounted = true;
@@ -54,17 +59,24 @@ export const PreviewRenderer: React.FC<PreviewRendererProps> = ({
         setIsLoading(true);
         setError(null);
 
-        // Récupérer tous les événements depuis Event Sourcing
-        const events = await getEvents();
+        // Récupérer les événements pour cette image depuis Event Sourcing (Phase 4.2-B.1)
+        const imageEvents = await CatalogService.getEditEvents(imageId);
 
-        // Filtrer les événements pour cette image (by targetId)
-        const imageEvents = events.filter((e) => e.targetId === imageId);
+        // Stocker dans EditStore (Phase 4.2-B.2)
+        if (isMounted) {
+          setEditEventsForImage(imageId, imageEvents);
+        }
 
         // Convertir en filtres CSS
         const cssFilters = eventsToCSSFilters(imageEvents);
 
         if (isMounted) {
           setFilters(cssFilters);
+          if (import.meta.env.DEV) {
+            console.warn(
+              `[PreviewRenderer] Loaded ${imageEvents.length} events for imageId=${imageId}`,
+            );
+          }
         }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
@@ -86,8 +98,10 @@ export const PreviewRenderer: React.FC<PreviewRendererProps> = ({
 
     return () => {
       isMounted = false;
+      // Cleanup: clear stored events for this image when component unmounts
+      clearEditEventsForImage(imageId);
     };
-  }, [imageId]);
+  }, [imageId, setEditEventsForImage, clearEditEventsForImage]);
 
   // Apply filters to DOM element when they change
   useEffect(() => {

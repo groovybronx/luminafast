@@ -86,7 +86,7 @@ export async function getEditEvents(imageId: number): Promise<EventDTO[]> {
     if (import.meta.env.DEV) {
       console.warn(`[EventService] getEditEvents called for imageId=${imageId}`);
     }
-    return await invoke<EventDTO[]>('get_edit_events', { image_id: imageId });
+    return await invoke<EventDTO[]>('get_edit_events', { imageId });
   } catch (error) {
     throw new Error(
       `Failed to retrieve edit events: ${error instanceof Error ? error.message : String(error)}`,

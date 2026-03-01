@@ -318,7 +318,7 @@ export class CatalogService {
   static async getEditEvents(imageId: number): Promise<EventDTO[]> {
     try {
       const invoke = this.getInvoke();
-      const result = await invoke('get_edit_events', { image_id: imageId });
+      const result = await invoke('get_edit_events', { imageId });
 
       if (typeof result === 'string') {
         throw new Error(result);

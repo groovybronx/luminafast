@@ -34,7 +34,7 @@ export const PreviewRenderer: React.FC<PreviewRendererProps> = ({
   previewUrl,
   className = '',
   isSelected = false,
-  useWasm: _useWasm = false, // Phase B will use this
+  useWasm: _useWasm = true, // Phase B will use this
 }) => {
   const imgRef = useRef<HTMLImageElement>(null);
   const [filters, setFilters] = useState<CSSFilterState>({

@@ -1,6 +1,7 @@
 import { Cloud, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { CatalogImage, DragImageData } from '../../types';
+import PreviewRenderer from './PreviewRenderer';
 
 interface LazyLoadedImageCardProps {
   image: CatalogImage;
@@ -104,12 +105,21 @@ export const LazyLoadedImageCard = ({
       }}
     >
       {hasPreview ? (
-        <img
-          draggable={false}
-          src={image.url}
-          alt={image.filename}
-          className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity pointer-events-none select-none"
-        />
+        <>
+          {(() => {
+            // Log console pour traçabilité phase 4.2a
+            if (import.meta.env.DEV) {
+              console.warn(`PreviewRenderer applied for imageId=${image.id}`);
+            }
+            return null;
+          })()}
+          <PreviewRenderer
+            imageId={image.id}
+            previewUrl={image.url}
+            className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity pointer-events-none select-none"
+            isSelected={isSelected}
+          />
+        </>
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-zinc-800 animate-pulse">
           <ImageIcon size={Math.max(16, itemHeight / 4)} className="text-zinc-600" />

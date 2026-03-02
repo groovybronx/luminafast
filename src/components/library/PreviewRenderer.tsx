@@ -35,7 +35,7 @@ export const PreviewRenderer: React.FC<PreviewRendererProps> = ({
   previewUrl,
   className = '',
   isSelected = false,
-  useWasm: _useWasm = true, // Phase B will use this
+  useWasm: _useWasm = false, // Phase B will use this
 }) => {
   const imgRef = useRef<HTMLImageElement>(null);
   const [filters, setFilters] = useState<CSSFilterState>({
@@ -46,9 +46,10 @@ export const PreviewRenderer: React.FC<PreviewRendererProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Get edit store actions (Phase 4.2-B.2)
+  // Get edit store actions + selector for subscription (Phase 4.2-B.2)
   const setEditEventsForImage = useEditStore((state) => state.setEditEventsForImage);
   const clearEditEventsForImage = useEditStore((state) => state.clearEditEventsForImage);
+  const editEventsForImage = useEditStore((state) => state.editEventsPerImage[imageId]);
 
   // Load and apply filters on mount and when imageId changes
   useEffect(() => {
@@ -107,6 +108,20 @@ export const PreviewRenderer: React.FC<PreviewRendererProps> = ({
   useEffect(() => {
     applyCSSFilters(imgRef.current, filters);
   }, [filters]);
+
+  // Phase 4.2-2: Monitor editStore changes for this image
+  // When events change (e.g., new EDIT event from App.tsx), recalculate filters
+  useEffect(() => {
+    if (editEventsForImage && editEventsForImage.length > 0) {
+      const cssFilters = eventsToCSSFilters(editEventsForImage);
+      setFilters(cssFilters);
+      if (import.meta.env.DEV) {
+        console.warn(
+          `[PreviewRenderer] Updated filters from store: ${editEventsForImage.length} events for imageId=${imageId}`,
+        );
+      }
+    }
+  }, [editEventsForImage, imageId]);
 
   return (
     <div className={`preview-renderer${isSelected ? ' selected' : ''}${error ? ' error' : ''}`}>

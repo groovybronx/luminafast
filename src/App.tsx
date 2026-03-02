@@ -8,6 +8,8 @@ import { useCollectionStore } from './stores/collectionStore';
 import { useFolderStore } from './stores/folderStore';
 import { useCatalog } from './hooks/useCatalog';
 import { previewService } from './services/previewService';
+import { CatalogService } from './services/catalogService';
+import type { EventDTO } from './services/eventService';
 import { GlobalStyles } from './components/shared/GlobalStyles';
 import { ArchitectureMonitor } from './components/shared/ArchitectureMonitor';
 import { ImportModal } from './components/shared/ImportModal';
@@ -183,8 +185,10 @@ export default function App() {
           }
         });
       } else if (eventType === 'EDIT') {
-        // Edit events stay local for now (EDIT_STATE not synced to SQLite)
+        // Phase 4.2-1: Persist EDIT events to Event Sourcing store
         const { setImages: updateLocalImages } = useCatalogStore.getState();
+
+        // Optimistic update (local)
         const updatedImages = images.map((img) => {
           if (selection.includes(img.id)) {
             const newState = { ...img.state, isSynced: false };
@@ -194,7 +198,34 @@ export default function App() {
           return img;
         });
         updateLocalImages(updatedImages);
-        addLog(`Edit stored for ${selection.length} asset(s)`, 'sqlite');
+
+        // Persist to Event Store (Phase 4.2-1: NEW)
+        selection.forEach((imageId) => {
+          const eventDto: EventDTO = {
+            id: safeID(),
+            timestamp: Date.now(),
+            eventType: 'edit_applied',
+            payload: { edits: payload as Partial<EditState> },
+            targetType: 'image', // ← lowercase for Rust enum
+            targetId: imageId,
+            userId: undefined,
+            createdAt: new Date().toISOString(),
+          };
+
+          CatalogService.appendEvent(eventDto)
+            .then(() => {
+              // Phase 4.2-2: Update editStore to trigger PreviewRenderer subscription
+              const { editEventsPerImage } = useEditStore.getState();
+              const existingEvents = editEventsPerImage[imageId] || [];
+              const { setEditEventsForImage } = useEditStore.getState();
+              setEditEventsForImage(imageId, [...existingEvents, eventDto]);
+            })
+            .catch((err) => {
+              addLog(`Failed to persist edit for image ${imageId}: ${err}`, 'error');
+            });
+        });
+
+        addLog(`Edit stored and persisted for ${selection.length} asset(s)`, 'sqlite');
       }
 
       if (eventType !== 'EDIT') {

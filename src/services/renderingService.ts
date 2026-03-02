@@ -27,7 +27,8 @@ export function eventsToCSSFilters(events: EventDTO[]): CSSFilterState {
   // Appliquer les événements EDIT dans l'ordre (replay)
   for (const event of events) {
     // Vérifier que l'event est bien de type EDIT
-    if (event.eventType !== 'ImageEdited') {
+    if (event.eventType !== 'edit_applied') {
+      // ← Match Rust enum value
       continue;
     }
 
@@ -83,7 +84,8 @@ export function eventsToPixelFilters(events: EventDTO[]): PixelFilterState {
 
   // Appliquer les événements EDIT pour les filtres avancés
   for (const event of events) {
-    if (event.eventType !== 'ImageEdited') {
+    if (event.eventType !== 'edit_applied') {
+      // ← Match Rust enum value
       continue;
     }
 

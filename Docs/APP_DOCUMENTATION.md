@@ -948,7 +948,17 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 ## 18. Système de Rendu
 
 > **Phase** : 4.2 (Pipeline de Rendu Image + Event Sourcing Integration)
-> **État** : ✅ **Entièrement implémenté** (CSS Filters + WASM Pixel Processing + Event Sourcing)
+> **État** : 🔄 **En Révision** (Phase 4.2-1/2 persistence complétée; WASM Phase B reporté à 4.2b)
+> **Maintenance** : MAINTENANCE-PHASE-4.2-COMPLETION.md
+
+### Statut d'Implémentation
+
+| Composant | Phase | Status | Notes |
+|-----------|-------|--------|-------|
+| Event Sourcing (append events) | 4.2-1 | ✅ Implémenté | App.tsx → CatalogService.appendEvent() → SQLite |
+| PreviewRenderer subscription | 4.2-2 | ✅ Implémenté | Monitore editStore.editEventsPerImage changes |
+| CSS Filters aplicaton | 4.2-A | ✅ Complet | CSS GPU-accelerated, <1ms latency |
+| WASM Pixel Processing | 4.2-B | 🔄 Standby | Code complet, non-bloquant, reporté à 4.2b |
 
 ### Architecture
 
@@ -986,6 +996,45 @@ struct Event {
 - Commande Tauri: `get_edit_events(image_id: i64) → Vec<EventDTO>`
 - Service wrapper: `CatalogService.getEditEvents(imageId) → Promise<EventDTO[]>`
 - Caching: `editStore.editEventsPerImage[imageId]` (per-image persistent cache)
+
+### 18.1.1 — Workflow Complet: Slider → Persist → Render (Phase 4.2-1/2)
+
+**Étape 1: Persistence (Phase 4.2-1)** — `src/App.tsx` EDIT branch
+
+```
+User adjust slider in DevelopView
+  ↓
+onChange → onDispatchEvent('EDIT', { exposure: 0.5 })
+  ↓
+App.tsx dispatchEvent('EDIT') handler [NEW Phase 4.2-1]:
+  1. Optimistic update local (existing)
+  2. For each selected image:
+     → Create EventDTO (imageEdited event)
+     → Call CatalogService.appendEvent(eventDto)
+     → Tauri invoke('append_event')
+     → Backend INSERT into events table
+  ↓
+Event persisted in SQLite ✅
+```
+
+**Étape 2: Subscription & Re-render (Phase 4.2-2)** — `src/components/library/PreviewRenderer.tsx`
+
+```
+editStore.editEventsPerImage[imageId] changes
+  ↓
+useEffect monitors subscription [NEW Phase 4.2-2]:
+  1. Reload events via CatalogService.getEditEvents()
+  2. Calculate filters: eventsToCSSFilters(events)
+  3. Update state: setFilters(cssFilters)
+  ↓
+Second useEffect applies to DOM:
+  → applyCSSFilters(imgRef.current, filters)
+  → imgElement.style.filter = "brightness(...) contrast(...)"
+  ↓
+Preview image updated visually in real-time ✅
+```
+
+**Persévérance Complète** : Brower refresh → Events reloaded from SQLite → Edits preserved ✅
 
 ### 18.2 — CSS Filters Pipeline
 

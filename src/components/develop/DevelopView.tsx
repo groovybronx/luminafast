@@ -38,13 +38,13 @@ export const DevelopView = ({ activeImg, showBeforeAfter }: DevelopViewProps) =>
       )}
       {/* Affichage "Après" (image modifiée avec filtres dynamiques) */}
       <div className="flex-1 shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-xl border border-zinc-800 relative flex items-center justify-center overflow-hidden bg-zinc-900 group">
-        {/* PreviewRenderer pour image modifiée */}
+        {/* PreviewRenderer pour image modifiée
         {(() => {
           if (import.meta.env.DEV) {
             console.warn(`PreviewRenderer applied for imageId=${activeImg.id} (Après)`);
           }
           return null;
-        })()}
+        })()} */}
         <PreviewRenderer
           imageId={activeImg.id}
           previewUrl={activeImg.url}

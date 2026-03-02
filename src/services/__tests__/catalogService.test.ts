@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CatalogService } from '@/services/catalogService';
+import * as eventService from '@/services/eventService';
 
 // Mock Tauri internals
 const mockTauriInvoke = vi.fn();
@@ -8,6 +9,9 @@ Object.defineProperty(window, '__TAURI_INTERNALS__', {
   value: { invoke: mockTauriInvoke },
   writable: true,
 });
+
+// Mock eventService.appendEvent for Phase 4.2 tests
+vi.spyOn(eventService, 'appendEvent');
 
 describe('CatalogService — Collection Methods (Phase 3.2)', () => {
   beforeEach(() => {
@@ -116,6 +120,47 @@ describe('CatalogService — Collection Methods (Phase 3.2)', () => {
       mockTauriInvoke.mockRejectedValue(new Error('Collection not found'));
 
       await expect(CatalogService.getCollectionImages(999)).rejects.toThrow('Collection not found');
+    });
+  });
+
+  // --- appendEvent (Phase 4.2-1) ---
+  describe('appendEvent', () => {
+    it('should call eventService.appendEvent with correct EventDTO', async () => {
+      const appendEventSpy = vi.mocked(eventService.appendEvent);
+      appendEventSpy.mockResolvedValue(undefined);
+
+      const eventDto = {
+        id: 'event-123',
+        timestamp: Date.now(),
+        eventType: 'edit_applied',
+        payload: { edits: { exposure: 0.5 } },
+        targetType: 'Image',
+        targetId: 42,
+        userId: undefined,
+        createdAt: new Date().toISOString(),
+      };
+
+      await CatalogService.appendEvent(eventDto);
+
+      expect(appendEventSpy).toHaveBeenCalledWith(eventDto);
+    });
+
+    it('should throw when eventService.appendEvent fails', async () => {
+      const appendEventSpy = vi.mocked(eventService.appendEvent);
+      appendEventSpy.mockRejectedValue(new Error('Database insert failed'));
+
+      const eventDto = {
+        id: 'event-456',
+        timestamp: Date.now(),
+        eventType: 'edit_applied',
+        payload: { edits: { contrast: 0.3 } },
+        targetType: 'Image',
+        targetId: 99,
+        userId: undefined,
+        createdAt: new Date().toISOString(),
+      };
+
+      await expect(CatalogService.appendEvent(eventDto)).rejects.toThrow('Database insert failed');
     });
   });
 });

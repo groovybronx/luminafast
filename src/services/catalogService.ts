@@ -1,6 +1,7 @@
 import type { CollectionDTO, ImageDTO, ImageDetailDTO, ImageFilter } from '../types/dto';
 import type { FolderTreeNode } from '../types/folder';
 import type { EventDTO } from './eventService';
+import { appendEvent as appendEventToStore } from './eventService';
 
 /**
  * Service for catalog operations - Phase 1.2
@@ -318,7 +319,7 @@ export class CatalogService {
   static async getEditEvents(imageId: number): Promise<EventDTO[]> {
     try {
       const invoke = this.getInvoke();
-      const result = await invoke('get_edit_events', { imageId });
+      const result = await invoke('get_edit_events', { imageId }); // ← camelCase
 
       if (typeof result === 'string') {
         throw new Error(result);
@@ -368,5 +369,19 @@ export class CatalogService {
       throw new Error(result);
     }
     return result;
+  }
+
+  /**
+   * Append an event to the Event Sourcing store
+   * Phase 4.2: Used to persist EDIT operations (exposure, contrast changes, etc.)
+   * @param event - EventDTO to persist
+   * @throws Error if append fails
+   */
+  static async appendEvent(event: EventDTO): Promise<void> {
+    try {
+      await appendEventToStore(event);
+    } catch (error) {
+      throw this.parseError(error);
+    }
   }
 }

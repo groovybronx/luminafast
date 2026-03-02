@@ -44,6 +44,7 @@
 | 4           | 4.1        | Event Sourcing Engine                                                                     | ✅ Complétée  | 2026-02-25 | Copilot |
 | 4           | 4.2        | Pipeline de Rendu Image (CSS Filters + WASM Pixel Processing)                             | ✅ Complétée  | 2026-02-26 | Copilot |
 | Maintenance | —          | Correction Formule Exposure CSS (0.35 → 0.3)                                              | ✅ Complétée  | 2026-02-26 | Copilot |
+| Maintenance | —          | Phase 4.2 Fixes: Event Sourcing persistence chain (Tauri params + editStore + renderingService) | ✅ Complétée  | 2026-03-02 | Copilot |
 | 4           | 4.3        | Historique & Snapshots UI                                                                 | ⬜ En attente | —          | —       |
 | 4           | 4.4        | Comparaison Avant/Après                                                                   | ⬜ En attente | —          | —       |
 | 5           | 5.1        | Panneau EXIF Connecté                                                                     | ⬜ En attente | —          | —       |
@@ -3616,6 +3617,188 @@ useEffect(() => {
 
 - **Phase 3 Checkpoint**: Validate full E2E workflow (slider → persist → render)
 - **Phase 4 (Optional)**: WASM integration (separate session, Phase 4.2b)
+
+---
+
+### 2026-03-02 — Maintenance : Phase 4.2 Fixes - Event Sourcing Persistence Chain (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée**
+**Agent** : GitHub Copilot (Claude Haiku 4.5)
+**Type** : Correction Structurelle — Critical bugs in slider→persist→render pipeline
+**Tests** : **180/180 ✅** (100% passants, 0 regressions)
+
+#### Problème Root Cause
+
+Le workflow **Slider → Persist → Render** était cassé à 3 niveaux :
+
+1. **Tauri params mapping** : App.tsx envoyait camelCase pour un endpoint attendu snake_case
+2. **editStore update** : App.tsx ne notifiait pas PreviewRenderer après persist
+3. **Event filtering** : renderingService cherchait `'ImageEdited'` au lieu de `'edit_applied'`
+
+**Impact** : Slider adjustments persistaient en DB mais ne s'affichaient JAMAIS à l'écran, même après reload
+
+#### Symptômes Observés
+
+- Sliders ajustaient l'image localement
+- Logs console montraient "Edit stored and persisted" ✓
+- Tauri append_event command retournait `null` (succès) ✓
+- **MAIS**: Image ne changeait jamais, edits jamais visibles au reload
+
+#### Cause Racine Identifiée
+
+Trois bugs en cascade :
+
+**Bug #1 : eventService endpoint params**
+- App.tsx envoyait `{ eventType: 'edit_applied' }`
+- Rust struct EventDTO attendait `{ event_type }`
+- Tauri ne convertit PAS automatiquement camelCase→snake_case
+
+**Bug #2 : Missing editStore update in App.tsx**
+- Après `CatalogService.appendEvent()` succès, App.tsx ne faisait RIEN
+- PreviewRenderer ne détectait pas la nouvelle EventDTO
+- useEffect subscription restait inactif (condition jamais vraie)
+
+**Bug #3 : renderingService event type filter**
+- `eventsToCSSFilters()` filtrait `event.eventType !== 'ImageEdited'`
+- Mais App.tsx envoyait `'edit_applied'` (constant Rust EventType)
+- Tous les événements étaient rejetés silencieusement → aucun filtre CSS appliqué
+
+#### Corrections Appliquées
+
+**Fichier 1: `src/services/eventService.ts` (Tauri parameter conversion)**
+```typescript
+export async function appendEvent(event: EventDTO): Promise<void> {
+  try {
+    // Convert camelCase DTO to snake_case for Tauri command
+    const eventPayload = {
+      id: event.id,
+      timestamp: event.timestamp,
+      event_type: event.eventType,      // ← Convert
+      payload: event.payload,
+      target_type: event.targetType,    // ← Convert
+      target_id: event.targetId,        // ← Convert
+      user_id: event.userId,            // ← Convert
+      created_at: event.createdAt,      // ← Convert
+    };
+
+    return await invoke<void>('append_event', { event: eventPayload });
+  } catch (error) {
+    throw new Error(`Failed to append event: ${...}`);
+  }
+}
+```
+
+**Fichier 2: `src/App.tsx` (editStore notification post-persist)**
+```typescript
+CatalogService.appendEvent(eventDto)
+  .then(() => {
+    // Phase 4.2-2: Update editStore to trigger PreviewRenderer subscription
+    const { editEventsPerImage } = useEditStore.getState();
+    const existingEvents = editEventsPerImage[imageId] || [];
+    const { setEditEventsForImage } = useEditStore.getState();
+    setEditEventsForImage(imageId, [...existingEvents, eventDto]);
+  })
+  .catch((err) => {
+    addLog(`Failed to persist edit for image ${imageId}: ${err}`, 'error');
+  });
+```
+
+**Fichier 3: `src/services/renderingService.ts` (Event type filter fix)**
+```typescript
+// Étape 1 : eventsToCSSFilters()
+if (event.eventType !== 'edit_applied') {  // ← Was 'ImageEdited'❌
+  continue;
+}
+
+// Étape 2 : eventsToPixelFilters()
+if (event.eventType !== 'edit_applied') {  // ← Was 'ImageEdited'❌
+  continue;
+}
+```
+
+**Fichier 4: `src/services/catalogService.ts` (getEditEvents parameter)**
+```typescript
+const result = await invoke('get_edit_events', { imageId }); // camelCase ✓
+```
+
+**Fichier 5: `src-tauri/build.rs` (Clippy compliance)**
+```rust
+// Replace .unwrap() with .expect()
+let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
+  .expect("CARGO_MANIFEST_DIR not set");  // ← Better error message
+let workspace_root = std::path::Path::new(&manifest_dir)
+  .parent()
+  .expect("workspace root not found");    // ← Better error message
+```
+
+#### Pipeline Complet Now Working ✅
+
+```
+1. User adjusts slider in DevelopView
+   ↓
+2. onChange → onDispatchEvent('EDIT', { exposure: 3 })
+   ↓
+3. App.tsx EDIT handler:
+   - Optimistic local update ✓
+   - Create EventDTO with id, timestamp, 'edit_applied', payload, 'image', imageId
+   - Call CatalogService.appendEvent(eventDto)
+   ↓
+4. eventService.appendEvent():
+   - Convert camelCase → snake_case
+   - invoke('append_event', { event_type, target_type, target_id, ... })
+   ↓
+5. Tauri command succeeds:
+   - Rust validates EventDTO struct
+   - INSERT into events table ✓
+   ↓
+6. Back in App.tsx.then():
+   - Call useEditStore.setEditEventsForImage(imageId, [...existingEvents, eventDto])
+   ↓
+7. PreviewRenderer detects editEventsPerImage[imageId] change:
+   - useEffect triggered ✓
+   - Calls CatalogService.getEditEvents(imageId)
+   - Calls setEditEventsForImage() again ✓
+   ↓
+8. Second useEffect applies filters:
+   - eventsToCSSFilters([...events]) now FINDS 'edit_applied' events ✓
+   - Generates brightness/contrast/saturation CSS ✓
+   - applyCSSFilters(imgRef, filters) ✓
+   ↓
+9. Visual result: Image brightness/contrast change visible immediately ✓
+
+10. On page reload:
+    - PreviewRenderer re-mounts
+    - CatalogService.getEditEvents(imageId) reloads from SQLite
+    - Same filters applied
+    - Edits persisted across sessions ✓
+```
+
+#### Validation & Tests
+
+- **TypeScript strict** : 0 errors ✅
+- **PreviewRenderer.test.tsx** : 4/4 passing ✅
+- **catalogService.test.ts** : 11/11 passing ✅
+- **renderingService.test.ts** : All passing ✅
+- **Total** : 180/180 tests passing, 0 regressions ✅
+
+#### Conformité Gouvernance
+
+- ✅ **Rule 2.1** (Intégrité Plan) : Plan not modified
+- ✅ **Rule 2.2** (No Abusive Simplification) : Root cause fixed at every layer
+- ✅ **Rule 2.3** (Test Integrity) : Tests written + passing; non-régression 100%
+- ✅ **Rule 2.4** (Cause Racine) : Documented above (3 root causes identified + fixed)
+
+#### Known Limitations
+
+- **Selection state not persisted** : On reload, `selection` is empty → `activeImg` reverts to first image
+  - User must manually re-select image 55 to see its edits
+  - **Phase 4.3** task: Persist selection to localStorage via Zustand middleware
+  - Not blocking: edits ARE persisted in DB, just need re-selection to display
+
+#### Next Steps
+
+- **Phase 4.3** : Persist UI selection state (localStorage)
+- **Phase 4.4** : Before/After comparison (already wireframed, needs event sourcing hooks)
 
 ---
 

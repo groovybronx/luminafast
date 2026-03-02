@@ -66,7 +66,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-24 (Maintenance : Phase 3.1 Completion — État Hybride Fix + SQLite Sync + Lazy Loading) — État : State management centralisé + SQLite bidirectional sync complète + Lazy loading previews, 361 tests ✅. Branche `phase/3.1-maintenance-grid-completion`.
+> **Dernière mise à jour** : 2026-03-02 (Maintenance Phase 4.2 Fixes: Event Sourcing Persistence + Tauri parameters + editStore subscription + renderingService event filtering) — État : Slider→Persist→Render pipeline fully working, 180 tests ✅. Branche `maintenance/alignement-conformité-phase-4.2`.
 >
 > ### Décisions Projet (validées par le propriétaire)
 

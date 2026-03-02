@@ -29,6 +29,7 @@ export const DevelopView = ({ activeImg, showBeforeAfter }: DevelopViewProps) =>
             previewUrl={activeImg.url}
             className="w-full h-full object-contain grayscale opacity-30 scale-105"
             isSelected={false}
+            useWasm={true}
           />
           {/* Badge RAW en overlay */}
           <div className="absolute top-4 left-4 bg-black/80 px-3 py-1 text-[10px] font-black uppercase rounded-full tracking-widest border border-zinc-700">
@@ -50,6 +51,7 @@ export const DevelopView = ({ activeImg, showBeforeAfter }: DevelopViewProps) =>
           previewUrl={activeImg.url}
           className="w-full h-full object-contain img-render"
           isSelected={true}
+          useWasm={true}
         />
         {/* Affichage du hash unique de l'image (pour traçabilité) */}
         <div className="absolute bottom-6 left-6 font-mono text-[9px] text-emerald-500 bg-black/80 px-3 py-1.5 rounded-lg border border-emerald-500/20 backdrop-blur-md shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity">

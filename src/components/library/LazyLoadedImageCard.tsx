@@ -118,6 +118,7 @@ export const LazyLoadedImageCard = ({
             previewUrl={image.url}
             className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity pointer-events-none select-none"
             isSelected={isSelected}
+            useWasm={true}
           />
         </>
       ) : (

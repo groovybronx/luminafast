@@ -26,12 +26,12 @@ describe('renderingService', () => {
       });
     });
 
-    it('should apply exposure from ImageEdited events', () => {
+    it('should apply exposure from edit_applied events', () => {
       const events: EventDTO[] = [
         {
           id: '1',
           timestamp: 1000,
-          eventType: 'ImageEdited',
+          eventType: 'edit_applied',
           payload: { edits: { exposure: 0.5 } },
           targetType: 'Image',
           targetId: 123,
@@ -45,12 +45,12 @@ describe('renderingService', () => {
       expect(filters.saturation).toBe(1);
     });
 
-    it('should apply contrast from ImageEdited events', () => {
+    it('should apply contrast from edit_applied events', () => {
       const events: EventDTO[] = [
         {
           id: '1',
           timestamp: 1000,
-          eventType: 'ImageEdited',
+          eventType: 'edit_applied',
           payload: { edits: { contrast: 0.3 } },
           targetType: 'Image',
           targetId: 123,
@@ -62,12 +62,12 @@ describe('renderingService', () => {
       expect(filters.contrast).toBe(0.3);
     });
 
-    it('should apply saturation from ImageEdited events', () => {
+    it('should apply saturation from edit_applied events', () => {
       const events: EventDTO[] = [
         {
           id: '1',
           timestamp: 1000,
-          eventType: 'ImageEdited',
+          eventType: 'edit_applied',
           payload: { edits: { saturation: 1.5 } },
           targetType: 'Image',
           targetId: 123,
@@ -93,7 +93,7 @@ describe('renderingService', () => {
         {
           id: '2',
           timestamp: 2000,
-          eventType: 'ImageEdited',
+          eventType: 'edit_applied',
           payload: { edits: { exposure: 0.5 } },
           targetType: 'Image',
           targetId: 123,
@@ -110,7 +110,7 @@ describe('renderingService', () => {
         {
           id: '1',
           timestamp: 1000,
-          eventType: 'ImageEdited',
+          eventType: 'edit_applied',
           payload: { edits: { exposure: 0.5 } },
           targetType: 'Image',
           targetId: 123,
@@ -119,7 +119,7 @@ describe('renderingService', () => {
         {
           id: '2',
           timestamp: 2000,
-          eventType: 'ImageEdited',
+          eventType: 'edit_applied',
           payload: { edits: { exposure: -0.3 } },
           targetType: 'Image',
           targetId: 123,
@@ -136,7 +136,7 @@ describe('renderingService', () => {
         {
           id: '1',
           timestamp: 1000,
-          eventType: 'ImageEdited',
+          eventType: 'edit_applied',
           payload: { edits: { exposure: 0.5, contrast: 0.3, saturation: 1.2 } },
           targetType: 'Image',
           targetId: 123,
@@ -157,7 +157,7 @@ describe('renderingService', () => {
         {
           id: '1',
           timestamp: 1000,
-          eventType: 'ImageEdited',
+          eventType: 'edit_applied',
           payload: {
             edits: {
               exposure: 0.5,
@@ -309,7 +309,7 @@ describe('renderingService', () => {
         {
           id: '1',
           timestamp: 1000,
-          eventType: 'ImageEdited',
+          eventType: 'edit_applied',
           payload: { edits: { exposure: -2 } },
           targetType: 'Image',
           targetId: 123,
@@ -329,7 +329,7 @@ describe('renderingService', () => {
         {
           id: '1',
           timestamp: 1000,
-          eventType: 'ImageEdited',
+          eventType: 'edit_applied',
           payload: {} as Record<string, unknown>,
           targetType: 'Image',
           targetId: 123,
@@ -355,7 +355,7 @@ describe('renderingService', () => {
         {
           id: '2',
           timestamp: 2000,
-          eventType: 'ImageEdited',
+          eventType: 'edit_applied',
           payload: { edits: { exposure: 0.5 } },
           targetType: 'Image',
           targetId: 123,

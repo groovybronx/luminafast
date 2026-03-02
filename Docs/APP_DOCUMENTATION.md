@@ -953,12 +953,12 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 
 ### Statut d'Implémentation
 
-| Composant | Phase | Status | Notes |
-|-----------|-------|--------|-------|
+| Composant                      | Phase | Status        | Notes                                           |
+| ------------------------------ | ----- | ------------- | ----------------------------------------------- |
 | Event Sourcing (append events) | 4.2-1 | ✅ Implémenté | App.tsx → CatalogService.appendEvent() → SQLite |
-| PreviewRenderer subscription | 4.2-2 | ✅ Implémenté | Monitore editStore.editEventsPerImage changes |
-| CSS Filters aplicaton | 4.2-A | ✅ Complet | CSS GPU-accelerated, <1ms latency |
-| WASM Pixel Processing | 4.2-B | 🔄 Standby | Code complet, non-bloquant, reporté à 4.2b |
+| PreviewRenderer subscription   | 4.2-2 | ✅ Implémenté | Monitore editStore.editEventsPerImage changes   |
+| CSS Filters aplicaton          | 4.2-A | ✅ Complet    | CSS GPU-accelerated, <1ms latency               |
+| WASM Pixel Processing          | 4.2-B | 🔄 Standby    | Code complet, non-bloquant, reporté à 4.2b      |
 
 ### Architecture
 

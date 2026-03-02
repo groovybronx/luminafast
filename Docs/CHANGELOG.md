@@ -7,62 +7,62 @@
 
 ## Tableau de Progression Global
 
-| Phase       | Sous-Phase | Description                                                                               | Statut        | Date       | Agent   |
-| ----------- | ---------- | ----------------------------------------------------------------------------------------- | ------------- | ---------- | ------- |
-| 0           | 0.1        | Migration TypeScript                                                                      | ✅ Complétée  | 2026-02-11 | Cascade |
-| 0           | 0.2        | Scaffolding Tauri v2                                                                      | ✅ Complétée  | 2026-02-11 | Cascade |
-| 0           | 0.3        | Décomposition Modulaire Frontend                                                          | ✅ Complétée  | 2026-02-11 | Cascade |
-| 0           | 0.4        | State Management (Zustand)                                                                | ✅ Complétée  | 2026-02-11 | Cascade |
-| 0           | 0.5        | Pipeline CI & Linting                                                                     | ✅ Complétée  | 2026-02-11 | Cascade |
-| Phase 1     | 1.1        | Schéma SQLite du Catalogue                                                                | ✅ Complétée  | 2026-02-11 | Cascade |
-| Phase 1     | 1.2        | Tauri Commands CRUD                                                                       | ✅ Complétée  | 2026-02-11 | Cascade |
-| Phase 1     | 1.3        | Service BLAKE3 (CAS)                                                                      | ✅ Complétée  | 2026-02-13 | Cascade |
-| 1           | 1.4        | Gestion du Système de Fichiers                                                            | ✅ Complétée  | 2026-02-13 | Cascade |
-| 2           | 2.1        | Discovery & Ingestion de Fichiers                                                         | ✅ Complétée  | 2026-02-19 | Cascade |
-| 2           | 2.2        | Harvesting Métadonnées EXIF/IPTC                                                          | ✅ Complétée  | 2026-02-20 | Cascade |
-| 2           | 2.3        | Génération de Previews                                                                    | ✅ Complétée  | 2026-02-16 | Cascade |
-| 2           | 2.4        | UI d'Import Connectée                                                                     | ✅ Complétée  | 2026-02-18 | Cascade |
-| Maintenance | —          | Conformité Testing (Fix Deadlocks + Integration)                                          | ✅ Complétée  | 2026-02-18 | Cascade |
-| Maintenance | —          | Correction Logs Production                                                                | ✅ Complétée  | 2026-02-20 | Cascade |
-| Maintenance | —          | Correction Bugs Scan Discovery & Polling Infini                                           | ✅ Complétée  | 2026-02-20 | Cascade |
-| Maintenance | —          | Correction Bug Stockage Fichiers Découverts                                               | ✅ Complétée  | 2026-02-20 | Cascade |
-| Maintenance | —          | Correction Bug Transition Scan→Ingestion                                                  | ✅ Complétée  | 2026-02-20 | Cascade |
-| Maintenance | —          | Correction Migrations Base de Données                                                     | ✅ Complétée  | 2026-02-20 | Cascade |
-| Maintenance | —          | Correction Pipeline Import (DB + SQL + Init)                                              | ✅ Complétée  | 2026-02-20 | Cascade |
-| 3           | 3.1        | Grille d'Images Réelle                                                                    | ✅ Complétée  | 2026-02-20 | Copilot |
-| Maintenance | —          | Phase 3.1 Maintenance (État Hybride + SQLite Sync + Lazy Loading)                         | ✅ Complétée  | 2026-02-24 | Copilot |
-| Maintenance | —          | Corrections Critiques Phases 0→3.1 (BLOC 1-4)                                             | ✅ Complétée  | 2026-02-21 | Copilot |
-| Infra       | —          | Agents IA dédiés (code-review, pr-verification, phase-implementation, documentation-sync) | ✅ Complétée  | 2026-02-20 | Copilot |
-| 3           | 3.2        | Collections Statiques (CRUD)                                                              | ✅ Complétée  | 2026-02-21 | Copilot |
-| 3           | 3.2b       | Drag & Drop d'Images dans les Collections (MultiSelect Support)                           | ✅ Complétée  | 2026-02-24 | Copilot |
-| 3           | 3.3        | Smart Collections                                                                         | ✅ Complétée  | 2026-02-21 | Copilot |
-| 3           | 3.4        | Navigateur de Dossiers                                                                    | ✅ Complétée  | 2026-02-21 | Copilot |
-| Maintenance | —          | Performance & UX Import (Parallélisme + Progression Multi-Phase)                          | ✅ Complétée  | 2026-02-21 | Copilot |
-| Maintenance | —          | SQL Safety & Refactorisation `get_folder_images`                                          | ✅ Complétée  | 2026-02-23 | Copilot |
-| Maintenance | —          | Résolution Notes Bloquantes Review Copilot (PR #20)                                       | ✅ Complétée  | 2026-02-23 | Copilot |
-| 3           | 3.5        | Recherche & Filtrage                                                                      | ✅ Complétée  | 2026-02-24 | Copilot |
-| 4           | 4.1        | Event Sourcing Engine                                                                     | ✅ Complétée  | 2026-02-25 | Copilot |
-| 4           | 4.2        | Pipeline de Rendu Image (CSS Filters + WASM Pixel Processing)                             | ✅ Complétée  | 2026-02-26 | Copilot |
-| Maintenance | —          | Correction Formule Exposure CSS (0.35 → 0.3)                                              | ✅ Complétée  | 2026-02-26 | Copilot |
+| Phase       | Sous-Phase | Description                                                                                     | Statut        | Date       | Agent   |
+| ----------- | ---------- | ----------------------------------------------------------------------------------------------- | ------------- | ---------- | ------- |
+| 0           | 0.1        | Migration TypeScript                                                                            | ✅ Complétée  | 2026-02-11 | Cascade |
+| 0           | 0.2        | Scaffolding Tauri v2                                                                            | ✅ Complétée  | 2026-02-11 | Cascade |
+| 0           | 0.3        | Décomposition Modulaire Frontend                                                                | ✅ Complétée  | 2026-02-11 | Cascade |
+| 0           | 0.4        | State Management (Zustand)                                                                      | ✅ Complétée  | 2026-02-11 | Cascade |
+| 0           | 0.5        | Pipeline CI & Linting                                                                           | ✅ Complétée  | 2026-02-11 | Cascade |
+| Phase 1     | 1.1        | Schéma SQLite du Catalogue                                                                      | ✅ Complétée  | 2026-02-11 | Cascade |
+| Phase 1     | 1.2        | Tauri Commands CRUD                                                                             | ✅ Complétée  | 2026-02-11 | Cascade |
+| Phase 1     | 1.3        | Service BLAKE3 (CAS)                                                                            | ✅ Complétée  | 2026-02-13 | Cascade |
+| 1           | 1.4        | Gestion du Système de Fichiers                                                                  | ✅ Complétée  | 2026-02-13 | Cascade |
+| 2           | 2.1        | Discovery & Ingestion de Fichiers                                                               | ✅ Complétée  | 2026-02-19 | Cascade |
+| 2           | 2.2        | Harvesting Métadonnées EXIF/IPTC                                                                | ✅ Complétée  | 2026-02-20 | Cascade |
+| 2           | 2.3        | Génération de Previews                                                                          | ✅ Complétée  | 2026-02-16 | Cascade |
+| 2           | 2.4        | UI d'Import Connectée                                                                           | ✅ Complétée  | 2026-02-18 | Cascade |
+| Maintenance | —          | Conformité Testing (Fix Deadlocks + Integration)                                                | ✅ Complétée  | 2026-02-18 | Cascade |
+| Maintenance | —          | Correction Logs Production                                                                      | ✅ Complétée  | 2026-02-20 | Cascade |
+| Maintenance | —          | Correction Bugs Scan Discovery & Polling Infini                                                 | ✅ Complétée  | 2026-02-20 | Cascade |
+| Maintenance | —          | Correction Bug Stockage Fichiers Découverts                                                     | ✅ Complétée  | 2026-02-20 | Cascade |
+| Maintenance | —          | Correction Bug Transition Scan→Ingestion                                                        | ✅ Complétée  | 2026-02-20 | Cascade |
+| Maintenance | —          | Correction Migrations Base de Données                                                           | ✅ Complétée  | 2026-02-20 | Cascade |
+| Maintenance | —          | Correction Pipeline Import (DB + SQL + Init)                                                    | ✅ Complétée  | 2026-02-20 | Cascade |
+| 3           | 3.1        | Grille d'Images Réelle                                                                          | ✅ Complétée  | 2026-02-20 | Copilot |
+| Maintenance | —          | Phase 3.1 Maintenance (État Hybride + SQLite Sync + Lazy Loading)                               | ✅ Complétée  | 2026-02-24 | Copilot |
+| Maintenance | —          | Corrections Critiques Phases 0→3.1 (BLOC 1-4)                                                   | ✅ Complétée  | 2026-02-21 | Copilot |
+| Infra       | —          | Agents IA dédiés (code-review, pr-verification, phase-implementation, documentation-sync)       | ✅ Complétée  | 2026-02-20 | Copilot |
+| 3           | 3.2        | Collections Statiques (CRUD)                                                                    | ✅ Complétée  | 2026-02-21 | Copilot |
+| 3           | 3.2b       | Drag & Drop d'Images dans les Collections (MultiSelect Support)                                 | ✅ Complétée  | 2026-02-24 | Copilot |
+| 3           | 3.3        | Smart Collections                                                                               | ✅ Complétée  | 2026-02-21 | Copilot |
+| 3           | 3.4        | Navigateur de Dossiers                                                                          | ✅ Complétée  | 2026-02-21 | Copilot |
+| Maintenance | —          | Performance & UX Import (Parallélisme + Progression Multi-Phase)                                | ✅ Complétée  | 2026-02-21 | Copilot |
+| Maintenance | —          | SQL Safety & Refactorisation `get_folder_images`                                                | ✅ Complétée  | 2026-02-23 | Copilot |
+| Maintenance | —          | Résolution Notes Bloquantes Review Copilot (PR #20)                                             | ✅ Complétée  | 2026-02-23 | Copilot |
+| 3           | 3.5        | Recherche & Filtrage                                                                            | ✅ Complétée  | 2026-02-24 | Copilot |
+| 4           | 4.1        | Event Sourcing Engine                                                                           | ✅ Complétée  | 2026-02-25 | Copilot |
+| 4           | 4.2        | Pipeline de Rendu Image (CSS Filters + WASM Pixel Processing)                                   | ✅ Complétée  | 2026-02-26 | Copilot |
+| Maintenance | —          | Correction Formule Exposure CSS (0.35 → 0.3)                                                    | ✅ Complétée  | 2026-02-26 | Copilot |
 | Maintenance | —          | Phase 4.2 Fixes: Event Sourcing persistence chain (Tauri params + editStore + renderingService) | ✅ Complétée  | 2026-03-02 | Copilot |
-| 4           | 4.3        | Historique & Snapshots UI                                                                 | ⬜ En attente | —          | —       |
-| 4           | 4.4        | Comparaison Avant/Après                                                                   | ⬜ En attente | —          | —       |
-| 5           | 5.1        | Panneau EXIF Connecté                                                                     | ⬜ En attente | —          | —       |
-| 5           | 5.2        | Système de Tags Hiérarchique                                                              | ⬜ En attente | —          | —       |
-| 5           | 5.3        | Rating & Flagging Persistants                                                             | ⬜ En attente | —          | —       |
-| 5           | 5.4        | Sidecar XMP                                                                               | ⬜ En attente | —          | —       |
-| 6           | 6.1        | Système de Cache Multiniveau                                                              | ⬜ En attente | —          | —       |
-| 6           | 6.2        | Intégration DuckDB (OLAP)                                                                 | ⬜ En attente | —          | —       |
-| 6           | 6.3        | Virtualisation Avancée Grille                                                             | ⬜ En attente | —          | —       |
-| 6           | 6.4        | Optimisation SQLite                                                                       | ⬜ En attente | —          | —       |
-| 7           | 7.1        | Gestion d'Erreurs & Recovery                                                              | ⬜ En attente | —          | —       |
-| 7           | 7.2        | Backup & Intégrité                                                                        | ⬜ En attente | —          | —       |
-| 7           | 7.3        | Packaging Multi-Plateforme                                                                | ⬜ En attente | —          | —       |
-| 7           | 7.4        | Accessibilité & UX                                                                        | ⬜ En attente | —          | —       |
-| 7           | 7.5        | Onboarding & Documentation Utilisateur                                                    | ⬜ En attente | —          | —       |
-| 8           | 8.1        | Smart Previews Mode Déconnecté                                                            | ⬜ En attente | —          | —       |
-| 8           | 8.2        | Synchronisation PouchDB/CouchDB                                                           | ⬜ En attente | —          | —       |
-| 8           | 8.3        | Résolution de Conflits                                                                    | ⬜ En attente | —          | —       |
+| 4           | 4.3        | Historique & Snapshots UI                                                                       | ⬜ En attente | —          | —       |
+| 4           | 4.4        | Comparaison Avant/Après                                                                         | ⬜ En attente | —          | —       |
+| 5           | 5.1        | Panneau EXIF Connecté                                                                           | ⬜ En attente | —          | —       |
+| 5           | 5.2        | Système de Tags Hiérarchique                                                                    | ⬜ En attente | —          | —       |
+| 5           | 5.3        | Rating & Flagging Persistants                                                                   | ⬜ En attente | —          | —       |
+| 5           | 5.4        | Sidecar XMP                                                                                     | ⬜ En attente | —          | —       |
+| 6           | 6.1        | Système de Cache Multiniveau                                                                    | ⬜ En attente | —          | —       |
+| 6           | 6.2        | Intégration DuckDB (OLAP)                                                                       | ⬜ En attente | —          | —       |
+| 6           | 6.3        | Virtualisation Avancée Grille                                                                   | ⬜ En attente | —          | —       |
+| 6           | 6.4        | Optimisation SQLite                                                                             | ⬜ En attente | —          | —       |
+| 7           | 7.1        | Gestion d'Erreurs & Recovery                                                                    | ⬜ En attente | —          | —       |
+| 7           | 7.2        | Backup & Intégrité                                                                              | ⬜ En attente | —          | —       |
+| 7           | 7.3        | Packaging Multi-Plateforme                                                                      | ⬜ En attente | —          | —       |
+| 7           | 7.4        | Accessibilité & UX                                                                              | ⬜ En attente | —          | —       |
+| 7           | 7.5        | Onboarding & Documentation Utilisateur                                                          | ⬜ En attente | —          | —       |
+| 8           | 8.1        | Smart Previews Mode Déconnecté                                                                  | ⬜ En attente | —          | —       |
+| 8           | 8.2        | Synchronisation PouchDB/CouchDB                                                                 | ⬜ En attente | —          | —       |
+| 8           | 8.3        | Résolution de Conflits                                                                          | ⬜ En attente | —          | —       |
 
 | Maintenance | — | Accélération Génération Previews (libvips + batch) | ✅ Complétée | 2026-02-23 | Copilot |
 | Maintenance | — | Régression Tauri IPC camelCase → snake_case (opérations collection) | ✅ Complétée | 2026-02-25 | Copilot |

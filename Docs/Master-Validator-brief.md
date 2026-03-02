@@ -22,36 +22,36 @@
 
 ## Tableau Principal — Conformité des Phases
 
-| Phase                     | Description                | Brief      | Statut CHANGELOG | Valide          | Score | Dernier Scan | Commentaire                                                                                                                                                                             |
-| ------------------------- | -------------------------- | ---------- | ---------------- | --------------- | ----- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **PHASE-0.1**             | Migration TypeScript       | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | Files present: src/**/\*.tsx, tsconfig.json, types/**                                                                                                                                   |
-| **PHASE-0.2**             | Scaffolding Tauri v2       | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | src-tauri/src/{main.rs, lib.rs, Cargo.toml all present}                                                                                                                                 |
-| **PHASE-0.3**             | Décomposition Modulaire    | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | 30+ composants modulaires créés, App.tsx <150 lignes                                                                                                                                    |
-| **PHASE-0.4**             | State Management Zustand   | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | 4 stores (catalog/ui/edit/system) + tests au vert                                                                                                                                       |
-| **PHASE-0.5**             | Pipeline CI & Linting      | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | ESLint, Clippy, GitHub Actions, pre-commit hooks OK                                                                                                                                     |
-| **PHASE-1.1**             | Schéma SQLite              | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | 5 migrations (001-005), schema complet, DB init OK                                                                                                                                      |
-| **PHASE-1.2**             | Tauri Commands CRUD        | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | catalog.rs commands: get/create/add/delete/rename OK                                                                                                                                    |
-| **PHASE-1.3**             | Service BLAKE3             | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | hashing.rs service, blake3 crate integrated, detect duplicates                                                                                                                          |
-| **PHASE-1.4**             | Gestion Filesystem         | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | filesystem.rs service, notify watcher, file locks                                                                                                                                       |
-| **PHASE-2.1**             | Discovery & Ingestion      | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | discovery.rs, ingestion.rs, EXIF extraction advanced                                                                                                                                    |
-| **PHASE-2.2**             | Harvesting EXIF/IPTC       | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | exifService.ts, kamadak-exif v0.6.1, metadata extracted                                                                                                                                 |
-| **PHASE-2.3**             | Génération Previews        | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | preview.rs (libvips), pyramid (Thumbnail/Standard/OneToOne)                                                                                                                             |
-| **PHASE-2.4**             | UI d'Import Connectée      | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | ImportModal.tsx, progress tracking, error handling                                                                                                                                      |
-| **PHASE-3.1**             | Grille d'Images Réelle     | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | GridView.tsx, useCatalog hook, virtualization, 545 tests                                                                                                                                |
-| **PHASE-3.1-MAINTENANCE** | État Hybride + SQLite Sync | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | Lazy loading, bidirectional sync, hybrid state management                                                                                                                               |
-| **PHASE-3.2**             | Collections Statiques CRUD | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | collectionStore.ts, create/rename/delete/getImages                                                                                                                                      |
-| **PHASE-3.2-AUDIT**       | Audit Drag & Drop          | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | Event propagation review, parent dragEnter/dragOver                                                                                                                                     |
-| **PHASE-3.2b**            | Drag & Drop MultiSelect    | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | LazyLoadedImageCard, drag-to-collection, batch ops                                                                                                                                      |
-| **PHASE-3.2c**            | Régression Tauri IPC       | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | camelCase fixes for Tauri v2, all collection ops restored                                                                                                                               |
-| **PHASE-3.3**             | Smart Collections          | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | smartQuery JSON, parser, SQL generator, UI builder                                                                                                                                      |
-| **PHASE-3.4**             | Navigateur de Dossiers     | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | FolderTree.tsx, folderStore.ts, recursive queries                                                                                                                                       |
-| **PHASE-3.5**             | Recherche & Filtrage       | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | SearchBar.tsx, searchService.ts, parser, advanced query                                                                                                                                 |
-| **MAINT-IMPORT-PERF**     | Performance & UX Import    | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | Parallel ingestion (Rayon), preview pyramid, progress tracking                                                                                                                          |
-| **MAINT-SQL-SAFETY**      | SQL Safety Refactor        | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | get_folder_images() refactored, rusqlite params! macro                                                                                                                                  |
-| **MAINT-DRAGDROP-TAU**    | Drag & Drop + BatchBar     | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | camelCase fixes, uiStore selection, relatedTarget check                                                                                                                                 |
-| **MAINT-COPILOT-REVIEW**  | Résolution Review Blockers | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-25   | volume_name fix, dummy file fix, LIKE pattern fix                                                                                                                                       |
-| **PHASE-4.1**             | Event Sourcing Engine      | ✅ Présent | ✅ Complétée     | ✅ Validé       | 100%  | 2026-02-26   | ✅ COMPLÈTEMENT CONFORME. Service Rust (150 LOC), Commands Tauri (3/3), Service TS (80 LOC), Tests (567 passing). Mineure: APP_DOC duplication section 19 (cosmétique).                 |
-| **PHASE-4.2**             | Pipeline de Rendu Image    | ✅ Présent | ✅ Complétée     | ❌ NON CONFORME | 20%   | 2026-03-02   | 🔴 CRITIQUE: EDIT events jamais persistés via append_event(). Phase A CSS OK, Phase B WASM jamais appelé. Voir rapport [PHASE-4.2-VALIDATION-REPORT.md](PHASE-4.2-VALIDATION-REPORT.md) |
+| Phase                     | Description                | Brief      | Statut CHANGELOG | Valide     | Score | Dernier Scan | Commentaire                                                                                                                                                             |
+| ------------------------- | -------------------------- | ---------- | ---------------- | ---------- | ----- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **PHASE-0.1**             | Migration TypeScript       | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | Files present: src/**/\*.tsx, tsconfig.json, types/**                                                                                                                   |
+| **PHASE-0.2**             | Scaffolding Tauri v2       | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | src-tauri/src/{main.rs, lib.rs, Cargo.toml all present}                                                                                                                 |
+| **PHASE-0.3**             | Décomposition Modulaire    | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | 30+ composants modulaires créés, App.tsx <150 lignes                                                                                                                    |
+| **PHASE-0.4**             | State Management Zustand   | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | 4 stores (catalog/ui/edit/system) + tests au vert                                                                                                                       |
+| **PHASE-0.5**             | Pipeline CI & Linting      | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | ESLint, Clippy, GitHub Actions, pre-commit hooks OK                                                                                                                     |
+| **PHASE-1.1**             | Schéma SQLite              | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | 5 migrations (001-005), schema complet, DB init OK                                                                                                                      |
+| **PHASE-1.2**             | Tauri Commands CRUD        | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | catalog.rs commands: get/create/add/delete/rename OK                                                                                                                    |
+| **PHASE-1.3**             | Service BLAKE3             | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | hashing.rs service, blake3 crate integrated, detect duplicates                                                                                                          |
+| **PHASE-1.4**             | Gestion Filesystem         | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | filesystem.rs service, notify watcher, file locks                                                                                                                       |
+| **PHASE-2.1**             | Discovery & Ingestion      | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | discovery.rs, ingestion.rs, EXIF extraction advanced                                                                                                                    |
+| **PHASE-2.2**             | Harvesting EXIF/IPTC       | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | exifService.ts, kamadak-exif v0.6.1, metadata extracted                                                                                                                 |
+| **PHASE-2.3**             | Génération Previews        | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | preview.rs (libvips), pyramid (Thumbnail/Standard/OneToOne)                                                                                                             |
+| **PHASE-2.4**             | UI d'Import Connectée      | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | ImportModal.tsx, progress tracking, error handling                                                                                                                      |
+| **PHASE-3.1**             | Grille d'Images Réelle     | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | GridView.tsx, useCatalog hook, virtualization, 545 tests                                                                                                                |
+| **PHASE-3.1-MAINTENANCE** | État Hybride + SQLite Sync | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | Lazy loading, bidirectional sync, hybrid state management                                                                                                               |
+| **PHASE-3.2**             | Collections Statiques CRUD | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | collectionStore.ts, create/rename/delete/getImages                                                                                                                      |
+| **PHASE-3.2-AUDIT**       | Audit Drag & Drop          | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | Event propagation review, parent dragEnter/dragOver                                                                                                                     |
+| **PHASE-3.2b**            | Drag & Drop MultiSelect    | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | LazyLoadedImageCard, drag-to-collection, batch ops                                                                                                                      |
+| **PHASE-3.2c**            | Régression Tauri IPC       | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | camelCase fixes for Tauri v2, all collection ops restored                                                                                                               |
+| **PHASE-3.3**             | Smart Collections          | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | smartQuery JSON, parser, SQL generator, UI builder                                                                                                                      |
+| **PHASE-3.4**             | Navigateur de Dossiers     | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | FolderTree.tsx, folderStore.ts, recursive queries                                                                                                                       |
+| **PHASE-3.5**             | Recherche & Filtrage       | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | SearchBar.tsx, searchService.ts, parser, advanced query                                                                                                                 |
+| **MAINT-IMPORT-PERF**     | Performance & UX Import    | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | Parallel ingestion (Rayon), preview pyramid, progress tracking                                                                                                          |
+| **MAINT-SQL-SAFETY**      | SQL Safety Refactor        | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | get_folder_images() refactored, rusqlite params! macro                                                                                                                  |
+| **MAINT-DRAGDROP-TAU**    | Drag & Drop + BatchBar     | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | camelCase fixes, uiStore selection, relatedTarget check                                                                                                                 |
+| **MAINT-COPILOT-REVIEW**  | Résolution Review Blockers | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-25   | volume_name fix, dummy file fix, LIKE pattern fix                                                                                                                       |
+| **PHASE-4.1**             | Event Sourcing Engine      | ✅ Présent | ✅ Complétée     | ✅ Validé  | 100%  | 2026-02-26   | ✅ COMPLÈTEMENT CONFORME. Service Rust (150 LOC), Commands Tauri (3/3), Service TS (80 LOC), Tests (567 passing). Mineure: APP_DOC duplication section 19 (cosmétique). |
+| **PHASE-4.2**             | Pipeline de Rendu Image    | ✅ Présent | ✅ Complétée     | ⚠️ PARTIEL | 60%   | 2026-03-02   | 🔴 CRITIQUE: 9 tests échouent (eventType 'ImageEdited'→'edit_applied' mismatch). 🟠 Phase B WASM jamais intégré dans PreviewRenderer. Voir détails ci-après             |
 
 ---
 
@@ -623,6 +623,240 @@ pub async fn apply_edits(
 - Implémenter commandes : apply_edits, render_preview, update_image
 - Tests : 600+/600+ (545 existants + 55+ phase 4.2)
 
+---
+
+## Phase 4.2 — Mise à jour 2026-03-02 (Corrections Event Sourcing)
+
+### 📊 État Après Modifications du 3 Mars
+
+| Aspect                             | État           | Détail                                                                          |
+| ---------------------------------- | -------------- | ------------------------------------------------------------------------------- |
+| **Persistance EDIT**               | ✅ FIXÉ        | App.tsx ligne 189-227 appelle CatalogService.appendEvent()                      |
+| **CSS Phase A**                    | ✅ FONCTIONNE  | renderingService.ts + PreviewRenderer subscription active                       |
+| **WASM Phase B**                   | ⚠️ STUB ONLY   | wasmRenderingService.ts existe mais jamais appelé                               |
+| **Tests renderingService.test.ts** | 🔴 9 ÉCHOUENT  | Event type mismatch: tests utilisent 'ImageEdited', code utilise 'edit_applied' |
+| **Non-régression**                 | 🟰 DÉPEND TEST | Si tests restent cassés, impossible de valider régression                       |
+
+### 🔴 PROBLÈME CRITIQUE #1 — Tests Cassés (Régression)
+
+**Commit causant** : ca2bba4 (2026-03-02 03:16:09)
+
+**Changement effectué** :
+
+- `renderingService.ts` ligne 31 : Changé de `'ImageEdited'` → `'edit_applied'`
+- `App.tsx` ligne 197 : Génère événements avec `eventType: 'edit_applied'`
+
+**Impact sur tests** :
+
+- `renderingService.test.ts` contient 14 occurrences de `eventType: 'ImageEdited'`
+- Fonction `eventsToCSSFilters()` rejette tous les événements ne correspondant pas à `'edit_applied'`
+- **Résultat** : 9 tests échouent car aucun événement ne passe le filtre `if (event.eventType !== 'edit_applied')`
+
+**Test Failures Détaillées** :
+
+```
+✗ should apply exposure from ImageEdited events
+  Expected: exposure=0.5  |  Actual: exposure=0
+
+✗ should apply contrast from ImageEdited events
+  Expected: contrast=0.3  |  Actual: contrast=0
+
+✗ should apply saturation from ImageEdited events
+  Expected: saturation=1.5  |  Actual: saturation=1
+
+✗ should replay multiple events in order
+  Expected: exposure=0.5  |  Actual: exposure=0
+
+✗ should apply negative contrast
+  Expected: contrast=-0.3  |  Actual: contrast=0
+
+✗ should handle partial event updates
+  Expected: exposure=0.5  |  Actual: exposure=0
+
+✗ should apply both CSS and pixel filters
+  Expected: exposure=0.5  |  Actual: exposure=0
+
+✗ should handle extreme exposure values
+  Expected: CSS contains 'brightness(0.40)'  |  Actual: CSS='none'
+
+✗ should handle mixed valid and invalid events
+  Expected: exposure=0.5  |  Actual: exposure=0
+```
+
+**Score de tests actuel** : 43 passés / 55 total = **78% (régression de 100%)**
+
+**Violation des règles AGENTS.md** :
+
+- Section 2.3 : "Ne JAMAIS modifier un test pour le rendre 'vert' sans justifier" → Inverse : ne jamais casser de tests
+- Section 2.3 : "Tous les tests des phases précédentes doivent continuer à passer" → Violation : 9 tests échouent
+
+---
+
+### 🟠 PROBLÈME MAJEUR #2 — Phase B WASM Non Intégrée
+
+**État du code** :
+
+- ✅ `wasmRenderingService.ts` existe (289 lignes)
+- ✅ `image_processing.rs` existe (src-tauri/src/wasm/)
+- ✅ Tests WASM existent et passent
+- ❌ **PreviewRenderer.tsx jamais appelle renderWithWasm()**
+
+**Code PreviewRenderer.tsx** :
+
+```tsx
+interface PreviewRendererProps {
+  ...
+  useWasm?: boolean; // Phase B: toggle WASM vs CSS fallback (not used in Phase A)
+}
+
+export const PreviewRenderer = ({
+  ...
+  useWasm: _useWasm = false, // Phase B will use this
+}) => {
+  // ❌ JAMAIS utilise _useWasm ou renderWithWasm()
+  // ✅ Applique seulement CSS filters
+  useEffect(() => {
+    applyCSSFilters(imgRef.current, filters);
+  }, [filters]);
+}
+```
+
+**Brief Requirement** (PHASE-4.2.md, "Phase B — WASM + Pixel Real") :
+
+> "Canvas-based rendering : application des pixels traités via HTML5 Canvas"
+> "Intégration event-to-pixel flow : EditStore → WASM → Canvas → display"
+
+**Statut** : ❌ NON IMPLÉMENTÉ — Phase B est un stub, le code n'a jamais appelé `renderWithWasm()`
+
+**Impact** : La phase B (environ 50% du brief) est non-fonctionnelle. Les filtres pixel réel (courbes, balance des blancs, etc.) ne sont jamais appliqués.
+
+---
+
+### 🟡 PROBLÈME MINEUR #3 — Documentation Hors-Sync
+
+**Fichier** : `Docs/APP_DOCUMENTATION.md` section "Système de Rendu"
+
+**Déclaration** (ligne 952) :
+
+```
+> **État** : ✅ **Entièrement implémenté** (CSS Filters + WASM Pixel Processing + Event Sourcing)
+```
+
+**Réalité** :
+
+- ✅ CSS Filters : Implémenté et testé (Phase A)
+- ✅ Event Sourcing : Intégration fixée (3 mars)
+- ❌ WASM Pixel Processing : Stub seulement (jamais intégré)
+
+**Correction nécessaire** : Mettre à jour la documentation pour refléter l'état réel (Phase A complète, Phase B incomplète).
+
+---
+
+### 📋 Résumé des Actions Requises
+
+**Priorité 🔴 CRITIQUE** :
+
+1. **Fixer les tests cassés** (9/55 échouent)
+   - Remplacer `eventType: 'ImageEdited'` par `eventType: 'edit_applied'` dans tous les tests
+   - Relancer tests : 55/55 doivent passer
+
+2. **Valider la chaîne de persistance Event Sourcing** (3 mars fix)
+   - Vérifier que : EDIT slider → append_event() → editStore notification → PreviewRenderer CSS update
+   - Tests doivent confirmer la chaîne complète fonctionne
+
+**Priorité 🟠 MAJEUR** :
+
+3. **Intégrer Phase B WASM ou reporter**
+   - Option A : Implémenter l'intégration WASM dans PreviewRenderer (Toggle useWasm + call renderWithWasm)
+   - Option B : Reporter Phase B à version future, marquer Phase 4.2-A comme complète
+   - **Brief actuel** suppose Phase B implémentée
+
+**Priorité 🟡 MINEURE** :
+
+4. **Mettre à jour APP_DOCUMENTATION.md**
+   - Refléter l'état réel : Phase A complète, Phase B (WASM) non-intégrée
+
+---
+
+### ✅ Points Positifs des Modifications du 3 Mars
+
+Les commits du 3 mars (ca2bba4, 775bfab, etc.) ont **effectivement fixé** le problème critique identifié le 2026-02-26 :
+
+**Avant (2026-02-26)** :
+
+```
+User moves slider → onDispatchEvent('EDIT')
+→ editStore.addEvent() (local only)
+→ ❌ ARRÊT : Aucune persistance
+→ PreviewRenderer retourne rien
+```
+
+**Après (2026-03-02)** :
+
+```
+User moves slider → onDispatchEvent('EDIT')
+→ App.tsx crée eventDto
+→ CatalogService.appendEvent(eventDto) ← NOUVEAU
+→ Rust Event Sourcing persiste
+→ App.tsx met à jour editStore
+→ PreviewRenderer rechargé
+→ CSS filters appliqués ← MAINTENANT VISIBLE
+```
+
+**Le flux de persistance Event Sourcing est maintenant correct.**
+
+#### Modifications Détaillées :
+
+1. **App.tsx** (lignes 189-227) :
+   - ✅ Crée EventDTO pour chaque EDIT event
+   - ✅ Appelle CatalogService.appendEvent() pour persister
+   - ✅ Met à jour editStore pour trigger PreviewRenderer subscription
+
+2. **catalogService.ts** (ligne 380) :
+   - ✅ Expose `appendEvent()` qui wraps eventService.appendEvent()
+
+3. **eventService.ts** (ligne 63) :
+   - ✅ Appelle Tauri `append_event` command avec conversion camelCase→snake_case
+
+4. **PreviewRenderer.tsx** (lignes 115-127) :
+   - ✅ Subscribe à editEventsForImage changes
+   - ✅ Recalcule CSS filters quand store change
+
+---
+
+### 📊 Score de Conformité Révisé
+
+| Critère                     | Avant (2026-02-26) | Après (2026-03-02) | Statut   |
+| --------------------------- | ------------------ | ------------------ | -------- |
+| Event Sourcing persistence  | 0%                 | ✅ 100%            | FIXÉ     |
+| PreviewRenderer integration | 30%                | ✅ 90%             | +60%     |
+| CSS Filters Phase A         | 50%                | ✅ 95%             | +45%     |
+| Tests renderingService      | 100%               | 78%                | -22%     |
+| WASM Phase B integration    | 0%                 | 0%                 | AUCUN    |
+| Documentation sync          | 50%                | 50%                | INCHANGÉ |
+| **SCORE GLOBAL**            | **20%**            | **60%**            | +40% ⬆️  |
+
+---
+
+### 🎯 Verdict Final (2026-03-02)
+
+**Statut** : ⚠️ **PARTIELLEMENT CONFORME**
+
+**Raisons** :
+
+✅ **Conformité Phase A** : CSS Filters fully integrated + Event Sourcing persistence **FIXED**
+❌ **Régression critique** : Tests cassés (9 failures) — violation règle AGENTS.md 2.3
+❌ **Phase B incomplet** : WASM jamais intégrée dans PreviewRenderer
+⚠️ **Documentation** : Hors-sync avec implémentation réelle
+
+**Blocages pour validation final** :
+
+1. **URGENT** : Fixer 9 tests échouants
+2. **IMPORTANT** : Clarifier état Phase B (implémenter ou reporter)
+3. **COSMÉTIQUE** : Mettre à jour documentation
+
+---
+
 **Phases Futures** :
 
 - **Phase 4.3** — Historique & Snapshots UI (dépend de 4.2)
@@ -631,10 +865,10 @@ pub async fn apply_edits(
 
 ### Verdict Final
 
-**Status : NON CONFORME ❌ — Phase 4.2 nécessite une maintenance corrective avant validation.**
+**Status : ⚠️ PARTIELLEMENT CONFORME — Phase 4.2 partiellement réparée, tests cassés. Corrections requises.**
 
 ---
 
 **Document généré par** : Master-Validator Agent
-**Dernière mise à jour** : 2026-02-26 (Scan Phase 4.2)
-**Prochaine révision** : Après correction Phase 4.2
+**Dernière mise à jour** : 2026-03-02 (Re-scan Phase 4.2 après modifications)
+**Prochaine révision** : Après fixation des tests et intégration Phase B

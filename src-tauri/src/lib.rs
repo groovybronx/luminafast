@@ -150,6 +150,7 @@ pub fn run() {
             // Event Sourcing commands
             commands::event_sourcing::append_event,
             commands::event_sourcing::get_events,
+            commands::event_sourcing::get_edit_events,
             commands::event_sourcing::replay_events,
         ])
         .run(tauri::generate_context!())

@@ -1,5 +1,7 @@
 import type { CollectionDTO, ImageDTO, ImageDetailDTO, ImageFilter } from '../types/dto';
 import type { FolderTreeNode } from '../types/folder';
+import type { EventDTO } from './eventService';
+import { appendEvent as appendEventToStore } from './eventService';
 
 /**
  * Service for catalog operations - Phase 1.2
@@ -311,6 +313,35 @@ export class CatalogService {
   }
 
   /**
+   * Get edit events for a specific image (Phase 4.2B.1)
+   * Retrieves all Event Sourcing events that target this image
+   */
+  static async getEditEvents(imageId: number): Promise<EventDTO[]> {
+    try {
+      const invoke = this.getInvoke();
+      const result = await invoke('get_edit_events', { imageId }); // ← camelCase
+
+      if (typeof result === 'string') {
+        throw new Error(result);
+      }
+
+      if (typeof result === 'object' && result !== null && 'message' in result) {
+        throw new Error((result as Record<string, unknown>).message as string);
+      }
+
+      /* if (import.meta.env.DEV) {
+        console.warn(
+          `[CatalogService] getEditEvents for imageId=${imageId}, returned ${Array.isArray(result) ? result.length : 0} events`,
+        );
+      } */
+
+      return result as EventDTO[];
+    } catch (error) {
+      throw this.parseError(error);
+    }
+  }
+
+  /**
    * Utility method to check if a result is an error
    */
   static isError<T>(result: T | string): result is string {
@@ -338,5 +369,19 @@ export class CatalogService {
       throw new Error(result);
     }
     return result;
+  }
+
+  /**
+   * Append an event to the Event Sourcing store
+   * Phase 4.2: Used to persist EDIT operations (exposure, contrast changes, etc.)
+   * @param event - EventDTO to persist
+   * @throws Error if append fails
+   */
+  static async appendEvent(event: EventDTO): Promise<void> {
+    try {
+      await appendEventToStore(event);
+    } catch (error) {
+      throw this.parseError(error);
+    }
   }
 }

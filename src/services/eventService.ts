@@ -48,6 +48,7 @@ export interface EventDTO {
  */
 export async function appendEvent(event: EventDTO): Promise<void> {
   try {
+    // Send event as camelCase directly - Rust serde(rename_all = "camelCase") handles conversion
     return await invoke<void>('append_event', {
       event,
     });
@@ -70,6 +71,26 @@ export async function getEvents(): Promise<EventDTO[]> {
   } catch (error) {
     throw new Error(
       `Failed to retrieve events: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+/**
+ * Retrieves edit events for a specific image (Phase 4.2A)
+ * Filters events where targetId matches the imageId
+ * @param imageId - The ID of the image to get edits for
+ * @throws Error if the Tauri command fails
+ * @returns Promise that resolves with events for the specified image
+ */
+export async function getEditEvents(imageId: number): Promise<EventDTO[]> {
+  try {
+    if (import.meta.env.DEV) {
+      console.warn(`[EventService] getEditEvents called for imageId=${imageId}`);
+    }
+    return await invoke<EventDTO[]>('get_edit_events', { imageId });
+  } catch (error) {
+    throw new Error(
+      `Failed to retrieve edit events: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 }

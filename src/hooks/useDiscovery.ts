@@ -59,9 +59,9 @@ export function useDiscovery(): UseDiscoveryReturn {
   // Phase weights for progress calculation (must sum to 1.0)
   const PHASE_WEIGHTS = useMemo(
     () => ({
-      scan: 0.3, // Discovery scan: 0-30%
-      ingest: 0.4, // Ingestion (hashing + EXIF + DB): 30-70%
-      previews: 0.3, // Preview generation: 70-100%
+      scan: 0.2, // Discovery scan: 0-20%
+      ingest: 0.1, // Ingestion (hashing + EXIF + DB): 20-30%
+      previews: 0.7, // Preview generation: 30-100%
     }),
     [],
   );
@@ -134,11 +134,11 @@ export function useDiscovery(): UseDiscoveryReturn {
     }
   }, []);
 
-  // Handle discovery progress updates (Phase 1: Scan 0-30%)
+  // Handle discovery progress updates (Phase 1: Scan 0-10%)
   const handleProgress = useCallback(
     (progress: DiscoveryProgress) => {
       const scanProgress = progress.percentage / 100; // 0.0 - 1.0
-      const globalProgress = scanProgress * PHASE_WEIGHTS.scan; // 0-30%
+      const globalProgress = scanProgress * PHASE_WEIGHTS.scan; // 0-10%
 
       setImportState({
         progress: globalProgress * 100, // Convert to 0-100
@@ -159,12 +159,12 @@ export function useDiscovery(): UseDiscoveryReturn {
     [setImportState, addLog, PHASE_WEIGHTS],
   );
 
-  // Handle ingestion progress updates (Phase 2: Ingestion 30-70%)
+  // Handle ingestion progress updates (Phase 2: Ingestion 10-30%)
   const handleIngestionProgress = useCallback(
     (progress: IngestionProgress) => {
       const ingestionProgress = progress.percentage; // 0.0 - 1.0
-      const baseProgress = PHASE_WEIGHTS.scan; // Start at 30%
-      const globalProgress = baseProgress + ingestionProgress * PHASE_WEIGHTS.ingest; // 30% + (0-40%)
+      const baseProgress = PHASE_WEIGHTS.scan; // Start at 10%
+      const globalProgress = baseProgress + ingestionProgress * PHASE_WEIGHTS.ingest; // 10% + (0-40%)
 
       const displayName = progress.currentFile || 'Traitement...';
 
@@ -412,8 +412,8 @@ export function useDiscovery(): UseDiscoveryReturn {
           addLog(`Failed files: ${result.failed.map((f) => f.file.filename).join(', ')}`, 'error');
         }
 
-        // Update progress to previews phase (70%)
-        const previewsBaseProgress = PHASE_WEIGHTS.scan + PHASE_WEIGHTS.ingest; // 70%
+        // Update progress to previews phase (30%)
+        const previewsBaseProgress = PHASE_WEIGHTS.scan + PHASE_WEIGHTS.ingest; // 30%
         setImportState({
           progress: previewsBaseProgress * 100,
           currentFile: 'Génération previews...',

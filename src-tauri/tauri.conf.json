@@ -4,9 +4,9 @@
   "identifier": "com.luminafast.V2",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": null,
-    "beforeDevCommand": "npm run build",
-    "beforeBuildCommand": ""
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
   },
   "app": {
     "windows": [

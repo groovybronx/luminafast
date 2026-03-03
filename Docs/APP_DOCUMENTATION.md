@@ -1,7 +1,4 @@
-
-
 # LuminaFast — Documentation de l'Application
-
 
 ## Table des matières
 
@@ -9,45 +6,59 @@
 2. [Stack Technique Actuelle](#2-stack-technique-actuelle)
 3. [Architecture des Fichiers](#3-architecture-des-fichiers)
 4. [Composants UI](#4-composants-ui)
-  - [4.1 Composants](#41--composants)
-  - [4.2 Stores Zustand](#42--stores-zustand)
-  - [4.3 Zones de l’interface](#43--zones-de-linterface)
+
+- [4.1 Composants](#41--composants)
+- [4.2 Stores Zustand](#42--stores-zustand)
+- [4.3 Zones de l’interface](#43--zones-de-linterface)
+
 5. [Modèle de Données](#5-modèle-de-données)
-  - [5.1 Structure d’une Image](#51--structure-dune-image)
-  - [5.2 Structure d’un Event](#52--structure-dun-event)
+
+- [5.1 Structure d’une Image](#51--structure-dune-image)
+- [5.2 Structure d’un Event](#52--structure-dun-event)
+
 6. [Fonctionnalités — État Actuel](#6-fonctionnalités--état-actuel)
 7. [Raccourcis Clavier](#7-raccourcis-clavier)
 8. [Dépendances npm](#8-dépendances-npm)
 9. [Dépendances Rust](#9-dépendances-rust)
 10. [Configuration](#10-configuration)
 11. [Schéma et Base de Données SQLite](#11-schéma-et-base-de-données-sqlite)
-  - [11.1 Architecture du Catalogue](#111--architecture-du-catalogue)
-  - [11.2 Configuration SQLite](#112--configuration-sqlite)
-  - [11.3 Système de Migrations](#113--système-de-migrations)
-  - [11.4 Types Rust](#114--types-rust)
-  - [11.5 Tests Unitaires](#115--tests-unitaires)
+
+- [11.1 Architecture du Catalogue](#111--architecture-du-catalogue)
+- [11.2 Configuration SQLite](#112--configuration-sqlite)
+- [11.3 Système de Migrations](#113--système-de-migrations)
+- [11.4 Types Rust](#114--types-rust)
+- [11.5 Tests Unitaires](#115--tests-unitaires)
+
 12. [Outils de Qualité et CI/CD](#12-outils-de-qualité-et-cicd)
-  - [12.1 Linting et Formatting](#121--linting-et-formatting)
-  - [12.2 Tests et Coverage](#122--tests-et-coverage)
-  - [12.3 Pipeline CI/CD](#123--pipeline-cicd)
-  - [12.4 Scripts de Développement](#124--scripts-de-développement)
+
+- [12.1 Linting et Formatting](#121--linting-et-formatting)
+- [12.2 Tests et Coverage](#122--tests-et-coverage)
+- [12.3 Pipeline CI/CD](#123--pipeline-cicd)
+- [12.4 Scripts de Développement](#124--scripts-de-développement)
+
 13. [Services EXIF/IPTC](#13-services-exifiptc)
-  - [13.1 Architecture EXIF](#131--architecture-exif)
-  - [13.2 Métadonnées EXIF](#132--métadonnées-exif)
-  - [13.3 Métadonnées IPTC](#133--métadonnées-iptc)
-  - [13.4 Performance et Intégration](#134--performance-et-intégration)
+
+- [13.1 Architecture EXIF](#131--architecture-exif)
+- [13.2 Métadonnées EXIF](#132--métadonnées-exif)
+- [13.3 Métadonnées IPTC](#133--métadonnées-iptc)
+- [13.4 Performance et Intégration](#134--performance-et-intégration)
+
 14. [Service Filesystem](#14-service-filesystem)
-  - [14.1 Architecture du Service](#141--architecture-du-service)
-  - [14.2 Types Unifiés](#142--types-unifiés)
-  - [14.3 Concurrence et Performance](#143--concurrence-et-performance)
-  - [14.4 Commandes Tauri](#144--commandes-tauri)
-  - [14.5 Tests et Validation](#145--tests-et-validation)
+
+- [14.1 Architecture du Service](#141--architecture-du-service)
+- [14.2 Types Unifiés](#142--types-unifiés)
+- [14.3 Concurrence et Performance](#143--concurrence-et-performance)
+- [14.4 Commandes Tauri](#144--commandes-tauri)
+- [14.5 Tests et Validation](#145--tests-et-validation)
+
 15. [Commandes Tauri (Mises à jour)](#15-commandes-tauri-mises-à-jour)
 16. [Services Frontend (Mises à jour)](#16-services-frontend-mises-à-jour)
 17. [Types & Interfaces (Mises à jour)](#17-types--interfaces-mises-à-jour)
-18. [Historique des Modifications](#18-historique-des-modifications)
+18. [Système de Rendu](#18--système-de-rendu)
+19. [Historique des Modifications](#19-historique-des-modifications)
 
 **Annexes** :
+
 - [Smart Collections : Logique SQL et compatibilité parser](#smart-collections--logique-sql-et-compatibilité-parser)
 - [Phase 3.4 : Folder Navigator](#phase-34--folder-navigator--architecture-et-schéma)
 - [Phase 3.5 : Recherche & Filtrage](#phase-35--recherche--filtrage--architecture-et-parser)
@@ -55,7 +66,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-02-24 (Maintenance : Phase 3.1 Completion — État Hybride Fix + SQLite Sync + Lazy Loading) — État : State management centralisé + SQLite bidirectional sync complète + Lazy loading previews, 361 tests ✅. Branche `phase/3.1-maintenance-grid-completion`.
+> **Dernière mise à jour** : 2026-03-02 (Maintenance Phase 4.2 Fixes: Event Sourcing Persistence + Tauri parameters + editStore subscription + renderingService event filtering) — État : Slider→Persist→Render pipeline fully working, 180 tests ✅. Branche `maintenance/alignement-conformité-phase-4.2`.
 >
 > ### Décisions Projet (validées par le propriétaire)
 
@@ -65,7 +76,6 @@
 > - **Formats standard** : JPG, JPEG, PNG (via preview service)
 > - **Phase 2.2 IPTC** : Extraction reportée Phase 5.4 (Sidecar XMP) — Skeleton créé
 
-
 ---
 
 ## 1. Vue d'Ensemble
@@ -73,7 +83,6 @@
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
 ### État actuel : Phases 0 à 3.5 complétées + Maintenance Phase 3.1 stabilisée
-
 
 **Pipeline d'import production-ready** :
 
@@ -87,6 +96,7 @@
 - **Modal réinitialisable**
 
 Progression temps réel visible sur 3 phases :
+
 - **0-30%** : scan
 - **30-70%** : ingestion
 - **70-100%** : previews
@@ -102,7 +112,8 @@ Progression temps réel visible sur 3 phases :
 - **Synchronisation catalogue**
 - **Modal réinitialisable**
 
- **Progression temps réel visible sur 3 phases** :
+  **Progression temps réel visible sur 3 phases** :
+
 - **0-30%** : scan
 - **30-70%** : ingestion + hashing + EXIF
 - **70-100%** : previews
@@ -116,7 +127,6 @@ Progression temps réel visible sur 3 phases :
 - **SQLite bidirectional sync** : ratings, flags, tags persistés immédiatement + isSynced tracking
 - **504 tests** (345 TypeScript + 159 Rust), **zéro warning**, **coverage 98%+**
 
-
 ### Objectif : Application Tauri autonome commercialisable
 
 Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructive, catalogue SQLite, et gestion de bibliothèques photographiques massives.
@@ -125,26 +135,25 @@ Desktop natif (macOS, Windows, Linux) avec édition paramétrique non-destructiv
 
 ## 2. Stack Technique Actuelle
 
-| Couche                | Technologie           | Version           | Statut                        |
-|----------------------|----------------------|-------------------|------------------------------|
-| Framework frontend   | React                | 19.2.0            | ✅ En place                  |
-| Bundler              | Vite                 | 7.3.1             | ✅ En place                  |
-| Styling              | TailwindCSS          | 4.1.18            | ✅ En place                  |
-| Icônes               | Lucide React         | 0.563.0           | ✅ En place                  |
-| Langage              | TypeScript (TSX)     | strict            | ✅ Complété (Phase 0.1)      |
-| Shell natif          | Tauri v2             | 2.10.2            | ✅ Complété (Phase 0.2)      |
-| Backend              | Rust                 | stable            | ✅ Complété (Phase 0.2)      |
-| State management     | Zustand              | 5.0.11            | ✅ Complété (Phase 0.4)      |
-| Linting              | ESLint + TypeScript  | 9.39.1            | ✅ Complété (Phase 0.5)      |
-| Tests                | Vitest + jsdom       | 4.0.18            | ✅ Complété (Phase 0.5)      |
-| CI/CD                | GitHub Actions       | —                 | ✅ Complété (Phase 0.5)      |
-| DB transactionnelle  | SQLite               | rusqlite 0.31.0   | ✅ Complété (Phase 1.1)      |
-| DB analytique        | DuckDB               | —                 | ⬜ Non installé (Phase 6.2)  |
-| Hashing              | BLAKE3               | —                 | ✅ Complété (Phase 1.3)      |
-| EXIF/IPTC            | kamadak-exif         | 0.6.1             | ✅ Complété (Phase 2.2)      |
+| Couche              | Technologie         | Version         | Statut                      |
+| ------------------- | ------------------- | --------------- | --------------------------- |
+| Framework frontend  | React               | 19.2.0          | ✅ En place                 |
+| Bundler             | Vite                | 7.3.1           | ✅ En place                 |
+| Styling             | TailwindCSS         | 4.1.18          | ✅ En place                 |
+| Icônes              | Lucide React        | 0.563.0         | ✅ En place                 |
+| Langage             | TypeScript (TSX)    | strict          | ✅ Complété (Phase 0.1)     |
+| Shell natif         | Tauri v2            | 2.10.2          | ✅ Complété (Phase 0.2)     |
+| Backend             | Rust                | stable          | ✅ Complété (Phase 0.2)     |
+| State management    | Zustand             | 5.0.11          | ✅ Complété (Phase 0.4)     |
+| Linting             | ESLint + TypeScript | 9.39.1          | ✅ Complété (Phase 0.5)     |
+| Tests               | Vitest + jsdom      | 4.0.18          | ✅ Complété (Phase 0.5)     |
+| CI/CD               | GitHub Actions      | —               | ✅ Complété (Phase 0.5)     |
+| DB transactionnelle | SQLite              | rusqlite 0.31.0 | ✅ Complété (Phase 1.1)     |
+| DB analytique       | DuckDB              | —               | ⬜ Non installé (Phase 6.2) |
+| Hashing             | BLAKE3              | —               | ✅ Complété (Phase 1.3)     |
+| EXIF/IPTC           | kamadak-exif        | 0.6.1           | ✅ Complété (Phase 2.2)     |
 
 ---
-
 
 ## 3. Architecture des Fichiers (État Actuel)
 
@@ -341,9 +350,7 @@ LuminaFast/
 └── .gitignore
 ```
 
-
 ---
-
 
 ## 4. Composants UI (Mockup Actuel)
 
@@ -351,40 +358,41 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 
 ### 4.1 — Composants (après décomposition Phase 0.3)
 
-| Composant             | Fichier                          | Lignes | Description                                                                                 |
-| --------------------- | -------------------------------- | ------ | ------------------------------------------------------------------------------------------- |
-| `App`                 | `src/App.tsx`                    | 152    | Orchestrateur pur (stores Zustand, callbacks)                                               |
-| `GlobalStyles`        | `shared/GlobalStyles.tsx`        | 16     | Styles CSS inline                                                                           |
-| `ArchitectureMonitor` | `shared/ArchitectureMonitor.tsx` | 54     | Console monitoring système                                                                  |
-| `ImportModal`         | `shared/ImportModal.tsx`         | 68     | Modal d'import avec progression                                                             |
-| `BatchBar`            | `shared/BatchBar.tsx`            | —      | Actions batch : pick, favoris, ajout à une collection (popover FolderPlus), clear sélection |
-| `KeyboardOverlay`     | `shared/KeyboardOverlay.tsx`     | 9      | Indicateurs raccourcis                                                                      |
-| `TopNav`              | `layout/TopNav.tsx`              | 29     | Navigation supérieure                                                                       |
-| `LeftSidebar`         | `layout/LeftSidebar.tsx`         | 64     | Catalogue, collections, folders                                                             |
-| `RightSidebar`        | `layout/RightSidebar.tsx`        | 36     | Panneau droit (orchestrateur)                                                               |
-| `Toolbar`             | `layout/Toolbar.tsx`             | 54     | Mode, recherche, taille thumbnails                                                          |
-| `Filmstrip`           | `layout/Filmstrip.tsx`           | 36     | Bande défilante                                                                             |
-| `GridView`            | `library/GridView.tsx`           | 46     | Grille d'images virtualisée (@tanstack/react-virtual)                                       |
-| `LazyLoadedImageCard` | `library/LazyLoadedImageCard.tsx`| —      | Carte image avec lazy loading + drag source (Phase 3.2b)                                     |
-| `ImageCard`           | `library/ImageCard.tsx`          | —      | Carte image avec métadonnées, sélection                                                     |
-| `DevelopView`         | `develop/DevelopView.tsx`        | 38     | Image + mode avant/après                                                                    |
-| `DevelopSliders`      | `develop/DevelopSliders.tsx`     | 37     | Sliders de réglage                                                                          |
-| `HistoryPanel`        | `develop/HistoryPanel.tsx`       | 25     | Historique des events                                                                       |
-| `Histogram`           | `metadata/Histogram.tsx`         | 18     | Histogramme simulé                                                                          |
-| `ExifGrid`            | `metadata/ExifGrid.tsx`          | 17     | Grille EXIF compacte                                                                        |
-| `MetadataPanel`       | `metadata/MetadataPanel.tsx`     | 76     | Fiche technique + tags                                                                      |
+| Composant             | Fichier                           | Lignes | Description                                                                                 |
+| --------------------- | --------------------------------- | ------ | ------------------------------------------------------------------------------------------- |
+| `App`                 | `src/App.tsx`                     | 152    | Orchestrateur pur (stores Zustand, callbacks)                                               |
+| `GlobalStyles`        | `shared/GlobalStyles.tsx`         | 16     | Styles CSS inline                                                                           |
+| `ArchitectureMonitor` | `shared/ArchitectureMonitor.tsx`  | 54     | Console monitoring système                                                                  |
+| `ImportModal`         | `shared/ImportModal.tsx`          | 68     | Modal d'import avec progression                                                             |
+| `BatchBar`            | `shared/BatchBar.tsx`             | —      | Actions batch : pick, favoris, ajout à une collection (popover FolderPlus), clear sélection |
+| `KeyboardOverlay`     | `shared/KeyboardOverlay.tsx`      | 9      | Indicateurs raccourcis                                                                      |
+| `TopNav`              | `layout/TopNav.tsx`               | 29     | Navigation supérieure                                                                       |
+| `LeftSidebar`         | `layout/LeftSidebar.tsx`          | 64     | Catalogue, collections, folders                                                             |
+| `RightSidebar`        | `layout/RightSidebar.tsx`         | 36     | Panneau droit (orchestrateur)                                                               |
+| `Toolbar`             | `layout/Toolbar.tsx`              | 54     | Mode, recherche, taille thumbnails                                                          |
+| `Filmstrip`           | `layout/Filmstrip.tsx`            | 36     | Bande défilante                                                                             |
+| `GridView`            | `library/GridView.tsx`            | 46     | Grille d'images virtualisée (@tanstack/react-virtual)                                       |
+| `LazyLoadedImageCard` | `library/LazyLoadedImageCard.tsx` | —      | Carte image avec lazy loading + drag source (Phase 3.2b)                                    |
+| `ImageCard`           | `library/ImageCard.tsx`           | —      | Carte image avec métadonnées, sélection                                                     |
+| `DevelopView`         | `develop/DevelopView.tsx`         | 38     | Image + mode avant/après                                                                    |
+| `DevelopSliders`      | `develop/DevelopSliders.tsx`      | 37     | Sliders de réglage                                                                          |
+| `HistoryPanel`        | `develop/HistoryPanel.tsx`        | 25     | Historique des events                                                                       |
+| `Histogram`           | `metadata/Histogram.tsx`          | 18     | Histogramme simulé                                                                          |
+| `ExifGrid`            | `metadata/ExifGrid.tsx`           | 17     | Grille EXIF compacte                                                                        |
+| `MetadataPanel`       | `metadata/MetadataPanel.tsx`      | 76     | Fiche technique + tags                                                                      |
 
 ### 4.2 — Stores Zustand (Phase 0.4 + Maintenance Phase 3.1)
 
-| Store             | Fichier                     | État géré                                                                    | Actions principales                                                                                               |
-| ----------------- | --------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `catalogStore`    | `stores/catalogStore.ts`    | images[] (from SQLite), activeImageId                                        | setImages, addImages, getImages                                                                                   |
-| `uiStore`         | `stores/uiStore.ts`         | **selection (Set)**, **filterText**, activeView, sidebars, thumbnailSize     | **toggleSelection, setSingleSelection, clearSelection, setFilterText**, setActiveView, toggleLeftSidebar          |
-| `collectionStore` | `stores/collectionStore.ts` | collections[], activeCollectionId, activeCollectionImageIds                  | loadCollections, createCollection, deleteCollection, renameCollection, setActiveCollection, clearActiveCollection |
-| `editStore`       | `stores/editStore.ts`       | eventLog[], currentEdits, historyIndex                                       | addEvent, setCurrentEdits, updateEdit, undo/redo (préparés)                                                       |
-| `systemStore`     | `stores/systemStore.ts`     | logs[], importState, appReady                                                | addLog, setImportState, setAppReady                                                                               |
+| Store             | Fichier                     | État géré                                                                | Actions principales                                                                                               |
+| ----------------- | --------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `catalogStore`    | `stores/catalogStore.ts`    | images[] (from SQLite), activeImageId                                    | setImages, addImages, getImages                                                                                   |
+| `uiStore`         | `stores/uiStore.ts`         | **selection (Set)**, **filterText**, activeView, sidebars, thumbnailSize | **toggleSelection, setSingleSelection, clearSelection, setFilterText**, setActiveView, toggleLeftSidebar          |
+| `collectionStore` | `stores/collectionStore.ts` | collections[], activeCollectionId, activeCollectionImageIds              | loadCollections, createCollection, deleteCollection, renameCollection, setActiveCollection, clearActiveCollection |
+| `editStore`       | `stores/editStore.ts`       | eventLog[], currentEdits, historyIndex                                   | addEvent, setCurrentEdits, updateEdit, undo/redo (préparés)                                                       |
+| `systemStore`     | `stores/systemStore.ts`     | logs[], importState, appReady                                            | addLog, setImportState, setAppReady                                                                               |
 
 **Architecture** (Maintenance Phase 3.1) :
+
 - **Single Source of Truth** : `useCatalog()` hook SEUL pour images data (pas de hybrid state)
 - **Separation of Concerns** : `useUiStore` pour state UI only (selection, filterText, viewport)
 - **Type Safety** : TypeScript strict mode, no `any`
@@ -485,32 +493,32 @@ export interface CatalogEvent {
 
 ## 6. Fonctionnalités — État Actuel
 
-| Fonctionnalité               | Statut            | Connectée à un backend ?        | Phase cible |
-| ---------------------------- | ----------------- | ------------------------------- | ----------- |
-| Affichage grille d'images    | ✅ Fonctionnel    | Oui (SQLite via useCatalog)     | —           |
-| Virtualisation grille (10K+) | ✅ Fonctionnel    | Oui (@tanstack/react-virtual + **LazyLoadedImageCard** with IntersectionObserver) | 3.1 |
-| Redimensionnement grille     | ✅ Fonctionnel    | N/A (ResizeObserver)            | —           |
-| Drag & Drop (ajouter à collection) | ✅ Fonctionnel | Oui (HTML5 DnD + collection store) | 3.2b      |
-| Sélection simple/multiple    | ✅ Fonctionnel    | Oui (useUiStore → selection Set)     | —           |
-| Notation (0-5 étoiles)       | ✅ Fonctionnel  | Oui (SQLite + isSynced tracking) | 5.3         |
-| Flagging (pick/reject)       | ✅ Fonctionnel  | Oui (SQLite + isSynced tracking) | 5.3         |
-| Import de fichiers           | ✅ Fonctionnel    | Oui (Tauri discovery+ingestion) | —           |
-| Progression import (%)       | ✅ Fonctionnel    | Oui (processedFiles/totalFiles) | —           |
-| Recherche/filtrage           | 🟡 Partiel        | Non (filter JS local)           | 3.5         |
-| Smart Collections            | 🟡 Mock           | Non (liens statiques)           | 3.3         |
-| Sliders de développement     | 🟡 Mock           | Non (CSS filters)               | 4.2         |
-| Histogramme                  | 🟡 Mock           | Non (Math.sin)                  | 5.1         |
-| EXIF display                 | ✅ Fonctionnel    | Oui (SQLite LEFT JOIN)          | —           |
-| Tags/mots-clés               | 🟡 Mock           | Non (état local)                | 5.2         |
-| Historique d'events          | 🟡 Partiel        | Non (CatalogEvent typé)         | 4.3         |
-| Avant/Après                  | 🟡 Mock           | Non (CSS filters)               | 4.4         |
-| Filmstrip                    | 🟡 Partiel        | Partiel (images SQLite)         | 3.1         |
-| Batch operations             | ⬜ Non implémenté | Non (boutons disabled)          | 3.2         |
-| Raccourcis clavier           | ✅ Fonctionnel    | N/A (event listeners)           | —           |
-| Monitoring système           | ✅ Fonctionnel    | Oui (logs SQLite réels)         | —           |
-| Cloud sync status            | ⬜ Non implémenté | Non (badge SQLite)              | 8.2         |
-| Taille thumbnails            | ✅ Fonctionnel    | N/A (CSS grid)                  | —           |
-| Navigation Library/Develop   | ✅ Fonctionnel    | N/A (state local)               | —           |
+| Fonctionnalité                     | Statut            | Connectée à un backend ?                                                          | Phase cible |
+| ---------------------------------- | ----------------- | --------------------------------------------------------------------------------- | ----------- |
+| Affichage grille d'images          | ✅ Fonctionnel    | Oui (SQLite via useCatalog)                                                       | —           |
+| Virtualisation grille (10K+)       | ✅ Fonctionnel    | Oui (@tanstack/react-virtual + **LazyLoadedImageCard** with IntersectionObserver) | 3.1         |
+| Redimensionnement grille           | ✅ Fonctionnel    | N/A (ResizeObserver)                                                              | —           |
+| Drag & Drop (ajouter à collection) | ✅ Fonctionnel    | Oui (HTML5 DnD + collection store)                                                | 3.2b        |
+| Sélection simple/multiple          | ✅ Fonctionnel    | Oui (useUiStore → selection Set)                                                  | —           |
+| Notation (0-5 étoiles)             | ✅ Fonctionnel    | Oui (SQLite + isSynced tracking)                                                  | 5.3         |
+| Flagging (pick/reject)             | ✅ Fonctionnel    | Oui (SQLite + isSynced tracking)                                                  | 5.3         |
+| Import de fichiers                 | ✅ Fonctionnel    | Oui (Tauri discovery+ingestion)                                                   | —           |
+| Progression import (%)             | ✅ Fonctionnel    | Oui (processedFiles/totalFiles)                                                   | —           |
+| Recherche/filtrage                 | 🟡 Partiel        | Non (filter JS local)                                                             | 3.5         |
+| Smart Collections                  | 🟡 Mock           | Non (liens statiques)                                                             | 3.3         |
+| Sliders de développement           | 🟡 Mock           | Non (CSS filters)                                                                 | 4.2         |
+| Histogramme                        | 🟡 Mock           | Non (Math.sin)                                                                    | 5.1         |
+| EXIF display                       | ✅ Fonctionnel    | Oui (SQLite LEFT JOIN)                                                            | —           |
+| Tags/mots-clés                     | 🟡 Mock           | Non (état local)                                                                  | 5.2         |
+| Historique d'events                | 🟡 Partiel        | Non (CatalogEvent typé)                                                           | 4.3         |
+| Avant/Après                        | 🟡 Mock           | Non (CSS filters)                                                                 | 4.4         |
+| Filmstrip                          | 🟡 Partiel        | Partiel (images SQLite)                                                           | 3.1         |
+| Batch operations                   | ⬜ Non implémenté | Non (boutons disabled)                                                            | 3.2         |
+| Raccourcis clavier                 | ✅ Fonctionnel    | N/A (event listeners)                                                             | —           |
+| Monitoring système                 | ✅ Fonctionnel    | Oui (logs SQLite réels)                                                           | —           |
+| Cloud sync status                  | ⬜ Non implémenté | Non (badge SQLite)                                                                | 8.2         |
+| Taille thumbnails                  | ✅ Fonctionnel    | N/A (CSS grid)                                                                    | —           |
+| Navigation Library/Develop         | ✅ Fonctionnel    | N/A (state local)                                                                 | —           |
 
 **Légende** :
 
@@ -519,7 +527,6 @@ export interface CatalogEvent {
 - ⬜ Non implémenté = Pas encore dans le code
 
 ---
-
 
 ## 7. Raccourcis Clavier (Mockup)
 
@@ -542,38 +549,38 @@ export interface CatalogEvent {
 
 ### Production
 
-| Package         | Version   | Usage         |
-|-----------------|-----------|--------------|
-| `react`         | ^19.2.0   | Framework UI |
-| `react-dom`     | ^19.2.0   | Rendu DOM    |
-| `lucide-react`  | ^0.563.0  | Icônes SVG   |
+| Package        | Version  | Usage        |
+| -------------- | -------- | ------------ |
+| `react`        | ^19.2.0  | Framework UI |
+| `react-dom`    | ^19.2.0  | Rendu DOM    |
+| `lucide-react` | ^0.563.0 | Icônes SVG   |
 
 ### Développement
 
-| Package                        | Version   | Usage                              |
-|--------------------------------|-----------|------------------------------------|
-| `vite`                         | ^7.3.1    | Bundler                            |
-| `@vitejs/plugin-react`         | ^5.1.1    | Plugin React pour Vite             |
-| `tailwindcss`                  | ^4.1.18   | Utilitaires CSS                    |
-| `@tailwindcss/vite`            | ^4.1.18   | Plugin TailwindCSS pour Vite       |
-| `postcss`                      | ^8.5.6    | Post-processeur CSS                |
-| `eslint`                       | ^9.39.1   | Linter                             |
-| `eslint-plugin-react-hooks`     | ^7.0.1    | Règles hooks React                 |
-| `eslint-plugin-react-refresh`   | ^0.4.24   | React Fast Refresh                 |
-| `globals`                      | ^16.5.0   | Globales ESLint                    |
-| `@types/react`                 | ^19.2.7   | Types React (non utilisés — JS)    |
-| `@types/react-dom`             | ^19.2.3   | Types ReactDOM (non utilisés — JS) |
-| `typescript`                   | ^5.6.3    | TypeScript strict                  |
-| `typescript-eslint`            | ^8.55.0   | ESLint pour TypeScript             |
-| `@testing-library/react`       | ^16.1.0   | Tests React                        |
-| `@vitest/coverage-v8`          | ^1.6.0    | Coverage tests                     |
-| `vitest`                       | ^2.1.8    | Framework de tests                 |
-| `jsdom`                        | ^25.0.1   | Environnement DOM tests            |
-| `zustand`                      | ^5.0.2    | State management                   |
-| `@tauri-apps/api`              | ^2.2.0    | API Tauri frontend                 |
-| `@tauri-apps/plugin-fs`        | ^2.2.0    | Plugin filesystem                  |
-| `@tauri-apps/plugin-dialog`    | ^2.2.0    | Plugin dialogues                   |
-| `@tauri-apps/plugin-shell`     | ^2.2.0    | Plugin shell                       |
+| Package                       | Version | Usage                              |
+| ----------------------------- | ------- | ---------------------------------- |
+| `vite`                        | ^7.3.1  | Bundler                            |
+| `@vitejs/plugin-react`        | ^5.1.1  | Plugin React pour Vite             |
+| `tailwindcss`                 | ^4.1.18 | Utilitaires CSS                    |
+| `@tailwindcss/vite`           | ^4.1.18 | Plugin TailwindCSS pour Vite       |
+| `postcss`                     | ^8.5.6  | Post-processeur CSS                |
+| `eslint`                      | ^9.39.1 | Linter                             |
+| `eslint-plugin-react-hooks`   | ^7.0.1  | Règles hooks React                 |
+| `eslint-plugin-react-refresh` | ^0.4.24 | React Fast Refresh                 |
+| `globals`                     | ^16.5.0 | Globales ESLint                    |
+| `@types/react`                | ^19.2.7 | Types React (non utilisés — JS)    |
+| `@types/react-dom`            | ^19.2.3 | Types ReactDOM (non utilisés — JS) |
+| `typescript`                  | ^5.6.3  | TypeScript strict                  |
+| `typescript-eslint`           | ^8.55.0 | ESLint pour TypeScript             |
+| `@testing-library/react`      | ^16.1.0 | Tests React                        |
+| `@vitest/coverage-v8`         | ^1.6.0  | Coverage tests                     |
+| `vitest`                      | ^2.1.8  | Framework de tests                 |
+| `jsdom`                       | ^25.0.1 | Environnement DOM tests            |
+| `zustand`                     | ^5.0.2  | State management                   |
+| `@tauri-apps/api`             | ^2.2.0  | API Tauri frontend                 |
+| `@tauri-apps/plugin-fs`       | ^2.2.0  | Plugin filesystem                  |
+| `@tauri-apps/plugin-dialog`   | ^2.2.0  | Plugin dialogues                   |
+| `@tauri-apps/plugin-shell`    | ^2.2.0  | Plugin shell                       |
 
 ---
 
@@ -736,8 +743,6 @@ npm run build:tauri    # Build Tauri production
 ```
 
 ---
-
-
 
 ---
 
@@ -923,7 +928,6 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 
 ---
 
-
 ## 15. Commandes Tauri (Mises à jour)
 
 - `generate_previews_batch(images: Vec<ImageId>, config: PreviewConfig)`
@@ -941,10 +945,284 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 
 - `PreviewConfig` (Rust/TS) : champ `use_libvips: bool` activé par défaut
 
-## 18. Historique des Modifications de ce Document
+## 18. Système de Rendu
+
+> **Phase** : 4.2 (Pipeline de Rendu Image + Event Sourcing Integration)
+> **État** : 🔄 **En Révision** (Phase 4.2-1/2 persistence complétée; WASM Phase B reporté à 4.2b)
+> **Maintenance** : MAINTENANCE-PHASE-4.2-COMPLETION.md
+
+### Statut d'Implémentation
+
+| Composant                      | Phase | Status        | Notes                                           |
+| ------------------------------ | ----- | ------------- | ----------------------------------------------- |
+| Event Sourcing (append events) | 4.2-1 | ✅ Implémenté | App.tsx → CatalogService.appendEvent() → SQLite |
+| PreviewRenderer subscription   | 4.2-2 | ✅ Implémenté | Monitore editStore.editEventsPerImage changes   |
+| CSS Filters aplicaton          | 4.2-A | ✅ Complet    | CSS GPU-accelerated, <1ms latency               |
+| WASM Pixel Processing          | 4.2-B | 🔄 Standby    | Code complet, non-bloquant, reporté à 4.2b      |
+
+### Architecture
+
+Le système de rendu non-destructif combine trois couches :
+
+```
+Event Sourcing Layer
+    ↓
+CSS Filters Layer (Fast, GPU-accelerated)
+    ↓ (Optional fallback for advanced filters)
+WASM Pixel Processing Layer (CPU, per-pixel algorithms)
+    ↓
+Rendered Preview (GPU Canvas)
+```
+
+### 18.1 — Flux d'Événements de Rendu
+
+**Source de Vérité** : `AppState.event_store` (Rust SQLite)
+
+Événements persistés pour chaque image modifiée :
+
+```rust
+struct Event {
+    id: i64,
+    target_id: i64,           // image_id
+    event_type: String,       // "exposure_adjustment", "contrast_adjustment", ...
+    parameters: serde_json::Value,  // { "exposure": 0.5, ... }
+    timestamp: i64,            // Unix milliseconds
+    // ...
+}
+```
+
+**Frontend Retrieval** (Phase 4.2-B.1) :
+
+- Commande Tauri: `get_edit_events(image_id: i64) → Vec<EventDTO>`
+- Service wrapper: `CatalogService.getEditEvents(imageId) → Promise<EventDTO[]>`
+- Caching: `editStore.editEventsPerImage[imageId]` (per-image persistent cache)
+
+### 18.1.1 — Workflow Complet: Slider → Persist → Render (Phase 4.2-1/2)
+
+**Étape 1: Persistence (Phase 4.2-1)** — `src/App.tsx` EDIT branch
+
+```
+User adjust slider in DevelopView
+  ↓
+onChange → onDispatchEvent('EDIT', { exposure: 0.5 })
+  ↓
+App.tsx dispatchEvent('EDIT') handler [NEW Phase 4.2-1]:
+  1. Optimistic update local (existing)
+  2. For each selected image:
+     → Create EventDTO (imageEdited event)
+     → Call CatalogService.appendEvent(eventDto)
+     → Tauri invoke('append_event')
+     → Backend INSERT into events table
+  ↓
+Event persisted in SQLite ✅
+```
+
+**Étape 2: Subscription & Re-render (Phase 4.2-2)** — `src/components/library/PreviewRenderer.tsx`
+
+```
+editStore.editEventsPerImage[imageId] changes
+  ↓
+useEffect monitors subscription [NEW Phase 4.2-2]:
+  1. Reload events via CatalogService.getEditEvents()
+  2. Calculate filters: eventsToCSSFilters(events)
+  3. Update state: setFilters(cssFilters)
+  ↓
+Second useEffect applies to DOM:
+  → applyCSSFilters(imgRef.current, filters)
+  → imgElement.style.filter = "brightness(...) contrast(...)"
+  ↓
+Preview image updated visually in real-time ✅
+```
+
+**Persévérance Complète** : Brower refresh → Events reloaded from SQLite → Edits preserved ✅
+
+### 18.2 — CSS Filters Pipeline
+
+**Service** : `src/services/renderingService.ts`
+
+**Conversion Events → CSS** :
+
+```typescript
+function eventsToCSSFilters(events: EventDTO[]): CSSFilterState {
+  // Accumule tous les événements en un seul CSSFilterState
+  // Formules :
+  // - brightness = 1 + exposure × 0.3 [clamped 0.3-1.7]
+  // - contrast = 1 + contrast × 0.25
+  // - saturation = 1 + saturation × 0.3
+  // Retourne : { exposure, contrast, saturation, ... }
+}
+
+function filtersToCSS(filters: CSSFilterState): string {
+  // Génère chaîne CSS : "brightness(1.15) contrast(1.2) saturate(0.9)"
+  return `brightness(${filters.exposure}) contrast(${filters.contrast}) ...`;
+}
+```
+
+**Application au Rendu** :
+
+```typescript
+// Dans PreviewRenderer.tsx
+const cssFilters = eventsToCSSFilters(imageEvents);
+const cssString = filtersToCSS(cssFilters);
+imgElement.style.filter = cssString;
+```
+
+**Performance** : <1ms latency, GPU-accelerated par navigateur
+
+### 18.3 — WASM Pixel Processing (Fallback Avancé)
+
+**Crate WASM** : `luminafast-wasm/` (zéro dépendances desktop)
+
+**Pixel Filters** (9 algorithmes) :
+
+```rust
+struct PixelFilters {
+    exposure: f32,      // Luminosité per-pixel (multiplicateur 0.15)
+    contrast: f32,      // Centré grey(128)
+    saturation: f32,    // Luma-based shift
+    highlights: f32,    // Ciblage high-luma (>180)
+    shadows: f32,       // Ciblage low-luma (<75)
+    clarity: f32,       // Local contrast
+    vibrance: f32,      // Selective saturation boost
+    color_temp: f32,    // Kelvin-based (2000-10000K RGB shift)
+    tint: f32,          // Green-magenta shift
+}
+
+impl PixelFilters {
+    pub fn apply_filters(&self, pixels: &mut [u8], width: u32, height: u32) {
+        // For each pixel [R, G, B, A]:
+        // - apply_exposure() → brightness_factor = 1 + exposure × 0.15
+        // - apply_contrast() → (pixel - 128) × factor + 128
+        // - apply_saturation() → luma_aware shift
+        // - ... (7 autres)
+    }
+}
+```
+
+**Wrapper TypeScript** : `src/services/wasmRenderingService.ts`
+
+**API** :
+
+```typescript
+async function renderWithWasm(
+  canvas: HTMLCanvasElement,
+  imageUrl: string,
+  filters: PixelFilterState,
+  width: number,
+  height: number,
+): Promise<void> {
+  // 1. Load image → Canvas
+  // 2. const pixels = ctx.getImageData(...).data
+  // 3. new PixelFiltersWasm(...).apply_filters(pixels, width, height)
+  // 4. ctx.putImageData(new ImageData(pixels, ...))
+  // 5. Display result
+}
+```
+
+**Compilation** :
+
+```bash
+cd luminafast-wasm
+wasm-pack build --target web --release
+# Génère : src/wasm/luminafast_wasm.js + .wasm + .d.ts
+```
+
+**Fallback Strategy** :
+
+- Si WASM disponible → `renderWithWasm()`
+- Sinon → CSS Filters (Phase A fallback)
+- Pas d'erreur utilisateur (graceful degradation)
+
+### 18.4 — Intégration PreviewRenderer
+
+**Composant** : `src/components/library/PreviewRenderer.tsx`
+
+**Lifecycle** :
+
+```javascript
+// 1. Mount
+useEffect(async () => {
+  const imageEvents = await CatalogService.getEditEvents(imageId);
+  setEditEventsForImage(imageId, imageEvents);          // Cache in EditStore
+  const cssFilters = eventsToCSSFilters(imageEvents);
+
+  // 2. Render with CSS (Phase A)
+  setFilters(cssFilters);
+
+  // 3. Optional: Render with WASM if available (Phase B fallback)
+  if (hasWasmSupport() && !useWasm) {
+    await renderWithWasm(canvasRef.current, imageUrl, ...);
+  }
+
+  // 4. Cleanup
+  return () => clearEditEventsForImage(imageId);
+}, [imageId, setEditEventsForImage, clearEditEventsForImage]);
+```
+
+**Props & State** :
+
+```typescript
+interface PreviewRendererProps {
+  imageId: number;
+  width: number;
+  height: number;
+  useWasm?: boolean; // Toggle WASM vs CSS filters
+}
+
+state: {
+  filters: CSSFilterState;
+  isLoading: boolean;
+  error: Error | null;
+}
+```
+
+### 18.5 — EditStore Caching (Phase 4.2-B.2)
+
+**Store** : `src/stores/editStore.ts` (Zustand)
+
+**State** :
+
+```typescript
+interface EditStore {
+  // Per-image event caching
+  editEventsPerImage: Record<number, EventDTO[]>;
+}
+```
+
+**Actions** :
+
+```typescript
+setEditEventsForImage(imageId: number, events: EventDTO[])     // Cache load
+clearEditEventsForImage(imageId: number)                        // Cleanup
+getAppliedEdits(imageId: number): EventDTO[]                   // Retrieve
+```
+
+**Lifecycle Benefits** :
+
+- ✅ Avoid repeated Tauri IPC calls (one per image per session)
+- ✅ Support component composition (multiple images visible simultaneously)
+- ✅ Automatic cleanup on unmount (no memory leaks)
+
+### 18.6 — Tests & Validation
+
+**TypeScript Tests** :
+
+- `renderingService.test.ts` : 25/25 ✅ (CSS filters conversion)
+- `wasmRenderingService.test.ts` : 18/18 ✅ (WASM wrapper + fallback)
+
+**Rust Tests** :
+
+- `image_processing.test.rs` : 5/5 ✅ (pixel algorithms)
+
+**Non-Régression** : Phases 1-4.1 à 100% ✅
+
+---
+
+## 19. Historique des Modifications de ce Document
 
 | Date       | Phase               | Modification                                                       | Raison                                         |
 | ---------- | ------------------- | ------------------------------------------------------------------ | ---------------------------------------------- |
+| 2026-02-27 | 4.2-B.2 Conformity  | Ajout section "Système de Rendu" (Event Sourcing + CSS + WASM)     | Documentation Phase 4.2 pipeline complet       |
 | 2026-02-23 | Maintenance SQL     | Refactorisation `get_folder_images()` pour sécurité et performance | Élimination conversions u32→String inutiles    |
 | 2026-02-23 | Maintenance Qualité | Résolution 4 notes bloquantes Review Copilot (PR #20)              | Error handling, volume_name, SQL LIKE, Zustand |
 | 2026-02-13 | 1.4                 | Ajout section Service Filesystem complète                          | Implémentation Phase 1.4 terminée              |
@@ -1439,14 +1717,14 @@ Moteur Event Sourcing côté backend pour traçabilité complète des modificati
 
 ### 19.1 — Composants
 
-| Composant | Fichier | Statut |
-|-----------|---------|--------|
-| Service Rust | `src-tauri/src/services/event_sourcing.rs` | ✅ 150 LOC |
-| Commandes Tauri | `src-tauri/src/commands/event_sourcing.rs` | ✅ 60 LOC |
-| Types Rust | `src-tauri/src/models/event.rs` | ✅ 242 LOC |
-| Migration SQL | `src-tauri/migrations/005_event_sourcing.sql` | ✅ |
-| Service TS | `src/services/eventService.ts` | ✅ 80 LOC |
-| Tests TS | `src/services/__tests__/eventService.test.ts` | ✅ 23 tests |
+| Composant       | Fichier                                       | Statut      |
+| --------------- | --------------------------------------------- | ----------- |
+| Service Rust    | `src-tauri/src/services/event_sourcing.rs`    | ✅ 150 LOC  |
+| Commandes Tauri | `src-tauri/src/commands/event_sourcing.rs`    | ✅ 60 LOC   |
+| Types Rust      | `src-tauri/src/models/event.rs`               | ✅ 242 LOC  |
+| Migration SQL   | `src-tauri/migrations/005_event_sourcing.sql` | ✅          |
+| Service TS      | `src/services/eventService.ts`                | ✅ 80 LOC   |
+| Tests TS        | `src/services/__tests__/eventService.test.ts` | ✅ 23 tests |
 
 ### 19.2 — Tests
 
@@ -1462,7 +1740,7 @@ Moteur Event Sourcing côté backend pour traçabilité complète des modificati
 Status: COMPLETED (Étapes 1-3 ✅)
 
 - Event Store Rust service (150 LOC)
-- Tauri commands: append_event, get_events, replay_events  
+- Tauri commands: append_event, get_events, replay_events
 - TypeScript eventService with full test coverage
 - Migration 005 + tests (173 Rust + 394 TypeScript)
 - Non-regression: 0 failures on Phases 1-3

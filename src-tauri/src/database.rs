@@ -104,6 +104,9 @@ impl Database {
         // Run event sourcing migration
         self.run_migration("005_event_sourcing")?;
 
+        // Run snapshots migration
+        self.run_migration("006_snapshots")?;
+
         Ok(())
     }
 
@@ -149,6 +152,7 @@ impl Database {
                 include_str!("../migrations/004_add_folder_online_status.sql")
             }
             "005_event_sourcing" => include_str!("../migrations/005_event_sourcing.sql"),
+            "006_snapshots" => include_str!("../migrations/006_snapshots.sql"),
             _ => {
                 return Err(DatabaseError::MigrationFailed(format!(
                     "Unknown migration version: {}",
@@ -335,6 +339,8 @@ mod tests {
         assert!(tables.contains(&"previews".to_string()));
         assert!(tables.contains(&"preview_cache_metadata".to_string()));
         assert!(tables.contains(&"preview_generation_log".to_string()));
+        // Verify table from 006_snapshots
+        assert!(tables.contains(&"edit_snapshots".to_string()));
 
         Ok(())
     }
@@ -350,13 +356,14 @@ mod tests {
         db.initialize()?;
         db.initialize()?;
 
-        // 5 migrations: 001_initial, 002_ingestion_sessions, 003_previews, 004_add_folder_online_status, 005_event_sourcing
+        // 6 migrations: 001_initial, 002_ingestion_sessions, 003_previews,
+        // 004_add_folder_online_status, 005_event_sourcing, 006_snapshots
         let migration_count: i64 = db
             .connection()
             .prepare("SELECT COUNT(*) FROM migrations")?
             .query_row([], |row| row.get(0))?;
 
-        assert_eq!(migration_count, 5);
+        assert_eq!(migration_count, 6);
 
         Ok(())
     }

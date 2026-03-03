@@ -376,7 +376,7 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 | `ImageCard`           | `library/ImageCard.tsx`           | —      | Carte image avec métadonnées, sélection                                                     |
 | `DevelopView`         | `develop/DevelopView.tsx`         | 38     | Image + mode avant/après                                                                    |
 | `DevelopSliders`      | `develop/DevelopSliders.tsx`      | 37     | Sliders de réglage                                                                          |
-| `HistoryPanel`        | `develop/HistoryPanel.tsx`        | 25     | Historique des events                                                                       |
+| `HistoryPanel`        | `develop/HistoryPanel.tsx`        | —      | Timeline d'événements + snapshots (create/restore/delete)                                   |
 | `Histogram`           | `metadata/Histogram.tsx`          | 18     | Histogramme simulé                                                                          |
 | `ExifGrid`            | `metadata/ExifGrid.tsx`           | 17     | Grille EXIF compacte                                                                        |
 | `MetadataPanel`       | `metadata/MetadataPanel.tsx`      | 76     | Fiche technique + tags                                                                      |
@@ -388,7 +388,7 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 | `catalogStore`    | `stores/catalogStore.ts`    | images[] (from SQLite), activeImageId                                    | setImages, addImages, getImages                                                                                   |
 | `uiStore`         | `stores/uiStore.ts`         | **selection (Set)**, **filterText**, activeView, sidebars, thumbnailSize | **toggleSelection, setSingleSelection, clearSelection, setFilterText**, setActiveView, toggleLeftSidebar          |
 | `collectionStore` | `stores/collectionStore.ts` | collections[], activeCollectionId, activeCollectionImageIds              | loadCollections, createCollection, deleteCollection, renameCollection, setActiveCollection, clearActiveCollection |
-| `editStore`       | `stores/editStore.ts`       | eventLog[], currentEdits, historyIndex                                   | addEvent, setCurrentEdits, updateEdit, undo/redo (préparés)                                                       |
+| `editStore`       | `stores/editStore.ts`       | eventLog[], currentEdits, historyIndex, editEventsPerImage, snapshots    | addEvent, setEditEventsForImage, restoreToEvent, setSnapshots, addSnapshot, deleteSnapshotLocal                   |
 | `systemStore`     | `stores/systemStore.ts`     | logs[], importState, appReady                                            | addLog, setImportState, setAppReady                                                                               |
 
 **Architecture** (Maintenance Phase 3.1) :
@@ -637,7 +637,7 @@ export interface CatalogEvent {
 | Histogramme                        | 🟡 Mock           | Non (Math.sin)                                                                    | 5.1         |
 | EXIF display                       | ✅ Fonctionnel    | Oui (SQLite LEFT JOIN)                                                            | —           |
 | Tags/mots-clés                     | 🟡 Mock           | Non (état local)                                                                  | 5.2         |
-| Historique d'events                | 🟡 Partiel        | Non (CatalogEvent typé)                                                           | 4.3         |
+| Historique d'events                | ✅ Fonctionnel    | Oui (Event Sourcing + snapshots SQLite via Tauri commands)                        | 4.3         |
 | Avant/Après                        | 🟡 Mock           | Non (CSS filters)                                                                 | 4.4         |
 | Filmstrip                          | 🟡 Partiel        | Partiel (images SQLite)                                                           | 3.1         |
 | Batch operations                   | ⬜ Non implémenté | Non (boutons disabled)                                                            | 3.2         |
@@ -1349,6 +1349,7 @@ getAppliedEdits(imageId: number): EventDTO[]                   // Retrieve
 
 | Date       | Phase               | Modification                                                       | Raison                                         |
 | ---------- | ------------------- | ------------------------------------------------------------------ | ---------------------------------------------- |
+| 2026-03-03 | 4.3                 | Historique interactif + snapshots nommés (create/restore/delete)   | Livraison complète de la Phase 4.3             |
 | 2026-02-27 | 4.2-B.2 Conformity  | Ajout section "Système de Rendu" (Event Sourcing + CSS + WASM)     | Documentation Phase 4.2 pipeline complet       |
 | 2026-02-23 | Maintenance SQL     | Refactorisation `get_folder_images()` pour sécurité et performance | Élimination conversions u32→String inutiles    |
 | 2026-02-23 | Maintenance Qualité | Résolution 4 notes bloquantes Review Copilot (PR #20)              | Error handling, volume_name, SQL LIKE, Zustand |

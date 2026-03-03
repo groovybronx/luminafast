@@ -49,7 +49,7 @@
 | Maintenance | —          | Phase B: Preview Format Selection - Parallel Loading (3-format Promise.all)                     | ✅ Complétée  | 2026-03-03 | Copilot |
 | Maintenance | —          | Phase C: Preview Format Selection - View-Specific Usage (DevelopView.standard 1440px)           | ✅ Complétée  | 2026-03-03 | Copilot |
 | 4           | 4.3        | Historique & Snapshots UI                                                                       | ✅ Complétée  | 2026-03-03 | Copilot |
-| 4           | 4.4        | Comparaison Avant/Après                                                                         | ⬜ En attente | —          | —       |
+| 4           | 4.4        | Comparaison Avant/Après                                                                         | 🔄 En cours  | 2026-03-04 | Copilot |
 | 5           | 5.1        | Panneau EXIF Connecté                                                                           | ⬜ En attente | —          | —       |
 | 5           | 5.2        | Système de Tags Hiérarchique                                                                    | ⬜ En attente | —          | —       |
 | 5           | 5.3        | Rating & Flagging Persistants                                                                   | ⬜ En attente | —          | —       |
@@ -81,9 +81,18 @@
 
 ---
 
+## Phase Actuelle
+
+> **Phase 4.4** : Comparaison Avant/Après (🔄 **En cours**)
+> 
+> Brief : `Docs/briefs/PHASE-4.4.md`
+> Branche : `phase/4.4-comparaison-avant-apres`
+
+---
+
 ## Prochaine Phase
 
-> **Phase 4.4** : Comparaison Avant/Après.
+> **Phase 4.5** : Panneau EXIF Connecté (Phase 5.1).
 
 ## Historique des Sous-Phases Complétées
 

@@ -6,7 +6,7 @@ import type { CatalogImage } from '@/types';
 const mockImage: CatalogImage = {
   id: 1,
   filename: 'test.jpg',
-  url: '/mock/test.jpg',
+  urls: { thumbnail: '/mock/thumb.jpg', standard: '/mock/test.jpg', oneToOne: undefined },
   hash: 'mockhash',
   capturedAt: '',
   exif: { iso: 100, aperture: 2.8, shutterSpeed: '1/125', lens: undefined, cameraModel: undefined },

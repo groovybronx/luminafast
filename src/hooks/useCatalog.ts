@@ -70,29 +70,41 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
         // Convert ImageDTO to CatalogImage format expected by store
         const catalogImages = await Promise.all(
           images.map(async (img: ImageDTO) => {
-            // Try to get thumbnail preview URL, fallback to empty string
-            let thumbnailUrl = '';
-            try {
-              const preview = await previewService.getPreviewPath(
-                img.blake3_hash,
-                PreviewType.Thumbnail,
+            // Phase B: Load 3 preview formats in PARALLEL
+            const [thumbnailResult, standardResult, oneToOneResult] = await Promise.all([
+              // Thumbnail (required, for backward compat fallback)
+              previewService
+                .getPreviewPath(img.blake3_hash, PreviewType.Thumbnail)
+                .catch(() => null),
+              // Standard (for DevelopView, Phase C)
+              previewService
+                .getPreviewPath(img.blake3_hash, PreviewType.Standard)
+                .catch(() => null),
+              // OneToOne (optional, for zoom 1:1 Phase D+)
+              previewService
+                .getPreviewPath(img.blake3_hash, PreviewType.OneToOne)
+                .catch(() => null),
+            ]);
+
+            // Convert file paths to asset:// URLs (Tauri v2)
+            const urls = {
+              thumbnail: thumbnailResult ? convertFileSrc(thumbnailResult) : '',
+              standard: standardResult ? convertFileSrc(standardResult) : '',
+              oneToOne: oneToOneResult ? convertFileSrc(oneToOneResult) : undefined,
+            };
+
+            // Log download progress in DEV mode
+            if (import.meta.env.DEV && (urls.thumbnail || urls.standard)) {
+              console.warn(
+                `[useCatalog] Loaded previews for ${img.filename}: thumbnail=${!!urls.thumbnail}, standard=${!!urls.standard}, oneToOne=${!!urls.oneToOne}`,
               );
-              if (preview && typeof preview === 'string') {
-                // Convert file path to URL that navigator can load (asset:// URL in Tauri v2)
-                const assetUrl = convertFileSrc(preview);
-                //console.warn(`[useCatalog] Preview URL for ${img.filename}: ${assetUrl}`);
-                thumbnailUrl = assetUrl;
-              }
-            } catch (error) {
-              // Preview not available yet, will be generated during ingestion
-              console.warn(`Thumbnail not available for ${img.filename}:`, error);
             }
 
             return {
               id: img.id,
               hash: img.blake3_hash,
               filename: img.filename,
-              url: thumbnailUrl, // Use real thumbnail URL or empty
+              urls, // 3-format preview pyramid
               capturedAt: img.captured_at || '',
               exif: {
                 iso: img.iso,
@@ -161,28 +173,30 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
       // Convert to catalog format
       const catalogImages = await Promise.all(
         images.map(async (img: ImageDTO) => {
-          // Try to get thumbnail preview URL, fallback to empty string
-          let thumbnailUrl = '';
-          try {
-            const preview = await previewService.getPreviewPath(
-              img.blake3_hash,
-              PreviewType.Thumbnail,
+          // Phase B: Load 3 preview formats in PARALLEL (same as refreshCatalog)
+          const [thumbnailResult, standardResult, oneToOneResult] = await Promise.all([
+            previewService.getPreviewPath(img.blake3_hash, PreviewType.Thumbnail).catch(() => null),
+            previewService.getPreviewPath(img.blake3_hash, PreviewType.Standard).catch(() => null),
+            previewService.getPreviewPath(img.blake3_hash, PreviewType.OneToOne).catch(() => null),
+          ]);
+
+          const urls = {
+            thumbnail: thumbnailResult ? convertFileSrc(thumbnailResult) : '',
+            standard: standardResult ? convertFileSrc(standardResult) : '',
+            oneToOne: oneToOneResult ? convertFileSrc(oneToOneResult) : undefined,
+          };
+
+          if (import.meta.env.DEV && (urls.thumbnail || urls.standard)) {
+            console.warn(
+              `[useCatalog] Synced previews for ${img.filename}: thumbnail=${!!urls.thumbnail}, standard=${!!urls.standard}`,
             );
-            if (preview && typeof preview === 'string') {
-              const assetUrl = convertFileSrc(preview);
-              //console.warn(`[useCatalog] Sync preview URL for ${img.filename}: ${assetUrl}`);
-              thumbnailUrl = assetUrl;
-            }
-          } catch (error) {
-            // Preview not available yet, will be generated during ingestion
-            console.warn(`Thumbnail sync error for ${img.filename}:`, error);
           }
 
           return {
             id: img.id,
             hash: img.blake3_hash,
             filename: img.filename,
-            url: thumbnailUrl, // Use real thumbnail URL or empty
+            urls, // 3-format preview pyramid
             capturedAt: img.captured_at || '',
             exif: {
               iso: img.iso,

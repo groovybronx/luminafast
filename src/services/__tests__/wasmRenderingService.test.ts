@@ -11,6 +11,7 @@ import {
   supportsWebAssembly,
   resetWasmModule,
   measureWasmLatency,
+  normalizeFiltersForWasm,
 } from '@/services/wasmRenderingService';
 import type { PixelFilterState } from '@/types/rendering';
 
@@ -257,6 +258,178 @@ describe('wasmRenderingService', () => {
       }
 
       expect(true).toBe(true);
+    });
+  });
+
+  describe('normalizeFiltersForWasm', () => {
+    it('should normalize exposure from UI range to WASM range', () => {
+      const filters: PixelFilterState = {
+        ...DEFAULT_TEST_FILTERS,
+        exposure: 100, // UI max
+      };
+
+      const normalized = normalizeFiltersForWasm(filters);
+      expect(normalized.exposure).toBe(100 / 50); // Should be 2.0
+      expect(normalized.exposure).toBe(2.0);
+    });
+
+    it('should normalize exposure negative values', () => {
+      const filters: PixelFilterState = {
+        ...DEFAULT_TEST_FILTERS,
+        exposure: -100, // UI min
+      };
+
+      const normalized = normalizeFiltersForWasm(filters);
+      expect(normalized.exposure).toBe(-100 / 50); // Should be -2.0
+      expect(normalized.exposure).toBe(-2.0);
+    });
+
+    it('should normalize contrast correctly', () => {
+      const filters: PixelFilterState = {
+        ...DEFAULT_TEST_FILTERS,
+        contrast: 50,
+      };
+
+      const normalized = normalizeFiltersForWasm(filters);
+      expect(normalized.contrast).toBe(50 / 50); // Should be 1.0
+      expect(normalized.contrast).toBe(1.0);
+    });
+
+    it('should normalize saturation with offset (1 = normal)', () => {
+      const filters: PixelFilterState = {
+        ...DEFAULT_TEST_FILTERS,
+        saturation: 0, // UI default (no change)
+      };
+
+      const normalized = normalizeFiltersForWasm(filters);
+      expect(normalized.saturation).toBe(1 + 0 / 100); // Should be 1.0 (no change)
+      expect(normalized.saturation).toBe(1.0);
+    });
+
+    it('should normalize saturation positive (more saturated)', () => {
+      const filters: PixelFilterState = {
+        ...DEFAULT_TEST_FILTERS,
+        saturation: 100, // UI max (more saturated)
+      };
+
+      const normalized = normalizeFiltersForWasm(filters);
+      expect(normalized.saturation).toBe(1 + 100 / 100); // Should be 2.0
+      expect(normalized.saturation).toBe(2.0);
+    });
+
+    it('should normalize saturation negative (less saturated)', () => {
+      const filters: PixelFilterState = {
+        ...DEFAULT_TEST_FILTERS,
+        saturation: -100, // UI min (less saturated/B&W)
+      };
+
+      const normalized = normalizeFiltersForWasm(filters);
+      expect(normalized.saturation).toBe(1 + -100 / 100); // Should be 0.0
+      expect(normalized.saturation).toBe(0.0);
+    });
+
+    it('should normalize highlights to [-1, +1]', () => {
+      const filters: PixelFilterState = {
+        ...DEFAULT_TEST_FILTERS,
+        highlights: 100, // UI max
+      };
+
+      const normalized = normalizeFiltersForWasm(filters);
+      expect(normalized.highlights).toBe(100 / 100); // Should be 1.0
+      expect(normalized.highlights).toBe(1.0);
+    });
+
+    it('should normalize shadows to [-1, +1]', () => {
+      const filters: PixelFilterState = {
+        ...DEFAULT_TEST_FILTERS,
+        shadows: -100, // UI min
+      };
+
+      const normalized = normalizeFiltersForWasm(filters);
+      expect(normalized.shadows).toBe(-100 / 100); // Should be -1.0
+      expect(normalized.shadows).toBe(-1.0);
+    });
+
+    it('should normalize tint to [-50, +50]', () => {
+      const filters: PixelFilterState = {
+        ...DEFAULT_TEST_FILTERS,
+        tint: 100, // UI max
+      };
+
+      const normalized = normalizeFiltersForWasm(filters);
+      expect(normalized.tint).toBe(100 / 2); // Should be 50.0
+      expect(normalized.tint).toBe(50.0);
+    });
+
+    it('should normalize tint negative to [-50, +50]', () => {
+      const filters: PixelFilterState = {
+        ...DEFAULT_TEST_FILTERS,
+        tint: -100, // UI min
+      };
+
+      const normalized = normalizeFiltersForWasm(filters);
+      expect(normalized.tint).toBe(-100 / 2); // Should be -50.0
+      expect(normalized.tint).toBe(-50.0);
+    });
+
+    it('should preserve colorTemp (no normalization)', () => {
+      const filters: PixelFilterState = {
+        ...DEFAULT_TEST_FILTERS,
+        colorTemp: 6500,
+      };
+
+      const normalized = normalizeFiltersForWasm(filters);
+      expect(normalized.colorTemp).toBe(6500);
+    });
+
+    it('should normalize all filters together', () => {
+      const filters: PixelFilterState = {
+        exposure: 50,
+        contrast: -50,
+        saturation: 50,
+        highlights: 50,
+        shadows: -50,
+        clarity: 50,
+        vibrance: 50,
+        colorTemp: 7000,
+        tint: -50,
+      };
+
+      const normalized = normalizeFiltersForWasm(filters);
+
+      expect(normalized.exposure).toBe(50 / 50); // 1.0
+      expect(normalized.contrast).toBe(-50 / 50); // -1.0
+      expect(normalized.saturation).toBe(1 + 50 / 100); // 1.5
+      expect(normalized.highlights).toBe(50 / 100); // 0.5
+      expect(normalized.shadows).toBe(-50 / 100); // -0.5
+      expect(normalized.clarity).toBe(50 / 100); // 0.5
+      expect(normalized.vibrance).toBe(50 / 100); // 0.5
+      expect(normalized.colorTemp).toBe(7000);
+      expect(normalized.tint).toBe(-50 / 2); // -25.0
+    });
+
+    it('should handle default values with optional chaining', () => {
+      const filters: PixelFilterState = {
+        exposure: 0,
+        contrast: 0,
+        saturation: 0,
+        highlights: undefined as unknown as number, // Pas possible en TS mais test robustesse
+        shadows: undefined as unknown as number,
+        clarity: undefined as unknown as number,
+        vibrance: undefined as unknown as number,
+        colorTemp: 5500,
+        tint: undefined as unknown as number,
+      };
+
+      // normalizeFiltersForWasm utilise ?? 0 donc doit gérer undefined/null
+      const normalized = normalizeFiltersForWasm(filters);
+
+      // Devrait utiliser les valeurs par défaut (0)
+      expect(normalized.highlights).toBe(0);
+      expect(normalized.shadows).toBe(0);
+      expect(normalized.clarity).toBe(0);
+      expect(normalized.vibrance).toBe(0);
+      expect(normalized.tint).toBe(0);
     });
   });
 });

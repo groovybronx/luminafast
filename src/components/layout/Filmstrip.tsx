@@ -36,9 +36,9 @@ export const Filmstrip = ({
           <div
             key={img.id}
             onClick={(e) => onToggleSelection(img.id, e)}
-            className={`h-20 aspect-[3/2] bg-zinc-800 shrink-0 border-2 transition-all relative rounded-md overflow-hidden ${selection.includes(img.id) ? 'border-blue-500 scale-110 z-10 shadow-2xl' : 'border-transparent opacity-40 hover:opacity-80'}`}
+            className={`h-20 aspect-3/2 bg-zinc-800 shrink-0 border-2 transition-all relative rounded-md overflow-hidden ${selection.includes(img.id) ? 'border-blue-500 scale-110 z-10 shadow-2xl' : 'border-transparent opacity-40 hover:opacity-80'}`}
           >
-            <img src={img.url} className="w-full h-full object-cover" alt="" />
+            <img src={img.urls.thumbnail} className="w-full h-full object-cover" alt="" />
           </div>
         ))}
       </div>

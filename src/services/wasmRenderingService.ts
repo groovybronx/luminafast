@@ -94,10 +94,48 @@ export function hasWasmSupport(): boolean {
 }
 
 /**
+ * Normalise les paramètres de filtres UI vers les plages attendues par WASM
+ *
+ * Les sliders UI utilisent une échelle -100 à +100, mais WASM utilise des plages différentes:
+ * - exposure: -2 à +2 (UI: -100..+100, diviser par 50)
+ * - contrast: -1 à +3 (UI: -100..+100, diviser par 50)
+ * - saturation: 0 à +2 (UI: -100..+100, voir 1 comme normal, donc 1 + input/100)
+ * - highlights: -1 à +1 (UI: -100..+100, diviser par 100)
+ * - shadows: -1 à +1 (UI: -100..+100, diviser par 100)
+ * - clarity: [0..1] (UI: -100..+100, diviser par 100)
+ * - vibrance: [0..1] (UI: -100..+100, diviser par 100)
+ * - colorTemp: 2000-10000K (UI: K value direct, pas de conversion)
+ * - tint: -50 à +50 (UI: -100..+100, diviser par 2)
+ *
+ * @param filters État des filtres UI
+ * @returns État des filtres normalisés pour WASM
+ */
+export function normalizeFiltersForWasm(filters: PixelFilterState): PixelFilterState {
+  return {
+    // CSS filters
+    exposure: filters.exposure / 50, // -100..+100 → -2..+2
+    contrast: filters.contrast / 50, // -100..+100 → -2..+2 (WASM clamps to -1..+3)
+    saturation: 1 + filters.saturation / 100, // -100..+100 → 0..+2
+
+    // Pixel advanced filters
+    highlights: (filters.highlights ?? 0) / 100, // -100..+100 → -1..+1
+    shadows: (filters.shadows ?? 0) / 100, // -100..+100 → -1..+1
+    clarity: (filters.clarity ?? 0) / 100, // -100..+100 → 0..+1
+    vibrance: (filters.vibrance ?? 0) / 100, // -100..+100 → 0..+1
+
+    // Color temp (no conversion, Kelvin scale)
+    colorTemp: filters.colorTemp ?? 5500,
+
+    // Tint
+    tint: (filters.tint ?? 0) / 2, // -100..+100 → -50..+50
+  };
+}
+
+/**
  * Rendu avec WASM (plus performant)
  * @param canvas - Canvas HTML pour rendu
  * @param imageUrl - URL de l'image source
- * @param filters - États des filtres pixel
+ * @param filters - États des filtres pixel (échelle UI: -100 à +100)
  * @param width - Largeur en pixels
  * @param height - Hauteur en pixels
  */
@@ -148,17 +186,20 @@ export async function renderWithWasm(
             throw new Error('WASM module unavailable');
           }
 
-          // Créer instance PixelFiltersWasm avec tous les paramètres
+          // Normaliser les filtres UI vers les plages attendues par WASM
+          const normalizedFilters = normalizeFiltersForWasm(_filters);
+
+          // Créer instance PixelFiltersWasm avec tous les paramètres normalisés
           const filters = new wasmModule.PixelFiltersWasm(
-            _filters.exposure,
-            _filters.contrast,
-            _filters.saturation,
-            _filters.highlights ?? 0,
-            _filters.shadows ?? 0,
-            _filters.clarity ?? 0,
-            _filters.vibrance ?? 0,
-            _filters.colorTemp ?? 5500,
-            _filters.tint ?? 0,
+            normalizedFilters.exposure,
+            normalizedFilters.contrast,
+            normalizedFilters.saturation,
+            normalizedFilters.highlights ?? 0,
+            normalizedFilters.shadows ?? 0,
+            normalizedFilters.clarity ?? 0,
+            normalizedFilters.vibrance ?? 0,
+            normalizedFilters.colorTemp ?? 5500,
+            normalizedFilters.tint ?? 0,
           );
 
           // Appeler apply_filters() sur l'instance

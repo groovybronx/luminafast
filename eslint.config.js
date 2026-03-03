@@ -13,6 +13,8 @@ export default defineConfig([
     'build',
     'node_modules',
     'src-tauri/target',
+    'luminafast-wasm/pkg',
+    'luminafast-wasm/target',
     'coverage',
     '*.local.ts',
     '*.config.local.ts',

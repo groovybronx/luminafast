@@ -86,7 +86,7 @@ const mockImages: CatalogImage[] = [
     id: 1,
     hash: 'hash1',
     filename: 'IMG_001.JPG',
-    url: 'file://img1.jpg',
+    urls: { thumbnail: 'file://img1-thumb.jpg', standard: 'file://img1.jpg', oneToOne: undefined },
     capturedAt: '2023-01-01',
     exif: { iso: 100, aperture: 2.8, shutterSpeed: '1/100', lens: '50mm', cameraModel: 'Sony' },
     state: {
@@ -103,7 +103,7 @@ const mockImages: CatalogImage[] = [
     id: 2,
     hash: 'hash2',
     filename: 'IMG_002.JPG',
-    url: 'file://img2.jpg',
+    urls: { thumbnail: 'file://img2-thumb.jpg', standard: 'file://img2.jpg', oneToOne: undefined },
     capturedAt: '2023-01-02',
     exif: { iso: 200, aperture: 4.0, shutterSpeed: '1/200', lens: '85mm', cameraModel: 'Sony' },
     state: {

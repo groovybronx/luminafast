@@ -27,7 +27,7 @@ describe('GridView Drag & Drop (Source)', () => {
     id: 1,
     filename: 'IMG_0001.CR3',
     hash: 'abc123',
-    url: 'blob:image',
+    urls: { thumbnail: 'blob:thumb', standard: 'blob:image', oneToOne: undefined },
     capturedAt: '2026-02-24T10:00:00Z',
     sizeOnDisk: '1.5 MB',
     state: {

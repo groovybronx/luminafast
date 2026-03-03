@@ -23,7 +23,11 @@ describe('Type Definitions', () => {
         id: 1,
         hash: 'b3-af92-001',
         filename: 'IMG_001.CR3',
-        url: 'https://example.com/img.jpg',
+        urls: {
+          thumbnail: 'https://example.com/img_thumb.jpg',
+          standard: 'https://example.com/img.jpg',
+          oneToOne: 'https://example.com/img_native.jpg',
+        },
         capturedAt: '2026-02-11T10:00:00Z',
         exif: {
           iso: 400,
@@ -61,7 +65,11 @@ describe('Type Definitions', () => {
         id: 1,
         hash: 'b3-af92-001',
         filename: 'IMG_001.CR3',
-        url: 'https://example.com/img.jpg',
+        urls: {
+          thumbnail: 'https://example.com/img_thumb.jpg',
+          standard: 'https://example.com/img.jpg',
+          oneToOne: 'https://example.com/img_native.jpg',
+        },
         capturedAt: '2026-02-11T10:00:00Z',
         exif: {
           iso: 100,
@@ -391,7 +399,11 @@ describe('Type Definitions', () => {
           id: 1,
           hash: 'b3-af92-001',
           filename: 'PORTRAIT_001.CR3',
-          url: 'https://example.com/portrait.jpg',
+          urls: {
+            thumbnail: 'https://example.com/portrait_thumb.jpg',
+            standard: 'https://example.com/portrait.jpg',
+            oneToOne: 'https://example.com/portrait_native.jpg',
+          },
           capturedAt: '2026-02-11T15:30:00Z',
           exif: {
             iso: 200,

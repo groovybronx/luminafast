@@ -56,7 +56,11 @@ export const generateImages = (count: number, startId = 0): CatalogImage[] => {
       id: id,
       hash: `b3-${id.toString(16).padStart(12, '0')}-af92`,
       filename: `RAW_PRO_${2000 + id}.RAF`,
-      url: `https://picsum.photos/seed/${id}/800/533`,
+      urls: {
+        thumbnail: `https://picsum.photos/seed/${id}/240/160`,
+        standard: `https://picsum.photos/seed/${id}/1440/960`,
+        oneToOne: undefined,
+      },
       capturedAt: new Date(2025, 1, Math.max(1, id % 28)).toISOString(),
       exif: {
         iso: ISO_VALUES[id % ISO_VALUES.length] ?? 160,

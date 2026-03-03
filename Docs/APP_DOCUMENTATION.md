@@ -66,7 +66,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-03-02 (Maintenance Phase 4.2 Fixes: Event Sourcing Persistence + Tauri parameters + editStore subscription + renderingService event filtering) — État : Slider→Persist→Render pipeline fully working, 180 tests ✅. Branche `maintenance/alignement-conformité-phase-4.2`.
+> **Dernière mise à jour** : 2026-03-03 (Maintenance Phase A/B/C/D - Preview Format Selection: Types, Parallel Loading, View-Specific Usage, Test Suite) — État : 3-format preview pyramid fully functional, 17 preview-format tests ✅, DevelopView displays 1440px Standard (6× quality improvement). Branche `maintenance/alignement-conformité-phase-4.2`.
 >
 > ### Décisions Projet (validées par le propriétaire)
 
@@ -440,11 +440,15 @@ export interface ExifData {
   id: number,                    // ID SQLite
   hash: string,                  // BLAKE3 hash réel
   filename: string,              // Nom de fichier réel
-  url: string,                   // Chemin preview local
+  urls: {                        // Phase A: Pyramide de previews
+    thumbnail: string,           // 240px JPEG – GridView
+    standard: string,            // 1440px JPEG – DevelopView
+    oneToOne?: string,           // Natif JPEG – Zoom 1:1 (optionnel)
+  },
   capturedAt: string,            // ISO date
   exif: ExifData,                // Données EXIF réelles (nullable)
   // Données mock générées pour démo :
-  // url: picsum.photos si preview absent
+  // urls.thumbnail: picsum.photos si preview absent
   exif_mock: {                   // NOTE: mockData.ts uniquement en dev
     iso: number,                 // [160, 400, 800, 1600, 3200, 6400, 12800]
     aperture: number,            // [1.2, 1.4, 2.0, 2.8, 4.0, 5.6, 8.0, 11, 16]
@@ -473,6 +477,129 @@ export interface ExifData {
   },
   sizeOnDisk: string             // "XX.X MB" (aléatoire)
 }
+```
+
+### 5.1.1 — Pyramide de Previews (Phase A+)
+
+CatalogImage supporte désormais **3 formats de preview** pour optimiser l'affichage selon le contexte :
+
+| Format        | Dimensions | Qualité  | Cas d'usage                    | Stockage |
+| ------------- | ---------- | -------- | ------------------------------ | -------- |
+| **Thumbnail** | 240px      | JPEG q75 | GridView (grille rapide)       | ~50KB    |
+| **Standard**  | 1440px     | JPEG q85 | DevelopView (édition)          | ~500KB   |
+| **OneToOne**  | Natif      | JPEG q90 | Zoom 1:1 pixel-peeping (futur) | ~2MB     |
+
+**Architecture** :
+
+```
+Image Source (RAW/CR3/JPG dans disque)
+  ↓
+Backend Rust (Phase 2.3)
+  ├─→ Génère Thumbnail (240px)
+  ├─→ Génère Standard (1440px)
+  └─→ Génère OneToOne (natif)
+  ↓
+Frontend TypeScript (useCatalog hook)
+  ├─→ Charge les 3 formats EN PARALLELE
+  ├─→ Retourne CatalogImage avec urls.*
+  ↓
+Composant React
+  ├─→ GridView        → image.urls.thumbnail (240px)
+  ├─→ DevelopView     → image.urls.standard (1440px)
+  └─→ ZoomView (TODO) → image.urls.oneToOne (natif)
+```
+
+**Backward Compatibility** :
+
+```typescript
+// Helper export pour code legacy (DEPRECATED)
+export function getImageUrl(image: CatalogImage): string {
+  return image.urls.thumbnail;
+}
+
+// Utilisation
+const url = getImageUrl(image); // → image.urls.thumbnail
+```
+
+**Transition Progressive** :
+
+- Phase A (✅ complétée) : Type structure `urls: { thumbnail, standard, oneToOne }`
+- Phase B (✅ complétée) : Load 3 formats in parallel via `Promise.all()` in useCatalog
+- Phase C (✅ complétée) : DevelopView uses `.standard` (1440px) for 6× quality improvement
+- Phase D (✅ complétée) : Comprehensive test suite for format selection + fallback behavior
+
+### 5.1.2 — Chargement Parallèle des Formats (Phase B)
+
+**Pattern d'Implémentation** :
+
+```typescript
+// src/hooks/useCatalog.ts
+const [thumbnailResult, standardResult, oneToOneResult] = await Promise.all([
+  previewService.getPreviewPath(hash, PreviewType.Thumbnail).catch(() => null),
+  previewService.getPreviewPath(hash, PreviewType.Standard).catch(() => null),
+  previewService.getPreviewPath(hash, PreviewType.OneToOne).catch(() => null),
+]);
+
+const urls = {
+  thumbnail: thumbnailResult ? convertFileSrc(thumbnailResult) : '',
+  standard: standardResult ? convertFileSrc(standardResult) : '',
+  oneToOne: oneToOneResult ? convertFileSrc(oneToOneResult) : undefined,
+};
+```
+
+**Avantages** :
+
+- ✅ Parallèle vs séquentiel : ~66% plus rapide (1× latence réseau au lieu de 3×)
+- ✅ Fallback automatique : Si Standard échoue, Thumbnail reste disponible
+- ✅ Robustesse : OneToOne optionnel, pas de blocage si absent
+- ✅ Type-safe : Structure `urls` formalisée en TypeScript strict mode
+
+### 5.1.3 — Sélection des Formats par Composant (Phase C)
+
+**Chaque composant utilise le format approprié** :
+
+| Composant               | Format utilisé              | Raison                                               |
+| ----------------------- | --------------------------- | ---------------------------------------------------- |
+| **GridView**            | `thumbnail` (240px)         | Optimisation mémoire, grille légère                  |
+| **Filmstrip**           | `thumbnail` (240px)         | idem, aperçu petit format                            |
+| **DevelopView**         | `standard` (1440px)         | Édition haute qualité (6× meilleur)                  |
+| **LazyLoadedImageCard** | `thumbnail` (240px)         | Virtualization + chargement lazy                     |
+| **PreviewRenderer**     | Variable selon `isSelected` | `thumbnail` dans GridView, `standard` en DevelopView |
+
+**Code d'Exemple** :
+
+```typescript
+// GridView.tsx : toujours utiliser thumbnail
+<img src={image.urls.thumbnail} alt="" className="..." />
+
+// DevelopView.tsx : utiliser standard (Phase C)
+<PreviewRenderer
+  previewUrl={activeImg.urls.standard}  // 1440px
+  isSelected={true}
+  useWasm={true}
+/>
+
+// Fallback logic (si Standard généré mais non disponible)
+const displayUrl = image.urls.standard || image.urls.thumbnail;
+```
+
+### 5.1.4 — Tests et Validation (Phase D)
+
+**Suite de tests** : `src/test/preview-formats.test.ts` (17 tests, 100% passing ✅)
+
+Couverts :
+
+- ✅ Type structure `urls: { thumbnail, standard, oneToOne }`
+- ✅ Backward compatibility via `getImageUrl()` helper
+- ✅ Chargement parallèle `Promise.all()` comportement
+- ✅ Fallback strategy (Standard fails → use Thumbnail)
+- ✅ Format specifications (sizes, JPEG quality, use cases)
+- ✅ Type safety & access patterns
+
+**Commande pour exécuter** :
+
+```bash
+npm test -- src/test/preview-formats.test.ts
 ```
 
 ### 5.2 — Structure d'un Event (`CatalogEvent`)

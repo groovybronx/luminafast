@@ -26,7 +26,7 @@ export const DevelopView = ({ activeImg, showBeforeAfter }: DevelopViewProps) =>
           })()}
           <PreviewRenderer
             imageId={activeImg.id}
-            previewUrl={activeImg.url}
+            previewUrl={activeImg.urls.standard}
             className="w-full h-full object-contain grayscale opacity-30 scale-105"
             isSelected={false}
             useWasm={true}
@@ -48,7 +48,7 @@ export const DevelopView = ({ activeImg, showBeforeAfter }: DevelopViewProps) =>
         })()} */}
         <PreviewRenderer
           imageId={activeImg.id}
-          previewUrl={activeImg.url}
+          previewUrl={activeImg.urls.standard}
           className="w-full h-full object-contain img-render"
           isSelected={true}
           useWasm={true}

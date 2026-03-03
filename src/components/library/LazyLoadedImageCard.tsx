@@ -60,7 +60,7 @@ export const LazyLoadedImageCard = ({
     };
   }, []);
 
-  const hasPreview = isVisible && image.url && image.url.length > 0;
+  const hasPreview = isVisible && image.urls.thumbnail && image.urls.thumbnail.length > 0;
 
   // Handle drag start: serialize selected images (or just this one if not in multi-select)
   const handleDragStart = (e: React.DragEvent) => {
@@ -115,7 +115,7 @@ export const LazyLoadedImageCard = ({
           })()} */}
           <PreviewRenderer
             imageId={image.id}
-            previewUrl={image.url}
+            previewUrl={image.urls.thumbnail}
             className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity pointer-events-none select-none"
             isSelected={isSelected}
             useWasm={true}

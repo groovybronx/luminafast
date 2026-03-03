@@ -89,7 +89,6 @@ export default function App() {
 
   const logs = useSystemStore((state) => state.logs);
   const addLog = useSystemStore((state) => state.addLog);
-  const eventLog = useEditStore((state) => state.eventLog);
   const addEvent = useEditStore((state) => state.addEvent);
   const showImport = useUiStore((state) => state.showImport);
   const setShowImport = useUiStore((state) => state.setShowImport);
@@ -185,7 +184,7 @@ export default function App() {
           }
         });
       } else if (eventType === 'EDIT') {
-        // Phase 4.2-1: Persist EDIT events to Event Sourcing store
+        // Phase 4.2-1: Optimistic UI update (no DB persistence yet)
         const { setImages: updateLocalImages } = useCatalogStore.getState();
 
         // Optimistic update (local)
@@ -199,7 +198,9 @@ export default function App() {
         });
         updateLocalImages(updatedImages);
 
-        // Persist to Event Store (Phase 4.2-1: NEW)
+        // No DB persistence here - wait for EDIT_COMMIT instead
+      } else if (eventType === 'EDIT_COMMIT') {
+        // Phase 4.2-1: Persist EDIT events to Event Sourcing store (slider released)
         selection.forEach((imageId) => {
           const eventDto: EventDTO = {
             id: safeID(),
@@ -225,10 +226,10 @@ export default function App() {
             });
         });
 
-        addLog(`Edit stored and persisted for ${selection.length} asset(s)`, 'sqlite');
+        addLog(`Edit persisted to DB for ${selection.length} asset(s)`, 'sqlite');
       }
 
-      if (eventType !== 'EDIT') {
+      if (eventType !== 'EDIT' && eventType !== 'EDIT_COMMIT') {
         addLog(`SQLite sync queued for ${selection.length} asset(s) [${eventType}]`, 'sqlite');
       }
     },
@@ -404,7 +405,6 @@ export default function App() {
         <RightSidebar
           activeView={activeView}
           activeImg={displayImg}
-          eventLog={eventLog}
           onDispatchEvent={dispatchEvent}
         />
       </div>

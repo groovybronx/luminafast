@@ -1,38 +1,42 @@
 import { create } from 'zustand';
 import type { CatalogEvent } from '../types';
 import type { EventDTO } from '@/services/eventService';
+import type { SnapshotDTO } from '@/services/snapshotService';
 
 interface EditStore {
-  // État
   eventLog: CatalogEvent[];
   currentEdits: Record<string, number>;
   historyIndex: number;
-  editEventsPerImage: Record<number, EventDTO[]>; // Phase 4.2-B.2: Store events per image
+  editEventsPerImage: Record<number, EventDTO[]>;
+  snapshots: Record<number, SnapshotDTO[]>;
 
-  // Actions
   addEvent: (event: CatalogEvent) => void;
   setCurrentEdits: (edits: Record<string, number>) => void;
   updateEdit: (param: string, value: number) => void;
   resetEdits: () => void;
   undo: () => void;
   redo: () => void;
-  setEditEventsForImage: (imageId: number, events: EventDTO[]) => void; // Phase 4.2-B.2
-  clearEditEventsForImage: (imageId: number) => void; // Phase 4.2-B.2
+  setEditEventsForImage: (imageId: number, events: EventDTO[]) => void;
+  clearEditEventsForImage: (imageId: number) => void;
+  restoreToEvent: (imageId: number, eventIndex: number) => void;
+  setSnapshots: (imageId: number, snapshots: SnapshotDTO[]) => void;
+  addSnapshot: (imageId: number, snapshot: SnapshotDTO) => void;
+  deleteSnapshotLocal: (imageId: number, snapshotId: number) => void;
 
-  // Getters
   canUndo: () => boolean;
   canRedo: () => boolean;
-  getAppliedEdits: (imageId: number) => EventDTO[]; // Phase 4.2-B.2 getter
+  getAppliedEdits: (imageId: number) => EventDTO[];
+  getSnapshots: (imageId: number) => SnapshotDTO[];
+  getSnapshot: (imageId: number, snapshotId: number) => SnapshotDTO | undefined;
 }
 
 export const useEditStore = create<EditStore>((set, get) => ({
-  // État initial
   eventLog: [],
   currentEdits: {},
   historyIndex: -1,
-  editEventsPerImage: {}, // Phase 4.2-B.2
+  editEventsPerImage: {},
+  snapshots: {},
 
-  // Actions
   addEvent: (event: CatalogEvent) =>
     set((state) => ({
       eventLog: [event, ...state.eventLog],
@@ -47,10 +51,6 @@ export const useEditStore = create<EditStore>((set, get) => ({
 
   resetEdits: () => set({ currentEdits: {} }),
 
-  /**
-   * Store edit events for a specific image (Phase 4.2-B.2)
-   * Called by PreviewRenderer when loading events for an image
-   */
   setEditEventsForImage: (imageId: number, events: EventDTO[]) =>
     set((state) => ({
       editEventsPerImage: {
@@ -59,10 +59,6 @@ export const useEditStore = create<EditStore>((set, get) => ({
       },
     })),
 
-  /**
-   * Clear stored events for a specific image (Phase 4.2-B.2)
-   * Called when component unmounts or image changes
-   */
   clearEditEventsForImage: (imageId: number) =>
     set((state) => {
       const newEvents = { ...state.editEventsPerImage };
@@ -70,26 +66,68 @@ export const useEditStore = create<EditStore>((set, get) => ({
       return { editEventsPerImage: newEvents };
     }),
 
+  restoreToEvent: (imageId: number, eventIndex: number) =>
+    set((state) => {
+      const events = state.editEventsPerImage[imageId] ?? [];
+      if (eventIndex < 0 || eventIndex >= events.length) {
+        return state;
+      }
+
+      const restoredEvents = events.slice(0, eventIndex + 1);
+      return {
+        editEventsPerImage: {
+          ...state.editEventsPerImage,
+          [imageId]: restoredEvents,
+        },
+      };
+    }),
+
+  setSnapshots: (imageId: number, snapshots: SnapshotDTO[]) =>
+    set((state) => ({
+      snapshots: {
+        ...state.snapshots,
+        [imageId]: snapshots,
+      },
+    })),
+
+  addSnapshot: (imageId: number, snapshot: SnapshotDTO) =>
+    set((state) => ({
+      snapshots: {
+        ...state.snapshots,
+        [imageId]: [snapshot, ...(state.snapshots[imageId] ?? [])],
+      },
+    })),
+
+  deleteSnapshotLocal: (imageId: number, snapshotId: number) =>
+    set((state) => ({
+      snapshots: {
+        ...state.snapshots,
+        [imageId]: (state.snapshots[imageId] ?? []).filter(
+          (snapshot) => snapshot.id !== snapshotId,
+        ),
+      },
+    })),
+
   undo: () => {
-    // TODO: Implémenter undo/redo quand on aura l'historique des edits
     console.warn('Undo not implemented yet');
   },
 
   redo: () => {
-    // TODO: Implémenter undo/redo quand on aura l'historique des edits
     console.warn('Redo not implemented yet');
   },
 
-  // Getters
   canUndo: () => get().historyIndex > 0,
-
   canRedo: () => get().historyIndex < get().eventLog.length - 1,
 
-  /**
-   * Get applied edits for a specific image (Phase 4.2-B.2)
-   * Returns stored Event Sourcing events for the image
-   */
   getAppliedEdits: (imageId: number) => {
     return get().editEventsPerImage[imageId] ?? [];
+  },
+
+  getSnapshots: (imageId: number) => {
+    return get().snapshots[imageId] ?? [];
+  },
+
+  getSnapshot: (imageId: number, snapshotId: number) => {
+    return (get().snapshots[imageId] ?? []).find((snapshot) => snapshot.id === snapshotId);
   },
 }));

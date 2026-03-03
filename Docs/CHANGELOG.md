@@ -48,7 +48,7 @@
 | Maintenance | —          | Phase A: Preview Format Selection - Types & Architecture (CatalogImage.urls)                    | ✅ Complétée  | 2026-03-03 | Copilot |
 | Maintenance | —          | Phase B: Preview Format Selection - Parallel Loading (3-format Promise.all)                     | ✅ Complétée  | 2026-03-03 | Copilot |
 | Maintenance | —          | Phase C: Preview Format Selection - View-Specific Usage (DevelopView.standard 1440px)           | ✅ Complétée  | 2026-03-03 | Copilot |
-| 4           | 4.3        | Historique & Snapshots UI                                                                       | ⬜ En attente | —          | —       |
+| 4           | 4.3        | Historique & Snapshots UI                                                                       | ✅ Complétée  | 2026-03-03 | Copilot |
 | 4           | 4.4        | Comparaison Avant/Après                                                                         | ⬜ En attente | —          | —       |
 | 5           | 5.1        | Panneau EXIF Connecté                                                                           | ⬜ En attente | —          | —       |
 | 5           | 5.2        | Système de Tags Hiérarchique                                                                    | ⬜ En attente | —          | —       |
@@ -83,11 +83,31 @@
 
 ## Prochaine Phase
 
-> **Phase 4.2** : Pipeline de Rendu d'Images — Intégration Event Sourcing avec système de transformation paramétrique non-destructive.
+> **Phase 4.4** : Comparaison Avant/Après.
 
 ## Historique des Sous-Phases Complétées
 
 ---
+
+### 2026-03-03 — Phase 4.3 : Historique & Snapshots UI (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée (backend + frontend + tests ciblés)**
+**Agent** : GitHub Copilot (GPT-5.3-Codex)
+**Brief** : `Docs/briefs/PHASE-4.3.md`
+
+**Livrables principaux** :
+
+- Migration `006_snapshots.sql` (table `edit_snapshots` + index)
+- Backend Rust : `models/snapshot.rs`, `services/snapshot_service.rs`, `commands/snapshots.rs`
+- Frontend : `snapshotService.ts`, `SnapshotModal.tsx`, refactor `HistoryPanel.tsx`
+- Intégration store : `editStore.ts` (snapshots, restoreToEvent, getters)
+
+**Validation** :
+
+- `cargo test --lib snapshot` : 8/8 ✅
+- `cargo check` : ✅
+- `npm run type-check` : ✅
+- Tests ciblés Phase 4.3 : 37/37 ✅
 
 ### 2026-02-25 — Phase 4.1 : Event Sourcing Engine (✅ COMPLÉTÉE)
 

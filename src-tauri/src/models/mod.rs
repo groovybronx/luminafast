@@ -7,3 +7,4 @@ pub mod filesystem;
 pub mod hashing;
 pub mod image;
 pub mod preview;
+pub mod snapshot;

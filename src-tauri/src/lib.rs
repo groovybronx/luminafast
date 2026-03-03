@@ -152,6 +152,12 @@ pub fn run() {
             commands::event_sourcing::get_events,
             commands::event_sourcing::get_edit_events,
             commands::event_sourcing::replay_events,
+            // Snapshot commands (Phase 4.3)
+            commands::snapshots::create_snapshot,
+            commands::snapshots::get_snapshots,
+            commands::snapshots::get_snapshot,
+            commands::snapshots::delete_snapshot,
+            commands::snapshots::rename_snapshot,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

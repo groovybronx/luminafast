@@ -169,7 +169,15 @@ export const PreviewRenderer: React.FC<PreviewRendererProps> = ({
       }
     };
 
-    renderFrame();
+    // PERF: Debounce rendering (300ms) to avoid multiple renders during slider movement
+    // Without debounce: slider change -100→+10 triggers 110 renders (one per value change)
+    // With debounce: only 1 render 300ms after slider release
+    const debounceTimer = setTimeout(() => {
+      renderFrame();
+    }, 300);
+
+    // Cleanup: cancel timeout if effect runs again
+    return () => clearTimeout(debounceTimer);
   }, [pixelFilters, previewUrl, useWasmMode, wasmAvailable]);
 
   // Monitor EditStore changes and update filters reactively (all 9 filters for WASM)

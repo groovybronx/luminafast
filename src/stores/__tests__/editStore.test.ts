@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { act } from '@testing-library/react';
 import { useEditStore } from '../editStore';
 import type { CatalogEvent } from '../../types';
+import type { EventDTO } from '@/services/eventService';
+import type { SnapshotDTO } from '@/services/snapshotService';
 
 describe('editStore', () => {
   beforeEach(() => {
@@ -199,5 +201,228 @@ describe('editStore', () => {
     });
     expect(useEditStore.getState().currentEdits).toEqual({});
     expect(useEditStore.getState().eventLog).toHaveLength(2); // Events remain in log
+  });
+
+  describe('snapshot actions', () => {
+    it('should initialize snapshots as empty object', () => {
+      const store = useEditStore.getState();
+      expect(store.snapshots).toEqual({});
+    });
+
+    it('should restore to event by slicing event array', () => {
+      const imageId = 100;
+      const events: EventDTO[] = [
+        {
+          id: 'evt-3',
+          timestamp: 3000,
+          eventType: 'saturation',
+          targetType: 'image' as const,
+          targetId: imageId,
+          payload: { value: 0.3 },
+          createdAt: '2025-03-02T12:02:00Z',
+        },
+        {
+          id: 'evt-2',
+          timestamp: 2000,
+          eventType: 'exposure',
+          targetType: 'image' as const,
+          targetId: imageId,
+          payload: { value: 0.2 },
+          createdAt: '2025-03-02T12:01:00Z',
+        },
+        {
+          id: 'evt-1',
+          timestamp: 1000,
+          eventType: 'contrast',
+          targetType: 'image' as const,
+          targetId: imageId,
+          payload: { value: 0.1 },
+          createdAt: '2025-03-02T12:00:00Z',
+        },
+      ];
+
+      // Setup events for image
+      act(() => {
+        useEditStore.getState().setEditEventsForImage(imageId, events);
+      });
+
+      // Restore to middle event (eventIndex = 1)
+      act(() => {
+        useEditStore.getState().restoreToEvent(imageId, 1);
+      });
+
+      const restored = useEditStore.getState().editEventsPerImage[imageId];
+      expect(restored).toHaveLength(2);
+      expect(restored?.[0]).toEqual(events[0]);
+      expect(restored?.[1]).toEqual(events[1]);
+    });
+
+    it('should not change events when restoring to invalid eventIndex', () => {
+      const imageId = 100;
+      const events: EventDTO[] = [
+        {
+          id: 'evt-1',
+          timestamp: 1000,
+          eventType: 'exposure',
+          targetType: 'image' as const,
+          targetId: imageId,
+          payload: { value: 0.5 },
+          createdAt: '2025-03-02T12:00:00Z',
+        },
+      ];
+
+      act(() => {
+        useEditStore.getState().setEditEventsForImage(imageId, events);
+      });
+
+      // Restore to out-of-bounds index should not change state
+      act(() => {
+        useEditStore.getState().restoreToEvent(imageId, 999);
+      });
+
+      const restored = useEditStore.getState().editEventsPerImage[imageId];
+      expect(restored).toEqual(events); // Should remain unchanged
+    });
+
+    it('should set snapshots for an image', () => {
+      const imageId = 100;
+      const mockSnapshots: SnapshotDTO[] = [
+        {
+          id: 1,
+          imageId,
+          name: 'Snapshot 1',
+          snapshotData: '[]',
+          eventIds: [],
+          createdAt: '2025-03-02T12:00:00Z',
+        },
+        {
+          id: 2,
+          imageId,
+          name: 'Snapshot 2',
+          snapshotData: '[]',
+          eventIds: [],
+          createdAt: '2025-03-02T12:01:00Z',
+        },
+      ];
+
+      act(() => {
+        useEditStore.getState().setSnapshots(imageId, mockSnapshots);
+      });
+
+      expect(useEditStore.getState().snapshots[imageId]).toEqual(mockSnapshots);
+    });
+
+    it('should add snapshot to list', () => {
+      const imageId = 100;
+      const snapshot1: SnapshotDTO = {
+        id: 1,
+        imageId,
+        name: 'First snapshot',
+        snapshotData: '[]',
+        eventIds: [],
+        createdAt: '2025-03-02T12:00:00Z',
+      };
+
+      const snapshot2: SnapshotDTO = {
+        id: 2,
+        imageId,
+        name: 'Second snapshot',
+        snapshotData: '[]',
+        eventIds: [],
+        createdAt: '2025-03-02T12:01:00Z',
+      };
+
+      act(() => {
+        useEditStore.getState().setSnapshots(imageId, [snapshot1]);
+        useEditStore.getState().addSnapshot(imageId, snapshot2);
+      });
+
+      const snapshots = useEditStore.getState().snapshots[imageId];
+      expect(snapshots).toHaveLength(2);
+      expect(snapshots?.[0]).toEqual(snapshot2); // Most recently added first
+      expect(snapshots?.[1]).toEqual(snapshot1);
+    });
+
+    it('should delete snapshot locally', () => {
+      const imageId = 100;
+      const snapshot1: SnapshotDTO = {
+        id: 1,
+        imageId,
+        name: 'Snapshot 1',
+        snapshotData: '[]',
+        eventIds: [],
+        createdAt: '2025-03-02T12:00:00Z',
+      };
+
+      const snapshot2: SnapshotDTO = {
+        id: 2,
+        imageId,
+        name: 'Snapshot 2',
+        snapshotData: '[]',
+        eventIds: [],
+        createdAt: '2025-03-02T12:01:00Z',
+      };
+
+      act(() => {
+        useEditStore.getState().setSnapshots(imageId, [snapshot1, snapshot2]);
+        useEditStore.getState().deleteSnapshotLocal(imageId, 1);
+      });
+
+      const snapshots = useEditStore.getState().snapshots[imageId];
+      expect(snapshots).toHaveLength(1);
+      expect(snapshots?.[0]).toEqual(snapshot2);
+    });
+
+    it('should get snapshots for an image', () => {
+      const imageId = 100;
+      const mockSnapshots: SnapshotDTO[] = [
+        {
+          id: 1,
+          imageId,
+          name: 'Snapshot',
+          snapshotData: '[]',
+          eventIds: [],
+          createdAt: '2025-03-02T12:00:00Z',
+        },
+      ];
+
+      act(() => {
+        useEditStore.getState().setSnapshots(imageId, mockSnapshots);
+      });
+
+      const retrieved = useEditStore.getState().getSnapshots(imageId);
+      expect(retrieved).toEqual(mockSnapshots);
+    });
+
+    it('should return empty array for image with no snapshots', () => {
+      const retrieved = useEditStore.getState().getSnapshots(999);
+      expect(retrieved).toEqual([]);
+    });
+
+    it('should get specific snapshot by id', () => {
+      const imageId = 100;
+      const snapshot: SnapshotDTO = {
+        id: 1,
+        imageId,
+        name: 'Target snapshot',
+        snapshotData: '[]',
+        eventIds: [],
+        createdAt: '2025-03-02T12:00:00Z',
+      };
+
+      act(() => {
+        useEditStore.getState().setSnapshots(imageId, [snapshot]);
+      });
+
+      const retrieved = useEditStore.getState().getSnapshot(imageId, 1);
+      expect(retrieved).toEqual(snapshot);
+    });
+
+    it('should return undefined for non-existent snapshot', () => {
+      const imageId = 100;
+
+      const retrieved = useEditStore.getState().getSnapshot(imageId, 999);
+      expect(retrieved).toBeUndefined();
+    });
   });
 });

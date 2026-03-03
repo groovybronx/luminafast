@@ -329,11 +329,11 @@ export class CatalogService {
         throw new Error((result as Record<string, unknown>).message as string);
       }
 
-      if (import.meta.env.DEV) {
+      /* if (import.meta.env.DEV) {
         console.warn(
           `[CatalogService] getEditEvents for imageId=${imageId}, returned ${Array.isArray(result) ? result.length : 0} events`,
         );
-      }
+      } */
 
       return result as EventDTO[];
     } catch (error) {

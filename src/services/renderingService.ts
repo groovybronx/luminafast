@@ -24,11 +24,24 @@ export function eventsToCSSFilters(events: EventDTO[]): CSSFilterState {
     saturation: 1, // CSS default: 1 = no change
   };
 
+  /* if (import.meta.env.DEV && events.length > 0) {
+    const editAppliedEvents = events.filter((e) => e.eventType === 'edit_applied');
+    console.warn('[renderingService] eventsToCSSFilters:', {
+      totalEvents: events.length,
+      editAppliedEvents: editAppliedEvents.length,
+      first3AllEvents: events
+        .slice(0, 3)
+        .map((e) => ({ eventType: e.eventType, targetId: e.targetId })),
+      first3EditEvents: editAppliedEvents.slice(0, 3).map((e) => ({ payload: e.payload })),
+    });
+  } */
+
   // Appliquer les événements EDIT dans l'ordre (replay)
   for (const event of events) {
-    // Vérifier que l'event est bien de type EDIT
-    if (event.eventType !== 'edit_applied') {
-      // ← Match Rust enum value
+    // Vérifier que l'event est bien de type EDIT (normaliser la casse)
+    // Accepte both 'edit_applied' et 'EditApplied'
+    const normalizedEventType = event.eventType.toLowerCase().replace(/([a-z])([A-Z])/g, '$1_$2');
+    if (normalizedEventType !== 'edit_applied') {
       continue;
     }
 
@@ -84,8 +97,9 @@ export function eventsToPixelFilters(events: EventDTO[]): PixelFilterState {
 
   // Appliquer les événements EDIT pour les filtres avancés
   for (const event of events) {
-    if (event.eventType !== 'edit_applied') {
-      // ← Match Rust enum value
+    // Normaliser la casse (BD contient 'EditApplied', code utilise 'edit_applied')
+    const normalizedEventType = event.eventType.toLowerCase().replace(/([a-z])([A-Z])/g, '$1_$2');
+    if (normalizedEventType !== 'edit_applied') {
       continue;
     }
 

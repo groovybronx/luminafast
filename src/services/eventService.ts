@@ -48,20 +48,9 @@ export interface EventDTO {
  */
 export async function appendEvent(event: EventDTO): Promise<void> {
   try {
-    // Convert camelCase DTO to snake_case for Tauri command
-    const eventPayload = {
-      id: event.id,
-      timestamp: event.timestamp,
-      event_type: event.eventType, // ← Convert camelCase to snake_case
-      payload: event.payload,
-      target_type: event.targetType, // ← Convert camelCase to snake_case
-      target_id: event.targetId, // ← Convert camelCase to snake_case
-      user_id: event.userId, // ← Convert camelCase to snake_case
-      created_at: event.createdAt, // ← Convert camelCase to snake_case
-    };
-
+    // Send event as camelCase directly - Rust serde(rename_all = "camelCase") handles conversion
     return await invoke<void>('append_event', {
-      event: eventPayload,
+      event,
     });
   } catch (error) {
     throw new Error(

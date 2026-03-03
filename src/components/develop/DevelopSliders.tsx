@@ -28,6 +28,8 @@ export const DevelopSliders = ({ activeImg, onDispatchEvent }: DevelopSlidersPro
         { label: 'Clarté', key: 'clarity' as const, icon: Wind },
         { label: 'Vibrance', key: 'vibrance' as const, icon: Palette },
         { label: 'Saturation', key: 'saturation' as const, icon: Droplets },
+        { label: 'Température', key: 'temp' as const, icon: Sun },
+        { label: 'Teinte', key: 'tint' as const, icon: Palette },
       ] as const
     ).map((param) => (
       <div key={param.key} className="space-y-1 group">

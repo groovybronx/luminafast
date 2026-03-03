@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Event {
     pub id: String,     // UUID
     pub timestamp: i64, // Unix timestamp
@@ -51,6 +52,7 @@ pub enum EventPayload {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ImageAddedPayload {
     pub image_id: i64,
     pub filename: String,
@@ -59,12 +61,14 @@ pub struct ImageAddedPayload {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ImageUpdatedPayload {
     pub image_id: i64,
     pub changed_fields: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RatingChangedPayload {
     pub image_id: i64,
     pub old_rating: i32,
@@ -72,6 +76,7 @@ pub struct RatingChangedPayload {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FlagChangedPayload {
     pub image_id: i64,
     pub old_flag: Option<String>,
@@ -79,6 +84,7 @@ pub struct FlagChangedPayload {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ColorLabelChangedPayload {
     pub image_id: i64,
     pub old_label: Option<String>,
@@ -86,6 +92,7 @@ pub struct ColorLabelChangedPayload {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TagAddedPayload {
     pub image_id: i64,
     pub tag_id: i64,
@@ -93,6 +100,7 @@ pub struct TagAddedPayload {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TagRemovedPayload {
     pub image_id: i64,
     pub tag_id: i64,
@@ -100,6 +108,7 @@ pub struct TagRemovedPayload {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct EditAppliedPayload {
     pub image_id: i64,
     pub edit_type: String,
@@ -108,6 +117,7 @@ pub struct EditAppliedPayload {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CollectionCreatedPayload {
     pub collection_id: i64,
     pub collection_name: String,
@@ -115,6 +125,7 @@ pub struct CollectionCreatedPayload {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ImageAddedToCollectionPayload {
     pub image_id: i64,
     pub collection_id: i64,
@@ -122,6 +133,7 @@ pub struct ImageAddedToCollectionPayload {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ImageRemovedFromCollectionPayload {
     pub image_id: i64,
     pub collection_id: i64,
@@ -138,6 +150,7 @@ pub enum TargetType {
 
 /// New event for insertion
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[allow(dead_code)] // Utilisé à partir de Phase 4.2 (pipeline de rendu image) et Phase 5+ (historique avec snapshots)
 pub struct NewEvent {
     pub event_type: EventType,

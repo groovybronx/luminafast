@@ -155,7 +155,7 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
 
       addLog('Syncing catalog after import...', 'sync');
 
-      // Get all images (could be optimized to get only new images in future)
+      // TODO: Get all images (could be optimized to get only new images in future)
       const images = await CatalogService.getAllImages(filter);
 
       // Convert to catalog format

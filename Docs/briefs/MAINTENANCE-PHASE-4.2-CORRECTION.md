@@ -22,6 +22,7 @@ Corriger et valider la Phase 4.2 (Pipeline de Rendu Image) suite aux modificatio
 **Objectif** : Restaurer 55/55 tests au vert
 
 **Cause racine** :
+
 - Commit ca2bba4 (3 mars) a changé `eventType` de `'ImageEdited'` → `'edit_applied'` dans le code
 - Tests `renderingService.test.ts` utilisent toujours l'ancienne valeur
 - Fonction `eventsToCSSFilters()` rejette tous les événements de test
@@ -50,6 +51,7 @@ Corriger et valider la Phase 4.2 (Pipeline de Rendu Image) suite aux modificatio
 **Objectif** : Clarifier et finaliser l'état de Phase B
 
 **Cause racine** :
+
 - Brief PHASE-4.2.md décrit Phase B comme "à implémenter"
 - Code `wasmRenderingService.ts` existe mais n'est jamais appelé
 - `PreviewRenderer.tsx` accepte prop `useWasm` mais l'ignore
@@ -99,10 +101,10 @@ Corriger et valider la Phase 4.2 (Pipeline de Rendu Image) suite aux modificatio
 **Fichiers à modifier** :
 
 - `Docs/APP_DOCUMENTATION.md` section "Système de Rendu" (ligne 948-1100+)
-  - Mettre à jour statut Phase A (+  Phase B si implémentée, ou "reportée" si B.1)
+  - Mettre à jour statut Phase A (+ Phase B si implémentée, ou "reportée" si B.1)
   - Ajouter section "Implémentation détaillée" décrivant le flux réel
 
-- `Docs/CHANGELOG.md` 
+- `Docs/CHANGELOG.md`
   - Ajouter entrée pour cette maintenance
 
 **Critères de validation** :
@@ -135,12 +137,14 @@ Corriger et valider la Phase 4.2 (Pipeline de Rendu Image) suite aux modificatio
 **Décision requise** : Choisir B.1 (Reporter) ou B.2 (Implémenter)
 
 **Si B.1 (Reporter)**:
+
 - [ ] Créer `PHASE-4.2-CSS-ONLY.md`
-- [ ] Créer `PHASE-5.0-WASM-RENDERING.md`  
+- [ ] Créer `PHASE-5.0-WASM-RENDERING.md`
 - [ ] Supprimer prop `useWasm` de PreviewRenderer
 - [ ] Committer : `phase(4.2-B.1): Reporter WASM Phase B à Phase 5.0`
 
 **Si B.2 (Implémenter)**:
+
 - [ ] Intégrer `renderWithWasm()` dans PreviewRenderer
 - [ ] Implémenter toggle `useWasm` avec fallback
 - [ ] `npm test -- rendering` → 55+X/55+X PASS
@@ -165,14 +169,14 @@ Corriger et valider la Phase 4.2 (Pipeline de Rendu Image) suite aux modificatio
 
 ## Estimation Temps
 
-| Sous-Phase | Tâche                      | Durée   |
-| ---------- | -------------------------- | ------- |
-| **A**      | Fixer 14 tests             | 15 min  |
-| **B.1**    | Reporter WASM (si choisi)  | 30 min  |
-| **B.2**    | Implémenter WASM (alt)     | 3-4h    |
-| **C**      | Documenter                 | 20 min  |
-| **Total**  | A + B.1 + C (minimal)      | **1h 5m** |
-| **Total**  | A + B.2 + C (si WASM)      | **4h 5m** |
+| Sous-Phase | Tâche                     | Durée     |
+| ---------- | ------------------------- | --------- |
+| **A**      | Fixer 14 tests            | 15 min    |
+| **B.1**    | Reporter WASM (si choisi) | 30 min    |
+| **B.2**    | Implémenter WASM (alt)    | 3-4h      |
+| **C**      | Documenter                | 20 min    |
+| **Total**  | A + B.1 + C (minimal)     | **1h 5m** |
+| **Total**  | A + B.2 + C (si WASM)     | **4h 5m** |
 
 ---
 
@@ -196,9 +200,11 @@ Corriger et valider la Phase 4.2 (Pipeline de Rendu Image) suite aux modificatio
 ## Prochaines Phases
 
 Si Option B.1 (Reporter WASM) choisie :
+
 - **Phase 5.0** — WASM Rendering Engine (5.0-A, 5.0-B, 5.0-C)
 
 Si Option B.2 (Implémenter WASM) choisie :
+
 - **Phase 4.3** — Historique & Snapshots UI (dépend de 4.2 complète)
 
 ---

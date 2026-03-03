@@ -18,8 +18,6 @@
     "test:workflow": "bash ./scripts/test-workflow.sh frontend",
     "test:workflow:backend": "bash ./scripts/test-workflow.sh backend",
     "test:workflow:all": "bash ./scripts/test-workflow.sh all",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build",
     "rust:check": "cd src-tauri && cargo check",
     "rust:build": "cd src-tauri && cargo build",
     "rust:test": "cd src-tauri && cargo test",
@@ -29,6 +27,10 @@
     "rust:clippy-fix": "cd src-tauri && cargo clippy --lib --fix --allow-dirty --allow-staged",
     "rust:lint": "npm run rust:fmt-check && npm run rust:clippy",
     "rust:fix": "npm run rust:fmt && npm run rust:clippy-fix",
+    "wasm:build": "cd luminafast-wasm && wasm-pack build --target web --release",
+    "wasm:build:dev": "cd luminafast-wasm && wasm-pack build --target web",
+    "tauri:dev": "npm run wasm:build:dev && tauri dev",
+    "tauri:build": "npm run wasm:build && tauri build",
     "clean": "rm -rf dist coverage src-tauri/target"
   },
   "dependencies": {

@@ -33,14 +33,17 @@ Le fichier `Cargo.toml` configure automatiquement wasm-opt avec les flags modern
 
 ## Output
 
-Après compilation, les fichiers générés dans `pkg/` sont copiés vers `src/wasm/` :
+Après compilation, les artefacts sont générés directement dans `luminafast-wasm/pkg/` :
 ```
-src/wasm/
-├── luminafast_wasm_bg.wasm   (19KB) — Module WASM optimisé
-├── luminafast_wasm.js         (11KB) — Wrapper wasm-bindgen ES module
-├── luminafast_wasm.d.ts       (3.6KB) — Type definitions TypeScript
+luminafast-wasm/pkg/
+├── luminafast_wasm_bg.wasm       — Module WASM optimisé
+├── luminafast_wasm.js            — Wrapper wasm-bindgen ES module
+├── luminafast_wasm.d.ts          — Types TypeScript
 └── luminafast_wasm_bg.wasm.d.ts
 ```
+
+Le frontend Tauri/Vite charge ce module directement via l'alias Vite `@wasm` (pointant sur `luminafast-wasm/pkg`).
+Il n'y a plus de copie vers `src/wasm/`.
 
 ## Usage (Frontend)
 
@@ -75,6 +78,6 @@ Toute modification des algorithmes pixel doit être **synchronisée manuellement
 
 Le module WASM doit être recompilé avant chaque build de production :
 ```bash
-npm run build:wasm  # Alias pour ./scripts/build-wasm.sh
-npm run build       # Build Vite frontend (inclut src/wasm/)
+npm run wasm:build      # Build WASM release (wasm-pack --target web --release)
+npm run tauri:build     # Build app Tauri (inclut la build WASM via script npm)
 ```

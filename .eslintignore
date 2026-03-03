@@ -1,0 +1,8 @@
+node_modules/
+dist/
+build/
+*.min.js
+
+# Generated WASM files (from wasm-pack)
+luminafast-wasm/pkg/
+luminafast-wasm/target/

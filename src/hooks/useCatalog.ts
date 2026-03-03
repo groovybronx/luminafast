@@ -93,12 +93,12 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
               oneToOne: oneToOneResult ? convertFileSrc(oneToOneResult) : undefined,
             };
 
-            // Log download progress in DEV mode
+            /*  // Log download progress in DEV mode
             if (import.meta.env.DEV && (urls.thumbnail || urls.standard)) {
               console.warn(
                 `[useCatalog] Loaded previews for ${img.filename}: thumbnail=${!!urls.thumbnail}, standard=${!!urls.standard}, oneToOne=${!!urls.oneToOne}`,
               );
-            }
+            } */
 
             return {
               id: img.id,

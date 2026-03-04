@@ -48,6 +48,8 @@ Connecter le composant **BeforeAfter mockup** existant dans `DevelopView` aux vr
 
 ### ❌ Exclus intentionnellement
 
+> TODO : à implémenter dans une future phase dédiée (Phase 5+) pour éviter de surcharger cette phase déjà complexe
+
 - **Masking/brush-based masking** (Phase future)
 - **Gesture multitouch (pinch zoom)** (Phase 7.4 — Accessibilité)
 - **Animated transitions entre modes** (reporting optionnel)

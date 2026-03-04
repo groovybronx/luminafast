@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ActiveView } from '../types';
+import type { ActiveView, ComparisonMode } from '../types';
 
 interface UiStore {
   // État
@@ -13,6 +13,11 @@ interface UiStore {
   selection: Set<number>; // ← Moved from catalogStore (UI state only)
   filterText: string; // ← Moved from catalogStore (UI state only)
 
+  // Phase 4.4: Comparaison Avant/Après
+  comparisonMode: ComparisonMode;
+  splitViewPosition: number; // 0-100, position du séparateur
+  overlayOpacity: number; // 0-100, opacité en mode overlay
+
   // Actions
   setActiveView: (view: ActiveView) => void;
   toggleLeftSidebar: () => void;
@@ -25,6 +30,11 @@ interface UiStore {
   setSingleSelection: (id: number) => void; // ← Moved from catalogStore
   clearSelection: () => void; // ← Moved from catalogStore
   setFilterText: (text: string) => void; // ← Moved from catalogStore
+
+  // Phase 4.4: Actions pour comparaison
+  setComparisonMode: (mode: ComparisonMode) => void;
+  setSplitViewPosition: (position: number) => void;
+  setOverlayOpacity: (opacity: number) => void;
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -38,6 +48,11 @@ export const useUiStore = create<UiStore>((set) => ({
   showBeforeAfter: false,
   selection: new Set(),
   filterText: '',
+
+  // Phase 4.4: État initial comparaison
+  comparisonMode: 'split',
+  splitViewPosition: 50,
+  overlayOpacity: 50,
 
   // Actions
   setActiveView: (view: ActiveView) => set({ activeView: view }),
@@ -84,4 +99,13 @@ export const useUiStore = create<UiStore>((set) => ({
 
   // Filter management (moved from catalogStore)
   setFilterText: (text: string) => set({ filterText: text }),
+
+  // Phase 4.4: Actions comparaison
+  setComparisonMode: (mode: ComparisonMode) => set({ comparisonMode: mode }),
+
+  setSplitViewPosition: (position: number) =>
+    set({ splitViewPosition: Math.max(0, Math.min(100, position)) }),
+
+  setOverlayOpacity: (opacity: number) =>
+    set({ overlayOpacity: Math.max(0, Math.min(100, opacity)) }),
 }));

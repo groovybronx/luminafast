@@ -1,5 +1,5 @@
 import { Search, X, Maximize2, Grid, SplitSquareVertical, Image as ImageIcon } from 'lucide-react';
-import type { ActiveView } from '../../types';
+import type { ActiveView, ComparisonMode } from '@/types';
 
 interface ToolbarProps {
   activeView: ActiveView;
@@ -10,6 +10,8 @@ interface ToolbarProps {
   onSetThumbnailSize: (size: number) => void;
   showBeforeAfter: boolean;
   onToggleBeforeAfter: () => void;
+  comparisonMode?: ComparisonMode;
+  onComparisonModeChange?: (mode: ComparisonMode) => void;
 }
 
 export const Toolbar = ({
@@ -21,6 +23,8 @@ export const Toolbar = ({
   onSetThumbnailSize,
   showBeforeAfter,
   onToggleBeforeAfter,
+  comparisonMode = 'split',
+  onComparisonModeChange,
 }: ToolbarProps) => (
   <div className="h-11 bg-zinc-900/60 border-b border-black flex items-center justify-between px-4 shrink-0 backdrop-blur-sm">
     <div className="flex gap-3 items-center">
@@ -51,6 +55,18 @@ export const Toolbar = ({
           >
             <SplitSquareVertical size={16} />
           </button>
+          {showBeforeAfter && onComparisonModeChange && (
+            <select
+              value={comparisonMode}
+              onChange={(e) => onComparisonModeChange(e.target.value as ComparisonMode)}
+              className="px-3 py-1 rounded bg-zinc-800 text-zinc-100 text-sm border border-zinc-700 hover:border-zinc-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent"
+              title="Mode de comparaison"
+            >
+              <option value="split">Split</option>
+              <option value="overlay">Overlay</option>
+              <option value="sideBySide">Side-by-Side</option>
+            </select>
+          )}
         </div>
       )}
     </div>

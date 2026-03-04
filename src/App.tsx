@@ -97,6 +97,8 @@ export default function App() {
   const thumbnailSize = useUiStore((state) => state.thumbnailSize);
   const setThumbnailSize = useUiStore((state) => state.setThumbnailSize);
   const sidebarOpen = useUiStore((state) => state.leftSidebarOpen);
+  const comparisonMode = useUiStore((state) => state.comparisonMode);
+  const setComparisonMode = useUiStore((state) => state.setComparisonMode);
 
   // Track if initial load has been triggered
   const initialLoadTriggered = useRef(false);
@@ -371,6 +373,8 @@ export default function App() {
             onSetThumbnailSize={setThumbnailSize}
             showBeforeAfter={showBeforeAfter}
             onToggleBeforeAfter={toggleBeforeAfter}
+            comparisonMode={comparisonMode}
+            onComparisonModeChange={setComparisonMode}
           />
 
           <div className="flex-1 overflow-hidden">

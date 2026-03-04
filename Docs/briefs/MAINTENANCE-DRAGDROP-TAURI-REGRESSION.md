@@ -31,6 +31,7 @@ Le commit `b37e79e` avait modifié les paramètres `invoke()` dans `catalogServi
 ### Correction Structurelle
 
 Rétablir camelCase pour tous les appels `invoke()` de `catalogService.ts` :
+
 - `create_collection` → `{ name, collectionType, parentId }`
 - `add_images_to_collection` → `{ collectionId, imageIds }`
 - `delete_collection` → `{ collectionId }`
@@ -78,6 +79,7 @@ Remplacer le `dragCounterRef` par `e.relatedTarget` / `container.contains(relate
 ## Périmètre
 
 ### ✅ Corrigé dans cette maintenance
+
 - `src/services/catalogService.ts` — tous les `invoke()` collection en camelCase
 - `src/services/__tests__/catalogService.test.ts` — assertions mises à jour
 - `src/components/shared/BatchBar.tsx` — lecture sélection depuis `uiStore`
@@ -85,6 +87,7 @@ Remplacer le `dragCounterRef` par `e.relatedTarget` / `container.contains(relate
 - `src/components/library/LazyLoadedImageCard.tsx` — suppression `console.warn` de debug
 
 ### ❌ Hors périmètre
+
 - Modification du comportement fonctionnel (aucune nouvelle feature)
 - Tests d'intégration drag & drop (reporter à phase future)
 
@@ -100,10 +103,10 @@ Remplacer le `dragCounterRef` par `e.relatedTarget` / `container.contains(relate
 
 ## Résultats
 
-| Métrique | Valeur |
-|----------|--------|
-| Tests avant | 551/551 ✅ |
-| Tests après | 551/551 ✅ |
-| Régressions introduites | 0 |
-| TypeScript strict | ✅ 0 erreurs |
-| ESLint | ✅ 0 warnings |
+| Métrique                | Valeur        |
+| ----------------------- | ------------- |
+| Tests avant             | 551/551 ✅    |
+| Tests après             | 551/551 ✅    |
+| Régressions introduites | 0             |
+| TypeScript strict       | ✅ 0 erreurs  |
+| ESLint                  | ✅ 0 warnings |

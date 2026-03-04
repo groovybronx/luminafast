@@ -178,4 +178,187 @@ describe('uiStore', () => {
     expect(useUiStore.getState().leftSidebarOpen).toBe(true);
     expect(useUiStore.getState().rightSidebarOpen).toBe(true);
   });
+
+  describe('Phase 4.4 - Comparison Mode', () => {
+    beforeEach(() => {
+      // Reset comparison state
+      act(() => {
+        useUiStore.setState({
+          comparisonMode: 'split',
+          splitViewPosition: 50,
+          overlayOpacity: 50,
+        });
+      });
+    });
+
+    describe('comparisonMode', () => {
+      it('should initialize with split mode', () => {
+        const mode = useUiStore.getState().comparisonMode;
+        expect(mode).toBe('split');
+      });
+
+      it('should set comparison mode to overlay', () => {
+        const store = useUiStore.getState();
+        act(() => {
+          store.setComparisonMode('overlay');
+        });
+
+        expect(useUiStore.getState().comparisonMode).toBe('overlay');
+      });
+
+      it('should set comparison mode to sideBySide', () => {
+        const store = useUiStore.getState();
+        act(() => {
+          store.setComparisonMode('sideBySide');
+        });
+
+        expect(useUiStore.getState().comparisonMode).toBe('sideBySide');
+      });
+
+      it('should toggle between all modes', () => {
+        const store = useUiStore.getState();
+
+        act(() => {
+          store.setComparisonMode('split');
+        });
+        expect(useUiStore.getState().comparisonMode).toBe('split');
+
+        act(() => {
+          store.setComparisonMode('overlay');
+        });
+        expect(useUiStore.getState().comparisonMode).toBe('overlay');
+
+        act(() => {
+          store.setComparisonMode('sideBySide');
+        });
+        expect(useUiStore.getState().comparisonMode).toBe('sideBySide');
+      });
+    });
+
+    describe('splitViewPosition', () => {
+      it('should initialize with 50 percent', () => {
+        expect(useUiStore.getState().splitViewPosition).toBe(50);
+      });
+
+      it('should set split position', () => {
+        const store = useUiStore.getState();
+        act(() => {
+          store.setSplitViewPosition(30);
+        });
+
+        expect(useUiStore.getState().splitViewPosition).toBe(30);
+      });
+
+      it('should clamp position to minimum 0', () => {
+        const store = useUiStore.getState();
+        act(() => {
+          store.setSplitViewPosition(-50);
+        });
+
+        expect(useUiStore.getState().splitViewPosition).toBe(0);
+      });
+
+      it('should clamp position to maximum 100', () => {
+        const store = useUiStore.getState();
+        act(() => {
+          store.setSplitViewPosition(150);
+        });
+
+        expect(useUiStore.getState().splitViewPosition).toBe(100);
+      });
+
+      it('should accept valid range positions', () => {
+        const store = useUiStore.getState();
+        const validPositions = [0, 25, 50, 75, 100];
+
+        validPositions.forEach((pos) => {
+          act(() => {
+            store.setSplitViewPosition(pos);
+          });
+          expect(useUiStore.getState().splitViewPosition).toBe(pos);
+        });
+      });
+    });
+
+    describe('overlayOpacity', () => {
+      it('should initialize with 50 percent', () => {
+        expect(useUiStore.getState().overlayOpacity).toBe(50);
+      });
+
+      it('should set overlay opacity', () => {
+        const store = useUiStore.getState();
+        act(() => {
+          store.setOverlayOpacity(75);
+        });
+
+        expect(useUiStore.getState().overlayOpacity).toBe(75);
+      });
+
+      it('should clamp opacity to minimum 0', () => {
+        const store = useUiStore.getState();
+        act(() => {
+          store.setOverlayOpacity(-25);
+        });
+
+        expect(useUiStore.getState().overlayOpacity).toBe(0);
+      });
+
+      it('should clamp opacity to maximum 100', () => {
+        const store = useUiStore.getState();
+        act(() => {
+          store.setOverlayOpacity(200);
+        });
+
+        expect(useUiStore.getState().overlayOpacity).toBe(100);
+      });
+
+      it('should accept valid range opacities', () => {
+        const store = useUiStore.getState();
+        const validOpacities = [0, 20, 50, 80, 100];
+
+        validOpacities.forEach((opacity) => {
+          act(() => {
+            store.setOverlayOpacity(opacity);
+          });
+          expect(useUiStore.getState().overlayOpacity).toBe(opacity);
+        });
+      });
+    });
+
+    describe('state independence', () => {
+      it('should not affect other state when changing comparison mode', () => {
+        const store = useUiStore.getState();
+        const initialPosition = store.splitViewPosition;
+
+        act(() => {
+          store.setComparisonMode('overlay');
+        });
+
+        expect(useUiStore.getState().splitViewPosition).toBe(initialPosition);
+      });
+
+      it('should not affect other state when changing split position', () => {
+        const store = useUiStore.getState();
+        const initialMode = store.comparisonMode;
+
+        act(() => {
+          store.setSplitViewPosition(25);
+        });
+
+        expect(useUiStore.getState().comparisonMode).toBe(initialMode);
+      });
+
+      it('should allow independent updates to position and opacity', () => {
+        const store = useUiStore.getState();
+
+        act(() => {
+          store.setSplitViewPosition(30);
+          store.setOverlayOpacity(70);
+        });
+
+        expect(useUiStore.getState().splitViewPosition).toBe(30);
+        expect(useUiStore.getState().overlayOpacity).toBe(70);
+      });
+    });
+  });
 });

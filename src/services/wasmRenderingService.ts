@@ -30,7 +30,7 @@ interface WasmExports {
     color_temp: number;
     tint: number;
     // Méthode principale
-    apply_filters(pixels: Uint8ClampedArray, width: number, height: number): Uint8Array;
+    apply_filters(pixels: Uint8ClampedArray, width: number, height: number): Uint8ClampedArray;
   };
   default: () => Promise<void>;
 }
@@ -76,8 +76,8 @@ export async function loadWasmModule(): Promise<void> {
     // Produits par: wasm-pack build --target web
 
     // Import dynamique du module ES généré par wasm-bindgen
-    const wasmModule =
-      (await import('@/../luminafast-wasm/pkg/luminafast_wasm.js')) as unknown as WasmExports;
+    // @ts-expect-error — Module WASM généré au build-time, disponible au runtime dans luminafast-wasm/pkg/
+    const wasmModule = (await import('@wasm/luminafast_wasm.js')) as WasmExports;
 
     // Initialiser le module WASM (charge .wasm et instancie)
     await wasmModule.default();

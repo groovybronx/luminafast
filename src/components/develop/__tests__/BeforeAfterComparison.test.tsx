@@ -45,13 +45,12 @@ describe('BeforeAfterComparison', () => {
   });
 
   it('should render SplitViewComparison when mode is split', () => {
-    render(<BeforeAfterComparison {...defaultProps} mode="split" />);
+    const { container } = render(<BeforeAfterComparison {...defaultProps} mode="split" />);
 
     // Split mode should render: 1 img (left original) + 1 canvas (right WASM)
     const images = screen.getAllByRole('img');
     expect(images).toHaveLength(1);
 
-    const { container } = render(<BeforeAfterComparison {...defaultProps} mode="split" />);
     const canvas = container.querySelector('canvas');
     expect(canvas).toBeInTheDocument();
   });

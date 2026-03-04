@@ -4,8 +4,8 @@ import { DevelopView } from '../DevelopView';
 import type { CatalogImage } from '../../../types';
 
 // Mock PreviewRenderer to avoid complex dependencies
-vi.mock('../PreviewRenderer', () => ({
-  PreviewRenderer: () => <div>Preview Renderer Mock</div>,
+vi.mock('../library/PreviewRenderer', () => ({
+  default: () => <div>Preview Renderer Mock</div>,
 }));
 
 describe('DevelopView - Integration (Phase 4.4)', () => {

@@ -15,13 +15,12 @@ describe('OverlayComparison', () => {
   });
 
   it('should render original image and WASM canvas overlay', () => {
-    render(<OverlayComparison {...defaultProps} />);
+    const { container } = render(<OverlayComparison {...defaultProps} />);
 
     // Background: original image, Overlay: WASM canvas
     const images = screen.getAllByRole('img');
     expect(images).toHaveLength(1); // Only background original image
 
-    const { container } = render(<OverlayComparison {...defaultProps} />);
     const canvas = container.querySelector('canvas');
     expect(canvas).toBeInTheDocument();
   });

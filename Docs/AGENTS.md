@@ -186,7 +186,7 @@ Chaque sous-phase a un **brief dédié** qui sert de "prompt" pour l'agent IA. L
 
 ### 3.2 — Sections Obligatoires
 
-````markdown
+```markdown
 # PHASE-X.Y — [Titre Descriptif]
 
 ## Objectif

@@ -5,10 +5,9 @@
  * Bas: Canvas WASM avec filtres appliqués
  */
 
-import { useCallback, useState, useRef, useEffect } from 'react';
-import { renderWithWasm, normalizeFiltersForWasm } from '@/services/wasmRenderingService';
+import { useCallback, useState, useRef } from 'react';
+import { useWasmCanvasRender } from '@/hooks/useWasmCanvasRender';
 import type { SideBySideComparisonProps } from '@/types';
-import type { PixelFilterState } from '@/types/rendering';
 
 export const SideBySideComparison = ({
   beforeUrl,
@@ -55,54 +54,7 @@ export const SideBySideComparison = ({
   }, []);
 
   // Rendu WASM du canvas bas avec filtres appliqués
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !afterUrl) return;
-
-    const renderImage = async () => {
-      try {
-        // Charger l'image pour connaître ses dimensions
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = async () => {
-          // Dimensionner le canvas
-          canvas.width = img.width;
-          canvas.height = img.height;
-
-          // Convertir EditState à PixelFilterState et appliquer WASM
-          const normalizedFilters: PixelFilterState = {
-            exposure: editState?.exposure ?? 0,
-            contrast: editState?.contrast ?? 0,
-            saturation: editState?.saturation ?? 0,
-            highlights: editState?.highlights ?? 0,
-            shadows: editState?.shadows ?? 0,
-            clarity: editState?.clarity ?? 0,
-            vibrance: editState?.vibrance ?? 0,
-            colorTemp: editState?.temp ?? 5500,
-            tint: editState?.tint ?? 0,
-          };
-
-          const wasmFilters = normalizeFiltersForWasm(normalizedFilters);
-
-          // Appliquer WASM si editState existe et contient des modifications
-          if (editState && Object.values(editState).some((v) => v !== 0 && v !== undefined)) {
-            await renderWithWasm(canvas, afterUrl, wasmFilters, img.width, img.height);
-          } else {
-            // Fallback: Dessiner l'image sans filtres
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.drawImage(img, 0, 0);
-            }
-          }
-        };
-        img.src = afterUrl;
-      } catch (error) {
-        console.error('Erreur WASM SideBySideComparison:', error);
-      }
-    };
-
-    renderImage();
-  }, [afterUrl, editState]);
+  useWasmCanvasRender(canvasRef, afterUrl, editState);
 
   // Transformation CSS appliquée aux deux images
   const transform = `scale(${zoom}) translate(${panX}px, ${panY}px)`;

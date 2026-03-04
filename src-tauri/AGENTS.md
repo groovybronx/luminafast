@@ -15,7 +15,7 @@
 ├── discovery.rs # Commands discovery/import
 └── dev.rs # Commands développement (si applicable)
 
-````
+```
 
 ### 2.2 — Modules Internes avec Tests
 

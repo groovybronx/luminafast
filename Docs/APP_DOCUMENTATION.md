@@ -399,6 +399,34 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 - **Zustand Persistence** : Subscriptions pour notifications state changes
 - **SQLite Bidirectional Sync** : Callbacks `onRatingChange()`, `onFlagChange()`, `onTagsChange()` dans useCatalog hook
 
+### 4.2.1 — Hooks Personnalisés et Utilitaires
+
+| Hook/Util               | Fichier                           | Responsabilité                                                                                                                             |
+| ----------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `useWasmCanvasRender`   | `hooks/useWasmCanvasRender.ts`    | Encapsule rendu WASM (chargement image, détection filtres, appel renderWithWasm) — utilisé par SplitViewComparison, OverlayComparison, SideBySideComparison (Phase 4.4-B, Maintenance déduplication) |
+| `editStateToPixelFilters` | `lib/filterUtils.ts`             | Convertit EditState UI (sliders -100..+100) → PixelFilterState (plages WASM spécifiques)                                                  |
+| `hasNonNeutralFilters`  | `lib/filterUtils.ts`             | Détecte si AU MOINS un filtre dévie des valeurs neutres (évite rendu inutile)                                                            |
+
+**Architecture** :
+
+```
+DevelopView (sliders)
+  ↓ (editState changé)
+SplitViewComparison / OverlayComparison / SideBySideComparison
+  ↓ (useWasmCanvasRender hook)
+editStateToPixelFilters()  →  Conversion UI → WASM
+hasNonNeutralFilters()    →  Détection modifications
+renderWithWasm()          →  Pixel-perfect WASM canvas rendering
+```
+
+**Pattern d'Utilisation** :
+
+```typescript
+// Dans un composant de comparaison (ex: OverlayComparison)
+const canvasRef = useRef<HTMLCanvasElement>(null);
+useWasmCanvasRender(canvasRef, afterUrl, editState); // Gère tout automatiquement
+```
+
 ### 4.3 — Zones de l'interface
 
 | Zone                    | Position               | Fonctionnalités mockées                                                          |

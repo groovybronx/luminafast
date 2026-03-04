@@ -146,7 +146,7 @@ Non-negotiables pour cette phase.
 - Migrations séquentielles (001, 002, ...)
 - Foreign keys avec CASCADE
 - Indexes sur colonnes fréquemment queryées
-````
+```
 
 ### 8. Architecture Cible
 

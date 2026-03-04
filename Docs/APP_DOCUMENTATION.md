@@ -66,7 +66,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-03-03 (Maintenance Phase A/B/C/D - Preview Format Selection: Types, Parallel Loading, View-Specific Usage, Test Suite) — État : 3-format preview pyramid fully functional, 17 preview-format tests ✅, DevelopView displays 1440px Standard (6× quality improvement). Branche `maintenance/alignement-conformité-phase-4.2`.
+> **Dernière mise à jour** : 2026-03-05 (Maintenance - Extraction Hook useWasmCanvasRender + filterUtils: élimination 140 lignes duplication, source unique vérité normalisation WASM, 18 tests unitaires) — État : Hook WASM extraction complétée, 3 composants comparaison refactorisés (47→1 ligne), zéro changement comportemental. Branche `phase/maintenance-wasm-canvas-extraction`
 >
 > ### Décisions Projet (validées par le propriétaire)
 
@@ -204,7 +204,10 @@ LuminaFast/
 │   ├── lib/                        # Utilitaires et données mock
 │   │   ├── helpers.ts              # safeID()
 │   │   ├── searchParser.ts         # parseSearchQuery() — parser Phase 3.5
-│   │   └── mockData.ts             # generateImages, INITIAL_IMAGES (MockEvent supprimé)
+│   │   ├── filterUtils.ts          # editStateToPixelFilters(), hasNonNeutralFilters() — centralisation logique WASM (Maintenance)
+│   │   ├── mockData.ts             # generateImages, INITIAL_IMAGES (MockEvent supprimé)
+│   │   └── __tests__/             # Tests utilitaires
+│   │       └── filterUtils.test.ts # 18 tests conversion + détection filtres neutres (Maintenance)
 │   ├── services/                   # Services TypeScript (Phase 1.2 + 2.2 + 3.3 + 3.5)
 │   │   ├── AGENTS.md               # Conventions services front + mocks
 │   │   ├── catalogService.ts       # Wrapper Tauri CRUD images + collections + folders
@@ -263,7 +266,9 @@ LuminaFast/
 │       ├── useCatalog.ts           # Hook principal catalogue (mapping DTO→CatalogImage, EXIF, isSynced, callbacks)
 │       ├── useDiscovery.ts         # Hook discovery (reset cleanup, preview séquentiel)
 │       ├── useSearch.ts            # Hook search (debounce 500ms, query parsing)
-│       └── __tests__/             # Tests hooks (3 fichiers)
+│       ├── useWasmCanvasRender.ts  # Hook rendu WASM sur canvas (chargement image, normalisation filtres) — Maintenance
+│       └── __tests__/             # Tests hooks (4 fichiers)
+│           └── useWasmCanvasRender.test.ts # Tests hook WASM canvas render (Maintenance)
 │   ├── test/                       # Infrastructure tests et mocks
 │   │   ├── setup.ts                # Configuration tests globale (setupFilesAfterEnv)
 │   │   ├── storeUtils.ts           # Utilitaires stores tests (resetStores)
@@ -401,11 +406,11 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 
 ### 4.2.1 — Hooks Personnalisés et Utilitaires
 
-| Hook/Util               | Fichier                           | Responsabilité                                                                                                                             |
-| ----------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `useWasmCanvasRender`   | `hooks/useWasmCanvasRender.ts`    | Encapsule rendu WASM (chargement image, détection filtres, appel renderWithWasm) — utilisé par SplitViewComparison, OverlayComparison, SideBySideComparison (Phase 4.4-B, Maintenance déduplication) |
-| `editStateToPixelFilters` | `lib/filterUtils.ts`             | Convertit EditState UI (sliders -100..+100) → PixelFilterState (plages WASM spécifiques)                                                  |
-| `hasNonNeutralFilters`  | `lib/filterUtils.ts`             | Détecte si AU MOINS un filtre dévie des valeurs neutres (évite rendu inutile)                                                            |
+| Hook/Util                 | Fichier                        | Responsabilité                                                                                                                                                                                       |
+| ------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useWasmCanvasRender`     | `hooks/useWasmCanvasRender.ts` | Encapsule rendu WASM (chargement image, détection filtres, appel renderWithWasm) — utilisé par SplitViewComparison, OverlayComparison, SideBySideComparison (Phase 4.4-B, Maintenance déduplication) |
+| `editStateToPixelFilters` | `lib/filterUtils.ts`           | Convertit EditState UI (sliders -100..+100) → PixelFilterState (plages WASM spécifiques)                                                                                                             |
+| `hasNonNeutralFilters`    | `lib/filterUtils.ts`           | Détecte si AU MOINS un filtre dévie des valeurs neutres (évite rendu inutile)                                                                                                                        |
 
 **Architecture** :
 

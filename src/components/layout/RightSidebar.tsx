@@ -1,9 +1,11 @@
 import { Histogram } from '../metadata/Histogram';
 import { ExifGrid } from '../metadata/ExifGrid';
+import { TagsPanel } from '../metadata/TagsPanel';
 import { DevelopSliders } from '../develop/DevelopSliders';
 import { HistoryPanel } from '../develop/HistoryPanel';
 import { MetadataPanel } from '../metadata/MetadataPanel';
 import { useExif } from '../../hooks/useExif';
+import { useUiStore } from '../../stores/uiStore';
 import type { CatalogImage, ActiveView, FlagType, EditState, ExifData } from '../../types';
 
 interface RightSidebarProps {
@@ -26,6 +28,8 @@ function buildExifSummary(exif: ExifData | null): string | undefined {
 
 export const RightSidebar = ({ activeView, activeImg, onDispatchEvent }: RightSidebarProps) => {
   const { exif: fullExif } = useExif(activeImg.id);
+  const selection = useUiStore((state) => state.selection);
+  const selectedImageIds = Array.from(selection).filter((id) => id !== activeImg.id);
   // Priorité : EXIF complet depuis Tauri > données partielles du catalogue
   const displayExif = fullExif ?? activeImg.exif;
   const exifSummary = buildExifSummary(fullExif);
@@ -46,7 +50,12 @@ export const RightSidebar = ({ activeView, activeImg, onDispatchEvent }: RightSi
             <HistoryPanel selectedImageId={activeImg.id} />
           </div>
         ) : (
-          <MetadataPanel activeImg={activeImg} onDispatchEvent={onDispatchEvent} />
+          <div className="animate-in fade-in duration-500">
+            <MetadataPanel activeImg={activeImg} />
+            <div className="px-5 pb-5 border-t border-zinc-800 pt-5">
+              <TagsPanel imageId={activeImg.id} selectedImageIds={selectedImageIds} />
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -52,7 +52,7 @@
 | 4           | 4.3        | Historique & Snapshots UI                                                                       | ✅ Complétée | 2026-03-03 | Copilot |
 
 | 5 | 5.1 | Panneau EXIF Connecté | ✅ Complétée | 2026-07-10 | Copilot |
-| 5 | 5.2 | Système de Tags Hiérarchique | ⬜ En attente | — | — |
+| 5 | 5.2 | Système de Tags Hiérarchique | ✅ Complétée | 2026-07-11 | Copilot |
 | 5 | 5.3 | Rating & Flagging Persistants | ⬜ En attente | — | — |
 | 5 | 5.4 | Sidecar XMP | ⬜ En attente | — | — |
 | 6 | 6.1 | Système de Cache Multiniveau | ⬜ En attente | — | — |
@@ -84,14 +84,63 @@
 
 ## Phase Actuelle
 
-> **Phase 4.5** : Panneau EXIF Connecté (⏳ **À commencer**)
+> **Phase 5.2** : Système de Tags Hiérarchique (✅ **Complétée**)
 >
-> Brief : `Docs/briefs/PHASE-4.5.md` (à créer)
-> Branche : `phase/4.5-exif-panel` (à créer)
+> Brief : `Docs/briefs/PHASE-5.2.md`
+> Branche : `phase/5.2-tags-hierarchiques`
 
 ---
 
 ## Historique des Sous-Phases Complétées
+
+---
+
+### 2026-07-11 — Phase 5.2 : Système de Tags Hiérarchique (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée (7 commandes Tauri + composant TagsPanel + 26 tests frontend + 13 tests Rust)**
+**Agent** : GitHub Copilot (Claude Sonnet 4.6)
+**Brief** : `Docs/briefs/PHASE-5.2.md`
+**Branche** : `phase/5.2-tags-hierarchiques`
+
+**Livrables principaux** :
+
+- **Backend Rust** (`src-tauri/src/commands/tags.rs`)
+  - `TagDTO { id, name, parent_id, image_count }` — serde Serialize/Deserialize
+  - `validate_tag_name()` — validation: non vide, ≤100 chars, pas de `/`
+  - 7 commandes Tauri : `create_tag`, `get_all_tags`, `rename_tag`, `delete_tag`, `add_tags_to_images`, `remove_tags_from_images`, `get_image_tags`
+  - `delete_tag` — suppression en cascade via WITH RECURSIVE CTE SQLite
+  - 13 tests unitaires Rust (tous passants, 201 tests Rust total)
+
+- **Types TypeScript** (`src/types/tag.ts`)
+  - `TagDTO`, `TagNode extends TagDTO { children: TagNode[] }`, `CreateTagPayload`
+
+- **Service** (`src/services/tagService.ts`)
+  - `TagService` — 7 méthodes static, pattern camelCase Tauri v2
+
+- **Store Zustand** (`src/stores/tagStore.ts`)
+  - `buildTree(flat)` — construction de l'arbre hiérarchique
+  - `flattenTree(nodes)` — aplatissement pour l'auto-complétion
+  - Opérations optimistes pour rename, reload complet pour delete/create
+
+- **Composant UI** (`src/components/metadata/TagsPanel.tsx`)
+  - Auto-complétion filtrée côté client (max 8 suggestions, navigation clavier ↑↓Enter Escape)
+  - Création de tag à la volée si nom non existant
+  - Arbre hiérarchique de gestion (rename inline, delete cascade)
+  - Intégration Event Sourcing (`ADD_TAG` / `REMOVE_TAG`)
+  - Support batch (selectedImageIds pour sélection multiple)
+
+- **Intégration** (`src/components/layout/RightSidebar.tsx`)
+  - `<TagsPanel imageId={activeImg.id} />` ajouté dans la vue Library/Metadata
+
+- **Tests frontend** (26 tests, 832 tests total)
+  - `src/services/__tests__/tagService.test.ts` — 12 tests (7 méthodes)
+  - `src/stores/__tests__/tagStore.test.ts` — 7 tests (buildTree, loadTags, CRUD)
+  - `src/components/metadata/__tests__/TagsPanel.test.tsx` — 7 tests (rendu, autocomplete, add/remove)
+
+**Cause racine des corrections** :
+
+- Rust E0597 (`stmt` lifetime) corrigé en assignant le résultat `.collect()` avant la fin du bloc
+- Tests TagsPanel : `onBlur setTimeout 150ms` → utiliser `keyDown Enter` plutôt que `mouseDown` dans les tests pour contourner le timing du dropdown
 
 ---
 

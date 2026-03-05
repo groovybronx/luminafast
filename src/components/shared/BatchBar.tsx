@@ -3,6 +3,8 @@ import { Check, Star, Tag, RefreshCw, X, FolderPlus, ChevronUp } from 'lucide-re
 import type { EditState } from '../../types';
 import { useCollectionStore } from '../../stores/collectionStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useTagStore } from '../../stores/tagStore';
+import type { TagNode } from '../../types/tag';
 
 interface BatchBarProps {
   selectionCount: number;
@@ -21,11 +23,15 @@ export const BatchBar = ({
   onClearSelection,
 }: BatchBarProps) => {
   const [showCollectionPicker, setShowCollectionPicker] = useState(false);
+  const [showTagPicker, setShowTagPicker] = useState(false);
+  const [tagInput, setTagInput] = useState('');
   const pickerRef = useRef<HTMLDivElement>(null);
+  const tagPickerRef = useRef<HTMLDivElement>(null);
 
   const collections = useCollectionStore((state) => state.collections);
   const addImagesToCollection = useCollectionStore((state) => state.addImagesToCollection);
   const selection = useUiStore((state) => state.selection);
+  const { flatTags, addTagsToImages, createTag, loadTags } = useTagStore();
 
   // Fermer le picker si clic en dehors
   useEffect(() => {
@@ -40,6 +46,18 @@ export const BatchBar = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showCollectionPicker]);
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (tagPickerRef.current && !tagPickerRef.current.contains(e.target as Node)) {
+        setShowTagPicker(false);
+      }
+    };
+    if (showTagPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showTagPicker]);
+
   const handleAddToCollection = async (collectionId: number, collectionName: string) => {
     const ids = Array.from(selection);
     try {
@@ -50,6 +68,41 @@ export const BatchBar = ({
     }
     setShowCollectionPicker(false);
   };
+
+  const handleAssignTagBatch = async (tag: TagNode) => {
+    const ids = Array.from(selection);
+    try {
+      await addTagsToImages(ids, [tag.id]);
+      onAddLog(`Tag "${tag.name}" ajouté à ${ids.length} image(s)`, 'sqlite');
+    } catch {
+      onAddLog(`Erreur lors de l'ajout du tag "${tag.name}"`, 'error');
+    }
+    setShowTagPicker(false);
+  };
+
+  const handleCreateTagBatch = async () => {
+    const name = tagInput.trim();
+    if (!name) return;
+    const existing = flatTags.find((t) => t.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      await handleAssignTagBatch(existing);
+      return;
+    }
+    try {
+      const newTag = await createTag(name);
+      const ids = Array.from(selection);
+      await addTagsToImages(ids, [newTag.id]);
+      onAddLog(`Tag "${newTag.name}" créé et ajouté à ${ids.length} image(s)`, 'sqlite');
+    } catch {
+      onAddLog('Erreur lors de la création du tag', 'error');
+    }
+    setShowTagPicker(false);
+  };
+
+  const tagSuggestions = flatTags.filter(
+    (t) =>
+      tagInput.trim().length > 0 && t.name.toLowerCase().includes(tagInput.trim().toLowerCase()),
+  );
 
   if (selectionCount <= 1) return null;
 
@@ -76,6 +129,58 @@ export const BatchBar = ({
                 <span className="text-zinc-600 text-[10px] shrink-0">{col.image_count} img</span>
               </button>
             ))
+          )}
+        </div>
+      )}
+
+      {/* Tag picker popover */}
+      {showTagPicker && (
+        <div
+          ref={tagPickerRef}
+          className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl py-1 min-w-52 max-h-64 overflow-y-auto"
+        >
+          <div className="px-3 pt-2 pb-1">
+            <input
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void handleCreateTagBatch();
+                if (e.key === 'Escape') setShowTagPicker(false);
+              }}
+              placeholder="Chercher ou créer un tag…"
+              autoFocus
+              className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-[11px] text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-purple-500"
+            />
+          </div>
+          {tagSuggestions.length === 0 && !tagInput.trim() ? (
+            <p className="px-4 py-2 text-[11px] text-zinc-500 italic">Tapez pour chercher…</p>
+          ) : (
+            <>
+              {tagSuggestions.map((tag) => (
+                <button
+                  key={tag.id}
+                  onClick={() => void handleAssignTagBatch(tag)}
+                  className="w-full text-left px-4 py-2 text-[11px] text-zinc-300 hover:bg-zinc-800 hover:text-white flex items-center justify-between gap-3 transition-colors"
+                >
+                  <span className="truncate">{tag.name}</span>
+                  {tag.parentId != null && (
+                    <span className="text-zinc-600 text-[10px] shrink-0">
+                      ← {flatTags.find((t) => t.id === tag.parentId)?.name}
+                    </span>
+                  )}
+                </button>
+              ))}
+              {tagInput.trim() &&
+                !flatTags.some((t) => t.name.toLowerCase() === tagInput.trim().toLowerCase()) && (
+                  <button
+                    onClick={() => void handleCreateTagBatch()}
+                    className="w-full text-left px-4 py-2 text-[11px] text-purple-400 hover:bg-zinc-800 hover:text-purple-300 transition-colors"
+                  >
+                    Créer « {tagInput.trim()} »
+                  </button>
+                )}
+            </>
           )}
         </div>
       )}
@@ -111,9 +216,13 @@ export const BatchBar = ({
             Collection
           </button>
           <button
-            disabled
-            title="Non implémenté"
-            className="opacity-40 cursor-not-allowed flex flex-col items-center gap-1 text-[9px] font-bold uppercase text-zinc-600"
+            onClick={() => {
+              loadTags();
+              setTagInput('');
+              setShowTagPicker((v) => !v);
+            }}
+            className={`flex flex-col items-center gap-1 text-[9px] font-bold uppercase transition-colors ${showTagPicker ? 'text-purple-400' : 'text-zinc-400 hover:text-purple-400'}`}
+            title="Ajouter un tag à la sélection"
           >
             <Tag size={18} /> Tags
           </button>

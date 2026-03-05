@@ -76,8 +76,7 @@ export async function loadWasmModule(): Promise<void> {
     // Produits par: wasm-pack build --target web
 
     // Import dynamique du module ES généré par wasm-bindgen
-    const wasmModule =
-      (await import('luminafast-wasm/pkg/luminafast_wasm')) as unknown as WasmExports;
+    const wasmModule = (await import('@wasm/luminafast_wasm')) as unknown as WasmExports;
 
     // Initialiser le module WASM (charge .wasm et instancie)
     await wasmModule.default();

@@ -44,6 +44,6 @@ export function hasNonNeutralFilters(filters: PixelFilterState): boolean {
     filters.clarity !== 0 ||
     filters.vibrance !== 0 ||
     filters.tint !== 0 ||
-    filters.colorTemp !== 5500 // Valeur neutre pour la temp de couleur
+    filters.colorTemp !== 0 // Valeur neutre pour la temp de couleur
   );
 }

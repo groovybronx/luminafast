@@ -87,6 +87,7 @@ pub fn run() {
             commands::catalog::get_folder_tree,
             commands::catalog::get_folder_images,
             commands::catalog::update_volume_status,
+            commands::catalog::get_image_exif,
             // EXIF commands
             commands::exif::extract_exif,
             commands::exif::extract_exif_batch,

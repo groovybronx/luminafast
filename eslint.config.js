@@ -15,6 +15,7 @@ export default defineConfig([
     'src-tauri/target',
     'luminafast-wasm/pkg',
     'luminafast-wasm/target',
+    'src/wasm',
     'coverage',
     '*.local.ts',
     '*.config.local.ts',

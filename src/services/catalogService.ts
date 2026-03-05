@@ -73,6 +73,26 @@ export class CatalogService {
   }
 
   /**
+   * Get full EXIF metadata for a single image (Phase 5.1)
+   * Includes GPS and color_space not available in ImageDTO.
+   */
+  static async getImageExif(id: number): Promise<import('../types/dto').ExifMetadataDTO> {
+    try {
+      const invoke = this.getInvoke();
+      const result = await invoke('get_image_exif', { id });
+
+      if (typeof result === 'string') {
+        throw new Error(result);
+      }
+
+      return result as import('../types/dto').ExifMetadataDTO;
+    } catch (error) {
+      console.error(`Failed to get EXIF for image ID ${id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Update image state (rating, flag, color_label) - Checkpoint 2
    * Now accepts an object for better API design
    */

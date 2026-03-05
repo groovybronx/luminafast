@@ -44,7 +44,7 @@ const makeImageDTO = (overrides: Partial<ImageDTO> = {}): ImageDTO => ({
   imported_at: '2025-01-02T12:00:00Z',
   iso: 400,
   aperture: 2.8,
-  shutter_speed: 1 / 500, // 0.002 -> "1/500"
+  shutter_speed: Math.log2(1 / 500), // log2(0.002) ≈ -8.97 → DB format → useCatalog convertit en "1/500"
   focal_length: 35.0,
   lens: 'XF 35mm F2 R WR',
   camera_make: 'FUJIFILM',
@@ -114,7 +114,8 @@ describe('useCatalog', () => {
   });
 
   it('devrait formater shutter_speed long exposure (>= 1s)', async () => {
-    const dto = makeImageDTO({ shutter_speed: 2.5 });
+    // Math.log2(2.5) ≈ 1.32 → DB format → useCatalog convertit en "2.5s"
+    const dto = makeImageDTO({ shutter_speed: Math.log2(2.5) });
     mockGetAllImages.mockResolvedValue([dto]);
 
     const { result } = renderHook(() => useCatalog());

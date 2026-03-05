@@ -387,6 +387,47 @@ fn apply_tint(pixels: &mut [u8], tint: f32) {
     }
 }
 
+/**
+ * Calcule l'histogramme RGB d'une image depuis son buffer RGBA.
+ *
+ * Retourne 768 valeurs u32 : r[0..256] ++ g[0..256] ++ b[0..256]
+ * Chaque bin représente le nombre de pixels ayant cette valeur (0–255).
+ *
+ * @param pixels - Buffer RGBA (4 octets par pixel)
+ * @param width  - Largeur en pixels
+ * @param height - Hauteur en pixels
+ * @returns Vec<u32> de 768 éléments, ou ProcessingError si dimensions invalides
+ */
+pub fn compute_histogram_from_pixels(
+    pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<Vec<u32>, ProcessingError> {
+    if width == 0 || height == 0 {
+        return Err(ProcessingError::InvalidDimensions { width, height });
+    }
+
+    let expected_len = (width as usize) * (height as usize) * 4;
+    if pixels.len() != expected_len {
+        return Err(ProcessingError::InvalidPixelCount {
+            expected: expected_len,
+            got: pixels.len(),
+        });
+    }
+
+    // 768 bins : r[0..256] puis g[256..512] puis b[512..768]
+    let mut histogram = vec![0u32; 768];
+
+    for chunk in pixels.chunks_exact(4) {
+        histogram[chunk[0] as usize] += 1;           // canal R
+        histogram[256 + chunk[1] as usize] += 1;     // canal G
+        histogram[512 + chunk[2] as usize] += 1;     // canal B
+        // chunk[3] = alpha, ignoré
+    }
+
+    Ok(histogram)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -496,5 +537,94 @@ mod tests {
 
         // Avec tous les filtres à zéro, les pixels devraient rester inchangés
         assert_eq!(result[0..3], pixels[0..3]);
+    }
+
+    // ===== Tests compute_histogram_from_pixels =====
+
+    #[test]
+    fn test_histogram_invalid_dimensions() {
+        let pixels = vec![100u8, 100u8, 100u8, 255u8];
+        assert!(compute_histogram_from_pixels(&pixels, 0, 1).is_err());
+        assert!(compute_histogram_from_pixels(&pixels, 1, 0).is_err());
+    }
+
+    #[test]
+    fn test_histogram_pixel_count_mismatch() {
+        // 1×1 pixel → 4 octets attendus, on en passe 8
+        let pixels = vec![100u8; 8];
+        assert!(compute_histogram_from_pixels(&pixels, 1, 1).is_err());
+    }
+
+    #[test]
+    fn test_histogram_length_is_768() {
+        // 2×2 image, pixels rouges purs
+        let pixels = vec![255u8, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255];
+        let hist = compute_histogram_from_pixels(&pixels, 2, 2).unwrap();
+        assert_eq!(hist.len(), 768);
+    }
+
+    #[test]
+    fn test_histogram_pure_red_pixel() {
+        // 1 pixel rouge pur (R=255, G=0, B=0)
+        let pixels = vec![255u8, 0, 0, 255];
+        let hist = compute_histogram_from_pixels(&pixels, 1, 1).unwrap();
+
+        // R bin 255 devrait être 1
+        assert_eq!(hist[255], 1);
+        // G bin 0 devrait être 1
+        assert_eq!(hist[256], 1);
+        // B bin 0 devrait être 1
+        assert_eq!(hist[512], 1);
+        // Tous les autres bins = 0
+        let total_r: u32 = hist[0..256].iter().sum();
+        let total_g: u32 = hist[256..512].iter().sum();
+        let total_b: u32 = hist[512..768].iter().sum();
+        assert_eq!(total_r, 1);
+        assert_eq!(total_g, 1);
+        assert_eq!(total_b, 1);
+    }
+
+    #[test]
+    fn test_histogram_counts_all_pixels() {
+        // 4 pixels avec des valeurs RGB différentes
+        // P1: (10,20,30), P2: (40,50,60), P3: (10,20,30), P4: (70,80,90)
+        let pixels: Vec<u8> = vec![
+            10, 20, 30, 255,
+            40, 50, 60, 255,
+            10, 20, 30, 255,
+            70, 80, 90, 255,
+        ];
+        let hist = compute_histogram_from_pixels(&pixels, 2, 2).unwrap();
+
+        // R: valeur 10 → 2 pixels, 40 → 1, 70 → 1
+        assert_eq!(hist[10], 2);
+        assert_eq!(hist[40], 1);
+        assert_eq!(hist[70], 1);
+
+        // G: valeur 20 → 2 pixels (offset +256), 50 → 1, 80 → 1
+        assert_eq!(hist[256 + 20], 2);
+        assert_eq!(hist[256 + 50], 1);
+        assert_eq!(hist[256 + 80], 1);
+
+        // B: valeur 30 → 2 pixels (offset +512), 60 → 1, 90 → 1
+        assert_eq!(hist[512 + 30], 2);
+        assert_eq!(hist[512 + 60], 1);
+        assert_eq!(hist[512 + 90], 1);
+
+        // Total par canal = 4 (nombre de pixels)
+        let total_r: u32 = hist[0..256].iter().sum();
+        assert_eq!(total_r, 4);
+    }
+
+    #[test]
+    fn test_histogram_alpha_is_ignored() {
+        // Alpha=0 vs Alpha=255 ne doit pas changer le résultat
+        let opaque = vec![128u8, 64, 32, 255];
+        let transparent = vec![128u8, 64, 32, 0];
+
+        let h1 = compute_histogram_from_pixels(&opaque, 1, 1).unwrap();
+        let h2 = compute_histogram_from_pixels(&transparent, 1, 1).unwrap();
+
+        assert_eq!(h1, h2, "Alpha should not affect histogram");
     }
 }

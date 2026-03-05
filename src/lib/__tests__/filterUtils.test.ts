@@ -47,7 +47,7 @@ describe('filterUtils', () => {
         shadows: 0,
         clarity: 0,
         vibrance: 0,
-        colorTemp: 5500,
+        colorTemp: 0,
         tint: 0,
       });
     });
@@ -68,7 +68,7 @@ describe('filterUtils', () => {
       expect(result.shadows).toBe(0);
       expect(result.clarity).toBe(0);
       expect(result.vibrance).toBe(0);
-      expect(result.colorTemp).toBe(5500); // Valeur par défaut
+      expect(result.colorTemp).toBe(0); // Valeur par défaut
       expect(result.tint).toBe(0);
     });
 
@@ -84,12 +84,12 @@ describe('filterUtils', () => {
 
     it('accepte une temp de couleur neutre (5500K)', () => {
       const editState: EditState = {
-        temp: 5500,
+        temp: 0,
       } as EditState;
 
       const result = editStateToPixelFilters(editState);
 
-      expect(result.colorTemp).toBe(5500);
+      expect(result.colorTemp).toBe(0);
     });
   });
 
@@ -173,7 +173,7 @@ describe('filterUtils', () => {
         shadows: 0,
         clarity: 0,
         vibrance: 0,
-        colorTemp: 5500,
+        colorTemp: 0,
         tint: 0,
       };
 

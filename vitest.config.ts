@@ -39,6 +39,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@wasm': path.resolve(__dirname, './luminafast-wasm/pkg/'),
       '@tauri-apps/api': path.resolve(__dirname, './src/test/mocks/tauri-api'),
       '@tauri-apps/api/core': path.resolve(__dirname, './src/test/mocks/tauri-api/core'),
       '@tauri-apps/api/event': path.resolve(__dirname, './src/test/mocks/tauri-api/event'),

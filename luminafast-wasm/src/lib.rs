@@ -8,7 +8,7 @@
 pub mod image_processing;
 
 // Réexporter publiquement pour wasm-bindgen
-pub use image_processing::{apply_filters, PixelFilters, ProcessingError};
+pub use image_processing::{apply_filters, compute_histogram_from_pixels, PixelFilters, ProcessingError};
 
 use wasm_bindgen::prelude::*;
 
@@ -77,4 +77,18 @@ impl PixelFiltersWasm {
         apply_filters(pixels, width, height, &filters)
             .map_err(|e| JsValue::from_str(&e.to_string()))
     }
+}
+
+/// Calcule l'histogramme RGB d'une image RGBA.
+///
+/// Retourne un Uint32Array de 768 valeurs : r[0..256] ++ g[0..256] ++ b[0..256].
+/// Chaque bin = nombre de pixels avec cette valeur pour ce canal.
+///
+/// @param pixels - Buffer RGBA (ImageData.data — Uint8ClampedArray ou &[u8])
+/// @param width  - Largeur en pixels
+/// @param height - Hauteur en pixels
+#[wasm_bindgen]
+pub fn compute_histogram(pixels: &[u8], width: u32, height: u32) -> Result<Vec<u32>, JsValue> {
+    compute_histogram_from_pixels(pixels, width, height)
+        .map_err(|e| JsValue::from_str(&e.to_string()))
 }

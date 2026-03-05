@@ -240,6 +240,125 @@ pub async fn get_image_detail(
     Ok(result)
 }
 
+/// Get EXIF metadata for a single image by ID (Phase 5.1)
+/// Returns full EXIF including GPS and color_space from exif_metadata table.
+#[tauri::command]
+pub async fn get_image_exif(id: u32, state: State<'_, AppState>) -> CommandResult<ExifMetadataDTO> {
+    let mut db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+
+    let result = db
+        .connection()
+        .query_row(
+            "SELECT iso, aperture, shutter_speed, focal_length,
+                    lens, camera_make, camera_model, gps_lat, gps_lon, color_space
+             FROM exif_metadata
+             WHERE image_id = ?",
+            [id],
+            |row| {
+                Ok(ExifMetadataDTO {
+                    iso: row.get(0)?,
+                    aperture: row.get(1)?,
+                    shutter_speed: row.get(2)?,
+                    focal_length: row.get(3)?,
+                    lens: row.get(4)?,
+                    camera_make: row.get(5)?,
+                    camera_model: row.get(6)?,
+                    gps_lat: row.get(7)?,
+                    gps_lon: row.get(8)?,
+                    color_space: row.get(9)?,
+                })
+            },
+        )
+        .map_err(|e| format!("EXIF not found for image {}: {}", id, e))?;
+
+    Ok(result)
+}
+
+#[cfg(test)]
+mod get_image_exif_tests {
+    use crate::database::Database;
+    use tempfile::tempdir;
+
+    fn setup_test_db() -> Database {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("test_exif.db");
+        let mut db = Database::new(&db_path).unwrap();
+        db.initialize().unwrap();
+        db
+    }
+
+    #[test]
+    fn test_get_image_exif_sql_not_found() {
+        let mut db = setup_test_db();
+        let result: rusqlite::Result<(Option<u32>, Option<f64>)> = db.connection().query_row(
+            "SELECT iso, aperture FROM exif_metadata WHERE image_id = ?",
+            [9999u32],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        );
+        assert!(result.is_err(), "Querying non-existent image should fail");
+    }
+
+    #[test]
+    fn test_get_image_exif_sql_returns_all_fields() {
+        let mut db = setup_test_db();
+
+        // Créer une image de test
+        db.connection()
+            .execute(
+                "INSERT INTO images (blake3_hash, filename, extension, imported_at) VALUES (?, ?, ?, ?)",
+                ["hash_exif_test", "test.CR3", "CR3", "2026-01-01T00:00:00Z"],
+            )
+            .unwrap();
+        let image_id = db.connection().last_insert_rowid() as u32;
+
+        // Insérer EXIF complet avec GPS et color_space
+        db.connection()
+            .execute(
+                "INSERT INTO exif_metadata (image_id, iso, aperture, shutter_speed, focal_length,
+                 lens, camera_make, camera_model, gps_lat, gps_lon, color_space)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                rusqlite::params![
+                    image_id, 200, 2.8f64, -6.97f64, 50.0f64, "EF 50mm", "Canon", "EOS R5",
+                    48.8566f64, 2.3522f64, "sRGB"
+                ],
+            )
+            .unwrap();
+
+        // Vérifier que toutes les colonnes sont récupérables
+        let (iso, aperture, shutter_speed, focal_length, lens, make, model, gps_lat, gps_lon, cs): (
+            Option<u32>, Option<f64>, Option<f64>, Option<f64>,
+            Option<String>, Option<String>, Option<String>,
+            Option<f64>, Option<f64>, Option<String>,
+        ) = db.connection()
+            .query_row(
+                "SELECT iso, aperture, shutter_speed, focal_length, lens, camera_make,
+                         camera_model, gps_lat, gps_lon, color_space
+                  FROM exif_metadata WHERE image_id = ?",
+                [image_id],
+                |row| Ok((
+                    row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?,
+                    row.get(4)?, row.get(5)?, row.get(6)?,
+                    row.get(7)?, row.get(8)?, row.get(9)?,
+                )),
+            )
+            .unwrap();
+
+        assert_eq!(iso, Some(200));
+        assert!((aperture.unwrap() - 2.8).abs() < 0.001);
+        assert!((shutter_speed.unwrap() - (-6.97)).abs() < 0.001);
+        assert!((focal_length.unwrap() - 50.0).abs() < 0.001);
+        assert_eq!(lens.as_deref(), Some("EF 50mm"));
+        assert_eq!(make.as_deref(), Some("Canon"));
+        assert_eq!(model.as_deref(), Some("EOS R5"));
+        assert!((gps_lat.unwrap() - 48.8566).abs() < 0.001);
+        assert!((gps_lon.unwrap() - 2.3522).abs() < 0.001);
+        assert_eq!(cs.as_deref(), Some("sRGB"));
+    }
+}
+
 /// Update image state (rating, flag, color_label)
 #[tauri::command]
 pub async fn update_image_state(

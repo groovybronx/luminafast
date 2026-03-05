@@ -2,23 +2,20 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PreviewService } from '@/services/previewService';
 import { PreviewType, PreviewProgressEvent } from '@/types';
 
-// Mock Tauri internals
-const mockTauriInvoke = vi.fn();
-const mockUnlisten = vi.fn();
-const mockListen = vi.fn(() => Promise.resolve(mockUnlisten));
-
-// Setup global mock with event system
-Object.defineProperty(window, '__TAURI_INTERNALS__', {
-  value: {
-    invoke: mockTauriInvoke,
-    event: {
-      listen: mockListen,
-    },
-  },
-  writable: true,
+// Using vi.hoisted to declare mocks before they're used in vi.mock()
+const { mockTauriInvoke, mockListen, mockUnlisten } = vi.hoisted(() => {
+  const mockTauriInvoke = vi.fn();
+  const mockUnlisten = vi.fn();
+  const mockListen = vi.fn(() => Promise.resolve(mockUnlisten));
+  return { mockTauriInvoke, mockUnlisten, mockListen };
 });
 
-// Mock Tauri event system (for compatibility)
+// Mock @tauri-apps/api/core module
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: mockTauriInvoke,
+}));
+
+// Mock @tauri-apps/api/event module
 vi.mock('@tauri-apps/api/event', () => ({
   listen: mockListen,
 }));

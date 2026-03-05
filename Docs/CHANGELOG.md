@@ -50,7 +50,7 @@
 | Maintenance | —          | Phase C: Preview Format Selection - View-Specific Usage (DevelopView.standard 1440px)           | ✅ Complétée  | 2026-03-03 | Copilot |
 | 4           | 4.4        | Before/After Comparison (3 modes: Split-View, Overlay, Side-by-Side)                            | ✅ Complétée  | 2026-03-04 | Copilot |
 | 4           | 4.3        | Historique & Snapshots UI                                                                       | ✅ Complétée  | 2026-03-03 | Copilot |
-| 4           | 4.4        | Comparaison Avant/Après                                                                         | 🔄 En cours   | 2026-03-04 | Copilot |
+
 | 5           | 5.1        | Panneau EXIF Connecté                                                                           | ⬜ En attente | —          | —       |
 | 5           | 5.2        | Système de Tags Hiérarchique                                                                    | ⬜ En attente | —          | —       |
 | 5           | 5.3        | Rating & Flagging Persistants                                                                   | ⬜ En attente | —          | —       |

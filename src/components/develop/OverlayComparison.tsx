@@ -5,10 +5,9 @@
  * Overlay: Canvas WASM avec filtres appliqués
  */
 
-import { useCallback, useRef, useEffect } from 'react';
-import { renderWithWasm, normalizeFiltersForWasm } from '@/services/wasmRenderingService';
+import { useCallback, useRef } from 'react';
+import { useWasmCanvasRender } from '@/hooks/useWasmCanvasRender';
 import type { OverlayComparisonProps } from '@/types';
-import type { PixelFilterState } from '@/types/rendering';
 
 export const OverlayComparison = ({
   beforeUrl,
@@ -27,54 +26,7 @@ export const OverlayComparison = ({
   );
 
   // Rendu WASM du canvas overlay avec filtres appliqués
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !afterUrl) return;
-
-    const renderImage = async () => {
-      try {
-        // Charger l'image pour connaître ses dimensions
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = async () => {
-          // Dimensionner le canvas
-          canvas.width = img.width;
-          canvas.height = img.height;
-
-          // Convertir EditState à PixelFilterState et appliquer WASM
-          const normalizedFilters: PixelFilterState = {
-            exposure: editState?.exposure ?? 0,
-            contrast: editState?.contrast ?? 0,
-            saturation: editState?.saturation ?? 0,
-            highlights: editState?.highlights ?? 0,
-            shadows: editState?.shadows ?? 0,
-            clarity: editState?.clarity ?? 0,
-            vibrance: editState?.vibrance ?? 0,
-            colorTemp: editState?.temp ?? 5500,
-            tint: editState?.tint ?? 0,
-          };
-
-          const wasmFilters = normalizeFiltersForWasm(normalizedFilters);
-
-          // Appliquer WASM si editState existe et contient des modifications
-          if (editState && Object.values(editState).some((v) => v !== 0 && v !== undefined)) {
-            await renderWithWasm(canvas, afterUrl, wasmFilters, img.width, img.height);
-          } else {
-            // Fallback: Dessiner l'image sans filtres
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.drawImage(img, 0, 0);
-            }
-          }
-        };
-        img.src = afterUrl;
-      } catch (error) {
-        console.error('Erreur WASM OverlayComparison:', error);
-      }
-    };
-
-    renderImage();
-  }, [afterUrl, editState]);
+  useWasmCanvasRender(canvasRef, afterUrl, editState);
 
   return (
     <div className="flex flex-col w-full h-full bg-zinc-950">

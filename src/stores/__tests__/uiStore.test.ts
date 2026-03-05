@@ -361,4 +361,103 @@ describe('uiStore', () => {
       });
     });
   });
+
+  describe('Phase 5.3 - Rating & Flag Filters', () => {
+    beforeEach(() => {
+      act(() => {
+        useUiStore.setState({ ratingFilter: null, flagFilter: null });
+      });
+    });
+
+    describe('ratingFilter', () => {
+      it('should initialize with null (all ratings)', () => {
+        expect(useUiStore.getState().ratingFilter).toBeNull();
+      });
+
+      it('should set rating filter to a specific star count', () => {
+        const store = useUiStore.getState();
+        act(() => {
+          store.setRatingFilter(3);
+        });
+        expect(useUiStore.getState().ratingFilter).toBe(3);
+      });
+
+      it('should accept all valid star values (1-5)', () => {
+        const store = useUiStore.getState();
+        ([1, 2, 3, 4, 5] as const).forEach((star) => {
+          act(() => {
+            store.setRatingFilter(star);
+          });
+          expect(useUiStore.getState().ratingFilter).toBe(star);
+        });
+      });
+
+      it('should reset to null (all)', () => {
+        const store = useUiStore.getState();
+        act(() => {
+          store.setRatingFilter(4);
+        });
+        act(() => {
+          store.setRatingFilter(null);
+        });
+        expect(useUiStore.getState().ratingFilter).toBeNull();
+      });
+    });
+
+    describe('flagFilter', () => {
+      it('should initialize with null (all flags)', () => {
+        expect(useUiStore.getState().flagFilter).toBeNull();
+      });
+
+      it('should set flag filter to pick', () => {
+        const store = useUiStore.getState();
+        act(() => {
+          store.setFlagFilter('pick');
+        });
+        expect(useUiStore.getState().flagFilter).toBe('pick');
+      });
+
+      it('should set flag filter to reject', () => {
+        const store = useUiStore.getState();
+        act(() => {
+          store.setFlagFilter('reject');
+        });
+        expect(useUiStore.getState().flagFilter).toBe('reject');
+      });
+
+      it('should reset to null (all)', () => {
+        const store = useUiStore.getState();
+        act(() => {
+          store.setFlagFilter('pick');
+        });
+        act(() => {
+          store.setFlagFilter(null);
+        });
+        expect(useUiStore.getState().flagFilter).toBeNull();
+      });
+    });
+
+    describe('filter independence', () => {
+      it('should not affect other state when setting rating filter', () => {
+        const store = useUiStore.getState();
+        act(() => {
+          store.setFlagFilter('pick');
+          store.setRatingFilter(3);
+        });
+        // Both should be set independently
+        expect(useUiStore.getState().flagFilter).toBe('pick');
+        expect(useUiStore.getState().ratingFilter).toBe(3);
+      });
+
+      it('should not affect other ui state when changing filters', () => {
+        const store = useUiStore.getState();
+        const initialView = store.activeView;
+        act(() => {
+          store.setRatingFilter(5);
+          store.setFlagFilter('reject');
+        });
+        expect(useUiStore.getState().activeView).toBe(initialView);
+      });
+    });
+  });
 });

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ActiveView, ComparisonMode } from '../types';
+import type { ActiveView, ComparisonMode, FlagType } from '../types';
 
 interface UiStore {
   // État
@@ -12,6 +12,10 @@ interface UiStore {
   showBeforeAfter: boolean;
   selection: Set<number>; // ← Moved from catalogStore (UI state only)
   filterText: string; // ← Moved from catalogStore (UI state only)
+
+  // Phase 5.3: Filtres rapides rating & flag
+  ratingFilter: number | null; // null = tous, 1-5 = rating minimum requis
+  flagFilter: FlagType; // null = tous, 'pick' | 'reject' = filtre flag actif
 
   // Phase 4.4: Comparaison Avant/Après
   comparisonMode: ComparisonMode;
@@ -31,6 +35,10 @@ interface UiStore {
   clearSelection: () => void; // ← Moved from catalogStore
   setFilterText: (text: string) => void; // ← Moved from catalogStore
 
+  // Phase 5.3: Actions filtres rapides
+  setRatingFilter: (rating: number | null) => void;
+  setFlagFilter: (flag: FlagType) => void;
+
   // Phase 4.4: Actions pour comparaison
   setComparisonMode: (mode: ComparisonMode) => void;
   setSplitViewPosition: (position: number) => void;
@@ -48,6 +56,10 @@ export const useUiStore = create<UiStore>((set) => ({
   showBeforeAfter: false,
   selection: new Set(),
   filterText: '',
+
+  // Phase 5.3: Filtres rapides rating & flag (état initial)
+  ratingFilter: null,
+  flagFilter: null,
 
   // Phase 4.4: État initial comparaison
   comparisonMode: 'split',
@@ -99,6 +111,10 @@ export const useUiStore = create<UiStore>((set) => ({
 
   // Filter management (moved from catalogStore)
   setFilterText: (text: string) => set({ filterText: text }),
+
+  // Phase 5.3: Filtres rapides rating & flag
+  setRatingFilter: (rating: number | null) => set({ ratingFilter: rating }),
+  setFlagFilter: (flag: FlagType) => set({ flagFilter: flag }),
 
   // Phase 4.4: Actions comparaison
   setComparisonMode: (mode: ComparisonMode) => set({ comparisonMode: mode }),

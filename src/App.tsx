@@ -45,6 +45,8 @@ export default function App() {
   const setSingleSelection = useUiStore((state) => state.setSingleSelection);
   const filterText = useUiStore((state) => state.filterText);
   const setFilterText = useUiStore((state) => state.setFilterText);
+  const ratingFilter = useUiStore((state) => state.ratingFilter);
+  const flagFilter = useUiStore((state) => state.flagFilter);
 
   // Collection active (filtre par collection)
   const activeCollectionImageIds = useCollectionStore((state) => state.activeCollectionImageIds);
@@ -67,7 +69,17 @@ export default function App() {
       baseImages = baseImages.filter((img) => activeFolderImageIds.includes(img.id));
     }
 
-    // 3. Appliquer le filtre texte
+    // 3. Phase 5.3: Filtre rapide par rating minimum
+    if (ratingFilter !== null) {
+      baseImages = baseImages.filter((img) => img.state.rating >= ratingFilter);
+    }
+
+    // 4. Phase 5.3: Filtre rapide par flag
+    if (flagFilter !== null) {
+      baseImages = baseImages.filter((img) => img.state.flag === flagFilter);
+    }
+
+    // 5. Appliquer le filtre texte
     if (!filterText) return baseImages;
 
     const q = filterText.toLowerCase();
@@ -85,7 +97,14 @@ export default function App() {
         img.state.tags.some((t) => t.toLowerCase().includes(q))
       );
     });
-  }, [images, filterText, activeCollectionImageIds, activeFolderImageIds]);
+  }, [
+    images,
+    filterText,
+    activeCollectionImageIds,
+    activeFolderImageIds,
+    ratingFilter,
+    flagFilter,
+  ]);
 
   const logs = useSystemStore((state) => state.logs);
   const addLog = useSystemStore((state) => state.addLog);

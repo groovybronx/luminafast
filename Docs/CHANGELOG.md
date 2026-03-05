@@ -53,7 +53,7 @@
 
 | 5 | 5.1 | Panneau EXIF Connecté | ✅ Complétée | 2026-07-10 | Copilot |
 | 5 | 5.2 | Système de Tags Hiérarchique | ✅ Complétée | 2026-07-11 | Copilot |
-| 5 | 5.3 | Rating & Flagging Persistants | ⬜ En attente | — | — |
+| 5 | 5.3 | Rating & Flagging Persistants | ✅ Complétée | 2026-07-11 | Copilot |
 | 5 | 5.4 | Sidecar XMP | ⬜ En attente | — | — |
 | 6 | 6.1 | Système de Cache Multiniveau | ⬜ En attente | — | — |
 | 6 | 6.2 | Intégration DuckDB (OLAP) | ⬜ En attente | — | — |
@@ -84,14 +84,61 @@
 
 ## Phase Actuelle
 
-> **Phase 5.2** : Système de Tags Hiérarchique (✅ **Complétée**)
+> **Phase 5.3** : Rating & Flagging Persistants (✅ **Complétée**)
 >
-> Brief : `Docs/briefs/PHASE-5.2.md`
-> Branche : `phase/5.2-tags-hierarchiques`
+> Brief : `Docs/briefs/PHASE-5.3.md`
+> Branche : `phase/5.3-rating-flagging-persistants`
 
 ---
 
 ## Historique des Sous-Phases Complétées
+
+---
+
+### 2026-07-11 — Phase 5.3 : Rating & Flagging Persistants (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée (filtres rapides sidebar + badges visuels + batch rating/flag + 31 tests)**
+**Agent** : GitHub Copilot (Claude Sonnet 4.6)
+**Brief** : `Docs/briefs/PHASE-5.3.md`
+**Branche** : `phase/5.3-rating-flagging-persistants`
+
+**Livrables principaux** :
+
+- **Store** (`src/stores/uiStore.ts`)
+  - `ratingFilter: number | null` — null = tous, 1-5 = rating minimum
+  - `flagFilter: FlagType` — null = tous, `'pick'` | `'reject'`
+  - Actions : `setRatingFilter`, `setFlagFilter`
+
+- **Filtrage** (`src/App.tsx`)
+  - `filteredImages` useMemo étendu avec 2 étapes supplémentaires :
+    - Étape 3 : `ratingFilter !== null → img.state.rating >= ratingFilter`
+    - Étape 4 : `flagFilter !== null → img.state.flag === flagFilter`
+  - Dépendances useMemo mises à jour (`ratingFilter`, `flagFilter`)
+
+- **Filtres Rapides UI** (`src/components/layout/LeftSidebar.tsx`)
+  - Section "Filtres Rapides" avec étoiles 1-5 + boutons flag (Tous/Pick/Reject)
+  - Comportement toggle : clic sur filtre actif le désactive
+  - Bouton reset global des deux filtres
+
+- **Badge Flag** (`src/components/library/LazyLoadedImageCard.tsx`)
+  - Remplacement des dots anonymes par badges textués "P" (vert) et "X" (rouge)
+  - `aria-label` et `title` pour accessibilité
+  - Overlay rating : affichage conditionnel (masqué si rating = 0)
+
+- **BatchBar** (`src/components/shared/BatchBar.tsx`)
+  - Boutons rating 1 à 5 étoiles individuels + bouton Clear rating (0)
+  - Bouton Reject flag (FLAG reject) + bouton Clear flag (FLAG null)
+  - `aria-label` sur tous les boutons d'action
+  - Suppression du bouton "Sync" placeholder non implémenté
+
+- **Tests** (31 nouveaux tests)
+  - `src/stores/__tests__/uiStore.test.ts` — 17 nouveaux tests (ratingFilter, flagFilter, indépendance)
+  - `src/components/shared/__tests__/BatchBar.test.tsx` — 14 tests (affichage, flag dispatch, rating dispatch)
+
+**Fondation réutilisée** (Phase 1.2 → 5.3) :
+- Backend `update_image_state` Tauri + `get_all_images` avec filtres SQLite déjà complets
+- Raccourcis clavier 0-5, P, X, U déjà fonctionnels (`App.tsx`)
+- `useCatalog.onRatingChange` / `onFlagChange` déjà implémentés
 
 ---
 

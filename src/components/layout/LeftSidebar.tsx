@@ -1,7 +1,8 @@
-import { Check, Database, Import, Pencil, Star, Trash2, X, Zap } from 'lucide-react';
+import { Check, Database, Import, Pencil, Trash2, X, Zap } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useCollectionStore } from '../../stores/collectionStore';
 import { useFolderStore } from '../../stores/folderStore';
+import { useUiStore } from '../../stores/uiStore';
 import type { SmartQuery } from '../../types/collection';
 import {
   isDragImageData,
@@ -243,6 +244,11 @@ export const LeftSidebar = ({
 
   const { folderTree, loadFolderTree, setActiveFolder } = useFolderStore();
 
+  const ratingFilter = useUiStore((state) => state.ratingFilter);
+  const flagFilter = useUiStore((state) => state.flagFilter);
+  const setRatingFilter = useUiStore((state) => state.setRatingFilter);
+  const setFlagFilter = useUiStore((state) => state.setFlagFilter);
+
   useEffect(() => {
     void loadCollections();
     void loadFolderTree();
@@ -319,28 +325,103 @@ export const LeftSidebar = ({
               <Database size={14} className="text-blue-500" /> Toutes les photos{' '}
               <span className="ml-auto opacity-30 text-[9px] font-mono">{imageCount}</span>
             </button>
-            <button
-              onClick={() => {
-                handleClear();
-                onSetFilterText('star 5');
-              }}
-              className="w-full text-left p-2 rounded text-xs hover:bg-zinc-800 flex gap-2 text-zinc-400 group"
-            >
-              <Star
-                size={14}
-                className="text-amber-500 group-hover:scale-110 transition-transform"
-              />{' '}
-              Meilleures Notes
-            </button>
-            <button
-              onClick={() => {
-                handleClear();
-                onSetFilterText('picked');
-              }}
-              className="w-full text-left p-2 rounded text-xs hover:bg-zinc-800 flex gap-2 text-zinc-400"
-            >
-              <Check size={14} className="text-emerald-500" /> Sélection active
-            </button>
+          </div>
+        </section>
+
+        {/* Phase 5.3 — Filtres Rapides */}
+        <section className="mb-8">
+          <div className="flex items-center justify-between text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2 px-2">
+            Filtres
+            {(ratingFilter !== null || flagFilter !== null) && (
+              <button
+                onClick={() => {
+                  setRatingFilter(null);
+                  setFlagFilter(null);
+                }}
+                className="text-zinc-600 hover:text-zinc-400 transition-colors"
+                title="Réinitialiser les filtres"
+                aria-label="Réinitialiser les filtres"
+              >
+                <X size={9} />
+              </button>
+            )}
+          </div>
+          <div className="space-y-0.5">
+            {/* Ligne rating */}
+            <div className="flex items-center gap-1 px-2 py-1">
+              <span className="text-[9px] text-zinc-700 w-8 shrink-0 font-mono uppercase">
+                Note
+              </span>
+              <button
+                onClick={() => setRatingFilter(null)}
+                className={`text-[10px] w-6 text-center rounded py-0.5 transition-colors ${
+                  ratingFilter === null
+                    ? 'text-zinc-200 bg-zinc-700'
+                    : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800'
+                }`}
+                aria-label="Toutes les notes"
+                title="Toutes les notes"
+              >
+                —
+              </button>
+              {([1, 2, 3, 4, 5] as const).map((star) => (
+                <button
+                  key={star}
+                  onClick={() => setRatingFilter(ratingFilter === star ? null : star)}
+                  className={`text-[10px] w-6 text-center rounded py-0.5 font-mono transition-colors ${
+                    ratingFilter === star
+                      ? 'text-amber-400 bg-amber-500/15'
+                      : 'text-zinc-600 hover:text-amber-400 hover:bg-zinc-800'
+                  }`}
+                  aria-label={`Filtrer ${star} étoile(s) minimum`}
+                  title={`${star}★ minimum`}
+                >
+                  {star}★
+                </button>
+              ))}
+            </div>
+            {/* Ligne flag */}
+            <div className="flex items-center gap-1 px-2 py-1">
+              <span className="text-[9px] text-zinc-700 w-8 shrink-0 font-mono uppercase">
+                Flag
+              </span>
+              <button
+                onClick={() => setFlagFilter(null)}
+                className={`text-[10px] w-6 text-center rounded py-0.5 transition-colors ${
+                  flagFilter === null
+                    ? 'text-zinc-200 bg-zinc-700'
+                    : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800'
+                }`}
+                aria-label="Tous les flags"
+                title="Tous"
+              >
+                —
+              </button>
+              <button
+                onClick={() => setFlagFilter(flagFilter === 'pick' ? null : 'pick')}
+                className={`text-[10px] px-2 text-center rounded py-0.5 font-bold transition-colors ${
+                  flagFilter === 'pick'
+                    ? 'text-emerald-400 bg-emerald-500/15'
+                    : 'text-zinc-600 hover:text-emerald-400 hover:bg-zinc-800'
+                }`}
+                aria-label="Filtrer les picks"
+                title="Afficher uniquement les picks (P)"
+              >
+                Pick
+              </button>
+              <button
+                onClick={() => setFlagFilter(flagFilter === 'reject' ? null : 'reject')}
+                className={`text-[10px] px-2 text-center rounded py-0.5 font-bold transition-colors ${
+                  flagFilter === 'reject'
+                    ? 'text-red-400 bg-red-500/15'
+                    : 'text-zinc-600 hover:text-red-400 hover:bg-zinc-800'
+                }`}
+                aria-label="Filtrer les rejects"
+                title="Afficher uniquement les rejects (X)"
+              >
+                Reject
+              </button>
+            </div>
           </div>
         </section>
 

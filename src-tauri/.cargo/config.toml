@@ -2,6 +2,12 @@
 # Note: mold linker is configured via RUSTFLAGS in CI only (GitHub Actions/Linux)
 # Local development uses native linkers (ld64 on macOS, lld on Windows)
 
+# Align macOS deployment target between Rust linker (-mmacosx-version-min=11.0)
+# and C build scripts (rsraw_sys, etc.) to avoid linker warnings and stale-cache
+# symbol hash mismatches after macOS upgrades.
+[env]
+MACOSX_DEPLOYMENT_TARGET = "11.0"
+
 # Profile for CI: middle ground between debug and release
 # Faster compilation than release, still optimized
 [profile.ci]

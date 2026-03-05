@@ -4,4 +4,5 @@ export { useCollectionStore } from './collectionStore';
 export { useEditStore } from './editStore';
 export { useFolderStore } from './folderStore';
 export { useSystemStore } from './systemStore';
+export { useTagStore } from './tagStore';
 export { useUiStore } from './uiStore';

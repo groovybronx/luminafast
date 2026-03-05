@@ -159,6 +159,14 @@ pub fn run() {
             commands::snapshots::get_snapshot,
             commands::snapshots::delete_snapshot,
             commands::snapshots::rename_snapshot,
+            // Tags commands (Phase 5.2)
+            commands::tags::create_tag,
+            commands::tags::get_all_tags,
+            commands::tags::rename_tag,
+            commands::tags::delete_tag,
+            commands::tags::add_tags_to_images,
+            commands::tags::remove_tags_from_images,
+            commands::tags::get_image_tags,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -83,9 +83,7 @@ Extraire la logique répétée de rendu WASM dans les trois composants de compar
  * Convertit un EditState en PixelFilterState
  * Gère les valeurs par défaut et mapping champs (temp → colorTemp)
  */
-export function editStateToPixelFilters(
-  editState: EditState | undefined,
-): PixelFilterState;
+export function editStateToPixelFilters(editState: EditState | undefined): PixelFilterState;
 
 /**
  * Détecte si des filtres non-neutres sont appliqués
@@ -154,13 +152,15 @@ export function useWasmCanvasRender(
 ### Pourquoi cette refactorisation ?
 
 La même logique existe 3 fois :
+
 1. Conversion `EditState` → `PixelFilterState` (hardcoded dans chaque composant)
 2. Détection des filtres neutres/non-neutres (logique booléenne répétée)
 3. Pattern `useEffect` identique (load image, get dimensions, render WASM)
 
 **Sans refactorisation** : risque de bug si cette logique doit être modifiée (risque de manquer une instance, incohérence).
 
-**Avec refactorisation** : 
+**Avec refactorisation** :
+
 - Source unique de vérité
 - Plus facile à tester
 - Plus lisible

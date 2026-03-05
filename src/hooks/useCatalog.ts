@@ -109,12 +109,12 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
               exif: {
                 iso: img.iso,
                 aperture: img.aperture,
-                shutterSpeed:
-                  img.shutter_speed != null
-                    ? img.shutter_speed >= 1
-                      ? `${img.shutter_speed}s`
-                      : `1/${Math.round(1 / img.shutter_speed)}`
-                    : undefined,
+                shutterSpeed: (() => {
+                  if (img.shutter_speed == null) return undefined;
+                  // DB stores log2(seconds): e.g. 1/125s → -6.97
+                  const seconds = Math.pow(2, img.shutter_speed);
+                  return seconds >= 1 ? `${seconds.toFixed(1)}s` : `1/${Math.round(1 / seconds)}`;
+                })(),
                 focalLength: img.focal_length,
                 lens: img.lens,
                 cameraMake: img.camera_make,
@@ -201,12 +201,12 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
             exif: {
               iso: img.iso,
               aperture: img.aperture,
-              shutterSpeed:
-                img.shutter_speed != null
-                  ? img.shutter_speed >= 1
-                    ? `${img.shutter_speed}s`
-                    : `1/${Math.round(1 / img.shutter_speed)}`
-                  : undefined,
+              shutterSpeed: (() => {
+                if (img.shutter_speed == null) return undefined;
+                // DB stores log2(seconds): e.g. 1/125s → -6.97
+                const seconds = Math.pow(2, img.shutter_speed);
+                return seconds >= 1 ? `${seconds.toFixed(1)}s` : `1/${Math.round(1 / seconds)}`;
+              })(),
               focalLength: img.focal_length,
               lens: img.lens,
               cameraMake: img.camera_make,

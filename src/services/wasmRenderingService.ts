@@ -32,6 +32,8 @@ interface WasmExports {
     // Méthode principale
     apply_filters(pixels: Uint8ClampedArray, width: number, height: number): Uint8Array;
   };
+  /** Phase 5.1 — Histogramme WASM : retourne 768 uint32 (r[256] g[256] b[256]) */
+  compute_histogram(pixels: Uint8Array, width: number, height: number): Uint32Array;
   default: () => Promise<void>;
 }
 

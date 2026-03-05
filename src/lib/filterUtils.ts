@@ -22,7 +22,7 @@ export function editStateToPixelFilters(editState: EditState | undefined): Pixel
     shadows: editState?.shadows ?? 0,
     clarity: editState?.clarity ?? 0,
     vibrance: editState?.vibrance ?? 0,
-    colorTemp: editState?.temp ?? 5500, // Mappage: 'temp' (EditState) → 'colorTemp' (PixelFilterState)
+    colorTemp: editState?.temp ?? 0, // Mappage: 'temp' (EditState) → 'colorTemp' (PixelFilterState)
     tint: editState?.tint ?? 0,
   };
 }
@@ -44,6 +44,6 @@ export function hasNonNeutralFilters(filters: PixelFilterState): boolean {
     filters.clarity !== 0 ||
     filters.vibrance !== 0 ||
     filters.tint !== 0 ||
-    filters.colorTemp !== 0 // Valeur neutre pour la temp de couleur
+    filters.colorTemp !== 0 // Valeur neutre pour la temp de couleur (K)
   );
 }

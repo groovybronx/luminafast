@@ -95,37 +95,32 @@ Implémenter le pipeline de rendu des images en deux étapes : Phase A via CSS f
 ```typescript
 // renderingService.ts (Phase A)
 export interface CSSFilterState {
-  exposure: number;      // -2.0 à +2.0
-  contrast: number;      // -1.0 à +3.0
-  saturation: number;    // 0.0 à 2.0
+  exposure: number; // -2.0 à +2.0
+  contrast: number; // -1.0 à +3.0
+  saturation: number; // 0.0 à 2.0
 }
 
 export interface PixelFilterState extends CSSFilterState {
-  highlights: number;    // -1.0 à +1.0 (Phase B)
-  shadows: number;       // -1.0 à +1.0 (Phase B)
-  clarity: number;       // -100 à +100 (Phase B)
-  vibrance: number;      // -100 à +100 (Phase B)
-  colorTemp: number;     // 2000K à 10000K (Phase B)
-  tint: number;          // -50 à +50 (Phase B)
+  highlights: number; // -1.0 à +1.0 (Phase B)
+  shadows: number; // -1.0 à +1.0 (Phase B)
+  clarity: number; // -100 à +100 (Phase B)
+  vibrance: number; // -100 à +100 (Phase B)
+  colorTemp: number; // 2000K à 10000K (Phase B)
+  tint: number; // -50 à +50 (Phase B)
   curves?: CurvePoint[]; // Tone curves (Phase B)
 }
 
-export function eventsToCSSFilters(
-  events: EditEvent[]
-): CSSFilterState;
+export function eventsToCSSFilters(events: EditEvent[]): CSSFilterState;
 
-export function applyCSSFilters(
-  imageElement: HTMLImageElement,
-  filters: CSSFilterState
-): void;
+export function applyCSSFilters(imageElement: HTMLImageElement, filters: CSSFilterState): void;
 
-export function calculateFilterLatency(): number;  // mesuré en ms
+export function calculateFilterLatency(): number; // mesuré en ms
 
 // wasmRenderingService.ts (Phase B)
 export async function loadWasmModule(): Promise<WasmModule>;
 export async function renderWithWasm(
   imageData: ImageData,
-  filters: PixelFilterState
+  filters: PixelFilterState,
 ): Promise<ImageData>;
 export function hasWasmSupport(): boolean;
 ```
@@ -139,7 +134,7 @@ export interface PreviewRendererProps {
   previewUrl: string;
   className?: string;
   isSelected?: boolean;
-  useWasm?: boolean;  // Phase B toggle
+  useWasm?: boolean; // Phase B toggle
 }
 
 export const PreviewRenderer: React.FC<PreviewRendererProps> = ({
@@ -371,6 +366,7 @@ src-tauri/
 ### Fallback Strategy (Phase B)
 
 Si WASM non-compilé ou dans un browser incompatible :
+
 - Basculer automatiquement sur CSS filters (qualité dégradée mais fonctionnel)
 - Avertir l'utilisateur avec une notification (`system.addLog()`)
 - Log du fallback pour debugging (`[WARN] WASM unavailable, using CSS filters fallback`)
@@ -379,6 +375,7 @@ Si WASM non-compilé ou dans un browser incompatible :
 ### Snapshot Building (via Event Sourcing)
 
 L'editStore lira les events via Event Sourcing et les rejouerait pour chaque rendu. Les snapshots (4.1) seront re-utilisés ici pour perf :
+
 1. Load snapshot (last N events)
 2. Replay remaining events
 3. Convert to filters (CSS or WASM)

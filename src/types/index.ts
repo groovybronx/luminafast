@@ -1,6 +1,7 @@
 // --- Re-export all domain types ---
 
 export * from './collection';
+export * from './comparison'; // Phase 4.4: Before/After comparison modes
 export * from './dragdrop';
 export * from './dto';
 export * from './events';

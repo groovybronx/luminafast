@@ -1,4 +1,3 @@
-
 # LuminaFast — Instructions Obligatoires pour Agents IA
 
 **CE FICHIER DOIT ÊTRE LU ENTIÈREMENT AVANT TOUTE ACTION.**
@@ -59,6 +58,7 @@ Toute violation des règles absolues (section 1) invalide le travail produit.
 ### 2.4 — Analyse cause racine obligatoire
 
 Avant toute modification corrective, fournir 2-3 phrases identifiant :
+
 - Le symptôme observé
 - La cause racine technique
 - La correction structurelle
@@ -71,23 +71,23 @@ Documenter dans le commit et le CHANGELOG.
 
 ### Directif par domaine
 
-| Domaine                        | Fichier                | Contenu                                                      |
-|--------------------------------|------------------------|--------------------------------------------------------------|
-| **Frontend (TypeScript/React)**| `src/AGENTS.md`        | Conventions TS, Zustand, tests Vitest, intégration backend    |
-| **Backend (Rust/Tauri)**       | `src-tauri/AGENTS.md`  | Conventions Rust, error handling, SQLite, session tracking, tests |
-| **CI/CD**                      | `.github/AGENTS.md`    | Workflow GitHub Actions, path filtering, timeouts, caching    |
-| **Documentation**              | `Docs/AGENTS.md`       | Briefs, CHANGELOG, APP_DOCUMENTATION, cohérence docs↔code    |
+| Domaine                         | Fichier               | Contenu                                                           |
+| ------------------------------- | --------------------- | ----------------------------------------------------------------- |
+| **Frontend (TypeScript/React)** | `src/AGENTS.md`       | Conventions TS, Zustand, tests Vitest, intégration backend        |
+| **Backend (Rust/Tauri)**        | `src-tauri/AGENTS.md` | Conventions Rust, error handling, SQLite, session tracking, tests |
+| **CI/CD**                       | `.github/AGENTS.md`   | Workflow GitHub Actions, path filtering, timeouts, caching        |
+| **Documentation**               | `Docs/AGENTS.md`      | Briefs, CHANGELOG, APP_DOCUMENTATION, cohérence docs↔code         |
 
 ### Architecture & stratégie
 
-| Document                                 | Quand consulter                                 |
-|-------------------------------------------|-------------------------------------------------|
-| `Docs/archives/Lightroomtechnique.md`     | Conception DB, collections, cache               |
-| `Docs/archives/recommendations.md`        | Choix technologiques (DuckDB, BLAKE3, Event Sourcing) |
-| `Docs/TESTING_STRATEGY.md`                | Structure tests, couverture minimale            |
-| `Docs/GOVERNANCE.md`                      | Escalade, décisions, approbations               |
-| `Docs/APP_DOCUMENTATION.md`               | État actuel de l’application                    |
-| `Docs/briefs/BRIEF_TEMPLATE.md`           | Structure des briefs de phase                   |
+| Document                              | Quand consulter                                       |
+| ------------------------------------- | ----------------------------------------------------- |
+| `Docs/archives/Lightroomtechnique.md` | Conception DB, collections, cache                     |
+| `Docs/archives/recommendations.md`    | Choix technologiques (DuckDB, BLAKE3, Event Sourcing) |
+| `Docs/TESTING_STRATEGY.md`            | Structure tests, couverture minimale                  |
+| `Docs/GOVERNANCE.md`                  | Escalade, décisions, approbations                     |
+| `Docs/APP_DOCUMENTATION.md`           | État actuel de l’application                          |
+| `Docs/briefs/BRIEF_TEMPLATE.md`       | Structure des briefs de phase                         |
 
 ---
 
@@ -95,14 +95,15 @@ Documenter dans le commit et le CHANGELOG.
 
 ⚠️ **Les conventions détaillées sont DANS les AGENTS spécialisés, PAS ici.**
 
-| Domaine                   | Voir                                      |
-|---------------------------|--------------------------------------------|
-| TypeScript/React/Zustand  | `src/AGENTS.md` → Sections 1-6             |
-| Rust/Tauri/SQLite         | `src-tauri/AGENTS.md` → Sections 1-6       |
-| GitHub Actions/CI         | `.github/AGENTS.md` → Sections 1-7         |
-| Briefs/Documentation      | `Docs/AGENTS.md` → Sections 1-5            |
+| Domaine                  | Voir                                 |
+| ------------------------ | ------------------------------------ |
+| TypeScript/React/Zustand | `src/AGENTS.md` → Sections 1-6       |
+| Rust/Tauri/SQLite        | `src-tauri/AGENTS.md` → Sections 1-6 |
+| GitHub Actions/CI        | `.github/AGENTS.md` → Sections 1-7   |
+| Briefs/Documentation     | `Docs/AGENTS.md` → Sections 1-5      |
 
 **Résumé rapide** :
+
 - ✅ Strict TypeScript (pas de `any`)
 - ✅ Error handling obligatoire Rust (`Result<T, E>`)
 - ✅ Tests en parallèle du code

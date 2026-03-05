@@ -2,20 +2,21 @@
 
 ## 1. Entête
 
-| Champ | Valeur |
-|-------|--------|
-| **Phase** | 3.1 Maintenance |
-| **Type** | Bug Fix + Feature Completion |
-| **Branche** | `phase/3.1-maintenance-grid-completion` |
-| **Durée estimée** | 4-5 heures |
-| **Agent** | Frontend + Backend |
-| **Date création** | 2026-02-24 |
+| Champ             | Valeur                                  |
+| ----------------- | --------------------------------------- |
+| **Phase**         | 3.1 Maintenance                         |
+| **Type**          | Bug Fix + Feature Completion            |
+| **Branche**       | `phase/3.1-maintenance-grid-completion` |
+| **Durée estimée** | 4-5 heures                              |
+| **Agent**         | Frontend + Backend                      |
+| **Date création** | 2026-02-24                              |
 
 ---
 
 ## 2. Objectif
 
 Compléter et corriger la Phase 3.1 après audit du code. La phase était marquée "Complétée" mais manquait des fonctionnalités critiques:
+
 - **Hybridation d'état** : App.tsx utilise simultanément `useCatalog()` ET `useCatalogStore()` → fuite de données
 - **Pas de synchronisation SQLite** : Ratings/flags/tags modifiés ne sont pas sauvegardés en base
 - **Pas de lazy loading** : Aucun IntersectionObserver pour charger previews à la demande
@@ -69,16 +70,16 @@ Compléter et corriger la Phase 3.1 après audit du code. La phase était marqu�
 
 ## 5. Fichiers Affectés
 
-| Fichier | Type | Détail |
-|---------|------|--------|
-| `src/App.tsx` | 🔄 REFACTOR | Remplacer `useCatalogStore` par `useCatalog()` ONLY |
-| `src/components/library/GridView.tsx` | 🔄 REFACTOR | Ajouter lazy loading IntersectionObserver |
-| `src/services/catalogService.ts` | ✏️ ADD | Ajouter `updateImage()` (écriture SQLite) |
-| `src/hooks/useCatalog.ts` | ✏️ ADD | Ajouter callbacks `onRatingChange`, `onFlagChange`, `onTagsChange` |
-| `src/stores/catalogStore.ts` | 🔄 REFACTOR | Simplifie: uniquement state local, pas BDD |
-| `src-tauri/src/commands/catalog.rs` | ✏️ ADD | Ajouter ou étendre `update_image` command |
-| `src/components/library/__tests__/GridView.test.tsx` | 🔄 REFACTOR | Adapter mocks pour vraies queries SQLite |
-| `src/hooks/__tests__/useCatalog.test.ts` | ✏️ ADD | Tests intégration avec catalogService |
+| Fichier                                              | Type        | Détail                                                             |
+| ---------------------------------------------------- | ----------- | ------------------------------------------------------------------ |
+| `src/App.tsx`                                        | 🔄 REFACTOR | Remplacer `useCatalogStore` par `useCatalog()` ONLY                |
+| `src/components/library/GridView.tsx`                | 🔄 REFACTOR | Ajouter lazy loading IntersectionObserver                          |
+| `src/services/catalogService.ts`                     | ✏️ ADD      | Ajouter `updateImage()` (écriture SQLite)                          |
+| `src/hooks/useCatalog.ts`                            | ✏️ ADD      | Ajouter callbacks `onRatingChange`, `onFlagChange`, `onTagsChange` |
+| `src/stores/catalogStore.ts`                         | 🔄 REFACTOR | Simplifie: uniquement state local, pas BDD                         |
+| `src-tauri/src/commands/catalog.rs`                  | ✏️ ADD      | Ajouter ou étendre `update_image` command                          |
+| `src/components/library/__tests__/GridView.test.tsx` | 🔄 REFACTOR | Adapter mocks pour vraies queries SQLite                           |
+| `src/hooks/__tests__/useCatalog.test.ts`             | ✏️ ADD      | Tests intégration avec catalogService                              |
 
 ---
 
@@ -88,7 +89,7 @@ Compléter et corriger la Phase 3.1 après audit du code. La phase était marqu�
 
 ```typescript
 // AVANT (❌ hybride state)
-const { images, refreshCatalog } = useCatalog();           // SQLite
+const { images, refreshCatalog } = useCatalog(); // SQLite
 const { setImages, toggleSelection } = useCatalogStore(); // Local
 
 // APRÈS (✅ seul source de vérité)
@@ -98,9 +99,9 @@ const {
   error,
   refreshCatalog,
   syncAfterImport,
-  onRatingChange,     // → SQLite
-  onFlagChange,       // → SQLite
-  onTagsChange,       // → SQLite
+  onRatingChange, // → SQLite
+  onFlagChange, // → SQLite
+  onTagsChange, // → SQLite
 } = useCatalog();
 
 // State local SEULEMENT UI (selection, activeView, etc.)
@@ -121,7 +122,7 @@ export interface UseCatalogReturn {
   clearError: () => void;
   imageCount: number;
   hasImages: boolean;
-  
+
   // NEW: Update handlers (write to SQLite)
   onRatingChange: (imageId: number, rating: number) => Promise<void>;
   onFlagChange: (imageId: number, flag: FlagType | null) => Promise<void>;
@@ -178,9 +179,9 @@ interface ImageCardProps {
 
 ```typescript
 // ❌ INTERDIT dans le refactoring
-const images: any[] = [];                    // no any
-const store = useCatalogStore();             // ne pas importer depuis App.tsx
-updateImage(imageId, null as unknown);       // no unknown casts
+const images: any[] = []; // no any
+const store = useCatalogStore(); // ne pas importer depuis App.tsx
+updateImage(imageId, null as unknown); // no unknown casts
 ```
 
 ---
@@ -297,6 +298,7 @@ DATABASE (SQLite via Rust)
 **Problème** : Utilisateur modifie rating, avant que SQLite confirme, modifie flag → état incohérent
 
 **Solution** :
+
 - Utiliser `isSynced: false` dès modification locale
 - Batcher les updates : n'envoyer que delta après 1sec d'inactivité
 - Afficher spinner/badge "saving..." pendant écriture
@@ -306,6 +308,7 @@ DATABASE (SQLite via Rust)
 **Problème** : Observer continue à tracker après unmount → memory leak
 
 **Solution** :
+
 ```typescript
 useEffect(() => {
   const observer = new IntersectionObserver(...);
@@ -319,6 +322,7 @@ useEffect(() => {
 **Problème** : Rapid scrolling → 1000 requêtes preview simultanées
 
 **Solution** :
+
 - Throttle observable callback : debounce 300ms
 - Skip if scroll velocity > 300px/sec
 - Canceller requêtes xhr en suspension
@@ -328,6 +332,7 @@ useEffect(() => {
 **Problème** : Tests passent localement mais fail en CI (mocks vs vraies queries)
 
 **Solution** :
+
 - Ne pas mocker `useCatalog()` complètement
 - Mocker seulement `CatalogService.getAllImages()` pour retourner fixtures
 - Garder interaction réelle avec Zustand store
@@ -337,16 +342,15 @@ useEffect(() => {
 **Problème** : Modifier `images[0].state.rating` directement → Zustand ne détecte pas changement
 
 **Solution** :
+
 ```typescript
 // ❌ WRONG
 images[0].state.rating = 5;
 
 // ✅ CORRECT
-setImages(images.map(img => 
-  img.id === id 
-    ? { ...img, state: { ...img.state, rating: 5 } }
-    : img
-));
+setImages(
+  images.map((img) => (img.id === id ? { ...img, state: { ...img.state, rating: 5 } } : img)),
+);
 ```
 
 ---
@@ -356,6 +360,7 @@ setImages(images.map(img =>
 ### CHANGELOG.md
 
 Nouvelle entrée :
+
 ```markdown
 ### 2026-02-24 — Phase 3.1 Maintenance : Complétion Grille (Branche: phase/3.1-maintenance-grid-completion)
 
@@ -385,12 +390,14 @@ Nouvelle entrée :
    - New: useCatalog.test.ts pour integration tests
 
 **Commits** :
+
 - phase(3.1-maint): centralizer App.tsx state via useCatalog
 - phase(3.1-maint): add bidirectionnal SQLite sync (update_image)
 - phase(3.1-maint): implement lazy loading IntersectionObserver
 - phase(3.1-maint): refactor tests pour vraies données
 
 **Stats** :
+
 - src/App.tsx : -120 lines, +80 lines
 - src/services/catalogService.ts : +45 lines
 - src/components/library/LazyLoadedImageCard.tsx : +120 lines (new)
@@ -400,6 +407,7 @@ Nouvelle entrée :
 ### APP_DOCUMENTATION.md
 
 Mettre à jour section "Grille d'Images" :
+
 ```markdown
 | GridView | library/GridView.tsx | Virtualization + lazy loading | ✅ Fonctionnel (Phase 3.1 complétée) |
 | State Management | stores/ + useCatalog | Zustand + SQLite sync bidirectional | ✅ Source unique depuis SQLite |

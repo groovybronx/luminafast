@@ -3,18 +3,19 @@
 > **Directives spécialisées pour la couche Backend Rust.**
 > Lisez d'abord `AGENTS.md` racine pour les règles absolues globales.
 
-├── preview.rs             # Génération previews
-├── discovery.rs           # Scan fichiers
-├── exif.rs                # Extraction EXIF/IPTC
-├── errors.rs              # Types d'erreur globaux
-├── database.rs            # Gestion SQLite
+├── preview.rs # Génération previews
+├── discovery.rs # Scan fichiers
+├── exif.rs # Extraction EXIF/IPTC
+├── errors.rs # Types d'erreur globaux
+├── database.rs # Gestion SQLite
 └── commands/
-    ├── mod.rs             # Re-export commands
-    ├── catalog.rs         # Commands #[tauri::command]
-    ├── collection.rs      # Commands collections
-    ├── discovery.rs       # Commands discovery/import
-    └── dev.rs             # Commands développement (si applicable)
-```
+├── mod.rs # Re-export commands
+├── catalog.rs # Commands #[tauri::command]
+├── collection.rs # Commands collections
+├── discovery.rs # Commands discovery/import
+└── dev.rs # Commands développement (si applicable)
+
+````
 
 ### 2.2 — Modules Internes avec Tests
 
@@ -57,7 +58,7 @@ fn load_image(path: &Path) -> Image {
     let file = std::fs::File::open(path).unwrap(); // BOOM si fichier absent
     // ...
 }
-```
+````
 
 ### 1.2 — Résultats & types d’erreur
 
@@ -83,13 +84,13 @@ use thiserror::Error;
 
 ### 1.3 — Nommage
 
-| Élément         | Convention         | Exemple                    |
-|-----------------|-------------------|----------------------------|
-| Fichier module  | snake_case        | `blake3_hasher.rs`         |
-| Struct/Enum     | PascalCase        | `Image`, `CatalogError`    |
-| Fonction/méthode| snake_case        | `compute_blake3()`, `load_from_db()` |
-| Constante       | SCREAMING_SNAKE_CASE | `THUMBNAIL_WIDTH = 240` |
-| Trait           | PascalCase        | `HashProvider`, `ImageProcessor` |
+| Élément          | Convention           | Exemple                              |
+| ---------------- | -------------------- | ------------------------------------ |
+| Fichier module   | snake_case           | `blake3_hasher.rs`                   |
+| Struct/Enum      | PascalCase           | `Image`, `CatalogError`              |
+| Fonction/méthode | snake_case           | `compute_blake3()`, `load_from_db()` |
+| Constante        | SCREAMING_SNAKE_CASE | `THUMBNAIL_WIDTH = 240`              |
+| Trait            | PascalCase           | `HashProvider`, `ImageProcessor`     |
 
 ---
 
@@ -152,12 +153,13 @@ mod tests {
 ## 3. Tauri commands
 
 pub fn get_all_images(filter: Option<String>) -> CatalogResult<Vec<ImageDTO>> {
-    // Implementation
+// Implementation
 }
 
 // L'invocation côté TS sera :
 // invoke<ImageDTO[]>('get_all_images', { filter: "test" })
-```
+
+````
 
 ### 3.2 — Arguments & Serialization
 
@@ -184,7 +186,7 @@ pub fn create_collection(
 ) -> CatalogResult<CollectionDTO> {
     // Implementation
 }
-```
+````
 
 **Note** : Les args camelCase du frontend sont mappés en snake_case Rust via `#[serde(rename = "...")]`.
 
@@ -333,6 +335,7 @@ async fn import_and_track(
 ```
 
 Côté TS :
+
 ```typescript
 import { listen } from '@tauri-apps/api/event';
 
@@ -469,18 +472,18 @@ mod tests {
 
 ## 8. Dépendances Autorisées
 
-| Crate | Version | Justification |
-|-------|---------|--------------|
-| tauri | 2.x | Framework shell |
-| serde | 1.x | Serialization |
-| rusqlite | 0.31.x | SQLite driver |
-| blake3 | latest | Hashing |
-| image | latest | Image processing |
-| kamadak-exif | 0.6.1 | EXIF extraction |
-| rayon | latest | Parallélization |
-| thiserror | latest | Error handling |
-| tokio | latest | Async runtime |
-| uuid | latest | ID generation |
+| Crate        | Version | Justification    |
+| ------------ | ------- | ---------------- |
+| tauri        | 2.x     | Framework shell  |
+| serde        | 1.x     | Serialization    |
+| rusqlite     | 0.31.x  | SQLite driver    |
+| blake3       | latest  | Hashing          |
+| image        | latest  | Image processing |
+| kamadak-exif | 0.6.1   | EXIF extraction  |
+| rayon        | latest  | Parallélization  |
+| thiserror    | latest  | Error handling   |
+| tokio        | latest  | Async runtime    |
+| uuid         | latest  | ID generation    |
 
 **Aucune autre dépendance** sans approbation propriétaire.
 

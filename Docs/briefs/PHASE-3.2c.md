@@ -1,4 +1,4 @@
-# Phase 3.2c — Reorder Images au sein d'une Collection (REPORTÉE    Phase 4.3)
+# Phase 3.2c — Reorder Images au sein d'une Collection (REPORTÉE Phase 4.3)
 
 ## Objectif
 
@@ -123,8 +123,8 @@ const handleDragStart = (e: React.DragEvent) => {
     type: 'image',
     ids,
     dropMode: activeCollectionId
-      ? 'reorder'  // Au sein d'une collection
-      : 'add',     // En dehors (ajouter à collection)
+      ? 'reorder' // Au sein d'une collection
+      : 'add', // En dehors (ajouter à collection)
   };
   e.dataTransfer.effectAllowed = dropMode === 'reorder' ? 'move' : 'copy';
   e.dataTransfer.setData('application/json', JSON.stringify(data));
@@ -138,7 +138,7 @@ const handleDragStart = (e: React.DragEvent) => {
 export interface DragImage {
   type: 'image';
   ids: number[];
-  dropMode?: 'add' | 'reorder';  // Nouveau flag
+  dropMode?: 'add' | 'reorder'; // Nouveau flag
 }
 ```
 
@@ -232,12 +232,14 @@ export interface DragDropState {
 #### Feedback visuel
 
 **Pendant le drag reorder :**
+
 - Ligne pointillée bleue positionnée avant l'image cible
 - Curseur change à `cursor-move` (vs `cursor-grab` pour add)
 - Image source devient semi-transparente (opacity 0.5)
 - Image cible reçoit une bordure d'insertion (2px bleu)
 
 **Couleurs:**
+
 - Reorder mode: `border-blue-600 bg-blue-50`
 - Add mode (sidebar): `border-blue-400 bg-blue-500/30`
 
@@ -287,14 +289,14 @@ updateCollectionImagesOrder: async (collectionId, imageIdsOrdered) => {
 
 | Cas                               | Comportement                                                                   |
 | --------------------------------- | ------------------------------------------------------------------------------ |
-| Reorder avec image sélectionnée   | Drag toute la sélection, insert comme bloc                                    |
+| Reorder avec image sélectionnée   | Drag toute la sélection, insert comme bloc                                     |
 | Reorder smart collection          | Refuser silencieusement (filter immédiatement)                                 |
-| Reorder au-delà des limites       | Clone à la fin (max index = collection_images.len() - 1)                      |
-| Reorder même image 2x (duplicata) | Ignorer duplicata (utiliser Set pour les IDs)                                |
-| Reorder + Backend error           | Rollback optimiste via `setActiveCollection(id)` pour recharger l'ordre DB    |
+| Reorder au-delà des limites       | Clone à la fin (max index = collection_images.len() - 1)                       |
+| Reorder même image 2x (duplicata) | Ignorer duplicata (utiliser Set pour les IDs)                                  |
+| Reorder + Backend error           | Rollback optimiste via `setActiveCollection(id)` pour recharger l'ordre DB     |
 | Reorder 1000+ images              | OK (transaction SQL batch)                                                     |
 | Drag source !== drag target       | Si dropMode='reorder' mais image pas dans collection → refuser silencieusement |
-| Collection devient vide            | Finir avec `sort_order` = vide (pas d'impact)                                 |
+| Collection devient vide           | Finir avec `sort_order` = vide (pas d'impact)                                  |
 
 ---
 
@@ -520,11 +522,13 @@ Frontend : Toast ✓ ou Toast ✗ + rollback
 Avec grille virtualisée, déterminer la position d'insertion est complexe :
 
 **Option 1 (Simple)** : Drag **sur une image** = insert avant celle-ci
+
 - ✅ Facile à implémenter
 - ✅ Feedback drag over simple
 - ❌ Moins précis (pas de "gap" entre images)
 
 **Option 2 (Complet)** : Drag entre les images = drop indicator visualisé
+
 - ✅ UX Lightroom-like
 - ❌ Nécessite calcul géométrique (clientY, offsetTop, virtualisation)
 

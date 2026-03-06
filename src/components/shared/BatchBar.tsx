@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Check, Star, Tag, RefreshCw, X, FolderPlus, ChevronUp } from 'lucide-react';
+import { Check, Tag, RefreshCw, X, FolderPlus, ChevronUp } from 'lucide-react';
 import type { EditState } from '../../types';
 import { useCollectionStore } from '../../stores/collectionStore';
 import { useUiStore } from '../../stores/uiStore';
@@ -198,15 +198,54 @@ export const BatchBar = ({
           <button
             onClick={() => onDispatchEvent('FLAG', 'pick')}
             className="text-zinc-400 hover:text-emerald-500 transition-colors flex flex-col items-center gap-1 text-[9px] font-bold uppercase"
+            aria-label="Marquer comme pick (P)"
+            title="Marquer comme pick (P)"
           >
-            <Check size={18} /> Pick
+            <Check size={14} /> Pick
           </button>
           <button
-            onClick={() => onDispatchEvent('RATING', 5)}
-            className="text-zinc-400 hover:text-amber-500 transition-colors flex flex-col items-center gap-1 text-[9px] font-bold uppercase"
+            onClick={() => onDispatchEvent('FLAG', 'reject')}
+            className="text-zinc-400 hover:text-red-500 transition-colors flex flex-col items-center gap-1 text-[9px] font-bold uppercase"
+            aria-label="Marquer comme reject (X)"
+            title="Marquer comme reject (X)"
           >
-            <Star size={18} /> Favoris
+            <X size={14} /> Reject
           </button>
+          <button
+            onClick={() => onDispatchEvent('FLAG', null)}
+            className="text-zinc-400 hover:text-zinc-300 transition-colors flex flex-col items-center gap-1 text-[9px] font-bold uppercase"
+            aria-label="Effacer le flag (U)"
+            title="Effacer le flag (U)"
+          >
+            <RefreshCw size={14} /> Clear
+          </button>
+          <div className="w-px h-8 bg-zinc-800 self-center" />
+          {/* Phase 5.3 — Batch rating compact */}
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex items-center gap-0.5">
+              {([1, 2, 3, 4, 5] as const).map((star) => (
+                <button
+                  key={star}
+                  onClick={() => onDispatchEvent('RATING', star)}
+                  className="w-5 h-5 flex items-center justify-center rounded text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 transition-colors text-[9px] font-bold font-mono"
+                  aria-label={`Attribuer ${star} étoile(s)`}
+                  title={`${star}★`}
+                >
+                  {star}
+                </button>
+              ))}
+              <button
+                onClick={() => onDispatchEvent('RATING', 0)}
+                className="w-5 h-5 flex items-center justify-center rounded text-zinc-700 hover:text-zinc-500 hover:bg-zinc-800 transition-colors text-[10px]"
+                aria-label="Effacer la note"
+                title="Effacer la note (0)"
+              >
+                ⊘
+              </button>
+            </div>
+            <span className="text-[9px] font-bold uppercase text-zinc-600">Note ★</span>
+          </div>
+          <div className="w-px h-8 bg-zinc-800 self-center" />
           <button
             onClick={() => setShowCollectionPicker((v) => !v)}
             className={`flex flex-col items-center gap-1 text-[9px] font-bold uppercase transition-colors ${showCollectionPicker ? 'text-blue-400' : 'text-zinc-400 hover:text-blue-400'}`}
@@ -225,13 +264,6 @@ export const BatchBar = ({
             title="Ajouter un tag à la sélection"
           >
             <Tag size={18} /> Tags
-          </button>
-          <button
-            disabled
-            title="Non implémenté"
-            className="opacity-40 cursor-not-allowed flex flex-col items-center gap-1 text-[9px] font-bold uppercase text-zinc-600"
-          >
-            <RefreshCw size={18} /> Sync
           </button>
         </div>
         <div

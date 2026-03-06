@@ -146,19 +146,34 @@ export const LazyLoadedImageCard = ({
           <div className="text-[9px] font-mono text-zinc-300 flex items-center gap-1 opacity-80 group-hover:opacity-100 uppercase tracking-tighter truncate">
             {image.filename}
           </div>
-          <div className="text-amber-400 text-[9px] flex drop-shadow-md">
-            {'★'.repeat(image.state.rating)}
-          </div>
+          {image.state.rating > 0 && (
+            <div className="text-amber-400 text-[9px] flex drop-shadow-md">
+              {'★'.repeat(image.state.rating)}
+              {'☆'.repeat(5 - image.state.rating)}
+            </div>
+          )}
         </div>
         <div className="text-[8px] font-mono text-zinc-500 shrink-0">{image.exif.iso} ISO</div>
       </div>
 
-      {/* Flag indicators */}
+      {/* Phase 5.3 — Flag badge (pick = vert P, reject = rouge X) */}
       {image.state.flag === 'pick' && (
-        <div className="absolute top-2 left-2 w-2.5 h-2.5 bg-emerald-500 border-2 border-zinc-950 rounded-full shadow-lg z-20" />
+        <div
+          className="absolute top-2 left-2 bg-emerald-500 text-white text-[8px] font-black leading-none px-1 py-0.5 rounded shadow-lg z-20 select-none"
+          aria-label="Pick"
+          title="Pick (P)"
+        >
+          P
+        </div>
       )}
       {image.state.flag === 'reject' && (
-        <div className="absolute top-2 left-2 w-2.5 h-2.5 bg-red-600 border-2 border-zinc-950 rounded-full shadow-lg z-20" />
+        <div
+          className="absolute top-2 left-2 bg-red-600 text-white text-[8px] font-black leading-none px-1 py-0.5 rounded shadow-lg z-20 select-none"
+          aria-label="Reject"
+          title="Reject (X)"
+        >
+          X
+        </div>
       )}
     </div>
   );

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DevelopSliders } from '../DevelopSliders';
-import type { CatalogImage } from '../../../types';
+import type { CatalogImage } from '@/types';
 
 describe('DevelopSliders', () => {
   const mockActiveImg: CatalogImage = {
@@ -13,7 +13,18 @@ describe('DevelopSliders', () => {
       standard: 'asset://previews/test_1440.jpg',
     },
     capturedAt: '2025-03-02T12:00:00Z',
-    exif: {} as any,
+    exif: {
+      iso: undefined,
+      aperture: undefined,
+      shutterSpeed: undefined,
+      focalLength: undefined,
+      lens: undefined,
+      cameraMake: undefined,
+      cameraModel: undefined,
+      gpsLat: undefined,
+      gpsLon: undefined,
+      colorSpace: undefined,
+    },
     sizeOnDisk: '2.5 MB',
     state: {
       isSynced: true,

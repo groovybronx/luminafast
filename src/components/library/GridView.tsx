@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ActiveView, CatalogImage } from '../../types';
+import type { ActiveView, CatalogImage } from '@/types';
 import { LazyLoadedImageCard } from './LazyLoadedImageCard';
 import './library.css';
 

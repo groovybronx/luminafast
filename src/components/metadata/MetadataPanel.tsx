@@ -1,5 +1,5 @@
 import { Info } from 'lucide-react';
-import type { CatalogImage } from '../../types';
+import type { CatalogImage } from '@/types';
 
 interface MetadataPanelProps {
   activeImg: CatalogImage;

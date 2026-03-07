@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Activity, Maximize2, ChevronDown } from 'lucide-react';
-import type { LogEntry } from '../../types';
+import type { LogEntry } from '@/types';
 
 interface ArchitectureMonitorProps {
   logs: LogEntry[];

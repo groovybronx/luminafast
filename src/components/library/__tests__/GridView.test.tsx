@@ -72,7 +72,7 @@ vi.stubGlobal(
               time: Date.now(),
             } as IntersectionObserverEntry,
           ],
-          this as any,
+          this as unknown as IntersectionObserver,
         );
       }, 10);
       this.timeoutIds.push(id);

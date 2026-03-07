@@ -3,19 +3,19 @@ import { render, fireEvent } from '@testing-library/react';
 import { BatchBar } from '../BatchBar';
 
 // Mock stores used by BatchBar
-vi.mock('../../../stores/collectionStore', () => ({
+vi.mock('@/stores/collectionStore', () => ({
   useCollectionStore: vi.fn(() => ({
     collections: [],
   })),
 }));
 
-vi.mock('../../../stores/uiStore', () => ({
+vi.mock('@/stores/uiStore', () => ({
   useUiStore: vi.fn(() => ({
     selection: new Set([1, 2]),
   })),
 }));
 
-vi.mock('../../../stores/tagStore', () => ({
+vi.mock('@/stores/tagStore', () => ({
   useTagStore: vi.fn(() => ({
     flatTags: [],
     addTagsToImages: vi.fn(),
@@ -24,7 +24,7 @@ vi.mock('../../../stores/tagStore', () => ({
   })),
 }));
 
-import type { EditState } from '../../../types';
+import type { EditState } from '@/types';
 
 type DispatchFn = (
   eventType: string,

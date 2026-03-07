@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TagsPanel } from '../TagsPanel';
-import { useTagStore } from '../../../stores/tagStore';
-import { TagService } from '../../../services/tagService';
+import { useTagStore } from '@/stores/tagStore';
+import { TagService } from '@/services/tagService';
 
 vi.mock('../../../stores/tagStore');
 vi.mock('../../../services/tagService');

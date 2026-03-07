@@ -20,7 +20,7 @@ class MockIntersectionObserver {
   disconnect = vi.fn();
 }
 
-global.IntersectionObserver = MockIntersectionObserver as any;
+global.IntersectionObserver = MockIntersectionObserver as unknown as typeof IntersectionObserver;
 
 describe('GridView Drag & Drop (Source)', () => {
   const mockImage: CatalogImage = {

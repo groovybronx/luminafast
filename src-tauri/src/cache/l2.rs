@@ -39,6 +39,7 @@ pub struct L2Stats {
 }
 
 /// Disk-based cache manager
+#[derive(Clone)]
 pub struct CacheL2 {
     preview_root: PathBuf,
     stats: std::sync::Arc<tokio::sync::Mutex<L2StatsInfo>>,

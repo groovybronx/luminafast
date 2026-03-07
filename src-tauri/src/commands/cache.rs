@@ -5,6 +5,7 @@
  * All operations are async and thread-safe via Tauri's managed state.
  */
 use crate::cache::CacheInstance;
+use crate::commands::catalog::AppState;
 use base64::Engine;
 use serde_json::json;
 use tauri::State;
@@ -69,7 +70,11 @@ pub async fn get_cache_stats(cache: State<'_, CacheInstance>) -> Result<serde_js
             "utilization": format!("{:.1}%", (stats.l1_size as f64 / stats.l1_capacity as f64) * 100.0),
             "hits": stats.l1_hits,
             "misses": stats.l1_misses,
-            "hitRate": format!("{:.1}%", (stats.l1_hits as f64 / (stats.l1_hits + stats.l1_misses) as f64) * 100.0)
+            "hitRate": if stats.l1_hits + stats.l1_misses > 0 {
+                format!("{:.1}%", (stats.l1_hits as f64 / (stats.l1_hits + stats.l1_misses) as f64) * 100.0)
+            } else {
+                "N/A".to_string()
+            }
         },
         "l2": {
             "size": stats.l2_size,
@@ -79,6 +84,18 @@ pub async fn get_cache_stats(cache: State<'_, CacheInstance>) -> Result<serde_js
             "misses": stats.l2_misses,
             "hitRate": if stats.l2_hits + stats.l2_misses > 0 {
                 format!("{:.1}%", (stats.l2_hits as f64 / (stats.l2_hits + stats.l2_misses) as f64) * 100.0)
+            } else {
+                "N/A".to_string()
+            }
+        },
+        "details": {
+            "size": stats.details_size,
+            "capacity": stats.details_capacity,
+            "utilization": format!("{:.1}%", (stats.details_size as f64 / stats.details_capacity as f64) * 100.0),
+            "hits": stats.details_hits,
+            "misses": stats.details_misses,
+            "hitRate": if stats.details_hits + stats.details_misses > 0 {
+                format!("{:.1}%", (stats.details_hits as f64 / (stats.details_hits + stats.details_misses) as f64) * 100.0)
             } else {
                 "N/A".to_string()
             }
@@ -145,6 +162,136 @@ fn format_bytes(bytes: u64) -> String {
     }
 
     format!("{:.2} {}", size, UNITS[unit_idx])
+}
+
+// ============================================================================
+// Phase 6.1 Completion — Metadata Commands
+// ============================================================================
+
+/// Get cache metadata for a specific image.
+///
+/// Returns the persisted metadata record (cached_at, last_accessed, size_bytes,
+/// source, is_valid) or `null` when the image has never been cached.
+#[tauri::command]
+pub async fn get_cache_metadata(
+    image_id: u32,
+    state: State<'_, AppState>,
+) -> Result<Option<serde_json::Value>, String> {
+    let mut db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+
+    let row =
+        crate::services::cache_metadata::CacheMetadataService::get(db.connection(), image_id)?;
+
+    Ok(row.map(|r| {
+        let dto: crate::services::cache_metadata::CacheMetadataDTO = r.into();
+        serde_json::to_value(dto).unwrap_or(serde_json::Value::Null)
+    }))
+}
+
+/// Manually update (upsert) the cache metadata record for an image.
+///
+/// Typically called after setting a thumbnail via `set_cached_thumbnail` so
+/// the metadata table stays in sync with the actual cache state.
+#[tauri::command]
+pub async fn update_cache_metadata(
+    image_id: u32,
+    source: String,
+    size_bytes: u64,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    // Validate source value
+    match source.as_str() {
+        "L1" | "L2" | "COMPUTED" => {}
+        other => return Err(format!("Invalid cache source: {}", other)),
+    }
+
+    let mut db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+
+    crate::services::cache_metadata::CacheMetadataService::upsert(
+        db.connection(),
+        image_id,
+        size_bytes,
+        &source,
+    )
+}
+
+/// Warm the L1 cache by loading the most recently accessed thumbnails from L2.
+///
+/// Queries the `cache_metadata` table for the top-`batch_size` recently
+/// accessed (and still valid) images, then for each one that has a file in L2,
+/// loads it into L1.  This brings the L1 hit rate up quickly on app restart.
+///
+/// Returns counts of successfully promoted items and total elapsed time.
+#[tauri::command]
+pub async fn warm_cache_from_db(
+    batch_size: u32,
+    state: State<'_, AppState>,
+    cache: State<'_, CacheInstance>,
+) -> Result<serde_json::Value, String> {
+    let start = std::time::Instant::now();
+    let limit = (batch_size.clamp(1, 200)) as usize; // Clamp 1..=200
+
+    // 1. Fetch recently accessed image IDs from DB
+    let candidate_ids = {
+        let mut db = state
+            .db
+            .lock()
+            .map_err(|e| format!("Database lock poisoned: {}", e))?;
+
+        crate::services::cache_metadata::CacheMetadataService::get_recently_accessed(
+            db.connection(),
+            limit,
+        )?
+    };
+
+    let total_candidates = candidate_ids.len() as u32;
+    let mut warmed_count = 0u32;
+    let mut skipped_count = 0u32;
+
+    // 2. For each candidate, try to promote from L2 → L1
+    for image_id in candidate_ids {
+        // Skip if already in L1
+        if cache.l1.get(image_id).await.is_some() {
+            skipped_count += 1;
+            continue;
+        }
+
+        // Attempt to load from L2 and promote to L1
+        match cache.l2.get(image_id).await {
+            Ok(Some(data)) => {
+                if cache.l1.put(image_id, data).await.is_ok() {
+                    warmed_count += 1;
+                } else {
+                    skipped_count += 1;
+                }
+            }
+            _ => {
+                skipped_count += 1;
+            }
+        }
+    }
+
+    let elapsed_ms = start.elapsed().as_millis();
+    log::info!(
+        "[Cache] warm_cache_from_db: warmed={} skipped={} total={} elapsed={}ms",
+        warmed_count,
+        skipped_count,
+        total_candidates,
+        elapsed_ms,
+    );
+
+    Ok(serde_json::json!({
+        "warmedCount": warmed_count,
+        "skippedCount": skipped_count,
+        "totalCandidates": total_candidates,
+        "elapsedMs": elapsed_ms,
+    }))
 }
 
 #[cfg(test)]

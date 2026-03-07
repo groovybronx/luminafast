@@ -32,7 +32,7 @@ Transformer le **HistoryPanel** mockup en interface fonctionnelle permettant la 
 - **Undo/Redo par raccourcis clavier** (sera ajouté en Phase 7.4 — Accessibilité)
 - **Snapshots partagés entre utilisateurs** (Phase 8 — Cloud sync)
 
-- **TODO **Historique entre sessions** (sera implémenté via Event Sourcing persistence, déjà acquis)
+- **TODO **Historique entre sessions\*\* (sera implémenté via Event Sourcing persistence, déjà acquis)
 
 ---
 

@@ -15,7 +15,7 @@
 ├── discovery.rs # Commands discovery/import
 └── dev.rs # Commands développement (si applicable)
 
-```
+````
 
 ### 2.2 — Modules Internes avec Tests
 
@@ -58,7 +58,7 @@ fn load_image(path: &Path) -> Image {
     let file = std::fs::File::open(path).unwrap(); // BOOM si fichier absent
     // ...
 }
-```
+````
 
 ### 1.2 — Résultats & types d’erreur
 

@@ -1,3 +1,4 @@
+use crate::cache::CacheInstance;
 use crate::database::Database;
 use crate::database::DatabaseError;
 use crate::models::dto::*;
@@ -75,11 +76,22 @@ pub async fn backfill_images_folder_id(state: State<'_, AppState>) -> CommandRes
 }
 
 /// Get all images with optional filtering
+/// Phase 6.1: Cache integration
 #[tauri::command]
 pub async fn get_all_images(
     filter: Option<ImageFilter>,
     state: State<'_, AppState>,
+    cache: State<'_, CacheInstance>,
 ) -> CommandResult<Vec<ImageDTO>> {
+    // Check cache statistics to evaluate cache effectiveness
+    if let Ok(stats) = cache.get_stats().await {
+        log::debug!(
+            "[Catalog] get_all_images - Cache L1 size: {}/{}",
+            stats.l1_hits + stats.l1_misses,
+            stats.l1_capacity
+        );
+    }
+
     let mut db = state
         .db
         .lock()
@@ -176,11 +188,18 @@ pub async fn get_all_images(
 }
 
 /// Get detailed information for a single image
+/// Phase 6.1: Check cache first
 #[tauri::command]
 pub async fn get_image_detail(
     id: u32,
     state: State<'_, AppState>,
+    cache: State<'_, CacheInstance>,
 ) -> CommandResult<ImageDetailDTO> {
+    // Check if image thumbnail is in cache
+    if let Ok(Some(_)) = cache.get_thumbnail(id).await {
+        log::debug!("[Catalog] Image {} thumbnail is cached", id);
+    }
+
     let mut db = state
         .db
         .lock()

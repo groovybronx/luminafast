@@ -1,3 +1,4 @@
+pub mod cache;
 pub mod catalog;
 pub mod discovery;
 pub mod event_sourcing;

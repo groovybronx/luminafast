@@ -1,3 +1,4 @@
+use crate::cache::CacheInstance;
 use crate::commands::catalog::AppState;
 use crate::models::event::Event;
 use crate::services::event_sourcing::{EventStore, EventStoreError};
@@ -31,15 +32,21 @@ impl From<EventStoreError> for CommandError {
 }
 
 #[tauri::command]
-pub fn append_event(event: EventDTO, state: State<AppState>) -> Result<(), CommandError> {
-    let mut db_guard = state.db.lock().map_err(|e| CommandError {
-        message: format!("DB lock: {}", e),
-    })?;
-    let conn = db_guard.connection();
+pub async fn append_event(
+    event: EventDTO,
+    state: State<'_, AppState>,
+    cache: State<'_, CacheInstance>,
+) -> Result<(), CommandError> {
+    // Store event in DB (sync part)
+    let target_id = event.target_id;
+    {
+        let mut db_guard = state.db.lock().map_err(|e| CommandError {
+            message: format!("DB lock: {}", e),
+        })?;
+        let conn = db_guard.connection();
 
-    // Convert DTO to Event
-    let event_to_store =
-        Event {
+        // Convert DTO to Event
+        let event_to_store = Event {
             id: event.id,
             timestamp: event.timestamp,
             event_type: serde_json::from_value(serde_json::Value::String(event.event_type))
@@ -62,10 +69,22 @@ pub fn append_event(event: EventDTO, state: State<AppState>) -> Result<(), Comma
                 .with_timezone(&chrono::Utc),
         };
 
-    let store = EventStore::new(conn);
-    store
-        .append_event(&event_to_store)
-        .map_err(CommandError::from)?;
+        let store = EventStore::new(conn);
+        store
+            .append_event(&event_to_store)
+            .map_err(CommandError::from)?;
+    } // Lock released here
+
+    // Phase 6.1.3 — Invalidate cache on edit (async part)
+    if let Err(e) = cache.invalidate_image(target_id as u32).await {
+        log::warn!(
+            "[EventSourcing] Failed to invalidate cache for image_id={}: {}",
+            target_id,
+            e
+        );
+        // Non-blocking: don't fail the event append if cache invalidation fails
+    }
+
     Ok(())
 }
 

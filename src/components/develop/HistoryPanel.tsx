@@ -1,9 +1,9 @@
 import { useEffect, useCallback, useMemo, useState } from 'react';
 import { History, RotateCcw, Save } from 'lucide-react';
-import { useEditStore } from '../../stores/editStore';
-import * as snapshotService from '../../services/snapshotService';
+import { useEditStore } from '@/stores/editStore';
+import * as snapshotService from '@/services/snapshotService';
 import { SnapshotModal } from './SnapshotModal';
-import type { SnapshotDTO } from '../../services/snapshotService';
+import type { SnapshotDTO } from '@/services/snapshotService';
 
 interface HistoryPanelProps {
   selectedImageId?: number;

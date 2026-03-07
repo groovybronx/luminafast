@@ -1,9 +1,9 @@
 import { Check, Database, Import, Pencil, Trash2, X, Zap } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useCollectionStore } from '../../stores/collectionStore';
-import { useFolderStore } from '../../stores/folderStore';
-import { useUiStore } from '../../stores/uiStore';
-import type { SmartQuery } from '../../types/collection';
+import { useCollectionStore } from '@/stores/collectionStore';
+import { useFolderStore } from '@/stores/folderStore';
+import { useUiStore } from '@/stores/uiStore';
+import type { SmartQuery } from '@/types/collection';
 import {
   isDragImageData,
   parseDragData,

@@ -5,9 +5,9 @@ import { XmpPanel } from '../metadata/XmpPanel';
 import { DevelopSliders } from '../develop/DevelopSliders';
 import { HistoryPanel } from '../develop/HistoryPanel';
 import { MetadataPanel } from '../metadata/MetadataPanel';
-import { useExif } from '../../hooks/useExif';
-import { useUiStore } from '../../stores/uiStore';
-import type { CatalogImage, ActiveView, FlagType, EditState, ExifData } from '../../types';
+import { useExif } from '@/hooks/useExif';
+import { useUiStore } from '@/stores/uiStore';
+import type { CatalogImage, ActiveView, FlagType, EditState, ExifData } from '@/types';
 
 interface RightSidebarProps {
   activeView: ActiveView;

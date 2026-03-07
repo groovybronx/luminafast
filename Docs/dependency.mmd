@@ -1,0 +1,118 @@
+---
+query: Package dependency analysis
+generationTime: 2026-03-07T00:45:55.370Z
+---
+flowchart TB
+    ROOT["🛡️ 36 Dependencies | Score: 8.9/10<br/>Critical: 0 | High: 0 | Medium: 0 | Low: 19 | Good: 17"]
+
+    subgraph CRITICAL["🚨 CRITICAL (0) - Fix Immediately"]
+        critical_no_data["No data found"]
+    end
+
+    subgraph HIGH["⚠️ HIGH (0) - Fix This Sprint"]
+        high_no_data["No data found"]
+    end
+
+    subgraph MEDIUM["🔶 MEDIUM (0) - Plan Updates"]
+        medium_no_data["No data found"]
+    end
+
+    subgraph LOW["🔽 LOW (19) - Minor Issues"]
+        low_tanstack_react_virtual["@tanstack/react-virtual ^3.13.18"]
+        low_comment_tanstack_react_virtual[["📅 Minor version updates available<br/>🆕 Latest: 3.13.21 available<br/>⚠️ Small improvements available<br/>📋 Action: Update in next cycle"]]
+        low_tanstack_react_virtual --> low_comment_tanstack_react_virtual
+        low_lucide_react["lucide-react ^0.563.0"]
+        low_comment_lucide_react[["📅 Minor version updates available<br/>🆕 Latest: 0.577.0 available<br/>⚠️ Small improvements available<br/>📋 Action: Update in next cycle"]]
+        low_lucide_react --> low_comment_lucide_react
+        low_react["react ^19.2.0"]
+        low_comment_react[["📅 Minor version updates available<br/>🆕 Latest: 19.2.4 available<br/>⚠️ Small improvements available<br/>📋 Action: Update in next cycle"]]
+        low_react --> low_comment_react
+        low_react_dom["react-dom ^19.2.0"]
+        low_comment_react_dom[["📅 Minor version updates available<br/>🆕 Latest: 19.2.4 available<br/>⚠️ Small improvements available<br/>📋 Action: Update in next cycle"]]
+        low_react_dom --> low_comment_react_dom
+        low_eslint_js["@eslint/js ^9.39.2"]
+        low_comment_eslint_js[["📅 1 major version behind<br/>🆕 Latest: 10.0.1 available<br/>⚠️ Outdated but manageable<br/>📋 Action: Update when convenient"]]
+        low_eslint_js --> low_comment_eslint_js
+        low_tailwindcss_vite["@tailwindcss/vite ^4.1.18"]
+        low_comment_tailwindcss_vite[["📅 Minor version updates available<br/>🆕 Latest: 4.2.1 available<br/>⚠️ Small improvements available<br/>📋 Action: Update in next cycle"]]
+        low_tailwindcss_vite --> low_comment_tailwindcss_vite
+        low_tauri_apps_cli["@tauri-apps/cli ^2.10.0"]
+        low_comment_tauri_apps_cli[["📅 Minor version updates available<br/>🆕 Latest: 2.10.1 available<br/>⚠️ Small improvements available<br/>📋 Action: Update in next cycle"]]
+        low_tauri_apps_cli --> low_comment_tauri_apps_cli
+        low_testing_library_user_event["@testing-library/user-event ^14.5.2"]
+        low_comment_testing_library_user_event[["📅 Minor version updates available<br/>🆕 Latest: 14.6.1 available<br/>⚠️ Small improvements available<br/>📋 Action: Update in next cycle"]]
+        low_testing_library_user_event --> low_comment_testing_library_user_event
+        low_types_node["@types/node ^25.3.0"]
+        low_comment_types_node[["📅 Minor version updates available<br/>🆕 Latest: 25.3.5 available<br/>⚠️ Small improvements available<br/>📋 Action: Update in next cycle"]]
+        low_types_node --> low_comment_types_node
+        low_typescript_eslint_eslint_plugin["@typescript-eslint/eslint-plugin ^8.55.0"]
+        low_comment_typescript_eslint_eslint_plugin[["📅 Minor version updates available<br/>🆕 Latest: 8.56.1 available<br/>⚠️ Small improvements available<br/>📋 Action: Update in next cycle"]]
+        low_typescript_eslint_eslint_plugin --> low_comment_typescript_eslint_eslint_plugin
+        low_typescript_eslint_parser["@typescript-eslint/parser ^8.55.0"]
+        low_comment_typescript_eslint_parser[["📅 Minor version updates available<br/>🆕 Latest: 8.56.1 available<br/>⚠️ Small improvements available<br/>📋 Action: Update in next cycle"]]
+        low_typescript_eslint_parser --> low_comment_typescript_eslint_parser
+        low_vitejs_plugin_react["@vitejs/plugin-react ^5.1.1"]
+        low_comment_vitejs_plugin_react[["📅 1 major version behind<br/>🆕 Latest: 5.1.4 available<br/>⚠️ Outdated but manageable<br/>📋 Action: Update when convenient"]]
+        low_vitejs_plugin_react --> low_comment_vitejs_plugin_react
+        low_eslint["eslint ^9.39.1"]
+        low_comment_eslint[["📅 1 major version behind<br/>🆕 Latest: 10.0.3 available<br/>⚠️ Outdated but manageable<br/>📋 Action: Update when convenient"]]
+        low_eslint --> low_comment_eslint
+        low_eslint_plugin_react_refresh["eslint-plugin-react-refresh ^0.4.24"]
+        low_comment_eslint_plugin_react_refresh[["📅 Minor version updates available<br/>🆕 Latest: 0.5.2 available<br/>⚠️ Small improvements available<br/>📋 Action: Update in next cycle"]]
+        low_eslint_plugin_react_refresh --> low_comment_eslint_plugin_react_refresh
+        low_globals["globals ^16.5.0"]
+        low_comment_globals[["📅 1 major version behind<br/>🆕 Latest: 17.4.0 available<br/>⚠️ Outdated but manageable<br/>📋 Action: Update when convenient"]]
+        low_globals --> low_comment_globals
+        low_jsdom["jsdom ^28.0.0"]
+        low_comment_jsdom[["📅 Minor version updates available<br/>🆕 Latest: 28.1.0 available<br/>⚠️ Small improvements available<br/>📋 Action: Update in next cycle"]]
+        low_jsdom --> low_comment_jsdom
+        low_postcss["postcss ^8.5.6"]
+        low_comment_postcss[["📅 Minor version updates available<br/>🆕 Latest: 8.5.8 available<br/>⚠️ Small improvements available<br/>📋 Action: Update in next cycle"]]
+        low_postcss --> low_comment_postcss
+        low_tailwindcss["tailwindcss ^4.1.18"]
+        low_comment_tailwindcss[["📅 Minor version updates available<br/>🆕 Latest: 4.2.1 available<br/>⚠️ Small improvements available<br/>📋 Action: Update in next cycle"]]
+        low_tailwindcss --> low_comment_tailwindcss
+        low_typescript_eslint["typescript-eslint ^8.55.0"]
+        low_comment_typescript_eslint[["📅 Minor version updates available<br/>🆕 Latest: 8.56.1 available<br/>⚠️ Small improvements available<br/>📋 Action: Update in next cycle"]]
+        low_typescript_eslint --> low_comment_typescript_eslint
+    end
+
+    subgraph GOOD["✅ GOOD (17) - No Issues"]
+        good_tauri_apps_api["@tauri-apps/api ^2.10.1"]
+        good_tauri_apps_plugin_dialog["@tauri-apps/plugin-dialog ^2.6.0"]
+        good_tauri_apps_plugin_fs["@tauri-apps/plugin-fs ^2.4.5"]
+        good_tauri_apps_plugin_shell["@tauri-apps/plugin-shell ^2.3.5"]
+        good_zustand["zustand ^5.0.11"]
+        good_testing_library_jest_dom["@testing-library/jest-dom ^6.9.1"]
+        good_testing_library_react["@testing-library/react ^16.3.2"]
+        good_types_react["@types/react ^19.2.14"]
+        good_types_react_dom["@types/react-dom ^19.2.3"]
+        good_vitest_coverage_v8["@vitest/coverage-v8 ^4.0.18"]
+        good_vitest_ui["@vitest/ui ^4.0.18"]
+        good_eslint_config_prettier["eslint-config-prettier ^10.1.8"]
+        good_eslint_plugin_prettier["eslint-plugin-prettier ^5.5.5"]
+        good_eslint_plugin_react_hooks["eslint-plugin-react-hooks ^7.0.1"]
+        good_typescript["typescript ^5.9.3"]
+        good_vite["vite ^7.3.1"]
+        good_vitest["vitest ^4.0.18"]
+    end
+
+    %% Connections
+    ROOT --> CRITICAL
+    ROOT --> HIGH
+    ROOT --> MEDIUM
+    ROOT --> LOW
+    ROOT --> GOOD
+
+    %% Styling
+    style ROOT fill:#F06292,stroke:#AD1457,stroke-width:2.5px
+    style CRITICAL fill:#FFB3BA,stroke:#D32F2F,stroke-width:2px
+    style HIGH fill:#FFD8A7,stroke:#EF6C00,stroke-width:2px
+    style MEDIUM fill:#FFFACD,stroke:#FBC02D,stroke-width:2px
+    style LOW fill:#B0E0E6,stroke:#0288D1,stroke-width:2px
+    style GOOD fill:#C1E1C1,stroke:#388E3C,stroke-width:2px
+    %% Comment node styling
+    classDef commentStyle fill:#F5F5F5,stroke:#666,stroke-width:1px,color:#28253D
+    class ROOT,CRITICAL,HIGH,MEDIUM,LOW,GOOD,low_comment_tanstack_react_virtual,low_tanstack_react_virtual,low_comment_lucide_react,low_lucide_react,low_comment_react,low_react,low_comment_react_dom,low_react_dom,low_comment_eslint_js,low_eslint_js,low_comment_tailwindcss_vite,low_tailwindcss_vite,low_comment_tauri_apps_cli,low_tauri_apps_cli,low_comment_testing_library_user_event,low_testing_library_user_event,low_comment_types_node,low_types_node,low_comment_typescript_eslint_eslint_plugin,low_typescript_eslint_eslint_plugin,low_comment_typescript_eslint_parser,low_typescript_eslint_parser,low_comment_vitejs_plugin_react,low_vitejs_plugin_react,low_comment_eslint,low_eslint,low_comment_eslint_plugin_react_refresh,low_eslint_plugin_react_refresh,low_comment_globals,low_globals,low_comment_jsdom,low_jsdom,low_comment_postcss,low_postcss,low_comment_tailwindcss,low_tailwindcss,low_comment_typescript_eslint,low_typescript_eslint,good_tauri_apps_api,good_tauri_apps_plugin_dialog,good_tauri_apps_plugin_fs,good_tauri_apps_plugin_shell,good_zustand,good_testing_library_jest_dom,good_testing_library_react,good_types_react,good_types_react_dom,good_vitest_coverage_v8,good_vitest_ui,good_eslint_config_prettier,good_eslint_plugin_prettier,good_eslint_plugin_react_hooks,good_typescript,good_vite,good_vitest,critical_no_data,high_no_data,medium_no_data commentStyle
+
+    %% Click handlers for vulnerability details

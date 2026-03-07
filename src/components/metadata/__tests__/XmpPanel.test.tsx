@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { XmpPanel } from '../XmpPanel';
-import { XmpService } from '../../../services/xmpService';
+import { XmpService } from '@/services/xmpService';
 
 vi.mock('../../../services/xmpService');
 

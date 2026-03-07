@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { FilesystemService } from '../filesystemService';
-import { FileEventType, FileLockType, isValidPath } from '../../types/filesystem';
+import { FileEventType, FileLockType, isValidPath } from '@/types/filesystem';
 
 describe('FilesystemService', () => {
   let service: FilesystemService;

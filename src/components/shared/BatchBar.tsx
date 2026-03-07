@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Check, Tag, RefreshCw, X, FolderPlus, ChevronUp } from 'lucide-react';
-import type { EditState } from '../../types';
-import { useCollectionStore } from '../../stores/collectionStore';
-import { useUiStore } from '../../stores/uiStore';
-import { useTagStore } from '../../stores/tagStore';
-import type { TagNode } from '../../types/tag';
+import type { EditState } from '@/types';
+import { useCollectionStore } from '@/stores/collectionStore';
+import { useUiStore } from '@/stores/uiStore';
+import { useTagStore } from '@/stores/tagStore';
+import type { TagNode } from '@/types/tag';
 
 interface BatchBarProps {
   selectionCount: number;

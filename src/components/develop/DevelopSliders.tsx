@@ -1,6 +1,6 @@
 import { useRef, useCallback } from 'react';
 import { RefreshCw, Sun, Layers, Droplets, Wind, Palette } from 'lucide-react';
-import type { CatalogImage, EditState } from '../../types';
+import type { CatalogImage, EditState } from '@/types';
 
 interface DevelopSlidersProps {
   activeImg: CatalogImage;

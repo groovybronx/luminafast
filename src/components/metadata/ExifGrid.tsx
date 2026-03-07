@@ -1,5 +1,5 @@
 import { Camera, Clock, Aperture, MapPin, Maximize2, Palette } from 'lucide-react';
-import type { ExifData } from '../../types';
+import type { ExifData } from '@/types';
 
 interface ExifGridProps {
   exif: ExifData;

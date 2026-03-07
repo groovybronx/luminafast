@@ -139,7 +139,7 @@ La virtualisation de base (@tanstack/react-virtual) était déjà implémentée 
 - [x] Chargement différé si `isScrollingFast === true` lors de l'intersection (via `pendingLoadRef`)
 - [x] Chargement déclenché dès l'arrêt du scroll (prop `isScrollingFast` → `false`)
 - [x] `tsc --noEmit` — 0 erreure TypeScript
-- [x] 728 tests passants (vs 727 avant — +1 net via 29 nouveaux tests)
+- [x] 756 tests passants (vs 727 avant )
 - [x] Non-régression : 0 test cassé par nos changements
 
 ### Impact

@@ -56,6 +56,7 @@
 17. [Types & Interfaces (Mises à jour)](#17-types--interfaces-mises-à-jour)
 18. [Système de Rendu](#18--système-de-rendu)
 19. [Historique des Modifications](#19-historique-des-modifications)
+20. [Conformité TypeScript Strict & Documentation WASM](#20-conformité-typescript-strict--documentation-wasm)
 
 **Annexes** :
 
@@ -66,7 +67,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-03-07 (Phase 5.4 - Sidecar XMP: read/write Adobe-standard `.xmp` sidecars, Lightroom format support, hierarchical tags, 16 Rust + 24 Vitest tests) — État : Phase 5.4 complétée, 3 commandes Tauri (export/import/status) + React component XmpPanel + XmpService wrapper. Branche `phase/5.4-sidecar-xmp`
+> **Dernière mise à jour** : 2026-03-07 (P0+P1: Conformité TypeScript Strict 100% + Documentation WASM normalizeFiltersForWasm() complète — 19 fichiers refactorisés, 26 imports relatifs→@/, 5 violations any éliminées, commit 97858ad)
 >
 > ### Décisions Projet (validées par le propriétaire)
 

@@ -1,0 +1,10 @@
+name: Setup Node Environment
+description: Setup Node.js 20.x with npm caching
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'

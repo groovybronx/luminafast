@@ -15,12 +15,6 @@
 ├── discovery.rs # Commands discovery/import
 └── dev.rs # Commands développement (si applicable)
 
-````
-
-### 2.2 — Modules Internes avec Tests
-
-Chaque module Rust contient ses tests unitaires :
-
 # LuminaFast Agents — Backend (Rust/Tauri)
 
 > **Directives spécialisées pour la couche Backend Rust.**
@@ -58,7 +52,7 @@ fn load_image(path: &Path) -> Image {
     let file = std::fs::File::open(path).unwrap(); // BOOM si fichier absent
     // ...
 }
-````
+```
 
 ### 1.2 — Résultats & types d’erreur
 
@@ -98,7 +92,7 @@ use thiserror::Error;
 
 ### 2.1 — Organisation par domaine
 
-```
+```t
 src-tauri/src/
 ├── lib.rs                 # Re-exports principaux
 ├── catalog.rs             # CRUD images + opérations catalogue
@@ -146,7 +140,7 @@ mod tests {
         assert_ne!(hash1, hash2);
     }
 }
-```
+```t
 
 ---
 

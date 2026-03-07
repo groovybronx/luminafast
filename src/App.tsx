@@ -446,7 +446,9 @@ export default function App() {
           onDispatchEvent={dispatchEvent}
         />
       </div>
-
+      {showImport && (
+        <ImportModal onClose={() => setShowImport(false)} onImportComplete={handleImport} />
+      )}
       <KeyboardOverlay />
     </div>
   );

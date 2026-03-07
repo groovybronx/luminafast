@@ -115,10 +115,10 @@
 
 **Violations corrigées** :
 
-| Catégorie | Fichiers | Violations | Solution |
-|-----------|----------|-----------|----------|
-| **Imports relatifs** | 13 | 26 | `../../stores/` → `@/stores/`, `../../types/` → `@/types/`, etc. |
-| **Test mocks `any`** | 5 | 5 | `exif: {} as any` → `exif: {} as ExifData`, IntersectionObserver casting strict |
+| Catégorie            | Fichiers | Violations | Solution                                                                        |
+| -------------------- | -------- | ---------- | ------------------------------------------------------------------------------- |
+| **Imports relatifs** | 13       | 26         | `../../stores/` → `@/stores/`, `../../types/` → `@/types/`, etc.                |
+| **Test mocks `any`** | 5        | 5          | `exif: {} as any` → `exif: {} as ExifData`, IntersectionObserver casting strict |
 
 **Fichiers modifiés (13)** :
 
@@ -171,9 +171,10 @@
    - Explication du pont UI ↔ WASM
 
 2. **Table de conversion complète** (9 paramètres)
+
    ```
    | Param    | WASM Range  | Conversion Formula | Notes
-   |----------|----------   |------------------|----------  
+   |----------|----------   |------------------|----------
    | exposure | -2 to +2    | UI / 50           | Multiplicative scale
    | contrast | -1 to +3    | UI / 50           | With WASM clamping
    | saturation | 0 to +2   | 1 + (UI / 100)    | 1.0 = neutral
@@ -186,10 +187,11 @@
    ```
 
 3. **Exemples de flux concrets**
+
    ```typescript
    // Example 1: Exposure slider to +50 (halfway)
    UI value: 50 → WASM: 50/50 = 1.0 EV
-   
+
    // Example 2: Saturation slider to -30 (slightly left)
    UI value: -30 → WASM: 1 + (-30/100) = 0.7 (desaturate 30%)
    ```

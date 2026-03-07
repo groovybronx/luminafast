@@ -81,6 +81,16 @@ pub fn run() {
                 }
             });
 
+            // Initialize DuckDB service for Phase 6.2 (OLAP Analytics)
+            let duckdb_service = services::duckdb_service::DuckDBService::new()
+                .expect("Failed to initialize DuckDB service");
+            let analytics_state = commands::analytics::AnalyticsState {
+                duckdb: std::sync::Arc::new(std::sync::Mutex::new(duckdb_service)),
+            };
+            app.manage(analytics_state);
+
+            log::info!("DuckDB analytics service initialized");
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -196,6 +206,11 @@ pub fn run() {
             commands::cache::get_cache_metadata,
             commands::cache::update_cache_metadata,
             commands::cache::warm_cache_from_db,
+            // Analytics commands (Phase 6.2)
+            commands::analytics::get_aggregations,
+            commands::analytics::get_catalog_statistics,
+            commands::analytics::execute_smart_query,
+            commands::analytics::sync_duckdb_from_sqlite,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -110,6 +110,9 @@ impl Database {
         // Run cache metadata migration (Phase 6.1)
         self.run_migration("007_cache_metadata")?;
 
+        // Run DuckDB tracking migration (Phase 6.2)
+        self.run_migration("008_duckdb_tracking")?;
+
         Ok(())
     }
 
@@ -157,6 +160,7 @@ impl Database {
             "005_event_sourcing" => include_str!("../migrations/005_event_sourcing.sql"),
             "006_snapshots" => include_str!("../migrations/006_snapshots.sql"),
             "007_cache_metadata" => include_str!("../migrations/007_cache_metadata.sql"),
+            "008_duckdb_tracking" => include_str!("../migrations/008_duckdb_tracking.sql"),
             _ => {
                 return Err(DatabaseError::MigrationFailed(format!(
                     "Unknown migration version: {}",

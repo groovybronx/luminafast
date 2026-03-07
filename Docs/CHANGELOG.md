@@ -2,6 +2,8 @@
 
 > **Ce fichier est mis à jour par l'agent IA après chaque sous-phase complétée.**
 > Il sert de source de vérité pour l'état d'avancement du projet.
+>
+> **👉 Voir aussi** : [FUTURE_OPTIMIZATIONS.md](FUTURE_OPTIMIZATIONS.md) — Todo list complète des optimisations et corrections futures (P2, maintenance, perf, security, documentation)
 
 ---
 

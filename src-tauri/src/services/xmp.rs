@@ -14,7 +14,7 @@ use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
 /// Données extraites / à écrire dans un fichier XMP
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct XmpData {
     /// Note de 0 à 5 (xmp:Rating)
     pub rating: Option<u8>,
@@ -24,17 +24,6 @@ pub struct XmpData {
     pub tags: Vec<String>,
     /// Tags hiérarchiques Lightroom (lr:hierarchicalSubject, ex: "Lieu/France/Paris")
     pub hierarchical_subjects: Vec<String>,
-}
-
-impl Default for XmpData {
-    fn default() -> Self {
-        Self {
-            rating: None,
-            flag: None,
-            tags: Vec::new(),
-            hierarchical_subjects: Vec::new(),
-        }
-    }
 }
 
 /// Construit le chemin du fichier sidecar `.xmp` à partir du chemin de l'image.
@@ -83,8 +72,7 @@ fn parse_xmp_content(content: &str) -> Result<XmpData, String> {
         match reader.read_event() {
             Ok(Event::Start(ref e)) => {
                 let raw = std::str::from_utf8(e.name().into_inner()).unwrap_or("");
-                let (prefix, name) =
-                    raw.split_once(':').unwrap_or(("", raw));
+                let (prefix, name) = raw.split_once(':').unwrap_or(("", raw));
 
                 match (prefix, name) {
                     ("xmp", "Rating") => current_element = Some(XmpElement::Rating),
@@ -99,42 +87,8 @@ fn parse_xmp_content(content: &str) -> Result<XmpData, String> {
                     }
                     // rdf:Description peut contenir xmp:Rating etc. comme attributs
                     ("rdf", "Description") => {
-                        for attr_result in e.attributes() {
-                            if let Ok(attr) = attr_result {
-                                let raw_key = std::str::from_utf8(attr.key.into_inner())
-                                    .unwrap_or("");
-                                let (attr_prefix, attr_name) =
-                                    raw_key.split_once(':').unwrap_or(("", raw_key));
-                                let val = attr
-                                    .decode_and_unescape_value(reader.decoder())
-                                    .unwrap_or_default()
-                                    .to_string();
-
-                                match (attr_prefix, attr_name) {
-                                    ("xmp", "Rating") => {
-                                        data.rating = val.parse::<u8>().ok();
-                                    }
-                                    ("xmp", "Label") => {
-                                        if !val.is_empty() {
-                                            data.flag = Some(val);
-                                        }
-                                    }
-                                    _ => {}
-                                }
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            Ok(Event::Empty(ref e)) => {
-                // Éléments auto-fermants : rdf:Description peut avoir xmp:Rating/Label en attributs
-                let raw = std::str::from_utf8(e.name().into_inner()).unwrap_or("");
-                if let ("rdf", "Description") = raw.split_once(':').unwrap_or(("", raw)) {
-                    for attr_result in e.attributes() {
-                        if let Ok(attr) = attr_result {
-                            let raw_key =
-                                std::str::from_utf8(attr.key.into_inner()).unwrap_or("");
+                        for attr in e.attributes().flatten() {
+                            let raw_key = std::str::from_utf8(attr.key.into_inner()).unwrap_or("");
                             let (attr_prefix, attr_name) =
                                 raw_key.split_once(':').unwrap_or(("", raw_key));
                             let val = attr
@@ -155,6 +109,34 @@ fn parse_xmp_content(content: &str) -> Result<XmpData, String> {
                             }
                         }
                     }
+                    _ => {}
+                }
+            }
+            Ok(Event::Empty(ref e)) => {
+                // Éléments auto-fermants : rdf:Description peut avoir xmp:Rating/Label en attributs
+                let raw = std::str::from_utf8(e.name().into_inner()).unwrap_or("");
+                if let ("rdf", "Description") = raw.split_once(':').unwrap_or(("", raw)) {
+                    for attr in e.attributes().flatten() {
+                        let raw_key = std::str::from_utf8(attr.key.into_inner()).unwrap_or("");
+                        let (attr_prefix, attr_name) =
+                            raw_key.split_once(':').unwrap_or(("", raw_key));
+                        let val = attr
+                            .decode_and_unescape_value(reader.decoder())
+                            .unwrap_or_default()
+                            .to_string();
+
+                        match (attr_prefix, attr_name) {
+                            ("xmp", "Rating") => {
+                                data.rating = val.parse::<u8>().ok();
+                            }
+                            ("xmp", "Label") => {
+                                if !val.is_empty() {
+                                    data.flag = Some(val);
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
                 }
             }
             Ok(Event::End(ref e)) => {
@@ -172,11 +154,7 @@ fn parse_xmp_content(content: &str) -> Result<XmpData, String> {
                 }
             }
             Ok(Event::Text(ref e)) => {
-                let text = e
-                    .unescape()
-                    .unwrap_or_default()
-                    .trim()
-                    .to_string();
+                let text = e.unescape().unwrap_or_default().trim().to_string();
 
                 if text.is_empty() {
                     continue;
@@ -359,7 +337,7 @@ pub fn xmp_label_to_flag(label: &str) -> Option<String> {
 enum XmpElement {
     Rating,
     Label,
-        DcSubject,
+    DcSubject,
     HierarchicalSubject,
 }
 

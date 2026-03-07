@@ -44,7 +44,7 @@ pub async fn create_tag(
     parent_id: Option<u32>,
     state: State<'_, AppState>,
 ) -> CommandResult<TagDTO> {
-    validate_tag_name(&name).map_err(|e| e)?;
+    validate_tag_name(&name)?;
     let trimmed = name.trim().to_string();
 
     let mut db = state
@@ -128,7 +128,7 @@ pub async fn rename_tag(
     new_name: String,
     state: State<'_, AppState>,
 ) -> CommandResult<()> {
-    validate_tag_name(&new_name).map_err(|e| e)?;
+    validate_tag_name(&new_name)?;
     let trimmed = new_name.trim().to_string();
 
     let mut db = state

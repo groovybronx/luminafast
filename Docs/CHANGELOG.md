@@ -144,7 +144,7 @@
 - **Rust** : 16 tests (6 path, 3 flag conversion, 2 content build, 5 round-trip, 1 Lightroom format)
   - `cargo test xmp` → 16/16 ✅
   - Coverage : parsing avec namespaces, Bag/Li nesting, attributes en Event::Empty
-  
+
 - **TypeScript/Vitest** : 24 tests
   - `xmpService.test.ts` : 7 tests (3 commandes + propagation erreurs)
   - `XmpPanel.test.tsx` : 17 tests (rendering, state transitions, mock API, button states)
@@ -182,7 +182,7 @@ Frontend:
 
 Backend:
   Tauri command → resolve_image_file_path(image_id) → xmp::read/write/parse/build
-  
+
 Format:
   .xmp sidecar named: image.RAF → image.xmp
   XML elements: xmp:Rating, xmp:Label, dc:subject (Bag), lr:hierarchicalSubject
@@ -233,6 +233,7 @@ Format:
   - `src/components/shared/__tests__/BatchBar.test.tsx` — 14 tests (affichage, flag dispatch, rating dispatch)
 
 **Fondation réutilisée** (Phase 1.2 → 5.3) :
+
 - Backend `update_image_state` Tauri + `get_all_images` avec filtres SQLite déjà complets
 - Raccourcis clavier 0-5, P, X, U déjà fonctionnels (`App.tsx`)
 - `useCatalog.onRatingChange` / `onFlagChange` déjà implémentés

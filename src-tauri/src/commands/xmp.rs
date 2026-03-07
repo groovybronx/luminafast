@@ -175,7 +175,12 @@ fn resolve_image_file_path(
         [image_id],
         |row| row.get::<_, String>(0),
     );
-    result.map_err(|_| format!("Image {} has no known file path in ingestion history", image_id))
+    result.map_err(|_| {
+        format!(
+            "Image {} has no known file path in ingestion history",
+            image_id
+        )
+    })
 }
 
 /// Exporte les métadonnées d'une image (rating, flag, tags) vers un fichier `.xmp` sidecar.
@@ -183,10 +188,7 @@ fn resolve_image_file_path(
 /// Le fichier est créé à côté de l'image originale avec l'extension `.xmp`.
 /// Retourne le chemin absolu du fichier XMP écrit.
 #[tauri::command]
-pub async fn export_image_xmp(
-    image_id: u32,
-    state: State<'_, AppState>,
-) -> CommandResult<String> {
+pub async fn export_image_xmp(image_id: u32, state: State<'_, AppState>) -> CommandResult<String> {
     let mut db = state
         .db
         .lock()
@@ -200,7 +202,12 @@ pub async fn export_image_xmp(
         let result = db.connection().query_row(
             "SELECT rating, flag FROM image_state WHERE image_id = ?",
             [image_id],
-            |row| Ok((row.get::<_, Option<u8>>(0)?, row.get::<_, Option<String>>(1)?)),
+            |row| {
+                Ok((
+                    row.get::<_, Option<u8>>(0)?,
+                    row.get::<_, Option<String>>(1)?,
+                ))
+            },
         );
         result.ok()
     };
@@ -220,8 +227,7 @@ pub async fn export_image_xmp(
 
     // 4. Écrire le fichier XMP
     let xmp_path = xmp::build_xmp_path(&image_path);
-    xmp::write_xmp(&xmp_path, &xmp_data)
-        .map_err(|e| format!("XMP write error: {}", e))?;
+    xmp::write_xmp(&xmp_path, &xmp_data).map_err(|e| format!("XMP write error: {}", e))?;
 
     Ok(xmp_path.to_string_lossy().to_string())
 }
@@ -244,14 +250,10 @@ pub async fn import_image_xmp(
     let xmp_path = xmp::build_xmp_path(&image_path);
 
     if !xmp_path.exists() {
-        return Err(format!(
-            "XMP sidecar not found at {:?}",
-            xmp_path
-        ));
+        return Err(format!("XMP sidecar not found at {:?}", xmp_path));
     }
 
-    let xmp_data = xmp::read_xmp(&xmp_path)
-        .map_err(|e| format!("XMP read error: {}", e))?;
+    let xmp_data = xmp::read_xmp(&xmp_path).map_err(|e| format!("XMP read error: {}", e))?;
 
     // Convertir le label XMP en flag LuminaFast
     let flag = xmp_data

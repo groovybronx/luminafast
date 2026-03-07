@@ -1,181 +1,70 @@
-# LuminaFast — Instructions Obligatoires pour Agents IA
+# LuminaFast — Instructions pour Agents IA
 
-**CE FICHIER DOIT ÊTRE LU ENTIÈREMENT AVANT TOUTE ACTION.**
-C'est le **hub central** qui renvoie vers les directives spécialisées.
-Toute violation des règles absolues (section 1) invalide le travail produit.
-
----
-
-## 1. Protocole de travail par sous-phase
-
-### Avant de commencer
-
-1. **Lire le fichier** : `Docs/CHANGELOG.md` pour connaître l’état actuel du projet
-2. **Vérifier l’existence du brief de la prochaine phase** : `Docs/briefs/PHASE-X.Y.md` (créer si absent, selon `BRIEF_TEMPLATE.md` en se référant au plan de développement `Docs/archives/luminafast_developement_plan.md`)
-3. **Lire ce fichier** entièrement
-4. **Consulter l’AGENTS spécialisé** (voir section 4 ci-dessous)
-5. **Vérifier les dépendances** dans CHANGELOG — phases précédentes ✅
-6. **Créer branche** : `phase/X.Y-description-kebab-case`
-
-### Pendant le travail
-
-- Respecter le périmètre du brief (pas de scope creep)
-- Écrire les tests EN PARALLÈLE du code (jamais après)
-- Suivre les conventions du domaine (voir section 4)
-- Gérer les erreurs explicitement (pas de `any`, `unwrap()`, etc.)
-
-### Après avoir terminé
-
-1. **Tous les tests passent** (unitaires + intégration + non-régression)
-2. **Mettre à jour** : `Docs/CHANGELOG.md` (nouvelle entrée)
-3. **Mettre à jour** : `Docs/APP_DOCUMENTATION.md` en respectant la structure existante
-4. **Créer le brief suivant** : `Docs/briefs/PHASE-X.(Y+1).md`
+> **Hub centralisé minimal.**
+> Source de vérité = fichiers spécialisés AGENTS.md par domaine.
 
 ---
 
-## 2. Règles absolues (non négociables)
+## 1. Règles Absolues (Non-Négociables)
 
-### 2.1 — Intégrité du plan
-
-- **Le plan de développement (`Docs/briefs/` + `Docs/archives/luminafast_developement_plan.md`) ne peut PAS être modifié** sans approbation explicite du propriétaire.
-- Avant modification du plan, l’agent DOIT :
-  1. Documenter la raison (2-3 phrases)
-  2. Proposer l’alternative
-  3. **ATTENDRE la validation** avant de procéder
-
-### 2.2 — Interdiction de simplification abusive
-
-- **Ne JAMAIS** résoudre un problème en supprimant une fonctionnalité, un test ou une validation existante.
-- **Ne JAMAIS** employer de workarounds — viser la correction structurelle (cause racine).
-- Si simplification requise : justifier + obtenir approbation du propriétaire.
-
-### 2.3 — Intégrité des tests
-
-- **Ne JAMAIS** modifier un test pour le rendre « vert » sans justifier pourquoi l’hypothèse initiale était fausse.
-- **Chaque sous-phase DOIT produire des tests.** Aucun code sans test.
-- Tous les tests des phases précédentes doivent continuer à passer (= non-régression).
-
-### 2.4 — Analyse cause racine obligatoire
-
-Avant toute modification corrective, fournir 2-3 phrases identifiant :
-
-- Le symptôme observé
-- La cause racine technique
-- La correction structurelle
-
-Documenter dans le commit et le CHANGELOG.
+- **Plan integrity** : `Docs/briefs/` + `luminafast_developement_plan.md` immuable sans approbation propriétaire
+- **No shortcuts** : Jamais supprimer fonction/test/validation existante ou utiliser workaround
+- **Test integrity** : 100% tests passants. Modification de test = justification racine obligatoire
+- **Root cause analysis** : Avant correction = symptôme + cause technique + solution structurelle
 
 ---
 
-## 3. Navigation entre documents
+## 2. Protocole par Sous-Phase
 
-### Directif par domaine
-
-| Domaine                         | Fichier               | Contenu                                                           |
-| ------------------------------- | --------------------- | ----------------------------------------------------------------- |
-| **Frontend (TypeScript/React)** | `src/AGENTS.md`       | Conventions TS, Zustand, tests Vitest, intégration backend        |
-| **Backend (Rust/Tauri)**        | `src-tauri/AGENTS.md` | Conventions Rust, error handling, SQLite, session tracking, tests |
-| **CI/CD**                       | `.github/AGENTS.md`   | Workflow GitHub Actions, path filtering, timeouts, caching        |
-| **Documentation**               | `Docs/AGENTS.md`      | Briefs, CHANGELOG, APP_DOCUMENTATION, cohérence docs↔code         |
-
-### Architecture & stratégie
-
-| Document                              | Quand consulter                                       |
-| ------------------------------------- | ----------------------------------------------------- |
-| `Docs/archives/Lightroomtechnique.md` | Conception DB, collections, cache                     |
-| `Docs/archives/recommendations.md`    | Choix technologiques (DuckDB, BLAKE3, Event Sourcing) |
-| `Docs/TESTING_STRATEGY.md`            | Structure tests, couverture minimale                  |
-| `Docs/GOVERNANCE.md`                  | Escalade, décisions, approbations                     |
-| `Docs/APP_DOCUMENTATION.md`           | État actuel de l’application                          |
-| `Docs/briefs/BRIEF_TEMPLATE.md`       | Structure des briefs de phase                         |
+| Étape | Actions |
+|-------|---------|
+| **Avant** | 1. Lire `Docs/CHANGELOG.md` 2. Vérifier `Docs/briefs/PHASE-X.Y.md` 3. Lire AGENTS.md pertinents 4. Créer branche `phase/X.Y-description` |
+| **Pendant** | Respecter brief • Tests en parallèle • Suivre conventions • Erreurs explicites |
+| **Après** | 1. Tests 100% ✅ 2. `Docs/CHANGELOG.md` à jour 3. `Docs/APP_DOCUMENTATION.md` à jour 4. Brief suivant créé |
 
 ---
 
-## 4. Conventions de code
+## 3. Domaines & AGENTS Spécialisés
 
-⚠️ **Les conventions détaillées sont DANS les AGENTS spécialisés, PAS ici.**
-
-| Domaine                  | Voir                                 |
-| ------------------------ | ------------------------------------ |
-| TypeScript/React/Zustand | `src/AGENTS.md` → Sections 1-6       |
-| Rust/Tauri/SQLite        | `src-tauri/AGENTS.md` → Sections 1-6 |
-| GitHub Actions/CI        | `.github/AGENTS.md` → Sections 1-7   |
-| Briefs/Documentation     | `Docs/AGENTS.md` → Sections 1-5      |
-
-**Résumé rapide** :
-
-- ✅ Strict TypeScript (pas de `any`)
-- ✅ Error handling obligatoire Rust (`Result<T, E>`)
-- ✅ Tests en parallèle du code
-- ✅ Commits : `phase(X.Y): description` + cause racine
+| Domaine | Fichier | Contenu |
+|---------|---------|---------|
+| **Frontend** | [src/AGENTS.md](src/AGENTS.md) | TS strict, React, Zustand, Vitest, Tauri services |
+| **Backend** | [src-tauri/AGENTS.md](src-tauri/AGENTS.md) | Rust, error handling, SQLite, session tracking |
+| **CI/CD** | [.github/AGENTS.md](.github/AGENTS.md) | Workflows, composite actions, caching, timeouts |
+| **Docs** | [Docs/AGENTS.md](Docs/AGENTS.md) | Briefs, CHANGELOG, cohérence |
 
 ---
 
-## 5. Protocole d’escalade
+## 4. Key Documents
 
-Si blocage non-résolvable dans la sous-phase :
-
-1. **NE PAS contourner** — ne rien faire sans validation
-2. **Documenter le blocage** dans `CHANGELOG.md` (section « Blocages ») :
-   - Description précise du problème
-   - Cause racine identifiée
-   - Options envisagées + pros/cons
-   - Impact sur planning
-3. **Signaler au propriétaire** et attendre instructions
+| Document | Purpose |
+|----------|---------|
+| [Docs/CHANGELOG.md](Docs/CHANGELOG.md) | État projet actuel |
+| [Docs/APP_DOCUMENTATION.md](Docs/APP_DOCUMENTATION.md) | Architecture + features |
+| [Docs/TESTING_STRATEGY.md](Docs/TESTING_STRATEGY.md) | Test patterns |
+| [Docs/GOVERNANCE.md](Docs/GOVERNANCE.md) | Règles projet |
+| [Docs/briefs/BRIEF_TEMPLATE.md](Docs/briefs/BRIEF_TEMPLATE.md) | Phase brief template |
 
 ---
 
-## 6. Checklist pré-commit
+## 5. Pre-Commit Checklist
 
-⚠️ **La checklist détaillée est dans `.github/AGENTS.md` (Section 8).**
-
-**Rapide** : Compiler ✅ + Tests ✅ + CHANGELOG ✅ + Docs ✅ + Scope respecté ✅
+✅ Compile (TS + Rust) | ✅ Tests 100% | ✅ No `any`/`unwrap()` | ✅ Error handling | ✅ Docs updated
 
 ---
 
-## 7. Rappel final
+## 6. Escalation Protocol
 
-**L’objectif est de produire une application de qualité commerciale.**
-La rapidité ne justifie JAMAIS de sacrifier qualité, robustesse ou cohérence architecturale.
-En cas de doute : **demander, ne pas deviner.**
+Non-resolvable blocker:
 
-**Règle d’or** : Si tu dois choisir entre vitesse et qualité → choisis qualité. Les agents IA sont ici pour ça.
+1. **Never workaround** — validate first
+2. **Document in CHANGELOG.md** : precise description + root cause + options + planning impact
+3. **Signal owner** and wait for instructions
 
 ---
 
-## 8. Structure hiérarchique des agents
+## 7. Gold Rule
 
-```
-AGENTS.md (racine) ← Vous êtes ici
-├─ Règles absolues (immuables)
-├─ Protocole général de travail
-├─ Navigation vers documents spécialisés
-└─ Protocole d’escalade
-
-    ├─ src/AGENTS.md (Frontend)
-    │   ├─ TypeScript strict mode
-    │   ├─ React components + Zustand
-    │   ├─ Services Tauri
-    │   └─ Tests Vitest
-    │
-    ├─ src-tauri/AGENTS.md (Backend)
-    │   ├─ Rust error handling
-    │   ├─ Tauri commands
-    │   ├─ SQLite + migrations
-    │   ├─ Session tracking
-    │   └─ Tests unitaires/intégration
-    │
-    ├─ .github/AGENTS.md (CI/CD)
-    │   ├─ Workflow philosophy
-    │   ├─ Path filtering
-    │   ├─ Jobs + timeouts
-    │   └─ Caching + artifacts
-    │
-    └─ Docs/AGENTS.md (Documentation)
-        ├─ Briefs structure
-        ├─ CHANGELOG format
-        ├─ Documentation cohérence
-        └─ Gouvernance
-```
-
-**→ Chaque sous-phase = lire ce fichier + AGENTS spécialisé(s) pertinent(s)**
+**Target: Commercial-grade application.**
+Speed never justifies sacrificing quality, robustness, or architectural coherence.
+⚠️ **When in doubt: ask, don't guess.**

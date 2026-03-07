@@ -1,0 +1,23 @@
+name: Setup Rust Environment
+description: Install Rust toolchain, mold, APT packages, and caching
+
+runs:
+  using: composite
+  steps:
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+
+    - run: sudo apt-get install -y mold
+      shell: bash
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: src-tauri
+        shared-key: rust-stable
+        cache-on-failure: true
+
+    - uses: awalsh128/cache-apt-pkgs-action@v1
+      with:
+        packages: libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libssl-dev pkg-config
+        version: 1.0

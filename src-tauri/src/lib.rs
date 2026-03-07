@@ -1,3 +1,4 @@
+mod cache;
 mod commands;
 mod database;
 mod models;
@@ -44,6 +45,14 @@ pub fn run() {
             // Initialize hashing service for Phase 1.3
             let hashing_state = commands::hashing::HashingState::new();
             app.manage(hashing_state);
+
+            // Initialize cache instance for Phase 6.1 (Multilevel Cache System)
+            let cache_root = app_data_dir.join("Previews.lrdata");
+            std::fs::create_dir_all(&cache_root).expect("Failed to create cache directory");
+            let cache_instance = cache::CacheInstance::new(500, cache_root.clone())
+                .expect("Failed to initialize cache");
+            app.manage(cache_instance);
+            log::info!("Cache system initialized at: {:?}", cache_root);
 
             // Initialize filesystem service for Phase 1.4
             commands::filesystem::initialize_filesystem_service();
@@ -171,6 +180,13 @@ pub fn run() {
             commands::xmp::export_image_xmp,
             commands::xmp::import_image_xmp,
             commands::xmp::get_xmp_status,
+            // Cache commands (Phase 6.1)
+            commands::cache::get_cached_thumbnail,
+            commands::cache::set_cached_thumbnail,
+            commands::cache::invalidate_image_cache,
+            commands::cache::get_cache_stats,
+            commands::cache::clear_all_caches,
+            commands::cache::is_image_cached,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

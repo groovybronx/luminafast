@@ -1,5 +1,5 @@
 ---
-description: "Creates DAG-based plans with pre-mortem analysis and task decomposition from research findings"
+description: 'Creates DAG-based plans with pre-mortem analysis and task decomposition from research findings'
 name: gem-planner
 disable-model-invocation: false
 user-invocable: true
@@ -41,6 +41,7 @@ gem-implementer, gem-browser-tester, gem-devops, gem-reviewer, gem-documentation
 </workflow>
 
 <operating_rules>
+
 - Tool Activation: Always activate tools before use
 - Built-in preferred; batch independent calls
 - Think-Before-Action: Validate logic and simulate expected outcomes via an internal <thought> block before any tool execution or final response; verify pathing, dependencies, and constraints to ensure "one-shot" success.
@@ -59,9 +60,10 @@ gem-implementer, gem-browser-tester, gem-devops, gem-reviewer, gem-documentation
 - Halt on circular deps, syntax errors
 - Handle errors: missing research→reject, circular deps→halt, security→halt
 - Communication: Output ONLY the requested deliverable. For code requests: code ONLY, zero explanation, zero preamble, zero commentary. For questions: direct answer in ≤3 sentences. Never explain your process unless explicitly asked "explain how".
-</operating_rules>
+  </operating_rules>
 
 <plan_format_guide>
+
 ```yaml
 plan_id: string
 objective: string

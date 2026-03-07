@@ -93,13 +93,13 @@ export async function loadWasmModule(): Promise<void> {
 
     wasmStatus.available = true;
     wasmStatus.loaded = true;
-    console.warn('[WASM] Module chargé avec succès');
+    if (import.meta.env.DEV) console.warn('[WASM] Module chargé');
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     wasmStatus.loaded = true;
     wasmStatus.available = false;
     wasmStatus.lastError = errorMsg;
-    console.warn('[WASM] Non-disponible', errorMsg);
+    if (import.meta.env.DEV) console.warn('[WASM] Non-disponible', errorMsg);
   }
 }
 
@@ -113,100 +113,38 @@ export function hasWasmSupport(): boolean {
 /**
  * Normalise les paramètres de filtres UI vers les plages attendues par WASM
  *
- * ⚠️ **CRITICAL NORMALIZATION** — Phase 4.2 Conformity
+ * Les sliders UI utilisent une échelle -100 à +100, mais WASM utilise des plages différentes:
+ * - exposure: -2 à +2 (UI: -100..+100, diviser par 50)
+ * - contrast: -1 à +3 (UI: -100..+100, diviser par 50)
+ * - saturation: 0 à +2 (UI: -100..+100, voir 1 comme normal, donc 1 + input/100)
+ * - highlights: -1 à +1 (UI: -100..+100, diviser par 100)
+ * - shadows: -1 à +1 (UI: -100..+100, diviser par 100)
+ * - clarity: [0..1] (UI: -100..+100, diviser par 100)
+ * - vibrance: [0..1] (UI: -100..+100, diviser par 100)
+ * - colorTemp: 2000-10000K (UI: K value direct, pas de conversion)
+ * - tint: -50 à +50 (UI: -100..+100, diviser par 2)
  *
- * This is the bridge between React UI slider ranges (-100..+100) and WASM Rust function expectations.
- * Mismatch here causes UI to become unresponsive (slider maxes out after few increments).
- * See https://github.com/groovybronx/luminafast/pull/20 for regression history.
- *
- * **UI Reference Ranges** (React sliders: always -100..+100):
- * - Left slider: -100 (min compression)
- * - Center slider: 0 (neutral)
- * - Right slider: +100 (max expansion)
- *
- * **WASM Expected Ranges** (from luminafast-wasm/src/image_processing.rs):
- *
- * | Param        | WASM Range   | Conversion Formula                    | Notes                                      |
- * |--------------|--------------|---------------------------------------|-------------------------------------------|
- * | exposure     | -2.0 to +2.0 | UI / 50                               | Multiplicative scale (linear EV steps)   |
- * | contrast     | -1.0 to +3.0 | UI / 50                               | Clipped at WASM boundary                  |
- * | saturation   | 0.0 to +2.0  | 1 + (UI / 100)                        | 1.0 = neutral, clamped [0..2]           |
- * | highlights   | -1.0 to +1.0 | UI / 100                              | Fine-grained control for bright areas    |
- * | shadows      | -1.0 to +1.0 | UI / 100                              | Fine-grained control for dark areas      |
- * | clarity      | 0.0 to +1.0  | UI / 100 (clamped [0..1])             | Edge enhancement (always positive)       |
- * | vibrance     | 0.0 to +1.0  | UI / 100 (clamped [0..1])             | Selective saturation (always positive)   |
- * | colorTemp    | 2000-10000K  | Direct (no conversion)                | Kelvin scale, applied as-is              |
- * | tint         | -50 to +50   | UI / 2                                | Green (-) to Magenta (+)                 |
- *
- * **Example Conversion Flow**:
- * ```
- * User moves exposure slider to +50 (halfway right)
- * UI value: 50
- * WASM value: 50 / 50 = 1.0 (bright by 1 EV)
- *
- * User moves saturation slider to -30 (slightly left)
- * UI value: -30
- * WASM value: 1 + (-30 / 100) = 0.7 (desaturate by 30%)
- * ```
- *
- * @param filters État des filtres UI (toutes valeurs en -100..+100)
- * @returns État des filtres normalisés selon les plages WASM attendues
- *
- * @throws Never — assumes valid PixelFilterState input
- *
- * @see luminafast-wasm/src/image_processing.rs — WASM implementation with clamping
- * @see src/lib/filterUtils.ts — Détection des filtres non-neutres
+ * @param filters État des filtres UI
+ * @returns État des filtres normalisés pour WASM
  */
 export function normalizeFiltersForWasm(filters: PixelFilterState): PixelFilterState {
   return {
-    // === CSS-equivalent filters (exposure, contrast, saturation) ===
-    // These map directly to browser CSS filter equivalents for fallback rendering
+    // CSS filters
+    exposure: filters.exposure / 50, // -100..+100 → -2..+2
+    contrast: filters.contrast / 50, // -100..+100 → -2..+2 (WASM clamps to -1..+3)
+    saturation: 1 + filters.saturation / 100, // -100..+100 → 0..+2
 
-    // Exposure (EV compensation): WASM -2.0..+2.0, UI -100..+100
-    // Formula: UI / 50 gives us 2 full EV stops range
-    exposure: filters.exposure / 50,
+    // Pixel advanced filters
+    highlights: (filters.highlights ?? 0) / 100, // -100..+100 → -1..+1
+    shadows: (filters.shadows ?? 0) / 100, // -100..+100 → -1..+1
+    clarity: (filters.clarity ?? 0) / 100, // -100..+100 → 0..+1
+    vibrance: (filters.vibrance ?? 0) / 100, // -100..+100 → 0..+1
 
-    // Contrast: WASM -1.0..+3.0, UI -100..+100
-    // Formula: Same as exposure, but WASM clamps to [-1, 3]
-    contrast: filters.contrast / 50,
-
-    // Saturation: WASM 0.0..+2.0, UI -100..+100
-    // Formula: 1 + (UI/100) gives us [0, 2] range with 1.0 as neutral midpoint
-    // 0.0 = grayscale, 1.0 = original, 2.0 = vivid
-    saturation: 1 + filters.saturation / 100,
-
-    // === Pixel-level advanced filters (highlights, shadows, clarity, vibrance) ===
-    // These require WASM pixel processing (CSS alternativesnotavailable)
-
-    // Highlights: WASM -1.0..+1.0, UI -100..+100
-    // Formula: UI / 100 for fine-grained control over bright areas
-    // Negative = darken bright areas, Positive = brighten bright areas
-    highlights: (filters.highlights ?? 0) / 100,
-
-    // Shadows: WASM -1.0..+1.0, UI -100..+100
-    // Formula: UI / 100 for fine-grained control over dark areas
-    // Negative = darken dark areas, Positive = brighten dark areas
-    shadows: (filters.shadows ?? 0) / 100,
-
-    // Clarity: WASM 0.0..+1.0, UI -100..+100
-    // Formula: UI / 100, but WASM clamps to [0, 1] (always additive - no negative allowed)
-    // 0.0 = no edge enhancement, 1.0 = maximum clarity/micro-contrast
-    clarity: (filters.clarity ?? 0) / 100,
-
-    // Vibrance: WASM 0.0..+1.0, UI -100..+100
-    // Formula: UI / 100, but WASM clamps to [0, 1] (always additive - no negative allowed)
-    // 0.0 = no selective saturation, 1.0 = maximum vibrance
-    vibrance: (filters.vibrance ?? 0) / 100,
-
-    // Color Temperature: WASM 2000-10000K, UI uses Kelvin direct
-    // Formula: Direct pass-through (no conversion needed)
-    // 2000K = warm/amber, 5500K = neutral, 10000K = cool/blue
+    // Color temp (no conversion, Kelvin scale)
     colorTemp: filters.colorTemp ?? 5500,
 
-    // Tint: WASM -50..+50, UI -100..+100
-    // Formula: UI / 2 to get -50..+50 range
-    // Negative = green shift, Positive = magenta shift
-    tint: (filters.tint ?? 0) / 2,
+    // Tint
+    tint: (filters.tint ?? 0) / 2, // -100..+100 → -50..+50
   };
 }
 
@@ -230,7 +168,7 @@ export async function renderWithWasm(
 
   // Si WASM non-disponible, fallback sur CSS
   if (!hasWasmSupport()) {
-    console.warn('[WASM] Fallback à CSS filters');
+    if (import.meta.env.DEV) console.warn('[WASM] Fallback à CSS filters');
     return renderWithCSSFallback(canvas, imageUrl);
   }
 
@@ -255,13 +193,10 @@ export async function renderWithWasm(
           ctx.drawImage(img, 0, 0, width, height);
 
           // Lire les données pixel
-          const t0 = performance.now();
           const imageData = ctx.getImageData(0, 0, width, height);
-          const t1 = performance.now();
           const pixels = imageData.data;
 
           // Appeler WASM pour traiter les pixels
-          const t2 = performance.now();
           const wasmModule = window.luminafastWasm;
           if (!wasmModule || typeof wasmModule.PixelFiltersWasm !== 'function') {
             throw new Error('WASM module unavailable');
@@ -269,7 +204,6 @@ export async function renderWithWasm(
 
           // Normaliser les filtres UI vers les plages attendues par WASM
           const normalizedFilters = normalizeFiltersForWasm(_filters);
-          const t3 = performance.now();
 
           // PERF: Réutiliser l'instance de filtres au lieu de recréer (économise 8ms/frame)
           if (!cachedFiltersInstance) {
@@ -286,36 +220,21 @@ export async function renderWithWasm(
           cachedFiltersInstance.vibrance = normalizedFilters.vibrance ?? 0;
           cachedFiltersInstance.color_temp = normalizedFilters.colorTemp ?? 5500;
           cachedFiltersInstance.tint = normalizedFilters.tint ?? 0;
-          const t4 = performance.now();
 
           // Appeler apply_filters() sur l'instance réutilisée
           const processedPixels = cachedFiltersInstance.apply_filters(pixels, width, height);
-          const t5 = performance.now();
 
           // Copier les résultats back (itération complète)
           // PERF: Utiliser .set() au lieu d'une boucle for (10x plus rapide)
           imageData.data.set(processedPixels);
-          const t6 = performance.now();
 
           // Afficher sur le canvas
           ctx.putImageData(imageData, 0, 0);
-          const t7 = performance.now();
 
-          // Profiling détaillé
-          const latency = t7 - t0;
           // TODO(phase-maintenance): Revenir sur l'optimisation WASM.
           // Objectif: ramener wasmApplyFilters sous ~5ms et le total sous 16ms de façon stable.
           // Symptôme actuel observé: pics fréquents autour de 35ms côté wasmApplyFilters.
-          if (import.meta.env.DEV || latency > 16) {
-            console.warn(`[WASM PERF] Total: ${latency.toFixed(2)}ms (budget: 16ms)`, {
-              getImageData: (t1 - t0).toFixed(2),
-              filterNormalization: (t3 - t2).toFixed(2),
-              wasmInstanceCreation: (t4 - t3).toFixed(2),
-              wasmApplyFilters: (t5 - t4).toFixed(2),
-              pixelsWriteBack: (t6 - t5).toFixed(2),
-              putImageData: (t7 - t6).toFixed(2),
-            });
-          }
+          // Pour réactiver le profiling en DEV, voir git history de ce fichier.
 
           resolve();
         } catch (err) {

@@ -1,5 +1,6 @@
 import { Cloud, Settings } from 'lucide-react';
 import type { ActiveView } from '../../types';
+import { CacheStatusIndicator } from '../shared/CacheStatusIndicator';
 
 interface TopNavProps {
   activeView: ActiveView;
@@ -33,6 +34,8 @@ export const TopNav = ({ activeView, onSetActiveView }: TopNavProps) => (
       </nav>
     </div>
     <div className="flex items-center gap-4 text-[10px] text-zinc-500 font-mono">
+      <CacheStatusIndicator />
+      <div className="w-px h-3 bg-zinc-800"></div>
       <div className="flex items-center gap-2">
         <Cloud size={12} className="text-green-500" /> SQLite
       </div>

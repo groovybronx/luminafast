@@ -9,6 +9,7 @@ import { useFolderStore } from './stores/folderStore';
 import { useCatalog } from './hooks/useCatalog';
 import { previewService } from './services/previewService';
 import { CatalogService } from './services/catalogService';
+import { CacheWarmingService } from './services/cacheWarmingService';
 import type { EventDTO } from './services/eventService';
 import { GlobalStyles } from './components/shared/GlobalStyles';
 import { ArchitectureMonitor } from './components/shared/ArchitectureMonitor';
@@ -133,6 +134,20 @@ export default function App() {
         .then(() => {
           addLog('PreviewService initialized', 'system');
           return refreshCatalog();
+        })
+        .then(() => {
+          // Phase 6.1.4: Start cache warming on app startup
+          // This runs in the background and improves thumbnail load times
+          addLog('Starting cache warming...', 'system');
+          return CacheWarmingService.warmCache((progress) => {
+            if (progress.warmed % 10 === 0) {
+              // Log every 10th image to avoid spam
+              addLog(
+                `Cache warming: ${progress.warmed}/${progress.total} (${progress.hitRate})`,
+                'debug',
+              );
+            }
+          });
         })
         .catch((err) => {
           addLog(`Initialization error: ${err}`, 'error');

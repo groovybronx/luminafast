@@ -107,6 +107,9 @@ impl Database {
         // Run snapshots migration
         self.run_migration("006_snapshots")?;
 
+        // Run cache metadata migration (Phase 6.1)
+        self.run_migration("007_cache_metadata")?;
+
         Ok(())
     }
 
@@ -153,6 +156,7 @@ impl Database {
             }
             "005_event_sourcing" => include_str!("../migrations/005_event_sourcing.sql"),
             "006_snapshots" => include_str!("../migrations/006_snapshots.sql"),
+            "007_cache_metadata" => include_str!("../migrations/007_cache_metadata.sql"),
             _ => {
                 return Err(DatabaseError::MigrationFailed(format!(
                     "Unknown migration version: {}",
@@ -356,14 +360,14 @@ mod tests {
         db.initialize()?;
         db.initialize()?;
 
-        // 6 migrations: 001_initial, 002_ingestion_sessions, 003_previews,
-        // 004_add_folder_online_status, 005_event_sourcing, 006_snapshots
+        // 7 migrations: 001_initial, 002_ingestion_sessions, 003_previews,
+        // 004_add_folder_online_status, 005_event_sourcing, 006_snapshots, 007_cache_metadata
         let migration_count: i64 = db
             .connection()
             .prepare("SELECT COUNT(*) FROM migrations")?
             .query_row([], |row| row.get(0))?;
 
-        assert_eq!(migration_count, 6);
+        assert_eq!(migration_count, 7);
 
         Ok(())
     }

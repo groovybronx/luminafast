@@ -167,6 +167,10 @@ pub fn run() {
             commands::tags::add_tags_to_images,
             commands::tags::remove_tags_from_images,
             commands::tags::get_image_tags,
+            // XMP commands (Phase 5.4)
+            commands::xmp::export_image_xmp,
+            commands::xmp::import_image_xmp,
+            commands::xmp::get_xmp_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

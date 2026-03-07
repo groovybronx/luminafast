@@ -66,7 +66,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-03-05 (Maintenance - Extraction Hook useWasmCanvasRender + filterUtils: élimination 140 lignes duplication, source unique vérité normalisation WASM, 18 tests unitaires) — État : Hook WASM extraction complétée, 3 composants comparaison refactorisés (47→1 ligne), zéro changement comportemental. Branche `phase/maintenance-wasm-canvas-extraction`
+> **Dernière mise à jour** : 2026-03-07 (Phase 5.4 - Sidecar XMP: read/write Adobe-standard `.xmp` sidecars, Lightroom format support, hierarchical tags, 16 Rust + 24 Vitest tests) — État : Phase 5.4 complétée, 3 commandes Tauri (export/import/status) + React component XmpPanel + XmpService wrapper. Branche `phase/5.4-sidecar-xmp`
 >
 > ### Décisions Projet (validées par le propriétaire)
 

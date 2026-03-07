@@ -147,13 +147,13 @@ pub fn get_edit_events(
         })
         .collect();
 
-    if cfg!(debug_assertions) {
+    /* if cfg!(debug_assertions) {
         eprintln!(
             "[EventSourcing] get_edit_events called for image_id={}, returned {} events",
             image_id,
             filtered_events.len()
         );
-    }
+    } */
 
     Ok(filtered_events)
 }

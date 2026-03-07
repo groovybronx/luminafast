@@ -2,6 +2,7 @@ pub mod blake3;
 pub mod cache_integration;
 pub mod cache_metadata;
 pub mod discovery;
+pub mod duckdb_service;
 pub mod event_sourcing;
 pub mod exif;
 pub mod filesystem;

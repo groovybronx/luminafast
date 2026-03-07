@@ -54,7 +54,7 @@
 | 5 | 5.1 | Panneau EXIF Connecté | ✅ Complétée | 2026-07-10 | Copilot |
 | 5 | 5.2 | Système de Tags Hiérarchique | ✅ Complétée | 2026-07-11 | Copilot |
 | 5 | 5.3 | Rating & Flagging Persistants | ✅ Complétée | 2026-07-11 | Copilot |
-| 5 | 5.4 | Sidecar XMP | ⬜ En attente | — | — |
+| 5 | 5.4 | Sidecar XMP | ✅ Complétée | 2026-03-07 | Copilot |
 | 6 | 6.1 | Système de Cache Multiniveau | ⬜ En attente | — | — |
 | 6 | 6.2 | Intégration DuckDB (OLAP) | ⬜ En attente | — | — |
 | 6 | 6.3 | Virtualisation Avancée Grille | ⬜ En attente | — | — |
@@ -84,14 +84,111 @@
 
 ## Phase Actuelle
 
-> **Phase 5.3** : Rating & Flagging Persistants (✅ **Complétée**)
+> **Phase 5.4** : Sidecar XMP (✅ **Complétée**)
 >
-> Brief : `Docs/briefs/PHASE-5.3.md`
-> Branche : `phase/5.3-rating-flagging-persistants`
+> Brief : `Docs/briefs/PHASE-5.4.md`
+> Branche : `phase/5.4-sidecar-xmp`
 
 ---
 
 ## Historique des Sous-Phases Complétées
+
+---
+
+### 2026-03-07 — Phase 5.4 : Sidecar XMP (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée (XMP read/write + Lightroom format + hierarchical tags + 16 Rust + 24 Vitest tests)**
+**Agent** : GitHub Copilot (Claude Haiku 4.5)
+**Brief** : `Docs/briefs/PHASE-5.4.md`
+**Branche** : `phase/5.4-sidecar-xmp`
+
+**Livrables principaux** :
+
+- **Backend Rust Service** (`src-tauri/src/services/xmp.rs`)
+  - `XmpData { rating: Option<u8>, flag: Option<String>, tags: Vec, hierarchical_subjects: Vec }`
+  - `parse_xmp_content(xml: &str) → Result<XmpData>` — SAX-style parser utilisant `quick_xml 0.37`
+  - `build_xmp_content(data: &XmpData) → String` — Génère XML Adobe-standard avec namespaces correct
+  - `read_xmp(path) / write_xmp(path, data)` — Wrappers sidecar `.xmp`
+  - Conversion flag : `"pick"` ↔ `"Pick"` (camelCase ↔ XMP casing)
+  - Support Lightroom : parsing de `rdf:Description` auto-fermantes (Event::Empty) + hiérarchies `"Parent/Child/GrandChild"`
+  - **16 tests Rust** : path building, flag conversion, round-trip complet, compatibilité Lightroom
+
+- **Backend Rust Commands** (`src-tauri/src/commands/xmp.rs`)
+  - `export_image_xmp(image_id)` → crée `.xmp` sidecar, exporte rating/flag/tags
+  - `import_image_xmp(image_id)` → lit `.xmp`, upsert DB, crée tags manquants
+  - `get_xmp_status(image_id)` → retourne `{exists: bool, xmpPath: String}`
+  - Résolution chemin fichier via `ingestion_file_status` table (sécurité)
+  - Build tags plats + hiérarchiques avec helper `get_or_create_tag()` idempotent
+
+- **Frontend TypeScript Service** (`src/services/xmpService.ts`)
+  - `exportImageXmp(imageId)`, `importImageXmp(imageId)`, `getXmpStatus(imageId)`
+  - Gestion `__TAURI_INTERNALS__` pour environnement web dev
+
+- **Frontend React Component** (`src/components/metadata/XmpPanel.tsx`)
+  - UI : badges (● Présent / ○ Absent), filename display, dual buttons (export/import)
+  - Feedback messages : success/error avec auto-hide 4s
+  - Integration RightSidebar (Phase 5.1-5.3)
+  - State : `status` (XmpStatus), `isExporting/isImporting`, `feedback`
+  - Callback `onImportSuccess` pour refresh parent après import
+
+- **Types TypeScript** (`src/types/xmp.ts`)
+  - `XmpStatus { exists: boolean, xmpPath: string }`
+  - `XmpImportResult { rating?: u8, flag?: string, tagsImported: u32 }`
+
+- **Dépendances**
+  - Cargo.toml : `quick-xml = { version = "0.37", features = ["serialize"] }`
+  - npm : aucune nouvelle dépendance (Tauri v2.9.1 déjà disponible)
+
+**Tests** (40 tests, tous passants) :
+
+- **Rust** : 16 tests (6 path, 3 flag conversion, 2 content build, 5 round-trip, 1 Lightroom format)
+  - `cargo test xmp` → 16/16 ✅
+  - Coverage : parsing avec namespaces, Bag/Li nesting, attributes en Event::Empty
+  
+- **TypeScript/Vitest** : 24 tests
+  - `xmpService.test.ts` : 7 tests (3 commandes + propagation erreurs)
+  - `XmpPanel.test.tsx` : 17 tests (rendering, state transitions, mock API, button states)
+
+**Cause racine des corrections** :
+
+1. **quick_xml 0.37 API changes** (3 erreurs)
+   - Symptôme : `Event::from(BytesDecl)` no longer exists
+   - Cause : Migration quick_xml 0.36→0.37 API refactor
+   - Correction : `Event::Decl(BytesDecl::new(...))`, `reader.decoder()`, `into_inner().split_once(':')`
+
+2. **Rust mutability rules** (9 erreurs)
+   - Symptôme : Cannot borrow `db` mutably dans commandes Tauri
+   - Cause : Multiple sequential `prepare()` calls in single function
+   - Correction : Change `&Database` → `&mut Database`, `drop(stmt)` explicit pour break borrow chains
+
+3. **Lightroom XMP format** (1 test failure)
+   - Symptôme : `test_parse_xmp_from_lightroom_style` failing
+   - Cause : Lightroom exports `rdf:Description` self-closing (`/>`), envoyé comme `Event::Empty` not `Event::Start`
+   - Correction : Added attribute parsing to `Event::Empty` match arm (duplication nécessaire)
+
+**Validation** :
+
+- ✅ Rust : `cargo check` success + `cargo test xmp` 16/16
+- ✅ Frontend : `npm run test` 24/24 Vitest passing
+- ✅ ESLint : 0 errors in TypeScript files
+- ✅ Format XML : Adobe-standard avec namespaces corrects
+- ✅ Lightroom compatibility : Support self-closing Description + hierarchical tags
+
+**Architecture** :
+
+```
+Frontend:
+  XmpPanel → useCallback(exportImageXmp/importImageXmp) → XmpService → Tauri invoke
+
+Backend:
+  Tauri command → resolve_image_file_path(image_id) → xmp::read/write/parse/build
+  
+Format:
+  .xmp sidecar named: image.RAF → image.xmp
+  XML elements: xmp:Rating, xmp:Label, dc:subject (Bag), lr:hierarchicalSubject
+  Flag values: "Pick" / "Reject" (case-sensitive)
+  Tags: Flat list + Hierarchical "Parent/Child/GrandChild" strings
+```
 
 ---
 

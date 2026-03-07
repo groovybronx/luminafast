@@ -1,6 +1,7 @@
 import { Histogram } from '../metadata/Histogram';
 import { ExifGrid } from '../metadata/ExifGrid';
 import { TagsPanel } from '../metadata/TagsPanel';
+import { XmpPanel } from '../metadata/XmpPanel';
 import { DevelopSliders } from '../develop/DevelopSliders';
 import { HistoryPanel } from '../develop/HistoryPanel';
 import { MetadataPanel } from '../metadata/MetadataPanel';
@@ -54,6 +55,9 @@ export const RightSidebar = ({ activeView, activeImg, onDispatchEvent }: RightSi
             <MetadataPanel activeImg={activeImg} />
             <div className="px-5 pb-5 border-t border-zinc-800 pt-5">
               <TagsPanel imageId={activeImg.id} selectedImageIds={selectedImageIds} />
+            </div>
+            <div className="px-5 pb-5 border-t border-zinc-800 pt-5">
+              <XmpPanel imageId={activeImg.id} />
             </div>
           </div>
         )}

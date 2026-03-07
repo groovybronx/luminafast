@@ -26,3 +26,5 @@ export type {
   ImageDTO,
   ImageFilter,
 } from './dto';
+
+export type { XmpStatus, XmpImportResult } from './xmp';

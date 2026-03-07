@@ -10,3 +10,4 @@ pub mod preview;
 pub mod search;
 pub mod smart_query_parser;
 pub mod snapshot_service;
+pub mod xmp;

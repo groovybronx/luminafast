@@ -8,3 +8,4 @@ pub mod preview;
 pub mod search;
 pub mod snapshots;
 pub mod tags;
+pub mod xmp;

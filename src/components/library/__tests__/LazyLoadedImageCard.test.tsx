@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, waitFor } from '@testing-library/react';
 import { LazyLoadedImageCard } from '../LazyLoadedImageCard';
 import type { CatalogImage } from '@/types';
 
@@ -252,5 +252,112 @@ describe('LazyLoadedImageCard', () => {
     // L'indicateur de sync non-synchronisé doit afficher une icône spinning (amber)
     const syncIndicator = container.querySelector('.text-amber-500');
     expect(syncIndicator).toBeDefined();
+  });
+
+  // Phase 6.3 — Advanced Grid Virtualization
+  describe('Phase 6.3 — Shimmer skeleton et chargement différé', () => {
+    it('affiche le shimmer skeleton par défaut (avant chargement)', () => {
+      const { container } = render(
+        <LazyLoadedImageCard
+          image={mockImage}
+          isSelected={false}
+          itemWidth={120}
+          itemHeight={80}
+          selectedImageIds={[]}
+          onToggleSelection={vi.fn()}
+          onSetActiveView={vi.fn()}
+        />,
+      );
+
+      const shimmer = container.querySelector('.grid-skeleton-shimmer');
+      expect(shimmer).not.toBeNull();
+    });
+
+    it('remplace le shimmer par PreviewRenderer une fois visible', async () => {
+      // IntersectionObserver mockée dans beforeEach pour déclencher intersection
+      class TriggerIntersectionObserver {
+        callback: IntersectionObserverCallback;
+        observe = vi.fn((element: Element) => {
+          setTimeout(() => {
+            this.callback(
+              [{ target: element, isIntersecting: true } as IntersectionObserverEntry],
+              this as unknown as IntersectionObserver,
+            );
+          }, 10);
+        });
+        disconnect = vi.fn();
+        unobserve = vi.fn();
+        constructor(callback: IntersectionObserverCallback) {
+          this.callback = callback;
+        }
+      }
+      global.IntersectionObserver =
+        TriggerIntersectionObserver as unknown as typeof IntersectionObserver;
+      global.requestAnimationFrame = (cb: FrameRequestCallback) =>
+        setTimeout(() => cb(Date.now()), 0) as unknown as number;
+
+      const { container } = render(
+        <LazyLoadedImageCard
+          image={mockImage}
+          isSelected={false}
+          itemWidth={120}
+          itemHeight={80}
+          selectedImageIds={[]}
+          isScrollingFast={false}
+          onToggleSelection={vi.fn()}
+          onSetActiveView={vi.fn()}
+        />,
+      );
+
+      // Once visible, the shimmer is replaced by PreviewRenderer (even if WASM mode renders nothing in tests)
+      await waitFor(
+        () => {
+          const shimmer = container.querySelector('[data-testid="shimmer-skeleton"]');
+          expect(shimmer).toBeNull();
+        },
+        { timeout: 500 },
+      );
+
+      // PreviewRenderer wrapper div is present
+      const previewWrapper = container.querySelector('.preview-renderer');
+      expect(previewWrapper).not.toBeNull();
+    });
+
+    it("garde le shimmer quand isScrollingFast=true lors de l'intersection", async () => {
+      // IntersectionObserver qui déclenche immédiatement
+      class FastScrollIntersectionObserver {
+        callback: IntersectionObserverCallback;
+        observe = vi.fn((element: Element) => {
+          this.callback(
+            [{ target: element, isIntersecting: true } as IntersectionObserverEntry],
+            this as unknown as IntersectionObserver,
+          );
+        });
+        disconnect = vi.fn();
+        unobserve = vi.fn();
+        constructor(callback: IntersectionObserverCallback) {
+          this.callback = callback;
+        }
+      }
+      global.IntersectionObserver =
+        FastScrollIntersectionObserver as unknown as typeof IntersectionObserver;
+
+      const { container } = render(
+        <LazyLoadedImageCard
+          image={mockImage}
+          isSelected={false}
+          itemWidth={120}
+          itemHeight={80}
+          selectedImageIds={[]}
+          isScrollingFast={true}
+          onToggleSelection={vi.fn()}
+          onSetActiveView={vi.fn()}
+        />,
+      );
+
+      // Shimmer doit encore être présent car scroll rapide
+      const shimmer = container.querySelector('.grid-skeleton-shimmer');
+      expect(shimmer).not.toBeNull();
+    });
   });
 });

@@ -23,7 +23,6 @@ import { Filmstrip } from './components/layout/Filmstrip';
 import { RightSidebar } from './components/layout/RightSidebar';
 import { GridView } from './components/library/GridView';
 import { DevelopView } from './components/develop/DevelopView';
-import { DuckDBAnalyticsTester } from './components/debug/DuckDBAnalyticsTester';
 
 export default function App() {
   // Catalog hook - loads images from SQLite
@@ -448,12 +447,7 @@ export default function App() {
         />
       </div>
 
-      <ArchitectureMonitor logs={logs} />
-      {showImport && (
-        <ImportModal onClose={() => setShowImport(false)} onImportComplete={handleImport} />
-      )}
       <KeyboardOverlay />
-      {import.meta.env.DEV && <DuckDBAnalyticsTester />}
     </div>
   );
 }

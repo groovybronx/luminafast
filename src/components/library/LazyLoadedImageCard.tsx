@@ -1,4 +1,4 @@
-import { Cloud, Image as ImageIcon, RefreshCw } from 'lucide-react';
+import { Cloud, RefreshCw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { CatalogImage, DragImageData } from '../../types';
 import PreviewRenderer from './PreviewRenderer';
@@ -9,15 +9,20 @@ interface LazyLoadedImageCardProps {
   itemWidth: number;
   itemHeight: number;
   selectedImageIds: number[]; // IDs of all selected images for multi-select drag
+  /** Phase 6.3: defer thumbnail loading while user scrolls rapidly */
+  isScrollingFast?: boolean;
   onToggleSelection: (id: number, e: React.MouseEvent) => void;
   onSetActiveView: (view: 'library' | 'develop') => void;
 }
 
 /**
- * Lazy-loaded image card with IntersectionObserver
- * Only loads preview when visible in viewport
- * Loads each image exactly once when intersection occurs
- * Checkpoint 3 implementation for Phase 3.1 maintenance
+ * Lazy-loaded image card with IntersectionObserver.
+ * Only loads preview when visible in viewport.
+ *
+ * Phase 6.3 — Advanced Grid Virtualization:
+ * - Defers thumbnail loading while `isScrollingFast` is true
+ * - Uses shimmer skeleton placeholder during load
+ * - Triggers deferred load as soon as scrolling slows down
  */
 export const LazyLoadedImageCard = ({
   image,
@@ -25,13 +30,32 @@ export const LazyLoadedImageCard = ({
   itemWidth,
   itemHeight,
   selectedImageIds,
+  isScrollingFast = false,
   onToggleSelection,
   onSetActiveView,
 }: LazyLoadedImageCardProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const hasInitializedRef = useRef(false); // Track if we've attempted load once
+  const hasInitializedRef = useRef(false); // true once load has been triggered
+  const pendingLoadRef = useRef(false); // true when intersecting during fast scroll
+  const isScrollingFastRef = useRef(isScrollingFast);
+
+  // Keep ref in sync with prop to avoid stale closure in IntersectionObserver callback
+  useEffect(() => {
+    isScrollingFastRef.current = isScrollingFast;
+  }, [isScrollingFast]);
+
+  // Phase 6.3 — When scrolling stops, trigger deferred loads
+  useEffect(() => {
+    if (!isScrollingFast && pendingLoadRef.current && !hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      pendingLoadRef.current = false;
+      requestAnimationFrame(() => {
+        setIsVisible(true);
+      });
+    }
+  }, [isScrollingFast]);
 
   // Setup IntersectionObserver for lazy loading
   useEffect(() => {
@@ -41,12 +65,17 @@ export const LazyLoadedImageCard = ({
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          // Load image once when it becomes visible (and only once)
           if (entry.isIntersecting && !hasInitializedRef.current) {
-            hasInitializedRef.current = true;
-            requestAnimationFrame(() => {
-              setIsVisible(true);
-            });
+            if (!isScrollingFastRef.current) {
+              // Load immediately when not fast scrolling
+              hasInitializedRef.current = true;
+              requestAnimationFrame(() => {
+                setIsVisible(true);
+              });
+            } else {
+              // Defer: mark as pending, will load when scroll slows down
+              pendingLoadRef.current = true;
+            }
           }
         });
       },
@@ -122,9 +151,7 @@ export const LazyLoadedImageCard = ({
           />
         </>
       ) : (
-        <div className="w-full h-full flex items-center justify-center bg-zinc-800 animate-pulse">
-          <ImageIcon size={Math.max(16, itemHeight / 4)} className="text-zinc-600" />
-        </div>
+        <div className="w-full h-full grid-skeleton-shimmer" data-testid="shimmer-skeleton" />
       )}
 
       {/* Sync status indicator */}

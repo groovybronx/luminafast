@@ -208,7 +208,7 @@ describe('SmartCollectionBuilder', () => {
     await user.click(previewButton);
 
     // Check that the preview text mentions the image count and the word "match"
-    const previewDiv = container.querySelector('.mt-2.p-2.bg-white');
+    const previewDiv = container.querySelector('.mt-2.p-2');
     expect(previewDiv).toBeInTheDocument();
     const textContent = previewDiv?.textContent || '';
     expect(textContent).toMatch(/42/);

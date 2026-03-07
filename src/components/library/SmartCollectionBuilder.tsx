@@ -141,43 +141,29 @@ export const SmartCollectionBuilder: React.FC<SmartCollectionBuilderProps> = ({
       setIsSaving(false);
     }
   };
-  // Root cause analysis:
-  // Le composant utilise la palette `slate` et un fond clair (`bg-white`), ce qui n'est pas cohérent avec le thème sombre basé sur `zinc` utilisé dans le reste de l'application.
-  // Cela crée une rupture visuelle et nuit à l'expérience utilisateur en mode sombre.
 
-  // Solution structurelle :
-  // Refactor des classes Tailwind pour utiliser la palette `zinc` et assurer la compatibilité avec le mode sombre (`dark:`).
-  // Remplacement de tous les `bg-slate-*`, `border-slate-*`, `text-slate-*`, et `bg-white` par leurs équivalents `zinc` et ajout des variantes `dark:`.
-  // Vérification de la cohérence des contrastes et de l'accessibilité.
-
-  // Exemple de refactoring (voir le JSX plus bas) :
-  // - bg-slate-50 → bg-zinc-900 dark:bg-zinc-800
-  // - border-slate-200 → border-zinc-700 dark:border-zinc-600
-  // - text-slate-700 → text-zinc-200 dark:text-zinc-100
-  // - bg-white → bg-zinc-800 dark:bg-zinc-900
-  // - text-slate-600 → text-zinc-400 dark:text-zinc-300
-  // - text-slate-900 → text-zinc-100 dark:text-zinc-50
-  // - border-slate-300 → border-zinc-600 dark:border-zinc-500
-
-  // Cette adaptation garantit une expérience homogène et accessible quel que soit le mode.
   return (
-    <div className="flex flex-col gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+    <div className="flex flex-col gap-4 p-4 bg-zinc-900 dark:bg-zinc-800 rounded-lg border border-zinc-700 dark:border-zinc-600">
       {/* Collection Name */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Collection Name</label>
+        <label className="block text-sm font-medium text-zinc-200 dark:text-zinc-100 mb-1">
+          Collection Name
+        </label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g., Best Portraits"
-          className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-zinc-600 dark:border-zinc-500 rounded-md bg-zinc-800 dark:bg-zinc-700 text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={isSaving}
         />
       </div>
 
       {/* Rules */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Filter Rules</label>
+        <label className="block text-sm font-medium text-zinc-200 dark:text-zinc-100 mb-2">
+          Filter Rules
+        </label>
         <div className="space-y-2">
           {query.rules.map((rule, index) => (
             <RuleRow
@@ -201,7 +187,7 @@ export const SmartCollectionBuilder: React.FC<SmartCollectionBuilderProps> = ({
       {/* Combinator */}
       {query.rules.length > 1 && (
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label className="block text-sm font-medium text-zinc-200 dark:text-zinc-100 mb-1">
             Combine Rules With
           </label>
           <div className="flex gap-2">
@@ -212,7 +198,7 @@ export const SmartCollectionBuilder: React.FC<SmartCollectionBuilderProps> = ({
                 className={`px-4 py-2 rounded font-medium transition-colors ${
                   query.combinator === comb
                     ? 'bg-blue-500 text-white'
-                    : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                    : 'bg-zinc-700 dark:bg-zinc-600 text-zinc-100 hover:bg-zinc-600 dark:hover:bg-zinc-500'
                 }`}
                 disabled={isSaving}
               >
@@ -224,19 +210,19 @@ export const SmartCollectionBuilder: React.FC<SmartCollectionBuilderProps> = ({
       )}
 
       {/* Preview */}
-      <div className="border-t border-slate-200 pt-3">
+      <div className="border-t border-zinc-700 dark:border-zinc-600 pt-3">
         <button
           onClick={() => setShowPreview(!showPreview)}
-          className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900"
+          className="flex items-center gap-2 text-sm text-zinc-400 dark:text-zinc-300 hover:text-zinc-100 transition-colors"
           disabled={isSaving}
         >
           <Eye size={16} />
           {showPreview ? 'Hide Preview' : 'Show Preview'}
         </button>
         {showPreview && (
-          <div className="mt-2 p-2 bg-white border border-slate-200 rounded text-sm">
+          <div className="mt-2 p-2 bg-zinc-800 dark:bg-zinc-900 border border-zinc-700 dark:border-zinc-600 rounded text-sm">
             {isLoading ? (
-              <span className="text-slate-500">Loading preview...</span>
+              <span className="text-zinc-400">Loading preview...</span>
             ) : (
               <>
                 <strong>{previewImageCount}</strong>
@@ -248,7 +234,7 @@ export const SmartCollectionBuilder: React.FC<SmartCollectionBuilderProps> = ({
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2 border-t border-slate-200 pt-3">
+      <div className="flex gap-2 border-t border-zinc-700 dark:border-zinc-600 pt-3">
         <button
           onClick={handleSave}
           disabled={!isValid || isSaving}
@@ -272,12 +258,12 @@ function RuleRow({ rule, onDelete, onChange }: RuleRowProps) {
   const operators = getOperatorsForField(rule.field);
 
   return (
-    <div className="flex gap-2 items-end bg-white p-2 rounded border border-slate-200">
+    <div className="flex gap-2 items-end bg-zinc-800 dark:bg-zinc-900 p-2 rounded border border-zinc-700 dark:border-zinc-600">
       {/* Field Select */}
       <select
         value={rule.field}
         onChange={(e) => onChange('field', e.target.value as SmartQueryField)}
-        className="px-2 py-1 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="px-2 py-1 border border-zinc-600 dark:border-zinc-500 rounded text-sm bg-zinc-700 dark:bg-zinc-800 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
         aria-label="Filter field"
       >
         {(Object.keys(FIELD_TYPES) as SmartQueryField[]).map((field) => (
@@ -291,7 +277,7 @@ function RuleRow({ rule, onDelete, onChange }: RuleRowProps) {
       <select
         value={rule.operator}
         onChange={(e) => onChange('operator', e.target.value)}
-        className="px-2 py-1 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="px-2 py-1 border border-zinc-600 dark:border-zinc-500 rounded text-sm bg-zinc-700 dark:bg-zinc-800 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
         aria-label="Filter operator"
       >
         {operators.map((op) => (
@@ -308,13 +294,13 @@ function RuleRow({ rule, onDelete, onChange }: RuleRowProps) {
           value={typeof rule.value === 'number' ? rule.value : 0}
           onChange={(e) => onChange('value', parseFloat(e.target.value) || 0)}
           aria-label="Filter value"
-          className="px-2 py-1 border border-slate-300 rounded text-sm w-20 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-2 py-1 border border-zinc-600 dark:border-zinc-500 rounded text-sm w-20 bg-zinc-700 dark:bg-zinc-800 text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       ) : fieldType === 'enum' && rule.field === 'flag' ? (
         <select
           value={typeof rule.value === 'string' ? rule.value : 'pick'}
           onChange={(e) => onChange('value', e.target.value)}
-          className="px-2 py-1 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-2 py-1 border border-zinc-600 dark:border-zinc-500 rounded text-sm bg-zinc-700 dark:bg-zinc-800 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Flag value"
         >
           {FLAG_OPTIONS.map((opt) => (
@@ -330,14 +316,14 @@ function RuleRow({ rule, onDelete, onChange }: RuleRowProps) {
           onChange={(e) => onChange('value', e.target.value)}
           placeholder="value"
           aria-label="Filter value"
-          className="px-2 py-1 border border-slate-300 rounded text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-2 py-1 border border-zinc-600 dark:border-zinc-500 rounded text-sm flex-1 bg-zinc-700 dark:bg-zinc-800 text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       )}
 
       {/* Delete Button */}
       <button
         onClick={onDelete}
-        className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+        className="p-1 text-red-500 hover:bg-red-900/20 rounded transition-colors"
         aria-label="Delete rule"
       >
         <X size={18} />

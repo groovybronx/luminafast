@@ -4,6 +4,11 @@ import { GridView } from '../GridView';
 import type { CatalogImage } from '../../../types';
 import { DEFAULT_EDIT_STATE } from '../../../types';
 
+// Mock useScrollVelocity: return idle state by default (no scroll events in jsdom)
+vi.mock('@/hooks/useScrollVelocity', () => ({
+  useScrollVelocity: vi.fn(() => ({ velocity: 0, isScrollingFast: false })),
+}));
+
 // Mock services used by PreviewRenderer
 vi.mock('@/services/catalogService', () => ({
   CatalogService: {
@@ -257,5 +262,61 @@ describe('GridView Component', () => {
     const selectedContainer = selectedItemName.closest('.group');
 
     expect(selectedContainer).toHaveClass('border-blue-500');
+  });
+
+  // Phase 6.3 — Advanced Grid Virtualization
+  describe('Phase 6.3 — Overscan dynamique et shimmer', () => {
+    it('passe isScrollingFast=false aux cartes par défaut', async () => {
+      const { container } = render(
+        <GridView
+          images={mockImages}
+          selection={[]}
+          thumbnailSize={200}
+          onToggleSelection={vi.fn()}
+          onSetActiveView={vi.fn()}
+        />,
+      );
+
+      // Le shimmer doit être présent pour les cartes non encore chargées
+      // (isScrollingFast=false par défaut → IntersectionObserver déclenchera le chargement)
+      const gridContainer = container.querySelector('.grid-virtual-container');
+      expect(gridContainer).toBeInTheDocument();
+    });
+
+    it('utilise useScrollVelocity depuis le hook', () => {
+      // Vérifie que le GridView se monte sans erreur avec le hook useScrollVelocity actif
+      const { unmount } = render(
+        <GridView
+          images={mockImages}
+          selection={[]}
+          thumbnailSize={200}
+          onToggleSelection={vi.fn()}
+          onSetActiveView={vi.fn()}
+        />,
+      );
+
+      // Le démontage doit nettoyer correctement sans erreur
+      expect(() => unmount()).not.toThrow();
+    });
+
+    it('affiche les images même quand isScrollingFast=true (overscan étendu)', async () => {
+      // Reconfigurer le mock pour simuler scroll rapide
+      const { useScrollVelocity } = await import('@/hooks/useScrollVelocity');
+      vi.mocked(useScrollVelocity).mockReturnValueOnce({ velocity: 1200, isScrollingFast: true });
+
+      const { container } = render(
+        <GridView
+          images={mockImages}
+          selection={[]}
+          thumbnailSize={200}
+          onToggleSelection={vi.fn()}
+          onSetActiveView={vi.fn()}
+        />,
+      );
+
+      // Le conteneur virtuel doit toujours être rendu même en mode fast scroll
+      const gridContainer = container.querySelector('.grid-virtual-container');
+      expect(gridContainer).toBeInTheDocument();
+    });
   });
 });

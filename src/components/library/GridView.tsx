@@ -1,6 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ActiveView, CatalogImage } from '@/types';
+import { useScrollVelocity } from '@/hooks/useScrollVelocity';
 import { LazyLoadedImageCard } from './LazyLoadedImageCard';
 import './library.css';
 
@@ -75,12 +76,15 @@ export const GridView = ({
   // Calculate virtual row/column layout
   const rowCount = Math.ceil(images.length / columnCount);
 
+  // Phase 6.3 — Adaptive overscan: more rows ahead when user scrolls fast
+  const { isScrollingFast } = useScrollVelocity(containerRef);
+
   // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
     count: rowCount,
     getScrollElement: () => containerRef.current,
     estimateSize: () => itemHeight + gap,
-    overscan: 3, // Render 3 extra rows ahead for smooth scrolling
+    overscan: isScrollingFast ? 8 : 3, // 8 rows ahead when fast, 3 when idle
   });
 
   const virtualRows = rowVirtualizer.getVirtualItems();
@@ -131,6 +135,7 @@ export const GridView = ({
                       itemWidth={itemWidth}
                       itemHeight={itemHeight}
                       selectedImageIds={selection}
+                      isScrollingFast={isScrollingFast}
                       onToggleSelection={onToggleSelection}
                       onSetActiveView={onSetActiveView}
                     />

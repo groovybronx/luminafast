@@ -364,14 +364,14 @@ mod tests {
         db.initialize()?;
         db.initialize()?;
 
-        // 7 migrations: 001_initial, 002_ingestion_sessions, 003_previews,
-        // 004_add_folder_online_status, 005_event_sourcing, 006_snapshots, 007_cache_metadata
+        // 8 migrations: 001_initial, 002_ingestion_sessions, 003_previews,
+        // 004_add_folder_online_status, 005_event_sourcing, 006_snapshots, 007_cache_metadata, 008_duckdb_tracking
         let migration_count: i64 = db
             .connection()
             .prepare("SELECT COUNT(*) FROM migrations")?
             .query_row([], |row| row.get(0))?;
 
-        assert_eq!(migration_count, 7);
+        assert_eq!(migration_count, 8);
 
         Ok(())
     }

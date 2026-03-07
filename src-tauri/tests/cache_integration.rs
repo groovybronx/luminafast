@@ -10,6 +10,7 @@
 use std::time::Instant;
 
 /// Cache performance targets from PHASE-6.1.md
+#[allow(dead_code)]
 struct CacheTargets {
     startup_time_ms: u128,   // <3000ms
     l1_hit_latency_us: u128, // <10μs
@@ -29,6 +30,7 @@ impl CacheTargets {
 }
 
 /// Mock cache state for testing
+#[allow(dead_code)]
 struct MockCacheState {
     l1_hits: u64,
     l1_misses: u64,

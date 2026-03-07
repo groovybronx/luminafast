@@ -228,7 +228,7 @@ Re-render with fresh preview
 
 ## Notes
 
-- **No persistent TTL**: All caches reset on app restart (simplifies invalidation)
+
 - **Session-only design**: Cache is volatile; safe data must persist to DB
 - **LRU eviction**: Max 500 thumbnails; oldest unused exits memory to make room
 - **Lazy L2**: Disk cache filled opportunistically; doesn't pre-generate previews

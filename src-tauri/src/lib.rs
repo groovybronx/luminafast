@@ -36,23 +36,28 @@ pub fn run() {
 
             log::info!("Database initialized at: {:?}", db_path);
 
-            // Store database in app state for commands
+            // Initialize cache instance for Phase 6.1 (Multilevel Cache System)
+            let cache_root = app_data_dir.join("Previews.lrdata");
+            std::fs::create_dir_all(&cache_root).expect("Failed to create cache directory");
+            let cache_instance =
+                cache::CacheInstance::new(cache::l1::L1_DEFAULT_CAPACITY, cache_root.clone())
+                    .expect("Failed to initialize cache");
+            log::info!("Cache system initialized at: {:?}", cache_root);
+
+            // Store database + cache in app state for catalog/event-sourcing commands
             let app_state = AppState {
                 db: std::sync::Arc::new(std::sync::Mutex::new(db)),
+                cache: std::sync::Arc::new(cache_instance.clone()),
             };
             app.manage(app_state);
+
+            // Also manage CacheInstance as standalone state for cache.rs commands
+            // (both share the same underlying L1/L2 Arc, so they stay in sync)
+            app.manage(cache_instance);
 
             // Initialize hashing service for Phase 1.3
             let hashing_state = commands::hashing::HashingState::new();
             app.manage(hashing_state);
-
-            // Initialize cache instance for Phase 6.1 (Multilevel Cache System)
-            let cache_root = app_data_dir.join("Previews.lrdata");
-            std::fs::create_dir_all(&cache_root).expect("Failed to create cache directory");
-            let cache_instance = cache::CacheInstance::new(500, cache_root.clone())
-                .expect("Failed to initialize cache");
-            app.manage(cache_instance);
-            log::info!("Cache system initialized at: {:?}", cache_root);
 
             // Initialize filesystem service for Phase 1.4
             commands::filesystem::initialize_filesystem_service();
@@ -187,6 +192,10 @@ pub fn run() {
             commands::cache::get_cache_stats,
             commands::cache::clear_all_caches,
             commands::cache::is_image_cached,
+            // Cache metadata commands (Phase 6.1 Completion)
+            commands::cache::get_cache_metadata,
+            commands::cache::update_cache_metadata,
+            commands::cache::warm_cache_from_db,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

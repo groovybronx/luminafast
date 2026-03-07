@@ -19,7 +19,7 @@ export interface CacheStatsResponse {
     utilization: string; // "45.2%"
     hits: number;
     misses: number;
-    hitRate: string; // "87.3%"
+    hitRate: string; // "87.3%" or "N/A"
   };
   l2: {
     size: number;
@@ -29,6 +29,30 @@ export interface CacheStatsResponse {
     misses: number;
     hitRate: string; // "N/A" if no hits/misses yet
   };
+  details: {
+    size: number;
+    capacity: number;
+    utilization: string; // "12.5%"
+    hits: number;
+    misses: number;
+    hitRate: string; // "93.2%" or "N/A"
+  };
+}
+
+export interface CacheMetadataResponse {
+  imageId: number;
+  cachedAt: number; // Unix timestamp
+  lastAccessed: number; // Unix timestamp
+  sizeBytes: number;
+  source: 'L1' | 'L2' | 'COMPUTED';
+  isValid: boolean;
+}
+
+export interface WarmCacheFromDbResponse {
+  warmedCount: number;
+  skippedCount: number;
+  totalCandidates: number;
+  elapsedMs: number;
 }
 
 /**
@@ -163,5 +187,60 @@ export class BackendCacheService {
     }
 
     return loaded;
+  }
+
+  /**
+   * Get persisted cache metadata for a specific image.
+   *
+   * Returns null when the image has never been cached or has no metadata record.
+   *
+   * @param imageId Unique image identifier
+   */
+  static async getCacheMetadata(imageId: number): Promise<CacheMetadataResponse | null> {
+    try {
+      return await invoke<CacheMetadataResponse | null>('get_cache_metadata', { imageId });
+    } catch (error) {
+      console.error(`Failed to get cache metadata for image ${imageId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Update persisted cache metadata for a specific image.
+   *
+   * Call this after writing to the cache so the metadata table stays in sync.
+   *
+   * @param imageId   Unique image identifier
+   * @param source    Cache level: "L1", "L2", or "COMPUTED"
+   * @param sizeBytes Size of the cached data in bytes
+   */
+  static async updateCacheMetadata(
+    imageId: number,
+    source: 'L1' | 'L2' | 'COMPUTED',
+    sizeBytes: number,
+  ): Promise<void> {
+    try {
+      await invoke('update_cache_metadata', { imageId, source, sizeBytes });
+    } catch (error) {
+      console.error(`Failed to update cache metadata for image ${imageId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Warm the L1 cache from the DB's recently-accessed record set.
+   *
+   * Promotes the `batchSize` most recently accessed thumbnails from L2 → L1,
+   * helping reach the <3 s startup target for large catalogs.
+   *
+   * @param batchSize Number of thumbnails to promote (default: 50, max: 200)
+   */
+  static async warmCacheFromDb(batchSize = 50): Promise<WarmCacheFromDbResponse> {
+    try {
+      return await invoke<WarmCacheFromDbResponse>('warm_cache_from_db', { batchSize });
+    } catch (error) {
+      console.error('Failed to warm cache from DB:', error);
+      throw error;
+    }
   }
 }

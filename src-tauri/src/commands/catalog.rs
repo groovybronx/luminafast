@@ -5,9 +5,10 @@ use crate::models::dto::*;
 use std::sync::{Arc, Mutex};
 use tauri::State;
 
-/// Application state containing the database connection
+/// Application state containing the database connection and cache system
 pub struct AppState {
     pub db: Arc<Mutex<Database>>,
+    pub cache: Arc<CacheInstance>,
 }
 /// Commande Tauri pour backfill des images sans folder_id
 #[tauri::command]
@@ -81,107 +82,151 @@ pub async fn backfill_images_folder_id(state: State<'_, AppState>) -> CommandRes
 pub async fn get_all_images(
     filter: Option<ImageFilter>,
     state: State<'_, AppState>,
-    cache: State<'_, CacheInstance>,
 ) -> CommandResult<Vec<ImageDTO>> {
-    // Check cache statistics to evaluate cache effectiveness
-    if let Ok(stats) = cache.get_stats().await {
-        log::debug!(
-            "[Catalog] get_all_images - Cache L1 size: {}/{}",
-            stats.l1_hits + stats.l1_misses,
-            stats.l1_capacity
+    // Cache-first: serve unfiltered catalog from details cache to skip the DB join.
+    // Filtered queries are not cached to avoid stale results after edits.
+    let is_unfiltered = filter.is_none();
+    const CATALOG_CACHE_KEY: u32 = u32::MAX; // Reserved key for the full catalog result
+
+    if is_unfiltered {
+        if let Some(json) = state.cache.get_detail_cached(CATALOG_CACHE_KEY).await {
+            if let Ok(images) = serde_json::from_str::<Vec<ImageDTO>>(&json) {
+                log::debug!(
+                    "[Catalog] get_all_images - catalog cache HIT ({} images)",
+                    images.len()
+                );
+                return Ok(images);
+            }
+        }
+    }
+
+    // ─── Scoped DB block — all non-Send types (MutexGuard, Statement) are dropped
+    // at the closing brace, BEFORE the await below.  Using a block instead of
+    // explicit drop() ensures the async state machine does not include these
+    // types in its yield-point state (Rust limitation with MutexGuard + async).
+    let (images, catalog_json) = {
+        let mut db = state
+            .db
+            .lock()
+            .map_err(|e| format!("Database lock poisoned: {}", e))?;
+
+        let mut query = String::from(
+            "SELECT i.id, i.blake3_hash, i.filename, i.extension,
+                    i.width, i.height, i.file_size_bytes, i.orientation,
+                    i.captured_at, i.imported_at, i.folder_id,
+                    ist.rating, ist.flag, ist.color_label,
+                    e.iso, e.aperture, e.shutter_speed, e.focal_length,
+                    e.lens, e.camera_make, e.camera_model
+             FROM images i
+             LEFT JOIN image_state ist ON i.id = ist.image_id
+             LEFT JOIN exif_metadata e ON i.id = e.image_id",
         );
-    }
 
-    let mut db = state
-        .db
-        .lock()
-        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+        let mut params = Vec::new();
 
-    let mut query = String::from(
-        "SELECT i.id, i.blake3_hash, i.filename, i.extension,
-                i.width, i.height, i.file_size_bytes, i.orientation,
-                i.captured_at, i.imported_at, i.folder_id,
-                ist.rating, ist.flag, ist.color_label,
-                e.iso, e.aperture, e.shutter_speed, e.focal_length,
-                e.lens, e.camera_make, e.camera_model
-         FROM images i
-         LEFT JOIN image_state ist ON i.id = ist.image_id
-         LEFT JOIN exif_metadata e ON i.id = e.image_id",
-    );
+        // Build WHERE clause based on filter
+        if let Some(f) = filter {
+            let mut conditions = Vec::new();
 
-    let mut params = Vec::new();
+            if let Some(rating_min) = f.rating_min {
+                conditions.push("image_state.rating >= ?");
+                params.push(rating_min.to_string());
+            }
 
-    // Build WHERE clause based on filter
-    if let Some(f) = filter {
-        let mut conditions = Vec::new();
+            if let Some(rating_max) = f.rating_max {
+                conditions.push("image_state.rating <= ?");
+                params.push(rating_max.to_string());
+            }
 
-        if let Some(rating_min) = f.rating_min {
-            conditions.push("image_state.rating >= ?");
-            params.push(rating_min.to_string());
+            if let Some(flag) = f.flag {
+                conditions.push("image_state.flag = ?");
+                params.push(flag);
+            }
+
+            if let Some(folder_id) = f.folder_id {
+                conditions.push("i.folder_id = ?");
+                params.push(folder_id.to_string());
+            }
+
+            if let Some(search_text) = f.search_text {
+                conditions.push("(i.filename LIKE ? OR i.blake3_hash LIKE ?)");
+                let search_pattern = format!("%{}%", search_text);
+                params.push(search_pattern.clone());
+                params.push(search_pattern);
+            }
+
+            if !conditions.is_empty() {
+                query.push_str(" WHERE ");
+                query.push_str(&conditions.join(" AND "));
+            }
         }
 
-        if let Some(rating_max) = f.rating_max {
-            conditions.push("image_state.rating <= ?");
-            params.push(rating_max.to_string());
+        query.push_str(" ORDER BY i.imported_at DESC");
+
+        // Inner block for Statement — ensures it is dropped before further db use
+        let images: Vec<ImageDTO> = {
+            let mut stmt = db
+                .connection()
+                .prepare(&query)
+                .map_err(|e| format!("Database error: {}", e))?;
+
+            let images_iter = stmt
+                .query_map(rusqlite::params_from_iter(params), |row| {
+                    Ok(ImageDTO {
+                        id: row.get(0)?,
+                        blake3_hash: row.get(1)?,
+                        filename: row.get(2)?,
+                        extension: row.get(3)?,
+                        width: row.get(4)?,
+                        height: row.get(5)?,
+                        rating: row.get(11)?,
+                        flag: row.get(12)?,
+                        captured_at: row.get(8)?,
+                        imported_at: row.get(9)?,
+                        iso: row.get(14)?,
+                        aperture: row.get(15)?,
+                        shutter_speed: row.get(16)?,
+                        focal_length: row.get(17)?,
+                        lens: row.get(18)?,
+                        camera_make: row.get(19)?,
+                        camera_model: row.get(20)?,
+                    })
+                })
+                .map_err(|e| format!("Query error: {}", e))?;
+
+            let mut images = Vec::new();
+            for image in images_iter {
+                images.push(image.map_err(|e| format!("Row error: {}", e))?);
+            }
+            images
+        }; // ← stmt (Statement, !Send) dropped here
+
+        // Update cache_metadata for access tracking (enables intelligent warm startup)
+        for img in &images {
+            let _ = crate::services::cache_metadata::CacheMetadataService::upsert(
+                db.connection(),
+                img.id,
+                img.width.unwrap_or(0) as u64 * img.height.unwrap_or(0) as u64 * 3,
+                "L2",
+            );
         }
 
-        if let Some(flag) = f.flag {
-            conditions.push("image_state.flag = ?");
-            params.push(flag);
-        }
+        let catalog_json = if is_unfiltered {
+            serde_json::to_string(&images).ok()
+        } else {
+            None
+        };
 
-        if let Some(folder_id) = f.folder_id {
-            conditions.push("i.folder_id = ?");
-            params.push(folder_id.to_string());
-        }
+        (images, catalog_json)
+    }; // ← db (MutexGuard<Database>, !Send) dropped here
 
-        if let Some(search_text) = f.search_text {
-            conditions.push("(i.filename LIKE ? OR i.blake3_hash LIKE ?)");
-            let search_pattern = format!("%{}%", search_text);
-            params.push(search_pattern.clone());
-            params.push(search_pattern);
-        }
-
-        if !conditions.is_empty() {
-            query.push_str(" WHERE ");
-            query.push_str(&conditions.join(" AND "));
-        }
-    }
-
-    query.push_str(" ORDER BY i.imported_at DESC");
-
-    let mut stmt = db
-        .connection()
-        .prepare(&query)
-        .map_err(|e| format!("Database error: {}", e))?;
-
-    let images_iter = stmt
-        .query_map(rusqlite::params_from_iter(params), |row| {
-            Ok(ImageDTO {
-                id: row.get(0)?,
-                blake3_hash: row.get(1)?,
-                filename: row.get(2)?,
-                extension: row.get(3)?,
-                width: row.get(4)?,
-                height: row.get(5)?,
-                rating: row.get(11)?,
-                flag: row.get(12)?,
-                captured_at: row.get(8)?,
-                imported_at: row.get(9)?,
-                iso: row.get(14)?,
-                aperture: row.get(15)?,
-                shutter_speed: row.get(16)?,
-                focal_length: row.get(17)?,
-                lens: row.get(18)?,
-                camera_make: row.get(19)?,
-                camera_model: row.get(20)?,
-            })
-        })
-        .map_err(|e| format!("Query error: {}", e))?;
-
-    let mut images = Vec::new();
-    for image in images_iter {
-        images.push(image.map_err(|e| format!("Row error: {}", e))?);
+    // Populate catalog cache — safe to await, no non-Send type in scope
+    if let Some(json) = catalog_json {
+        state.cache.put_detail_cached(CATALOG_CACHE_KEY, json).await;
+        log::debug!(
+            "[Catalog] get_all_images - catalog cached ({} images)",
+            images.len()
+        );
     }
 
     Ok(images)
@@ -193,68 +238,114 @@ pub async fn get_all_images(
 pub async fn get_image_detail(
     id: u32,
     state: State<'_, AppState>,
-    cache: State<'_, CacheInstance>,
 ) -> CommandResult<ImageDetailDTO> {
-    // Check if image thumbnail is in cache
-    if let Ok(Some(_)) = cache.get_thumbnail(id).await {
-        log::debug!("[Catalog] Image {} thumbnail is cached", id);
+    // ─── Cache-first: check in-memory details cache BEFORE acquiring the DB lock ───
+    if let Some(json) = state.cache.get_detail_cached(id).await {
+        match serde_json::from_str::<ImageDetailDTO>(&json) {
+            Ok(dto) => {
+                log::debug!("[Catalog] get_image_detail - cache HIT for image {}", id);
+                return Ok(dto);
+            }
+            Err(e) => {
+                // Deserialisation failure — fall through to DB with a warning
+                log::warn!(
+                    "[Catalog] get_image_detail - cache deserialise error for image {}: {}",
+                    id,
+                    e
+                );
+            }
+        }
     }
 
-    let mut db = state
-        .db
-        .lock()
-        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+    log::debug!(
+        "[Catalog] get_image_detail - cache MISS for image {}, querying DB",
+        id
+    );
 
-    let mut stmt = db.connection().prepare(
-        "SELECT i.id, i.blake3_hash, i.filename, i.extension,
-                i.width, i.height, i.file_size_bytes, i.orientation,
-                i.captured_at, i.imported_at, i.folder_id,
-                image_state.rating, image_state.flag, image_state.color_label,
-                exif_metadata.iso, exif_metadata.aperture, exif_metadata.shutter_speed, exif_metadata.focal_length,
-                exif_metadata.lens, exif_metadata.camera_make, exif_metadata.camera_model,
-                exif_metadata.gps_lat, exif_metadata.gps_lon, exif_metadata.color_space
-         FROM images i
-         LEFT JOIN image_state image_state ON i.id = image_state.image_id
-         LEFT JOIN exif_metadata exif_metadata ON i.id = exif_metadata.image_id
-         WHERE i.id = ?"
-    )
-    .map_err(|e| format!("Database error: {}", e))?;
+    // ─── Scoped DB block — non-Send types (MutexGuard, Statement) are dropped at
+    // the closing brace, BEFORE the await below.  Block scope (not drop()) is
+    // required because Rust's async state machine generator conservatively keeps
+    // variables alive until end-of-scope rather than until consumed by drop().
+    let (result, json_for_cache) = {
+        let mut db = state
+            .db
+            .lock()
+            .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
-    let result = stmt
-        .query_row([id], |row| {
-            let exif_metadata = if row.get::<_, Option<i32>>(14)?.is_some() {
-                Some(ExifMetadataDTO {
-                    iso: row.get(14)?,
-                    aperture: row.get(15)?,
-                    shutter_speed: row.get(16)?,
-                    focal_length: row.get(17)?,
-                    lens: row.get(18)?,
-                    camera_make: row.get(19)?,
-                    camera_model: row.get(20)?,
-                    gps_lat: row.get(21)?,
-                    gps_lon: row.get(22)?,
-                    color_space: row.get(23)?,
+        // Inner block for the Statement (borrows db) — dropped before next db use
+        let result: ImageDetailDTO = {
+            let mut stmt = db.connection().prepare(
+                "SELECT i.id, i.blake3_hash, i.filename, i.extension,
+                        i.width, i.height, i.file_size_bytes, i.orientation,
+                        i.captured_at, i.imported_at, i.folder_id,
+                        image_state.rating, image_state.flag, image_state.color_label,
+                        exif_metadata.iso, exif_metadata.aperture, exif_metadata.shutter_speed, exif_metadata.focal_length,
+                        exif_metadata.lens, exif_metadata.camera_make, exif_metadata.camera_model,
+                        exif_metadata.gps_lat, exif_metadata.gps_lon, exif_metadata.color_space
+                 FROM images i
+                 LEFT JOIN image_state image_state ON i.id = image_state.image_id
+                 LEFT JOIN exif_metadata exif_metadata ON i.id = exif_metadata.image_id
+                 WHERE i.id = ?",
+            )
+            .map_err(|e| format!("Database error: {}", e))?;
+
+            stmt.query_row([id], |row| {
+                let exif_metadata = if row.get::<_, Option<i32>>(14)?.is_some() {
+                    Some(ExifMetadataDTO {
+                        iso: row.get(14)?,
+                        aperture: row.get(15)?,
+                        shutter_speed: row.get(16)?,
+                        focal_length: row.get(17)?,
+                        lens: row.get(18)?,
+                        camera_make: row.get(19)?,
+                        camera_model: row.get(20)?,
+                        gps_lat: row.get(21)?,
+                        gps_lon: row.get(22)?,
+                        color_space: row.get(23)?,
+                    })
+                } else {
+                    None
+                };
+
+                Ok(ImageDetailDTO {
+                    id: row.get(0)?,
+                    blake3_hash: row.get(1)?,
+                    filename: row.get(2)?,
+                    extension: row.get(3)?,
+                    width: row.get(4)?,
+                    height: row.get(5)?,
+                    rating: row.get(12)?,
+                    flag: row.get(13)?,
+                    captured_at: row.get(8)?,
+                    imported_at: row.get(9)?,
+                    exif_metadata,
+                    folder_id: row.get(11)?,
                 })
-            } else {
-                None
-            };
-
-            Ok(ImageDetailDTO {
-                id: row.get(0)?,
-                blake3_hash: row.get(1)?,
-                filename: row.get(2)?,
-                extension: row.get(3)?,
-                width: row.get(4)?,
-                height: row.get(5)?,
-                rating: row.get(12)?,
-                flag: row.get(13)?,
-                captured_at: row.get(8)?,
-                imported_at: row.get(9)?,
-                exif_metadata,
-                folder_id: row.get(11)?,
             })
-        })
-        .map_err(|e| format!("Query error: {}", e))?;
+            .map_err(|e| format!("Query error: {}", e))?
+        }; // ← stmt dropped here
+
+        // Serialize for cache and update metadata (stmt is no longer alive)
+        let size_estimate = result
+            .width
+            .and_then(|w| result.height.map(|h| w as u64 * h as u64 * 3))
+            .unwrap_or(0);
+        let json_for_cache = serde_json::to_string(&result).ok();
+
+        let _ = crate::services::cache_metadata::CacheMetadataService::upsert(
+            db.connection(),
+            id,
+            size_estimate,
+            "L2",
+        );
+
+        (result, json_for_cache)
+    }; // ← db (MutexGuard<Database>, !Send) dropped here
+
+    // Populate details cache — safe to await, no non-Send type in scope
+    if let Some(json) = json_for_cache {
+        state.cache.put_detail_cached(id, json).await;
+    }
 
     Ok(result)
 }

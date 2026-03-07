@@ -17,13 +17,30 @@ pub use l1::CacheL1;
 pub use l2::CacheL2;
 pub use metadata::CacheStats;
 
+use lru::LruCache;
+use std::num::NonZeroUsize;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use tokio::sync::Mutex;
 
-/// Main cache instance coordinating L1 + L2
+/// Capacity for the in-memory details DTO cache (per-image serialised JSON).
+const DETAILS_CACHE_CAPACITY: usize = 200;
+
+/// Main cache instance coordinating L1 + L2 + in-memory details cache.
+///
+/// The `details_cache` stores JSON-serialised `ImageDetailDTO` values keyed by
+/// `image_id`.  This enables a true cache-first pattern for `get_image_detail`:
+/// the DB is only queried on a miss.
+#[derive(Clone)]
 pub struct CacheInstance {
     pub l1: Arc<CacheL1>,
     pub l2: Arc<CacheL2>,
+    /// Per-image detail cache: image_id → JSON(ImageDetailDTO)
+    details_cache: Arc<Mutex<LruCache<u32, String>>>,
+    /// Hit/miss counters for the details cache (shared across Clone instances via Arc)
+    details_hits: Arc<AtomicU64>,
+    details_misses: Arc<AtomicU64>,
 }
 
 impl CacheInstance {
@@ -33,8 +50,48 @@ impl CacheInstance {
         let l2 = Arc::new(
             CacheL2::new(l2_root).map_err(|e| format!("Failed to initialize L2 cache: {}", e))?,
         );
+        let details_cap =
+            NonZeroUsize::new(DETAILS_CACHE_CAPACITY).expect("DETAILS_CACHE_CAPACITY must be > 0");
+        let details_cache = Arc::new(Mutex::new(LruCache::new(details_cap)));
 
-        Ok(Self { l1, l2 })
+        Ok(Self {
+            l1,
+            l2,
+            details_cache,
+            details_hits: Arc::new(AtomicU64::new(0)),
+            details_misses: Arc::new(AtomicU64::new(0)),
+        })
+    }
+
+    // =========================================================================
+    // Details cache (ImageDetailDTO JSON)
+    // =========================================================================
+
+    /// Return a cached JSON string for an `ImageDetailDTO`, or `None` on miss.
+    pub async fn get_detail_cached(&self, image_id: u32) -> Option<String> {
+        let mut cache = self.details_cache.lock().await;
+        match cache.get(&image_id).cloned() {
+            Some(v) => {
+                self.details_hits.fetch_add(1, Ordering::Relaxed);
+                Some(v)
+            }
+            None => {
+                self.details_misses.fetch_add(1, Ordering::Relaxed);
+                None
+            }
+        }
+    }
+
+    /// Store (or overwrite) a JSON-serialised `ImageDetailDTO` in the details cache.
+    pub async fn put_detail_cached(&self, image_id: u32, json: String) {
+        let mut cache = self.details_cache.lock().await;
+        cache.put(image_id, json);
+    }
+
+    /// Remove a single entry from the details cache.
+    pub async fn invalidate_detail(&self, image_id: u32) {
+        let mut cache = self.details_cache.lock().await;
+        cache.pop(&image_id);
     }
 
     /// Get thumbnail from L1, or L2 if L1 miss
@@ -70,7 +127,7 @@ impl CacheInstance {
         Ok(())
     }
 
-    /// Invalidate image from both L1 and L2
+    /// Invalidate image from L1, L2 AND the details cache.
     pub async fn invalidate_image(&self, image_id: u32) -> Result<(), String> {
         self.l1
             .invalidate(image_id)
@@ -82,10 +139,13 @@ impl CacheInstance {
             .await
             .map_err(|e| format!("L2 error: {}", e))?;
 
+        // Also remove from in-memory details cache
+        self.invalidate_detail(image_id).await;
+
         Ok(())
     }
 
-    /// Clear all caches (session-only design)
+    /// Clear all caches (L1, L2, and details).
     pub async fn clear_all(&self) -> Result<(), String> {
         self.l1
             .clear()
@@ -96,6 +156,9 @@ impl CacheInstance {
             .clear()
             .await
             .map_err(|e| format!("L2 error: {}", e))?;
+
+        let mut details = self.details_cache.lock().await;
+        details.clear();
 
         Ok(())
     }
@@ -114,6 +177,11 @@ impl CacheInstance {
             .await
             .map_err(|e| format!("L2 stats error: {}", e))?;
 
+        let details_size = {
+            let cache = self.details_cache.lock().await;
+            cache.len()
+        };
+
         Ok(CacheStats {
             l1_size: l1_stats.size,
             l1_capacity: l1_stats.capacity,
@@ -123,6 +191,10 @@ impl CacheInstance {
             l2_disk_usage: l2_stats.disk_usage,
             l2_hits: l2_stats.hits,
             l2_misses: l2_stats.misses,
+            details_size,
+            details_capacity: DETAILS_CACHE_CAPACITY,
+            details_hits: self.details_hits.load(Ordering::Relaxed),
+            details_misses: self.details_misses.load(Ordering::Relaxed),
         })
     }
 }
@@ -130,7 +202,6 @@ impl CacheInstance {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
     use tempfile::TempDir;
 
     #[tokio::test]

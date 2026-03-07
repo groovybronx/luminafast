@@ -12,7 +12,7 @@ use std::num::NonZeroUsize;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-pub const L1_DEFAULT_CAPACITY: usize = 500;
+pub const L1_DEFAULT_CAPACITY: usize = 500; // Used in lib.rs for CacheInstance initialization
 
 /// Statistics for L1 cache monitoring
 #[derive(Debug, Clone)]
@@ -24,6 +24,7 @@ pub struct L1Stats {
 }
 
 /// In-memory LRU cache for thumbnails
+#[derive(Clone)]
 pub struct CacheL1 {
     cache: Arc<Mutex<LruCache<u32, Vec<u8>>>>,
     stats: Arc<Mutex<CacheL1Stats>>,

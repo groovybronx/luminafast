@@ -1,6 +1,7 @@
 use crate::database::Database;
 use crate::database::DatabaseError;
 use crate::models::dto::*;
+use crate::services::db_repository::get_or_create_folder_id_tx;
 use std::sync::{Arc, Mutex};
 use tauri::State;
 
@@ -21,16 +22,6 @@ pub async fn backfill_images_folder_id(state: State<'_, AppState>) -> CommandRes
         .transaction()
         .map_err(|e| format!("Transaction error: {}", e))?;
     let mut updated_count = 0u32;
-
-    // Créer un service ingestion avec une connexion in_memory (utilisée uniquement pour get_or_create_folder_id)
-    let ingestion_service = crate::services::ingestion::IngestionService::new(
-        crate::services::blake3::Blake3Service::new(crate::models::hashing::HashConfig::default())
-            .into(),
-        std::sync::Arc::new(std::sync::Mutex::new(
-            rusqlite::Connection::open_in_memory()
-                .map_err(|e| format!("Memory DB error: {}", e))?,
-        )),
-    );
 
     // Sélectionner toutes les images sans folder_id, joinées avec ingestion_file_status pour récupérer le full file_path
     {
@@ -53,9 +44,7 @@ pub async fn backfill_images_folder_id(state: State<'_, AppState>) -> CommandRes
 
         for img_res in images_iter {
             let (id, file_path) = img_res.map_err(|e| format!("Row error: {}", e))?;
-            // Appeler get_or_create_folder_id avec le full file_path (la fonction en extrait le parent)
-            let folder_id_opt = ingestion_service
-                .get_or_create_folder_id(&transaction, &file_path)
+            let folder_id_opt = get_or_create_folder_id_tx(&transaction, &file_path)
                 .map_err(|e| format!("Folder error: {}", e))?;
             if let Some(folder_id) = folder_id_opt {
                 transaction

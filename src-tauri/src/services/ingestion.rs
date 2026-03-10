@@ -1,13 +1,13 @@
-use crate::models::catalog::{NewExifMetadata, NewImage};
 use crate::models::discovery::{
     BasicExif, BatchIngestionRequest, BatchIngestionResult, DiscoveredFile, DiscoveryError,
     FormatDetails, IngestionMetadata, IngestionProgress, IngestionResult,
 };
 use crate::models::exif::ExifMetadata;
 use crate::services::blake3::Blake3Service;
+use crate::services::db_repository::SqliteDbRepository;
 use crate::services::exif;
 use crate::services::metrics::{DefaultMetricsCollector, MetricsCollector};
-use rusqlite::OptionalExtension;
+use crate::types::db_context::{DBContext, SessionStatsUpdate};
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -23,30 +23,21 @@ use uuid::Uuid;
 /// Takes owned Arc references to be 'static compatible for tokio::spawn
 async fn ingest_file_internal(
     blake3_service: Arc<Blake3Service>,
-    db: Arc<std::sync::Mutex<rusqlite::Connection>>,
+    db_context: Arc<dyn DBContext>,
     file: DiscoveredFile,
 ) -> Result<IngestionResult, DiscoveryError> {
-    let svc = IngestionService::with_max_threads(blake3_service, db, 8);
+    let svc = IngestionService::with_context_and_max_threads(blake3_service, db_context, 8);
     svc.ingest_file(&file).await
-}
-
-/// Session statistics update parameters
-#[derive(Debug, Clone)]
-pub struct SessionStatsUpdate {
-    pub total_files: usize,
-    pub ingested_files: usize,
-    pub failed_files: usize,
-    pub skipped_files: usize,
-    pub total_size_bytes: u64,
-    pub avg_processing_time_ms: f64,
 }
 
 /// Service for ingesting discovered RAW files into the catalog
 pub struct IngestionService {
     /// BLAKE3 service for file hashing
     blake3_service: Arc<Blake3Service>,
-    /// Database connection (std::sync::Mutex for Sync safety)
-    pub(crate) db: Arc<std::sync::Mutex<rusqlite::Connection>>,
+    /// Backward-compatible direct SQLite handle kept during migration.
+    db: Arc<std::sync::Mutex<rusqlite::Connection>>,
+    /// Database context abstraction for ingestion operations
+    db_context: Arc<dyn DBContext>,
     /// Threadpool metrics collector for monitoring saturation
     metrics_collector: Arc<DefaultMetricsCollector>,
 }
@@ -57,7 +48,13 @@ impl IngestionService {
         blake3_service: Arc<Blake3Service>,
         db: Arc<std::sync::Mutex<rusqlite::Connection>>,
     ) -> Self {
-        Self::with_max_threads(blake3_service, db, 8)
+        let db_context: Arc<dyn DBContext> = Arc::new(SqliteDbRepository::new(Arc::clone(&db)));
+        Self {
+            blake3_service,
+            db,
+            db_context,
+            metrics_collector: Arc::new(DefaultMetricsCollector::new(8)),
+        }
     }
 
     /// Create a new ingestion service with custom max threads for metrics
@@ -66,9 +63,36 @@ impl IngestionService {
         db: Arc<std::sync::Mutex<rusqlite::Connection>>,
         max_threads: usize,
     ) -> Self {
+        let db_context: Arc<dyn DBContext> = Arc::new(SqliteDbRepository::new(Arc::clone(&db)));
         Self {
             blake3_service,
             db,
+            db_context,
+            metrics_collector: Arc::new(DefaultMetricsCollector::new(max_threads)),
+        }
+    }
+
+    /// Create a new ingestion service using an injected DB context
+    pub fn with_context(
+        blake3_service: Arc<Blake3Service>,
+        db_context: Arc<dyn DBContext>,
+    ) -> Self {
+        Self::with_context_and_max_threads(blake3_service, db_context, 8)
+    }
+
+    /// Create a new ingestion service using an injected DB context and custom threadpool metrics
+    pub fn with_context_and_max_threads(
+        blake3_service: Arc<Blake3Service>,
+        db_context: Arc<dyn DBContext>,
+        max_threads: usize,
+    ) -> Self {
+        let db = Arc::new(std::sync::Mutex::new(
+            rusqlite::Connection::open_in_memory().expect("failed to create fallback DB"),
+        ));
+        Self {
+            blake3_service,
+            db,
+            db_context,
             metrics_collector: Arc::new(DefaultMetricsCollector::new(max_threads)),
         }
     }
@@ -267,14 +291,14 @@ impl IngestionService {
         let session_id = request.session_id; // Extract ONCE before loop to avoid lifetime issues
         let semaphore = Arc::new(tokio::sync::Semaphore::new(8)); // Max 8 concurrent tasks
         let blake3_service = Arc::clone(&self.blake3_service); // Extract Arc ONCE
-        let db = Arc::clone(&self.db); // Extract Arc ONCE
+        let db_context = Arc::clone(&self.db_context); // Extract Arc ONCE
         let metrics_collector = Arc::clone(&self.metrics_collector); // Extract Arc ONCE for monitoring
         let mut join_handles = Vec::new();
 
         for file in files_to_process.iter() {
             let file_clone = file.clone();
             let blake3_service_clone = Arc::clone(&blake3_service); // Cheap Arc clone
-            let db_clone = Arc::clone(&db); // Cheap Arc clone
+            let db_context_clone = Arc::clone(&db_context); // Cheap Arc clone
             let semaphore_clone = Arc::clone(&semaphore);
             let metrics_collector_clone = Arc::clone(&metrics_collector); // Clone for this task
             let processed_clone = Arc::clone(&processed_count);
@@ -307,8 +331,12 @@ impl IngestionService {
                 }
 
                 // Ingest file using the internal helper function (works with Arc parameters)
-                let ingest_result =
-                    ingest_file_internal(blake3_service_clone, db_clone, file_clone.clone()).await;
+                let ingest_result = ingest_file_internal(
+                    blake3_service_clone,
+                    db_context_clone,
+                    file_clone.clone(),
+                )
+                .await;
 
                 let file_processing_time = file_start_time.elapsed().as_millis() as u64;
                 total_processing_time_clone
@@ -470,28 +498,16 @@ impl IngestionService {
             .ok_or_else(|| DiscoveryError::InvalidPath(file_path.to_string_lossy().to_string()))?
             .to_string();
 
-        // Compute BLAKE3 hash BEFORE acquiring the lock (async operation)
+        // Compute BLAKE3 hash before querying to avoid duplicate imports by name+content.
         let hash_result = self
             .blake3_service
             .hash_file(file_path)
             .await
             .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
-        let blake3_hash = hash_result.hash;
 
-        // Now acquire the lock for the synchronous DB query
-        let db = self
-            .db
-            .lock()
-            .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
-        let mut stmt = db
-            .prepare("SELECT id FROM images WHERE filename = ? AND blake3_hash = ?")
-            .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
-        let result: Option<i64> = stmt
-            .query_row((&filename, &blake3_hash), |row| row.get(0))
-            .optional()
-            .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
-
-        Ok(result)
+        self.db_context
+            .find_image_id_by_filename_and_hash(&filename, &hash_result.hash)
+            .await
     }
 
     /// Extract basic EXIF metadata from a RAW file with enhanced fallback
@@ -686,84 +702,6 @@ impl IngestionService {
         None
     }
 
-    /// Get or create a folder entry in the database
-    /// Returns the folder_id for the given file path
-    pub fn get_or_create_folder_id(
-        &self,
-        transaction: &rusqlite::Transaction,
-        file_path: &str,
-    ) -> Result<Option<i64>, DiscoveryError> {
-        let path = Path::new(file_path);
-        let folder_path = match path.parent() {
-            Some(p) => match p.to_str() {
-                Some(s) => s,
-                None => return Ok(None), // Invalid UTF-8 path
-            },
-            None => return Ok(None), // File at root (unlikely)
-        };
-
-        // Extract folder name (last component)
-        let folder_name = Path::new(folder_path)
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("")
-            .to_string();
-
-        // Extract volume name: find "volumes" component and take the next one
-        // For paths like /Volumes/SSD/Photos or /volumes/SSD/Photos
-        let volume_name = {
-            let components: Vec<_> = Path::new(folder_path)
-                .components()
-                .filter_map(|c| {
-                    if let std::path::Component::Normal(os_str) = c {
-                        os_str.to_str()
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-
-            // Find "volumes" (case-insensitive) and take the next component
-            components
-                .windows(2)
-                .find(|w| w[0].eq_ignore_ascii_case("volumes"))
-                .map(|w| w[1].to_string())
-                .unwrap_or_else(|| {
-                    // Fallback: take second component if exists, otherwise first
-                    components
-                        .get(1)
-                        .or_else(|| components.first())
-                        .map(|s| s.to_string())
-                        .unwrap_or_else(|| "Unknown".to_string())
-                })
-        };
-
-        // Check if folder already exists
-        let existing_id: Option<i64> = transaction
-            .query_row(
-                "SELECT id FROM folders WHERE path = ?",
-                [folder_path],
-                |row| row.get(0),
-            )
-            .optional()
-            .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
-
-        if let Some(id) = existing_id {
-            return Ok(Some(id));
-        }
-
-        // Insert new folder
-        transaction
-            .execute(
-                "INSERT INTO folders (path, name, volume_name, is_online, parent_id) VALUES (?, ?, ?, 1, NULL)",
-                rusqlite::params![folder_path, folder_name, volume_name],
-            )
-            .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
-
-        let folder_id = transaction.last_insert_rowid();
-        Ok(Some(folder_id))
-    }
-
     /// Create image and EXIF records in the database
     async fn create_image_record(
         &self,
@@ -772,127 +710,9 @@ impl IngestionService {
         exif: &BasicExif,
         real_exif: Option<&ExifMetadata>,
     ) -> Result<i64, DiscoveryError> {
-        let mut db = self
-            .db
-            .lock()
-            .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
-
-        // Start transaction
-        let transaction = db
-            .transaction()
-            .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
-
-        // Get or create folder for this file
-        let file_path_str = file
-            .path
-            .to_str()
-            .ok_or_else(|| DiscoveryError::IoError("Invalid UTF-8 in file path".to_string()))?;
-        let folder_id = self.get_or_create_folder_id(&transaction, file_path_str)?;
-
-        // Create image record
-        let new_image = NewImage {
-            blake3_hash: blake3_hash.to_string(),
-            filename: file.filename.clone(),
-            extension: file.format.extension().to_string(),
-            width: None,
-            height: None,
-            orientation: 0,
-            file_size_bytes: Some(file.size_bytes as i64),
-            captured_at: exif.date_taken,
-            folder_id,
-        };
-
-        let _rows = transaction
-            .execute(
-                "INSERT INTO images (
-                blake3_hash, filename, extension, width, height, orientation,
-                file_size_bytes, captured_at, folder_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                rusqlite::params![
-                    &new_image.blake3_hash,
-                    &new_image.filename,
-                    &new_image.extension,
-                    new_image.width,
-                    new_image.height,
-                    new_image.orientation,
-                    new_image.file_size_bytes,
-                    new_image.captured_at,
-                    new_image.folder_id,
-                ],
-            )
-            .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
-
-        let image_id = transaction.last_insert_rowid();
-
-        // Create EXIF metadata record (Phase 2.2: Use real EXIF if available)
-        let new_exif = if let Some(real) = real_exif {
-            // Use real EXIF data from kamadak-exif
-            NewExifMetadata {
-                image_id,
-                iso: real.iso.map(|iso| iso as i32),
-                aperture: real.aperture.map(|a| a as f64),
-                shutter_speed: real.shutter_speed.map(|s| s as f64),
-                focal_length: real.focal_length.map(|f| f as f64),
-                lens: real.lens.clone(),
-                camera_make: real.camera_make.clone(),
-                camera_model: real.camera_model.clone(),
-                gps_lat: real.gps_lat,
-                gps_lon: real.gps_lon,
-                color_space: real.color_space.clone(),
-            }
-        } else {
-            // Fallback to BasicExif (filename-based extraction)
-            NewExifMetadata {
-                image_id,
-                iso: exif.iso.map(|iso| iso as i32),
-                aperture: exif.aperture.map(|a| a as f64),
-                shutter_speed: exif.shutter_speed.as_deref().and_then(|s| s.parse().ok()),
-                focal_length: exif.focal_length.map(|f| f as f64),
-                lens: exif.lens.clone(),
-                camera_make: exif.make.clone(),
-                camera_model: exif.model.clone(),
-                gps_lat: None,
-                gps_lon: None,
-                color_space: None,
-            }
-        };
-
-        transaction
-            .execute(
-                "INSERT INTO exif_metadata (
-                image_id, iso, aperture, shutter_speed, focal_length,
-                lens, camera_make, camera_model, gps_lat, gps_lon, color_space
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                rusqlite::params![
-                    new_exif.image_id,
-                    new_exif.iso,
-                    new_exif.aperture,
-                    new_exif.shutter_speed,
-                    new_exif.focal_length,
-                    new_exif.lens,
-                    new_exif.camera_make,
-                    new_exif.camera_model,
-                    new_exif.gps_lat,
-                    new_exif.gps_lon,
-                    new_exif.color_space,
-                ],
-            )
-            .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
-
-        // Phase 2.2: Initialize image_state (rating=0, flag=NULL)
-        transaction
-            .execute(
-                "INSERT INTO image_state (image_id, rating, flag) VALUES (?, 0, NULL)",
-                rusqlite::params![image_id],
-            )
-            .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
-
-        // Commit transaction
-        transaction
-            .commit()
-            .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
-
-        Ok(image_id)
+        self.db_context
+            .insert_image_with_exif(file, blake3_hash, exif, real_exif)
+            .await
     }
 
     /// Update a discovered file with ingestion results

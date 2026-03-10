@@ -1,4 +1,5 @@
 pub mod blake3;
+pub mod db_repository;
 pub mod discovery;
 pub mod event_sourcing;
 pub mod exif;

@@ -16,6 +16,7 @@ interface CatalogStore {
   clearSelection: () => void;
   setFilterText: (text: string) => void;
   setActiveImage: (id: number | null) => void;
+  setImageExif: (id: number, exif: CatalogImage['exif']) => void;
 
   // Getters
   getSelectedImages: () => CatalogImage[];
@@ -61,6 +62,13 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
   setFilterText: (text: string) => set({ filterText: text }),
 
   setActiveImage: (id: number | null) => set({ activeImageId: id }),
+
+  setImageExif: (id: number, exif: CatalogImage['exif']) =>
+    set((state) => ({
+      images: state.images.map((img) =>
+        img.id === id ? { ...img, exif: { ...img.exif, ...exif } } : img,
+      ),
+    })),
 
   // Getters
   getSelectedImages: () => {

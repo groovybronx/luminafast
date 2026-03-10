@@ -65,7 +65,7 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
 
         addLog('Refreshing catalog from database...', 'sqlite');
 
-        const images = await CatalogService.getAllImages(refreshFilter || filter);
+        const images = await CatalogService.getAllImages(refreshFilter || filter, false);
 
         // Convert ImageDTO to CatalogImage format expected by store
         const catalogImages = await Promise.all(
@@ -168,7 +168,7 @@ export function useCatalog(filter?: ImageFilter): UseCatalogReturn {
       addLog('Syncing catalog after import...', 'sync');
 
       // TODO: Get all images (could be optimized to get only new images in future)
-      const images = await CatalogService.getAllImages(filter);
+      const images = await CatalogService.getAllImages(filter, false);
 
       // Convert to catalog format
       const catalogImages = await Promise.all(

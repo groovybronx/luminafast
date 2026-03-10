@@ -5,7 +5,7 @@ import { XmpPanel } from '../metadata/XmpPanel';
 import { DevelopSliders } from '../develop/DevelopSliders';
 import { HistoryPanel } from '../develop/HistoryPanel';
 import { MetadataPanel } from '../metadata/MetadataPanel';
-import { useExif } from '@/hooks/useExif';
+import { useLazyImageMeta } from '@/hooks/useLazyImageMeta';
 import { useUiStore } from '@/stores/uiStore';
 import type { CatalogImage, ActiveView, FlagType, EditState, ExifData } from '@/types';
 
@@ -28,12 +28,12 @@ function buildExifSummary(exif: ExifData | null): string | undefined {
 }
 
 export const RightSidebar = ({ activeView, activeImg, onDispatchEvent }: RightSidebarProps) => {
-  const { exif: fullExif } = useExif(activeImg.id);
+  const { data: fullExif } = useLazyImageMeta(activeImg.id, true);
   const selection = useUiStore((state) => state.selection);
   const selectedImageIds = Array.from(selection).filter((id) => id !== activeImg.id);
   // Priorité : EXIF complet depuis Tauri > données partielles du catalogue
   const displayExif = fullExif ?? activeImg.exif;
-  const exifSummary = buildExifSummary(fullExif);
+  const exifSummary = buildExifSummary(fullExif ?? null);
   const previewUrl = activeImg.urls?.thumbnail ?? activeImg.urls?.standard;
 
   return (

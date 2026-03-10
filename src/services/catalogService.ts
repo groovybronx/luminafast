@@ -37,10 +37,10 @@ export class CatalogService {
   /**
    * Get all images with optional filtering
    */
-  static async getAllImages(filter?: ImageFilter): Promise<ImageDTO[]> {
+  static async getAllImages(filter?: ImageFilter, includeExif = false): Promise<ImageDTO[]> {
     try {
       const invoke = this.getInvoke();
-      const result = await invoke('get_all_images', { filter });
+      const result = await invoke('get_all_images', { filter, includeExif });
 
       if (typeof result === 'string') {
         throw new Error(result);

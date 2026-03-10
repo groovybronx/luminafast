@@ -70,7 +70,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-03-10 (Maintenance M.2.2 clôturée : whitelist chemins + hardening CSP/assetProtocol)
+> **Dernière mise à jour** : 2026-03-10 (Maintenance M.3.2 en cours : lazy EXIF + get_all_images sans EXIF par défaut)
 >
 > ### Décisions Projet (validées par le propriétaire)
 
@@ -269,12 +269,14 @@ LuminaFast/
 │   └── hooks/                       # Hooks React personnalisés
 │       ├── AGENTS.md               # Conventions hooks + async patterns
 │       ├── useAppShortcuts.ts      # Raccourcis clavier globaux + cleanup listeners (M.3.1)
+│       ├── useLazyImageMeta.ts     # Chargement lazy EXIF on-demand + hydration store (M.3.2)
 │       ├── useCatalog.ts           # Hook principal catalogue (mapping DTO→CatalogImage, EXIF, isSynced, callbacks)
 │       ├── useDiscovery.ts         # Hook discovery (reset cleanup, preview séquentiel)
 │       ├── useSearch.ts            # Hook search (debounce 500ms, query parsing)
 │       ├── useWasmCanvasRender.ts  # Hook rendu WASM sur canvas (chargement image, normalisation filtres) — Maintenance
-│       └── __tests__/             # Tests hooks (5 fichiers)
+│       └── __tests__/             # Tests hooks (6 fichiers)
 │           ├── useAppShortcuts.test.ts # Tests listener keydown + matching + ignore champs saisie (M.3.1)
+│           ├── useLazyImageMeta.test.ts # Tests lazy-load EXIF (enabled/disabled + hydration) (M.3.2)
 │           └── useWasmCanvasRender.test.ts # Tests hook WASM canvas render (Maintenance)
 │   ├── test/                       # Infrastructure tests et mocks
 │   │   ├── setup.ts                # Configuration tests globale (setupFilesAfterEnv)
@@ -705,6 +707,8 @@ export interface CatalogEvent {
 
 Depuis la maintenance **M.3.1**, les raccourcis globaux sont gérés par `useAppShortcuts` (hook dédié) au lieu d’un listener inline dans `App.tsx`.
 
+Depuis la maintenance **M.3.2 (en cours)**, la grille charge les images via `get_all_images` sans jointure EXIF par défaut, et les métadonnées EXIF sont chargées à la demande via `useLazyImageMeta` + `imageDataService` (prefetch hover + chargement panneau droit).
+
 | Touche       | Action                    | Implémenté ? |
 | ------------ | ------------------------- | ------------ |
 | `G`          | Vue Bibliothèque (grille) | ✅           |
@@ -1086,6 +1090,14 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 - ✅ `tauri.conf.json` restreint `assetProtocol.scope` et CSP (suppression `unsafe-eval`).
 - ✅ Tests sécurité passants (`services::security::tests`) + non-régression discovery (`test_create_discovery_config`, `test_validate_discovery_path`).
 
+**M.3.2 — Optimisation Grille & Données (2026-03-10, en cours)** :
+
+- ✅ `get_all_images` backend accepte `includeExif` optionnel et retourne désormais un jeu de données "brief" sans EXIF par défaut.
+- ✅ `imageDataService.ts` introduit cache + déduplication de requêtes EXIF on-demand.
+- ✅ `useLazyImageMeta.ts` charge et hydrate les EXIF uniquement quand nécessaire (panneau droit/détail).
+- ✅ `GridView.tsx` déclenche un prefetch EXIF au hover pour fluidifier l’affichage des métadonnées.
+- ✅ Tests ciblés ajoutés : `useLazyImageMeta.test.ts` + `GridView.performance.test.tsx`.
+
 ---
 
 ## 15. Service Filesystem
@@ -1459,6 +1471,7 @@ getAppliedEdits(imageId: number): EventDTO[]                   // Retrieve
 
 | Date       | Phase               | Modification                                                                     | Raison                                         |
 | ---------- | ------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------- |
+| 2026-03-10 | M.3.2 (en cours)    | get_all_images sans EXIF par défaut + lazy EXIF on-demand (hook/service + prefetch hover) | Réduction coût chargement grille volumineuse   |
 | 2026-03-10 | M.2.2               | Whitelist dynamique paths, validation traversal, hardening `assetProtocol` + CSP | Réduction surface d'attaque filesystem/XSS     |
 | 2026-03-10 | M.2.1a              | Connection pooling SQLite (r2d2), tuning env, retry lock/busy, métriques pool    | Robustesse ingestion/discovery sous contention |
 | 2026-03-03 | 4.3                 | Historique interactif + snapshots nommés (create/restore/delete)                 | Livraison complète de la Phase 4.3             |

@@ -1,6 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ActiveView, CatalogImage } from '@/types';
+import { imageDataService } from '@/services/imageDataService';
 import { LazyLoadedImageCard } from './LazyLoadedImageCard';
 import './library.css';
 
@@ -124,16 +125,20 @@ export const GridView = ({
                   const isSelected = selection.includes(img.id);
 
                   return (
-                    <LazyLoadedImageCard
+                    <div
                       key={img.id}
-                      image={img}
-                      isSelected={isSelected}
-                      itemWidth={itemWidth}
-                      itemHeight={itemHeight}
-                      selectedImageIds={selection}
-                      onToggleSelection={onToggleSelection}
-                      onSetActiveView={onSetActiveView}
-                    />
+                      onMouseEnter={() => imageDataService.prefetchImageExif(img.id)}
+                    >
+                      <LazyLoadedImageCard
+                        image={img}
+                        isSelected={isSelected}
+                        itemWidth={itemWidth}
+                        itemHeight={itemHeight}
+                        selectedImageIds={selection}
+                        onToggleSelection={onToggleSelection}
+                        onSetActiveView={onSetActiveView}
+                      />
+                    </div>
                   );
                 })}
               </div>

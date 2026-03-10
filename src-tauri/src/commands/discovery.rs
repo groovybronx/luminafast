@@ -74,133 +74,110 @@ fn get_db_path() -> std::path::PathBuf {
 
 /// Ingest a single discovered file using the main database
 #[tauri::command]
-pub fn ingest_file(file: DiscoveredFile) -> Result<IngestionResult, String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        let ingestion_service = get_ingestion_service();
-        let result = ingestion_service
-            .ingest_file(&file)
-            .await
-            .map_err(|e| e.to_string())?;
+pub async fn ingest_file(file: DiscoveredFile) -> Result<IngestionResult, String> {
+    let ingestion_service = get_ingestion_service();
+    let result = ingestion_service
+        .ingest_file(&file)
+        .await
+        .map_err(|e| e.to_string())?;
 
-        Ok(result)
-    })
+    Ok(result)
 }
 
 /// Batch ingest multiple files using the main database with progress events
 #[tauri::command]
-pub fn batch_ingest(
+pub async fn batch_ingest(
     app_handle: AppHandle,
     request: BatchIngestionRequest,
 ) -> Result<BatchIngestionResult, String> {
     // Validate that all files were part of a discovery session
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        let discovery_service = get_discovery_service();
+    let discovery_service = get_discovery_service();
 
-        // Get discovered files for the session
-        let discovered_files = discovery_service
-            .get_session_files(request.session_id)
-            .await
-            .map_err(|e| format!("Failed to get session files: {}", e))?;
+    // Get discovered files for the session
+    let discovered_files = discovery_service
+        .get_session_files(request.session_id)
+        .await
+        .map_err(|e| format!("Failed to get session files: {}", e))?;
 
-        // Create a set of valid paths from the discovery session
-        let valid_paths: std::collections::HashSet<_> = discovered_files
-            .iter()
-            .map(|f| f.path.clone())
-            .collect();
+    // Create a set of valid paths from the discovery session
+    let valid_paths: std::collections::HashSet<_> =
+        discovered_files.iter().map(|f| f.path.clone()).collect();
 
-        // Validate that all requested files are in the discovery session
-        for file_path in &request.file_paths {
-            if !valid_paths.contains(file_path) {
-                return Err(format!(
-                    "File not found in discovery session: {}. All files must be from a valid discovery session.",
-                    file_path.display()
-                ));
-            }
+    // Validate that all requested files are in the discovery session
+    for file_path in &request.file_paths {
+        if !valid_paths.contains(file_path) {
+            return Err(format!(
+                "File not found in discovery session: {}. All files must be from a valid discovery session.",
+                file_path.display()
+            ));
         }
+    }
 
-        // Proceed with ingestion only if all files are validated
-        let ingestion_service = get_ingestion_service();
-        let result = ingestion_service
-            .batch_ingest(&request, Some(app_handle))
-            .await
-            .map_err(|e| e.to_string())?;
+    // Proceed with ingestion only if all files are validated
+    let ingestion_service = get_ingestion_service();
+    let result = ingestion_service
+        .batch_ingest(&request, Some(app_handle))
+        .await
+        .map_err(|e| e.to_string())?;
 
-        Ok(result)
-    })
+    Ok(result)
 }
 
 /// Start a new discovery session
 #[tauri::command]
-pub fn start_discovery(config: DiscoveryConfig) -> Result<DiscoverySession, String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        let service = get_discovery_service();
-        let session_id = service
-            .start_discovery(config)
-            .await
-            .map_err(|e| e.to_string())?;
-        service
-            .get_session_status(session_id)
-            .await
-            .map_err(|e| e.to_string())
-    })
+pub async fn start_discovery(config: DiscoveryConfig) -> Result<DiscoverySession, String> {
+    let service = get_discovery_service();
+    let session_id = service
+        .start_discovery(config)
+        .await
+        .map_err(|e| e.to_string())?;
+    service
+        .get_session_status(session_id)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// Stop an active discovery session
 #[tauri::command]
-pub fn stop_discovery(#[allow(non_snake_case)] sessionId: Uuid) -> Result<(), String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        get_discovery_service()
-            .stop_discovery(sessionId)
-            .await
-            .map_err(|e| e.to_string())
-    })
+pub async fn stop_discovery(#[allow(non_snake_case)] sessionId: Uuid) -> Result<(), String> {
+    get_discovery_service()
+        .stop_discovery(sessionId)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// Get the status of a discovery session
 #[tauri::command]
-pub fn get_discovery_status(
+pub async fn get_discovery_status(
     #[allow(non_snake_case)] sessionId: Uuid,
 ) -> Result<DiscoverySession, String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        let session = get_discovery_service()
-            .get_session_status(sessionId)
-            .await
-            .map_err(|e| e.to_string())?;
+    let session = get_discovery_service()
+        .get_session_status(sessionId)
+        .await
+        .map_err(|e| e.to_string())?;
 
-        Ok(session)
-    })
+    Ok(session)
 }
 
 /// Get all discovery sessions
 #[tauri::command]
-pub fn get_all_discovery_sessions() -> Result<Vec<DiscoverySession>, String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        let sessions = get_discovery_service().get_all_sessions().await;
+pub async fn get_all_discovery_sessions() -> Result<Vec<DiscoverySession>, String> {
+    let sessions = get_discovery_service().get_all_sessions().await;
 
-        Ok(sessions)
-    })
+    Ok(sessions)
 }
 
 /// Get discovered files for a session
 #[tauri::command]
-pub fn get_discovered_files(
+pub async fn get_discovered_files(
     #[allow(non_snake_case)] sessionId: Uuid,
 ) -> Result<Vec<DiscoveredFile>, String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        let files = get_discovery_service()
-            .get_session_files(sessionId)
-            .await
-            .map_err(|e| e.to_string())?;
+    let files = get_discovery_service()
+        .get_session_files(sessionId)
+        .await
+        .map_err(|e| e.to_string())?;
 
-        Ok(files)
-    })
+    Ok(files)
 }
 
 /// Create a discovery configuration from a directory path
@@ -280,54 +257,48 @@ pub async fn get_default_discovery_config() -> Result<DiscoveryConfig, String> {
 
 /// Clean up old discovery sessions
 #[tauri::command]
-pub fn cleanup_discovery_sessions(max_age_hours: u64) -> Result<usize, String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        let cleaned = get_discovery_service()
-            .cleanup_old_sessions(max_age_hours)
-            .await
-            .map_err(|e| e.to_string())?;
+pub async fn cleanup_discovery_sessions(max_age_hours: u64) -> Result<usize, String> {
+    let cleaned = get_discovery_service()
+        .cleanup_old_sessions(max_age_hours)
+        .await
+        .map_err(|e| e.to_string())?;
 
-        Ok(cleaned)
-    })
+    Ok(cleaned)
 }
 
 /// Get discovery statistics
 #[tauri::command]
-pub fn get_discovery_stats(
+pub async fn get_discovery_stats(
     #[allow(non_snake_case)] sessionId: Uuid,
 ) -> Result<DiscoveryStats, String> {
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(async {
-        // Get session status
-        let session = get_discovery_service()
-            .get_session_status(sessionId)
-            .await
-            .map_err(|e| e.to_string())?;
+    // Get session status
+    let session = get_discovery_service()
+        .get_session_status(sessionId)
+        .await
+        .map_err(|e| e.to_string())?;
 
-        // Get ingestion stats using singleton
-        let ingestion_service = get_ingestion_service();
-        let ingestion_stats = ingestion_service
-            .get_session_stats(sessionId)
-            .await
-            .map_err(|e| e.to_string())?;
+    // Get ingestion stats using singleton
+    let ingestion_service = get_ingestion_service();
+    let ingestion_stats = ingestion_service
+        .get_session_stats(sessionId)
+        .await
+        .map_err(|e| e.to_string())?;
 
-        let stats = DiscoveryStats {
-            session_id: sessionId,
-            status: session.status.clone(),
-            files_found: session.files_found,
-            files_processed: session.files_processed,
-            files_with_errors: session.files_with_errors,
-            progress_percentage: session.progress_percentage,
-            current_directory: session.current_directory.clone(),
-            started_at: session.started_at,
-            completed_at: session.completed_at,
-            duration: session.duration(),
-            ingestion_stats,
-        };
+    let stats = DiscoveryStats {
+        session_id: sessionId,
+        status: session.status.clone(),
+        files_found: session.files_found,
+        files_processed: session.files_processed,
+        files_with_errors: session.files_with_errors,
+        progress_percentage: session.progress_percentage,
+        current_directory: session.current_directory.clone(),
+        started_at: session.started_at,
+        completed_at: session.completed_at,
+        duration: session.duration(),
+        ingestion_stats,
+    };
 
-        Ok(stats)
-    })
+    Ok(stats)
 }
 
 /// Combined discovery statistics

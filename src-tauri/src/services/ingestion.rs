@@ -235,16 +235,21 @@ impl IngestionService {
             let _ = handle.emit("ingestion-progress", &progress);
         }
 
-        // Process files in parallel using Rayon
+        // Create a single tokio runtime for the entire batch (OUTSIDE the parallel iterator)
+        // This replaces the anti-pattern of creating one runtime per file
+        let rt = Arc::new(tokio::runtime::Runtime::new().map_err(|e| {
+            DiscoveryError::IoError(format!("Failed to create tokio runtime: {}", e))
+        })?);
+
+        // Process files in parallel using Rayon with a single Runtime instance
         let ingest_results: Vec<_> = thread_pool.install(|| {
             files_to_process
                 .par_iter()
                 .map(|file| {
                     let file_start_time = Instant::now();
 
-                    // Process file (blocking operation moved to thread pool)
-                    // Create a runtime per thread to avoid blocking the tokio runtime
-                    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
+                    // Process file: reuse the same runtime for all iterations (via Arc clone)
+                    // This eliminates the O(n) runtime creation cost that was catastrophic at 1000+ files
                     let ingest_result = rt.block_on(async { self.ingest_file(file).await });
 
                     let file_processing_time = file_start_time.elapsed().as_millis() as u64;

@@ -230,8 +230,8 @@ Memory: Only rendered items in DOM (~5-10 MB)
 
 - [x] `cargo check` ✅
 - [x] `cargo clippy` ✅ (0 warnings)
-- [ ] `get_all_images` response ~100ms (baseline, no EXIF parsing)
-- [ ] `get_image_exif` response ~200ms per image
+- [x] `get_all_images` response ~100ms (baseline, no EXIF parsing) — benchmark test 5000 rows: `brief=211us`
+- [x] `get_image_exif` response ~200ms per image — benchmark test: `avg=2us/query` (1000 itérations)
 
 ### Integration
 
@@ -239,3 +239,18 @@ Memory: Only rendered items in DOM (~5-10 MB)
 - [ ] User can interact with 5000 images library smoothly
 - [x] CHANGELOG et APP_DOCUMENTATION mis à jour
 - [x] Code compile sans warning
+
+## Mesures Récentes (2026-03-10)
+
+- `cargo test benchmark_get_all_images_queries_with_5000_rows -- --nocapture`
+  - `M3.2 benchmark (5000 rows): brief=211us (0ms), with_exif=147us (0ms)`
+- `cargo test benchmark_get_image_exif_query_latency -- --nocapture`
+  - `M3.2 benchmark get_image_exif: total=2414us, avg=2us per query`
+- `runTests` frontend ciblés
+  - `src/components/library/__tests__/GridView.performance.test.tsx` ✅
+  - `src/hooks/__tests__/useLazyImageMeta.test.ts` ✅
+
+### Points Restants Avant Clôture M.3.2
+
+- Validation UX manuelle en situation réelle (scroll + interactions sur bibliothèque 5000 images)
+- Mesure mémoire/FPS en environnement app (DevTools/runtime) pour confirmer critères frontend finaux

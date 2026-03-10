@@ -1,221 +1,22 @@
-import { Check, Database, Import, Pencil, Trash2, X, Zap } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Database, Import, X, Zap } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useCollectionStore } from '@/stores/collectionStore';
 import { useFolderStore } from '@/stores/folderStore';
 import { useUiStore } from '@/stores/uiStore';
+import type { DragImageData } from '@/types';
 import type { SmartQuery } from '@/types/collection';
-import {
-  isDragImageData,
-  parseDragData,
-  type CollectionDTO,
-  type DragImageData,
-} from '../../types';
 import { FolderTree } from '../library/FolderTree';
 import { SmartCollectionBuilder } from '../library/SmartCollectionBuilder';
+import { CollectionItem } from '../sidebar/CollectionItem';
+import { NewCollectionInput } from '../sidebar/NewCollectionInput';
+import { QuickFilters } from '../sidebar/QuickFilters';
+import { SmartCollectionItem } from '../sidebar/SmartCollectionItem';
 
 interface LeftSidebarProps {
   sidebarOpen: boolean;
   imageCount: number;
   onSetFilterText: (text: string) => void;
   onShowImport: () => void;
-}
-
-// --- Sous-composant : Formulaire de création inline ---
-interface NewCollectionInputProps {
-  onConfirm: (name: string) => void;
-  onCancel: () => void;
-}
-
-function NewCollectionInput({ onConfirm, onCancel }: NewCollectionInputProps) {
-  const [value, setValue] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && value.trim()) onConfirm(value.trim());
-    if (e.key === 'Escape') onCancel();
-  };
-  return (
-    <div className="flex items-center gap-1 px-1 py-0.5">
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        className="flex-1 text-[11px] bg-zinc-800 text-zinc-200 rounded px-2 py-1 outline-none border border-zinc-600 min-w-0"
-        placeholder="Nom de la collection..."
-        maxLength={80}
-      />
-      <button
-        onClick={() => {
-          if (value.trim()) onConfirm(value.trim());
-        }}
-        disabled={!value.trim()}
-        className="text-emerald-400 hover:text-emerald-300 disabled:opacity-30 transition-colors"
-        aria-label="Valider"
-      >
-        <Check size={12} />
-      </button>
-      <button
-        onClick={onCancel}
-        className="text-zinc-500 hover:text-zinc-300 transition-colors"
-        aria-label="Annuler"
-      >
-        <X size={12} />
-      </button>
-    </div>
-  );
-}
-
-// --- Sous-composant : Item de collection ---
-interface CollectionItemProps {
-  collection: CollectionDTO;
-  isActive: boolean;
-  isDragOver: boolean;
-  onSelect: (id: number) => void;
-  onDelete: (id: number) => void;
-  onRename: (id: number, name: string) => void;
-  onDrop: (collectionId: number, dragData: DragImageData) => Promise<void>;
-  onDragOver: () => void;
-  onDragLeave: () => void;
-}
-
-function CollectionItem({
-  collection,
-  isActive,
-  isDragOver,
-  onSelect,
-  onDelete,
-  onRename,
-  onDrop,
-  onDragOver,
-  onDragLeave,
-}: CollectionItemProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(collection.name);
-  const inputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (isEditing) inputRef.current?.focus();
-  }, [isEditing]);
-
-  const commitRename = () => {
-    const trimmed = editValue.trim();
-    if (trimmed && trimmed !== collection.name) onRename(collection.id, trimmed);
-    setIsEditing(false);
-  };
-
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    onDragOver();
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    const related = e.relatedTarget as Node | null;
-    const container = e.currentTarget as Node;
-    // Only fire leave when pointer truly exits the container (not moving to a child)
-    if (!related || !container.contains(related)) {
-      onDragLeave();
-    }
-  };
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onDragLeave();
-
-    try {
-      const jsonStr = e.dataTransfer.getData('application/json');
-      if (!jsonStr) return;
-
-      const dragData = parseDragData(jsonStr);
-      if (dragData && isDragImageData(dragData) && dragData.ids.length > 0) {
-        await onDrop(collection.id, dragData);
-      }
-    } catch (err) {
-      console.error(`[CollectionItem] Drop error:`, err);
-    }
-  };
-
-  if (isEditing) {
-    return (
-      <div className="px-1 py-0.5">
-        <input
-          ref={inputRef}
-          type="text"
-          value={editValue}
-          maxLength={80}
-          onChange={(e) => setEditValue(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') commitRename();
-            if (e.key === 'Escape') {
-              setEditValue(collection.name);
-              setIsEditing(false);
-            }
-          }}
-          onBlur={commitRename}
-          title="Renommer la collection"
-          className="w-full text-[11px] bg-zinc-800 text-zinc-200 rounded px-2 py-1 outline-none border border-blue-600"
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={`flex items-center gap-1 text-[11px] rounded group transition-colors select-none ${
-        isDragOver ? 'bg-blue-500/30 border border-blue-400 border-dashed' : ''
-      } ${
-        isActive
-          ? 'bg-blue-600/25 text-white'
-          : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
-      }`}
-      onDragEnter={handleDragEnter}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
-      <button
-        className="flex-1 flex items-center gap-2 p-1.5 min-w-0 text-left"
-        onClick={() => onSelect(collection.id)}
-      >
-        <Database
-          size={11}
-          className={`${isActive ? 'text-blue-400' : 'text-zinc-600'} shrink-0`}
-        />
-        <span className="truncate">{collection.name}</span>
-        <span className="ml-auto opacity-30 text-[9px] font-mono shrink-0">
-          {collection.image_count}
-        </span>
-      </button>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsEditing(true);
-        }}
-        className="p-1 opacity-0 group-hover:opacity-50 hover:opacity-100! text-zinc-500 hover:text-zinc-200 transition-all"
-        aria-label={`Renommer ${collection.name}`}
-      >
-        <Pencil size={10} />
-      </button>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete(collection.id);
-        }}
-        className="p-1 opacity-0 group-hover:opacity-50 hover:opacity-100! text-zinc-500 hover:text-red-400 transition-all"
-        aria-label={`Supprimer ${collection.name}`}
-      >
-        <Trash2 size={10} />
-      </button>
-    </div>
-  );
 }
 
 // --- Composant principal ---
@@ -328,102 +129,16 @@ export const LeftSidebar = ({
           </div>
         </section>
 
-        {/* Phase 5.3 — Filtres Rapides */}
-        <section className="mb-8">
-          <div className="flex items-center justify-between text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2 px-2">
-            Filtres
-            {(ratingFilter !== null || flagFilter !== null) && (
-              <button
-                onClick={() => {
-                  setRatingFilter(null);
-                  setFlagFilter(null);
-                }}
-                className="text-zinc-600 hover:text-zinc-400 transition-colors"
-                title="Réinitialiser les filtres"
-                aria-label="Réinitialiser les filtres"
-              >
-                <X size={9} />
-              </button>
-            )}
-          </div>
-          <div className="space-y-0.5">
-            {/* Ligne rating */}
-            <div className="flex items-center gap-1 px-2 py-1">
-              <span className="text-[9px] text-zinc-700 w-8 shrink-0 font-mono uppercase">
-                Note
-              </span>
-              <button
-                onClick={() => setRatingFilter(null)}
-                className={`text-[10px] w-6 text-center rounded py-0.5 transition-colors ${
-                  ratingFilter === null
-                    ? 'text-zinc-200 bg-zinc-700'
-                    : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800'
-                }`}
-                aria-label="Toutes les notes"
-                title="Toutes les notes"
-              >
-                —
-              </button>
-              {([1, 2, 3, 4, 5] as const).map((star) => (
-                <button
-                  key={star}
-                  onClick={() => setRatingFilter(ratingFilter === star ? null : star)}
-                  className={`text-[10px] w-6 text-center rounded py-0.5 font-mono transition-colors ${
-                    ratingFilter === star
-                      ? 'text-amber-400 bg-amber-500/15'
-                      : 'text-zinc-600 hover:text-amber-400 hover:bg-zinc-800'
-                  }`}
-                  aria-label={`Filtrer ${star} étoile(s) minimum`}
-                  title={`${star}★ minimum`}
-                >
-                  {star}★
-                </button>
-              ))}
-            </div>
-            {/* Ligne flag */}
-            <div className="flex items-center gap-1 px-2 py-1">
-              <span className="text-[9px] text-zinc-700 w-8 shrink-0 font-mono uppercase">
-                Flag
-              </span>
-              <button
-                onClick={() => setFlagFilter(null)}
-                className={`text-[10px] w-6 text-center rounded py-0.5 transition-colors ${
-                  flagFilter === null
-                    ? 'text-zinc-200 bg-zinc-700'
-                    : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800'
-                }`}
-                aria-label="Tous les flags"
-                title="Tous"
-              >
-                —
-              </button>
-              <button
-                onClick={() => setFlagFilter(flagFilter === 'pick' ? null : 'pick')}
-                className={`text-[10px] px-2 text-center rounded py-0.5 font-bold transition-colors ${
-                  flagFilter === 'pick'
-                    ? 'text-emerald-400 bg-emerald-500/15'
-                    : 'text-zinc-600 hover:text-emerald-400 hover:bg-zinc-800'
-                }`}
-                aria-label="Filtrer les picks"
-                title="Afficher uniquement les picks (P)"
-              >
-                Pick
-              </button>
-              <button
-                onClick={() => setFlagFilter(flagFilter === 'reject' ? null : 'reject')}
-                className={`text-[10px] px-2 text-center rounded py-0.5 font-bold transition-colors ${
-                  flagFilter === 'reject'
-                    ? 'text-red-400 bg-red-500/15'
-                    : 'text-zinc-600 hover:text-red-400 hover:bg-zinc-800'
-                }`}
-                aria-label="Filtrer les rejects"
-                title="Afficher uniquement les rejects (X)"
-              >
-                Reject
-              </button>
-            </div>
-          </div>
-        </section>
+        <QuickFilters
+          ratingFilter={ratingFilter}
+          flagFilter={flagFilter}
+          onSetRatingFilter={setRatingFilter}
+          onSetFlagFilter={setFlagFilter}
+          onReset={() => {
+            setRatingFilter(null);
+            setFlagFilter(null);
+          }}
+        />
 
         <section className="mb-8">
           <div className="flex justify-between items-center text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-3 px-2">
@@ -480,40 +195,13 @@ export const LeftSidebar = ({
           </div>
           <div className="space-y-0.5">
             {smartCollections.map((c) => (
-              <div
+              <SmartCollectionItem
                 key={c.id}
-                className={`flex items-center gap-1 text-[11px] rounded group transition-colors ${
-                  activeCollectionId === c.id
-                    ? 'bg-blue-600/25 text-white'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
-                }`}
-              >
-                <button
-                  className="flex-1 flex items-center gap-2 p-1.5 min-w-0 text-left"
-                  onClick={() => void handleSelect(c.id)}
-                >
-                  <Zap
-                    size={11}
-                    className={`${
-                      activeCollectionId === c.id ? 'text-amber-400' : 'text-zinc-600'
-                    } shrink-0`}
-                  />
-                  <span className="truncate">{c.name}</span>
-                  <span className="ml-auto opacity-30 text-[9px] font-mono shrink-0">
-                    {c.image_count}
-                  </span>
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void deleteCollection(c.id);
-                  }}
-                  className="p-1 opacity-0 group-hover:opacity-50 hover:opacity-100! text-zinc-500 hover:text-red-400 transition-all"
-                  aria-label={`Supprimer ${c.name}`}
-                >
-                  <Trash2 size={10} />
-                </button>
-              </div>
+                collection={c}
+                isActive={activeCollectionId === c.id}
+                onSelect={(id) => void handleSelect(id)}
+                onDelete={(id) => void deleteCollection(id)}
+              />
             ))}
             {smartCollections.length === 0 && !showSmartBuilder && (
               <p className="text-[10px] text-zinc-700 italic px-2 py-1">

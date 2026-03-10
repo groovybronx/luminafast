@@ -56,6 +56,7 @@
 | M           | 1.1        | Correction Runtime Ingestion (Élimination O(n) Runtime::new bottleneck)                         | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 1.1a       | Monitoring Threadpool Tokio (Saturation Alerts + Metrics Collection)                            | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 1.2        | Migration Async IO (std::fs → tokio::fs dans contextes async)                                   | ✅ Complétée | 2026-03-10 | Copilot |
+| M           | 1.3        | Nettoyage Code Mort (fichier debug + fonctions WASM deprecated)                                 | ✅ Complétée | 2026-03-10 | Copilot |
 
 | 5 | 5.1 | Panneau EXIF Connecté | ✅ Complétée | 2026-07-10 | Copilot |
 | 5 | 5.2 | Système de Tags Hiérarchique | ✅ Complétée | 2026-07-11 | Copilot |
@@ -90,11 +91,11 @@
 
 ## Phase Actuelle
 
-> **Maintenance M.1.2** : Migration Async IO (clôturée)
+> **Maintenance M.1.3** : Nettoyage Code Mort (clôturée)
 >
-> Brief : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.1.2-migration-async-io.md`
-> Branche : `phase/m.1.2-migration-async-io`
-> Note qualité : `cargo clippy --all-targets -D warnings` ✅ (dettes historiques M.1.2 résolues)
+> Brief : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.1.3-nettoyage-code-mort.md`
+> Branche : `phase/m.1.3-nettoyage-code-mort`
+> Note qualité : validations backend/frontend ✅ (`cargo check`, `clippy`, `cargo test`, `tsc`, `eslint`)
 
 ---
 
@@ -4711,10 +4712,47 @@ test result: ok. 10 passed; 0 failed
 
 ---
 
+## 2026-03-10 — Phase M.1.3 : Nettoyage Code Mort (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée**
+**Agent** : GitHub Copilot (GPT-5.3-Codex)
+**Brief** : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.1.3-nettoyage-code-mort.md`
+**Branche** : `phase/m.1.3-nettoyage-code-mort`
+
+### Analyse Cause Racine
+
+**Symptôme** : présence de code mort explicite (`src-tauri/src/test_hook.rs`) et d'un bloc WASM legacy non utilisé gardé en doublon du pipeline single-pass.
+
+**Cause racine technique** : accumulation de code historique de debug/référence non relié au flux de production actuel.
+
+**Correction structurelle** : suppression du fichier debug et suppression des anciennes fonctions WASM dépréciées pour ne conserver qu'une implémentation active.
+
+### Travaux Réalisés
+
+- Supprimé : `src-tauri/src/test_hook.rs`.
+- Nettoyé : `luminafast-wasm/src/image_processing.rs` (suppression du bloc `OLD FUNCTIONS (DEPRECATED FOR OPTIMIZATION)`).
+- Audit M.1.3 : pas de commandes Tauri catalog non exposées; pas de suppression de dépendances Cargo/npm réalisée (usages actifs détectés sur les crates ciblées).
+
+### Validation
+
+- ✅ `cargo check` (src-tauri)
+- ✅ `cargo clippy --all-targets -- -D warnings` (src-tauri)
+- ✅ `cargo test` (src-tauri) — **225/225** + doc-tests
+- ✅ `cargo check` + `cargo test` (luminafast-wasm) — **11/11**
+- ✅ `npm run type-check`
+- ✅ `npm run lint`
+
+### Impact
+
+- Réduction du bruit technique (moins de code dormant à maintenir).
+- WASM rendu plus lisible: une seule voie de traitement pixel conservée.
+
+---
+
 ## Statistiques du Projet
 
 - **Sous-phases totales** : 38
-- **Complétées** : 23 / 38 (60.5%)
+- **Complétées** : 24 / 38 (63.2%)
 - **En cours** : 0
 - **Bloquées** : 0
 - **Dernière mise à jour** : 2026-03-10

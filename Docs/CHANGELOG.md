@@ -55,6 +55,7 @@
 | 4           | 4.3        | Historique & Snapshots UI                                                                       | ✅ Complétée | 2026-03-03 | Copilot |
 | M           | 1.1        | Correction Runtime Ingestion (Élimination O(n) Runtime::new bottleneck)                         | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 1.1a       | Monitoring Threadpool Tokio (Saturation Alerts + Metrics Collection)                            | ✅ Complétée | 2026-03-10 | Copilot |
+| M           | 1.2        | Migration Async IO (std::fs → tokio::fs dans contextes async)                                   | ✅ Complétée | 2026-03-10 | Copilot |
 
 | 5 | 5.1 | Panneau EXIF Connecté | ✅ Complétée | 2026-07-10 | Copilot |
 | 5 | 5.2 | Système de Tags Hiérarchique | ✅ Complétée | 2026-07-11 | Copilot |
@@ -89,10 +90,11 @@
 
 ## Phase Actuelle
 
-> **P1 Phase 5.4++** : Production Readiness (Conformité TypeScript + WASM Documentation)
+> **Maintenance M.1.2** : Migration Async IO (clôturée)
 >
-> Brief : Tâche interne (P0 + P1 du post-review)
-> Branche : `phase/5.4-react-conformity-fix`
+> Brief : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.1.2-migration-async-io.md`
+> Branche : `phase/m.1.2-migration-async-io`
+> Note qualité : `cargo clippy --all-targets -D warnings` ✅ (dettes historiques M.1.2 résolues)
 
 ---
 
@@ -4670,13 +4672,52 @@ test result: ok. 10 passed; 0 failed
 
 ---
 
+## 2026-03-10 — Phase M.1.2 : Migration Async IO (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée**
+**Agent** : GitHub Copilot (GPT-5.3-Codex)
+**Brief** : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.1.2-migration-async-io.md`
+**Branche** : `phase/m.1.2-migration-async-io`
+**Dépendance** : M.1.1 ✅ (runtime ingestion)
+
+### Analyse Cause Racine
+
+**Symptôme** : plusieurs chemins `async fn` backend utilisaient encore `std::fs`, créant des sections bloquantes sur le runtime Tokio (scan, preview, hashing scan, commandes filesystem, XMP).
+
+**Cause racine technique** : la migration asynchrone n'avait couvert que les points principaux initiaux; des opérations IO sync restaient dans des commandes et services secondaires, notamment vérifications de chemins, traversal récursif et lecture/écriture XMP.
+
+**Correction structurelle** : migration systématique vers `tokio::fs` dans les chemins asynchrones, traversal itératif async (`read_dir().next_entry().await`), wrappers XMP async, et correction de lock scopes pour éviter mutex DB tenu à travers des `.await`.
+
+### Travaux Réalisés
+
+- **Lot core M.1.2** : `services/discovery.rs`, `services/preview.rs`, `commands/discovery.rs`, `commands/preview.rs`.
+- **Lot A** : `services/ingestion.rs` (metadata async), `services/blake3.rs` (`spawn_blocking` pour hash streaming).
+- **Lot B** : `commands/filesystem.rs` et `commands/hashing.rs` (IO async + recursion async).
+- **Lot C** : `services/xmp.rs`, `commands/xmp.rs`, `services/filesystem.rs` (checks sync supprimés en chemins async).
+- **Tests de garde** ajoutés pour éviter la réintroduction de patterns sync IO dans les modules critiques.
+
+### Validation
+
+- ✅ `cargo check` (2026-03-10) — compile OK.
+- ✅ `cargo test` (2026-03-10) — **225/225 tests** + doc-tests OK.
+- ✅ Grep des fichiers M.1.2 : chemins async migrés vers `tokio::fs` (`discovery`, `preview`, `ingestion`, `filesystem`, `hashing`, `xmp`).
+- ✅ `cargo clippy --all-targets -- -D warnings` : passe après correction des tests `src/commands/catalog.rs` et `src/services/ingestion.rs`.
+
+### Impact
+
+- Élimination des points de blocage IO connus dans les chemins async backend ciblés.
+- Réduction du risque de starvation du runtime Tokio pendant import/scan/XMP.
+- Base prête pour M.2.x (optimisations DB/IO) sans dépendance sync cachée sur les modules migrés.
+
+---
+
 ## Statistiques du Projet
 
 - **Sous-phases totales** : 38
-- **Complétées** : 22 / 38 (57.9%)
+- **Complétées** : 23 / 38 (60.5%)
 - **En cours** : 0
 - **Bloquées** : 0
-- **Dernière mise à jour** : 2026-03-03
+- **Dernière mise à jour** : 2026-03-10
 
 **Preview Format Selection (Phases A-D)** : ✅ 100% Complete
 - Architecture: ✅ Type-safe 3-format pyramid
@@ -4685,7 +4726,4 @@ test result: ok. 10 passed; 0 failed
 - Testing: ✅ 17 comprehensive tests
 - Documentation: ✅ Full API + implementation details
 
-```
-
-```
 ````

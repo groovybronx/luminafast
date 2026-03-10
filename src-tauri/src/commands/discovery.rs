@@ -190,8 +190,12 @@ pub async fn create_discovery_config(
 ) -> Result<DiscoveryConfig, String> {
     let path = PathBuf::from(&rootPath);
 
-    if !path.exists() {
-        return Err("Directory does not exist".to_string());
+    let metadata = tokio::fs::metadata(&path)
+        .await
+        .map_err(|_| "Directory does not exist".to_string())?;
+
+    if !metadata.is_dir() {
+        return Err("Path is not a directory".to_string());
     }
 
     let config = DiscoveryConfig {
@@ -234,19 +238,19 @@ pub async fn get_supported_formats() -> Result<Vec<String>, String> {
 pub async fn validate_discovery_path(path: String) -> Result<bool, String> {
     let path_buf = PathBuf::from(&path);
 
-    if !path_buf.exists() {
-        return Err("Path does not exist".to_string());
-    }
+    let metadata = tokio::fs::metadata(&path_buf)
+        .await
+        .map_err(|_| "Path does not exist".to_string())?;
 
-    if !path_buf.is_dir() {
+    if !metadata.is_dir() {
         return Err("Path is not a directory".to_string());
     }
 
     // Check if we can read the directory
-    match std::fs::read_dir(&path_buf) {
-        Ok(_) => Ok(true),
-        Err(e) => Err(format!("Cannot read directory: {}", e)),
-    }
+    tokio::fs::read_dir(&path_buf)
+        .await
+        .map(|_| true)
+        .map_err(|e| format!("Cannot read directory: {}", e))
 }
 
 /// Get default discovery configuration

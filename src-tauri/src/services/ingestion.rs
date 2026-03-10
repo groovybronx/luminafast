@@ -172,7 +172,7 @@ impl IngestionService {
             let path = std::path::Path::new(file_path);
 
             // Get file metadata
-            let metadata = std::fs::metadata(path).map_err(|e| {
+            let metadata = tokio::fs::metadata(path).await.map_err(|e| {
                 DiscoveryError::IoError(format!(
                     "Failed to read metadata for {}: {}",
                     path.display(),
@@ -315,7 +315,7 @@ impl IngestionService {
                     .fetch_add(file_processing_time as usize, Ordering::Relaxed);
 
                 // Update file size counter
-                if let Ok(metadata) = std::fs::metadata(&file_clone.path) {
+                if let Ok(metadata) = tokio::fs::metadata(&file_clone.path).await {
                     total_size_clone.fetch_add(metadata.len() as usize, Ordering::Relaxed);
                 }
 
@@ -501,8 +501,9 @@ impl IngestionService {
         file_path: &Path,
     ) -> Result<BasicExif, DiscoveryError> {
         // Get file metadata as basic information
-        let metadata =
-            std::fs::metadata(file_path).map_err(|e| DiscoveryError::IoError(e.to_string()))?;
+        let metadata = tokio::fs::metadata(file_path)
+            .await
+            .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
 
         let modified_time = metadata
             .modified()
@@ -1111,15 +1112,15 @@ mod tests {
     /// Test: No Runtime::new() in ingestion.rs (M.1.1 requirement)
     #[test]
     fn test_no_runtime_new_bottleneck() {
-        // We verify source embedded in binary doesn't contain the pattern
-        // (This is guaranteed by the grep check in CI/checkpoints)
-        // For unit test simplicity we just confirm the fix was applied
-
-        // The fact that ingest_file_internal is async and tokio::spawn works
-        // with Semaphore proves we're not creating Runtime::new() per file anymore
+        let source = include_str!("ingestion.rs");
+        let production_section = source.split("#[cfg(test)]").next().unwrap_or(source);
         assert!(
-            true,
-            "M.1.1: Runtime pattern refactored to async/await with tokio::spawn"
+            !production_section.contains("Runtime::new("),
+            "ingestion.rs must not create Tokio runtimes per file"
+        );
+        assert!(
+            production_section.contains("tokio::spawn"),
+            "ingestion.rs should use tokio::spawn for batch ingestion"
         );
     }
 
@@ -1314,7 +1315,9 @@ mod tests {
         }
         service.metrics_collector.set_queue_depth(3);
 
-        let metrics = service.metrics_collector.get_latest_metrics().unwrap();
+        let Some(metrics) = service.metrics_collector.get_latest_metrics() else {
+            panic!("Metrics snapshot should be present after activity");
+        };
 
         assert_eq!(metrics.active_tasks, 5, "Should show 5 active tasks");
         assert_eq!(metrics.queue_depth, 3, "Should show 3 queued tasks");
@@ -1371,7 +1374,9 @@ mod tests {
 
         let service = IngestionService::with_max_threads(blake3, db, 16); // Custom: 16 threads
 
-        let metrics = service.metrics_collector.get_latest_metrics().unwrap();
+        let Some(metrics) = service.metrics_collector.get_latest_metrics() else {
+            panic!("Metrics snapshot should be present after service init");
+        };
         assert_eq!(
             metrics.max_threads, 16,
             "Should use custom max_threads value"
@@ -1382,10 +1387,22 @@ mod tests {
             service.metrics_collector.increment_active_tasks();
         }
 
-        let metrics = service.metrics_collector.get_latest_metrics().unwrap();
+        let Some(metrics) = service.metrics_collector.get_latest_metrics() else {
+            panic!("Metrics snapshot should be present after incrementing tasks");
+        };
         assert!(
             (metrics.saturation_percentage - 50.0).abs() < 0.1,
             "Should be 50% saturated with custom threadpool size"
+        );
+    }
+
+    #[test]
+    fn test_source_has_no_std_fs_usage() {
+        let source = include_str!("ingestion.rs");
+        let forbidden = ["std", "::", "fs::"].concat();
+        assert!(
+            !source.contains(&forbidden),
+            "ingestion.rs must not use sync filesystem APIs"
         );
     }
 }

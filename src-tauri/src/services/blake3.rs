@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tokio::fs::metadata;
+use tokio::task;
 
 /// Service de hachage BLAKE3 haute performance
 pub struct Blake3Service {
@@ -50,12 +51,21 @@ impl Blake3Service {
         // Vérifier la taille maximale
         if let Some(max_size) = self.config.max_file_size {
             if meta.len() > max_size {
-                return Err(HashError::FileTooLarge(file_path, meta.len()));
+                return Err(HashError::FileTooLarge(file_path.clone(), meta.len()));
             }
         }
 
-        // Calculer le hash
-        let hash = self.compute_hash_streaming(&file_path, meta.len())?;
+        // Offload du calcul CPU-bound sur le blocking pool pour éviter de bloquer Tokio.
+        let chunk_size = self.config.chunk_size;
+        let file_size = meta.len();
+        let path_for_hash = file_path.clone();
+        let hash = task::spawn_blocking(move || {
+            Self::compute_hash_streaming(&path_for_hash, file_size, chunk_size)
+        })
+        .await
+        .map_err(|e| {
+            HashError::ReadError(file_path.clone(), format!("Hash task join error: {}", e))
+        })??;
 
         // Mettre en cache si activé
         if self.config.enable_cache {
@@ -68,7 +78,11 @@ impl Blake3Service {
     }
 
     /// Calcule le hash BLAKE3 avec streaming pour gérer les gros fichiers
-    fn compute_hash_streaming(&self, file_path: &Path, file_size: u64) -> HashResult<FileHash> {
+    fn compute_hash_streaming(
+        file_path: &Path,
+        file_size: u64,
+        chunk_size: usize,
+    ) -> HashResult<FileHash> {
         let start_time = Instant::now();
 
         let file = File::open(file_path).map_err(|e| match e.kind() {
@@ -81,7 +95,7 @@ impl Blake3Service {
 
         let mut hasher = Hasher::new();
         let mut reader = BufReader::new(file);
-        let mut buffer = vec![0u8; self.config.chunk_size];
+        let mut buffer = vec![0u8; chunk_size];
 
         loop {
             let bytes_read = reader
@@ -432,5 +446,14 @@ mod tests {
         service.clear_cache();
         let (count_after, _) = service.cache_stats();
         assert_eq!(count_after, 0);
+    }
+
+    #[test]
+    fn test_source_uses_spawn_blocking() {
+        let source = include_str!("blake3.rs");
+        assert!(
+            source.contains("spawn_blocking"),
+            "blake3.rs must offload hash computation to spawn_blocking"
+        );
     }
 }

@@ -23,12 +23,14 @@ pub struct PreviewService {
 
 impl PreviewService {
     /// Crée une nouvelle instance du service preview
-    pub fn new(config: PreviewConfig) -> Result<Self, PreviewError> {
+    pub async fn new(config: PreviewConfig) -> Result<Self, PreviewError> {
         // Créer les répertoires de previews Previews.lrdata/
         let previews_dir = config.previews_dir();
-        std::fs::create_dir_all(&previews_dir).map_err(|e| PreviewError::CacheError {
-            message: format!("Impossible de créer le répertoire Previews.lrdata: {}", e),
-        })?;
+        tokio::fs::create_dir_all(&previews_dir)
+            .await
+            .map_err(|e| PreviewError::CacheError {
+                message: format!("Impossible de créer le répertoire Previews.lrdata: {}", e),
+            })?;
 
         // Créer les sous-répertoires pour chaque type de preview
         for preview_type in [
@@ -37,13 +39,15 @@ impl PreviewService {
             PreviewType::OneToOne,
         ] {
             let type_dir = config.preview_type_dir(preview_type);
-            std::fs::create_dir_all(&type_dir).map_err(|e| PreviewError::CacheError {
-                message: format!(
-                    "Impossible de créer le répertoire {}: {}",
-                    preview_type.subdir_name(),
-                    e
-                ),
-            })?;
+            tokio::fs::create_dir_all(&type_dir)
+                .await
+                .map_err(|e| PreviewError::CacheError {
+                    message: format!(
+                        "Impossible de créer le répertoire {}: {}",
+                        preview_type.subdir_name(),
+                        e
+                    ),
+                })?;
         }
 
         Ok(Self {
@@ -74,12 +78,7 @@ impl PreviewService {
             .get_cached_preview_path(source_hash, &preview_type)
             .await
         {
-            if cached_path.exists() {
-                let metadata =
-                    std::fs::metadata(&cached_path).map_err(|e| PreviewError::IoError {
-                        message: format!("Impossible de lire les métadonnées du cache: {}", e),
-                    })?;
-
+            if let Ok(metadata) = tokio::fs::metadata(&cached_path).await {
                 let dimensions = self.get_image_dimensions(&cached_path)?;
 
                 return Ok(PreviewResult {
@@ -176,7 +175,7 @@ impl PreviewService {
             None => return false,
         };
 
-        cached_path.exists()
+        tokio::fs::metadata(cached_path).await.is_ok()
     }
 
     /// Nettoie le cache des previews
@@ -202,7 +201,7 @@ impl PreviewService {
         // Supprimer les fichiers et métadonnées
         for hash in to_remove {
             if let Some(meta) = metadata.remove(&hash) {
-                if let Err(e) = std::fs::remove_file(&meta.path) {
+                if let Err(e) = tokio::fs::remove_file(&meta.path).await {
                     log::warn!(
                         "Impossible de supprimer le fichier preview {:?}: {}",
                         meta.path,
@@ -248,10 +247,12 @@ impl PreviewService {
                 message: "Preview non trouvée en cache".to_string(),
             })?;
 
-        if cached_path.exists() {
-            std::fs::remove_file(&cached_path).map_err(|e| PreviewError::IoError {
-                message: format!("Impossible de supprimer la preview: {}", e),
-            })?;
+        if let Err(e) = tokio::fs::remove_file(&cached_path).await {
+            if e.kind() != std::io::ErrorKind::NotFound {
+                return Err(PreviewError::IoError {
+                    message: format!("Impossible de supprimer la preview: {}", e),
+                });
+            }
         }
 
         // Supprimer des métadonnées
@@ -273,7 +274,7 @@ impl PreviewService {
         let start_time = Instant::now();
 
         // Vérifier que le fichier existe
-        if !file_path.exists() {
+        if tokio::fs::metadata(file_path).await.is_err() {
             return Err(PreviewError::CorruptedFile {
                 path: file_path.to_string_lossy().to_string(),
             });
@@ -332,9 +333,12 @@ impl PreviewService {
         };
 
         // Récupérer les métadonnées du fichier généré
-        let metadata = std::fs::metadata(&output_path).map_err(|e| PreviewError::IoError {
-            message: format!("Impossible de lire les métadonnées de la preview: {}", e),
-        })?;
+        let metadata =
+            tokio::fs::metadata(&output_path)
+                .await
+                .map_err(|e| PreviewError::IoError {
+                    message: format!("Impossible de lire les métadonnées de la preview: {}", e),
+                })?;
 
         Ok(PreviewResult {
             path: output_path,
@@ -880,12 +884,14 @@ mod tests {
             generation_timeout: 30,
             use_libvips: true,
         };
-        let service = PreviewService::new(config).expect("init preview service");
+        let service = PreviewService::new(config)
+            .await
+            .expect("init preview service");
         let hash = "testhash1234567890";
         let start = std::time::Instant::now();
         let result = service
             .generate_preview(
-                &std::path::Path::new(&test_file),
+                std::path::Path::new(&test_file),
                 PreviewType::Thumbnail,
                 hash,
             )
@@ -910,7 +916,9 @@ mod tests {
             generation_timeout: 10,
             use_libvips: true,
         };
-        let service = PreviewService::new(config.clone()).expect("init preview service");
+        let service = PreviewService::new(config.clone())
+            .await
+            .expect("init preview service");
         assert!(
             service.config.use_libvips,
             "libvips doit être activé dans la config"
@@ -922,20 +930,20 @@ mod tests {
     use std::path::PathBuf;
     use tempfile::TempDir;
 
-    fn create_test_service() -> (PreviewService, TempDir) {
+    async fn create_test_service() -> (PreviewService, TempDir) {
         let temp_dir = TempDir::new().unwrap();
         let config = PreviewConfig {
             catalog_dir: temp_dir.path().to_path_buf(),
             ..Default::default()
         };
 
-        let service = PreviewService::new(config).unwrap();
+        let service = PreviewService::new(config).await.unwrap();
         (service, temp_dir)
     }
 
     #[tokio::test]
     async fn test_preview_service_creation() {
-        let (service, _temp_dir) = create_test_service();
+        let (service, _temp_dir) = create_test_service().await;
         let cache_info = service.get_cache_info().await;
 
         assert_eq!(cache_info.total_previews, 0);
@@ -944,7 +952,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cached_preview_path() {
-        let (service, _temp_dir) = create_test_service();
+        let (service, _temp_dir) = create_test_service().await;
 
         let path = service
             .get_cached_preview_path("b3a1c2d3e4f5", &PreviewType::Thumbnail)
@@ -959,7 +967,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_raw_file() {
-        let (service, _temp_dir) = create_test_service();
+        let (service, _temp_dir) = create_test_service().await;
 
         assert!(service.is_raw_file(&PathBuf::from("test.cr3")).await);
         assert!(service.is_raw_file(&PathBuf::from("test.RAF")).await);
@@ -1136,5 +1144,15 @@ mod tests {
         assert_eq!(config.parallel_threads, deserialized.parallel_threads);
         assert_eq!(config.generation_timeout, deserialized.generation_timeout);
         assert_eq!(config.use_libvips, deserialized.use_libvips);
+    }
+
+    #[test]
+    fn test_source_has_no_std_fs_usage() {
+        let source = include_str!("preview.rs");
+        let forbidden = ["std", "::", "fs"].concat();
+        assert!(
+            !source.contains(&forbidden),
+            "preview.rs must not use sync filesystem APIs"
+        );
     }
 }

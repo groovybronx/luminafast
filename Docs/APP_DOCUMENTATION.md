@@ -58,6 +58,7 @@
 19. [Historique des Modifications](#19-historique-des-modifications)
 20. [Conformité TypeScript Strict & Documentation WASM](#20-conformité-typescript-strict--documentation-wasm)
 21. [Service Metrics — Monitoring Threadpool (M.1.1a)](#21-service-metrics--monitoring-threadpool-m11a)
+22. [Migration Async IO (M.1.2)](#22-migration-async-io-m12)
 
 **Annexes** :
 
@@ -68,7 +69,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-03-07 (P0+P1: Conformité TypeScript Strict 100% + Documentation WASM normalizeFiltersForWasm() complète — 19 fichiers refactorisés, 26 imports relatifs→@/, 5 violations any éliminées, commit 97858ad)
+> **Dernière mise à jour** : 2026-03-10 (Maintenance M.1.2 clôturée: migration async IO `std::fs` → `tokio::fs` sur services/commandes backend + validation 225 tests Rust)
 >
 > ### Décisions Projet (validées par le propriétaire)
 
@@ -298,10 +299,10 @@ LuminaFast/
 │   │   │   ├── folder.rs            # 4 commandes folders : tree, images, backfill, volume_status (Phase 3.4)
 │   │   │   ├── search.rs            # 1 commande search_images (Phase 3.5)
 │   │   │   ├── exif.rs              # Commandes EXIF/IPTC extraction (Phase 2.2)
-│   │   │   ├── filesystem.rs        # Commandes système de fichiers
-│   │   │   ├── discovery.rs         # Commandes ingestion + découverte (Phase 2.1)
-│   │   │   ├── hashing.rs           # Commandes BLAKE3 batch
-│   │   │   ├── preview.rs           # Commandes génération previews RAW (Phase 3.3, batch + libvips)
+│   │   │   ├── filesystem.rs        # Commandes système de fichiers (M.1.2: IO async tokio::fs)
+│   │   │   ├── discovery.rs         # Commandes ingestion + découverte (M.1.2: validations chemin async)
+│   │   │   ├── hashing.rs           # Commandes BLAKE3 batch (M.1.2: scan dossier async)
+│   │   │   ├── preview.rs           # Commandes génération previews RAW (M.1.2: init async du service)
 │   │   │   ├── __tests__/preview_performance.rs # Tests perf batch vs séquentiel
 │   │   │   ├── __tests__/preview_unit.rs        # Tests unitaires preview pyramide
 │   │   │   └── types.rs             # Types réponse partagés
@@ -333,9 +334,9 @@ LuminaFast/
 │   │   │   ├── blake3.rs            # Service BLAKE3 hashing (Phase 1.3)
 │   │   │   ├── exif.rs              # Service extraction EXIF kamadak-exif (Phase 2.2)
 │   │   │   ├── iptc.rs              # Service IPTC skeleton (Phase 5.4)
-│   │   │   ├── discovery.rs         # Service découverte fichiers récursive
+│   │   │   ├── discovery.rs         # Service découverte récursive (M.1.2: metadata async)
 │   │   │   │   └── tests.rs         # Tests discovery (18 tests)
-│   │   │   ├── ingestion.rs         # Service ingestion batch (discovery + hashing + EXIF)
+│   │   │   ├── ingestion.rs         # Service ingestion batch (M.1.2: metadata async + anti-blocking)
 │   │   │   │   └── tests.rs         # Tests ingestion (24 tests)
 │   │   │   ├── collection.rs        # Service collections CRUD + smart queries (Phase 3.2)
 │   │   │   │   └── tests.rs         # Tests collections (28 tests)
@@ -343,8 +344,8 @@ LuminaFast/
 │   │   │   │   └── tests.rs         # Tests folders (6 tests)
 │   │   │   ├── search.rs            # Service search + build_where_clause (Phase 3.5)
 │   │   │   │   └── tests.rs         # Tests search (6 tests)
-│   │   │   ├── filesystem.rs        # Service système de fichiers (watcher, lock)
-│   │   │   ├── preview.rs           # Service génération previews RAW (Phase 3.3)
+│   │   │   ├── filesystem.rs        # Service système de fichiers (M.1.2: checks async dans chemins async)
+│   │   │   ├── preview.rs           # Service génération previews RAW (M.1.2: create/read/write async)
 │   │   │   │   └── tests.rs         # Tests preview pyramide (27 tests)
 │   │   │   └── __tests__/           # Tests integration transversales
 │   └── icons/                      # Icônes d'application (16 fichiers)
@@ -1010,6 +1011,13 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 - ✅ 2 tests services::exif (log2 conversion, error handling)
 - ✅ 2 tests services::iptc (struct validation, empty data)
 - ✅ 17 tests services::ingestion (EXIF integration, fallback, atomicity)
+
+**M.1.2 — Migration Async IO (2026-03-10)** :
+
+- ✅ Chemins async migrés de `std::fs` vers `tokio::fs` dans `services/discovery.rs`, `services/preview.rs`, `services/ingestion.rs`, `commands/discovery.rs`, `commands/filesystem.rs`, `commands/hashing.rs`, `commands/xmp.rs`.
+- ✅ `services/blake3.rs` utilise `tokio::task::spawn_blocking` pour le hash streaming CPU-bound.
+- ✅ Validation backend : `cargo check` OK, `cargo test` OK (**225 tests passants**).
+- ✅ `cargo clippy --all-targets -D warnings` passe.
 
 ---
 
@@ -2059,3 +2067,31 @@ for file in files {
 | Distributed tracing | Advanced debugging            | Phase 7.4+ |
 
 ---
+
+## 22. Migration Async IO (M.1.2)
+
+> ✅ **Complétée** — 2026-03-10
+> **Objectif** : éliminer les appels filesystem bloquants dans les chemins `async` backend.
+
+### 22.1 — Périmètre Implémenté
+
+- Services : `discovery.rs`, `preview.rs`, `ingestion.rs`, `filesystem.rs`, `xmp.rs`, `blake3.rs`.
+- Commandes : `discovery.rs`, `preview.rs`, `filesystem.rs`, `hashing.rs`, `xmp.rs`.
+
+### 22.2 — Changements Structurels
+
+- Remplacement des appels `std::fs::*` par `tokio::fs::*` sur les parcours asynchrones.
+- Refactor des traversées récursives en pattern itératif async (`read_dir` + `next_entry().await`).
+- Ajout d'APIs async XMP (`read_xmp_async`, `write_xmp_async`) et suppression des checks sync en amont.
+- Offload explicite du hash streaming via `spawn_blocking` pour éviter le blocage du scheduler Tokio.
+
+### 22.3 — Validation
+
+- `cargo check` : ✅
+- `cargo test` : ✅ 225/225 (backend) + doc-tests OK
+- `cargo clippy --all-targets -D warnings` : ✅
+
+### 22.4 — Impact
+
+- Stabilisation des imports/scans sur runtime Tokio (moins de risques de freeze par IO sync).
+- Cohérence async renforcée avant les futures optimisations IO/DB (M.2.x).

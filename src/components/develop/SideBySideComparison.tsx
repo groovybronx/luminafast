@@ -72,7 +72,11 @@ export const SideBySideComparison = ({
       {/* Image "Avant" (haut) - RAW original */}
       <div className="flex-1 overflow-hidden relative border-b border-zinc-800 bg-zinc-950">
         <div style={{ transform }} className="w-full h-full origin-center">
-          <img src={beforeUrl} className="w-full h-full object-contain" alt="Original RAW" />
+          <img
+            src={beforeUrl || undefined}
+            className="w-full h-full object-contain"
+            alt="Original RAW"
+          />
         </div>
         <div className="absolute top-4 left-4 text-xs text-zinc-400 bg-black/80 px-2 py-1 rounded border border-zinc-700">
           Original RAW

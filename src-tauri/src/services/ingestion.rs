@@ -35,6 +35,7 @@ pub struct IngestionService {
     /// BLAKE3 service for file hashing
     blake3_service: Arc<Blake3Service>,
     /// Backward-compatible direct SQLite handle kept during migration.
+    #[allow(dead_code)]
     db: Arc<std::sync::Mutex<rusqlite::Connection>>,
     /// Database context abstraction for ingestion operations
     db_context: Arc<dyn DBContext>,
@@ -743,107 +744,39 @@ impl IngestionService {
         &self,
         session_id: Uuid,
     ) -> Result<IngestionStats, DiscoveryError> {
-        let db = self
-            .db
-            .lock()
-            .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
-
-        // Query real session statistics from ingestion_sessions table
-        let mut stmt = db
-            .prepare(
-                "
-                SELECT
-                    total_files,
-                    ingested_files,
-                    failed_files,
-                    skipped_files,
-                    total_size_bytes,
-                    avg_processing_time_ms
-                FROM ingestion_sessions
-                WHERE id = ?
-            ",
-            )
-            .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
-
-        let session_id_str = session_id.to_string();
-        let (
-            total_files,
-            ingested_files,
-            failed_files,
-            skipped_files,
-            total_size_bytes,
-            avg_processing_time_ms,
-        ): (i64, i64, i64, i64, Option<i64>, Option<f64>) = stmt
-            .query_row([&session_id_str], |row| {
-                Ok((
-                    row.get(0)?,
-                    row.get(1)?,
-                    row.get(2)?,
-                    row.get(3)?,
-                    row.get(4)?,
-                    row.get(5)?,
-                ))
-            })
-            .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
-
-        // Fallback to images table if session not found yet (for backward compatibility)
-        if total_files == 0 {
-            let mut stmt = db
-                .prepare(
-                    "
-                    SELECT
-                        COUNT(*) as total_files,
-                        SUM(file_size_bytes) as total_size
-                    FROM images
-                    WHERE imported_at >= datetime('now', '-1 hour')
-                ",
-                )
-                .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
-
-            let (fallback_total, fallback_size): (i64, Option<i64>) = stmt
-                .query_row([], |row| Ok((row.get(0)?, row.get(1)?)))
-                .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
-
-            Ok(IngestionStats {
+        if let Some(record) = self
+            .db_context
+            .get_ingestion_session_record(session_id)
+            .await?
+        {
+            return Ok(IngestionStats {
                 session_id,
-                total_files: fallback_total as usize,
-                ingested_files: fallback_total as usize, // Assume all successful
-                failed_files: 0,
-                skipped_files: 0,
-                total_size_bytes: fallback_size.unwrap_or(0) as u64,
-                avg_processing_time_ms: 150.0, // Estimated
-            })
-        } else {
-            Ok(IngestionStats {
-                session_id,
-                total_files: total_files as usize,
-                ingested_files: ingested_files as usize,
-                failed_files: failed_files as usize,
-                skipped_files: skipped_files as usize,
-                total_size_bytes: total_size_bytes.unwrap_or(0) as u64,
-                avg_processing_time_ms: avg_processing_time_ms.unwrap_or(0.0),
-            })
+                total_files: record.total_files as usize,
+                ingested_files: record.ingested_files as usize,
+                failed_files: record.failed_files as usize,
+                skipped_files: record.skipped_files as usize,
+                total_size_bytes: record.total_size_bytes.unwrap_or(0) as u64,
+                avg_processing_time_ms: record.avg_processing_time_ms.unwrap_or(0.0),
+            });
         }
+
+        // Fallback to recent imports for backward compatibility when session row is absent
+        let (fallback_total, fallback_size) = self.db_context.get_recent_import_fallback().await?;
+
+        Ok(IngestionStats {
+            session_id,
+            total_files: fallback_total as usize,
+            ingested_files: fallback_total as usize, // Assume all successful
+            failed_files: 0,
+            skipped_files: 0,
+            total_size_bytes: fallback_size.unwrap_or(0) as u64,
+            avg_processing_time_ms: 150.0, // Estimated
+        })
     }
 
     /// Create a new ingestion session for tracking
     pub async fn create_ingestion_session(&self, session_id: Uuid) -> Result<(), DiscoveryError> {
-        let db = self
-            .db
-            .lock()
-            .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
-
-        db.execute(
-            "INSERT OR REPLACE INTO ingestion_sessions (id, started_at, status) VALUES (?, ?, ?)",
-            rusqlite::params![
-                session_id.to_string(),
-                chrono::Utc::now().to_rfc3339(),
-                "scanning"
-            ],
-        )
-        .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
-
-        Ok(())
+        self.db_context.create_ingestion_session(session_id).await
     }
 
     /// Update session statistics during ingestion
@@ -852,52 +785,14 @@ impl IngestionService {
         session_id: Uuid,
         stats: SessionStatsUpdate,
     ) -> Result<(), DiscoveryError> {
-        let db = self
-            .db
-            .lock()
-            .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
-
-        db.execute(
-            "UPDATE ingestion_sessions SET
-                    total_files = ?,
-                    ingested_files = ?,
-                    failed_files = ?,
-                    skipped_files = ?,
-                    total_size_bytes = ?,
-                    avg_processing_time_ms = ?
-                WHERE id = ?",
-            rusqlite::params![
-                stats.total_files as i64,
-                stats.ingested_files as i64,
-                stats.failed_files as i64,
-                stats.skipped_files as i64,
-                stats.total_size_bytes as i64,
-                stats.avg_processing_time_ms,
-                session_id.to_string()
-            ],
-        )
-        .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
-
-        Ok(())
+        self.db_context
+            .update_ingestion_session(session_id, stats)
+            .await
     }
 
     /// Mark session as completed
     pub async fn complete_session(&self, session_id: Uuid) -> Result<(), DiscoveryError> {
-        let db = self
-            .db
-            .lock()
-            .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
-
-        db.execute(
-            "UPDATE ingestion_sessions SET
-                    status = 'completed',
-                    completed_at = ?
-                WHERE id = ?",
-            rusqlite::params![chrono::Utc::now().to_rfc3339(), session_id.to_string()],
-        )
-        .map_err(|e: rusqlite::Error| DiscoveryError::IoError(e.to_string()))?;
-
-        Ok(())
+        self.db_context.complete_ingestion_session(session_id).await
     }
 }
 
@@ -1021,6 +916,43 @@ mod tests {
             "100 concurrent spawn tasks should complete in < 1s (got {}ms)",
             ms
         );
+    }
+
+    #[tokio::test]
+    async fn test_with_context_session_methods_use_db_context() {
+        let shared_db = Arc::new(std::sync::Mutex::new(
+            rusqlite::Connection::open_in_memory().unwrap(),
+        ));
+        let repo = Arc::new(SqliteDbRepository::new(Arc::clone(&shared_db)));
+
+        let blake3 = Arc::new(Blake3Service::new(
+            crate::models::hashing::HashConfig::default(),
+        ));
+        let service = IngestionService::with_context(blake3, repo.clone());
+
+        let session_id = Uuid::new_v4();
+        service
+            .create_ingestion_session(session_id)
+            .await
+            .expect("Session creation should succeed via DBContext");
+
+        let guard = shared_db.lock().unwrap();
+        let table_exists: i64 = guard
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='ingestion_sessions'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        drop(guard);
+
+        assert_eq!(table_exists, 1);
+
+        let stats = service
+            .get_session_stats(session_id)
+            .await
+            .expect("Stats retrieval should succeed via DBContext");
+        assert_eq!(stats.session_id, session_id);
     }
 
     // ===== Tests for M.1.1a (Threadpool Monitoring) =====

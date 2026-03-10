@@ -64,7 +64,11 @@ export const SplitViewComparison = ({
     <div ref={containerRef} className="flex w-full h-full overflow-hidden bg-zinc-950">
       {/* Image "Avant" (gauche) - RAW original sans filtres */}
       <div style={{ width: `${position}%` }} className="shrink-0 overflow-hidden relative">
-        <img src={beforeUrl} className="w-full h-full object-contain" alt="Original RAW" />
+        <img
+          src={beforeUrl || undefined}
+          className="w-full h-full object-contain"
+          alt="Original RAW"
+        />
         <div className="absolute top-4 left-4 bg-black/80 px-3 py-1 text-xs font-bold text-white rounded-md shadow-lg border border-zinc-700">
           Original RAW
         </div>

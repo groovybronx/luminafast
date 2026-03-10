@@ -57,7 +57,7 @@ pub fn run() {
             );
 
             // Initialize discovery services for Phase 2.1
-            commands::discovery::initialize_discovery_services();
+            commands::discovery::initialize_discovery_services(db_path);
 
             log::info!("Hashing, filesystem and discovery services initialized");
 

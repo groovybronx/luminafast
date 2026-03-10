@@ -208,7 +208,7 @@ export const PreviewRenderer: React.FC<PreviewRendererProps> = ({
       {!useWasmMode && (
         <img
           ref={imgRef}
-          src={previewUrl}
+          src={previewUrl || undefined}
           alt={`Preview for image ${imageId}`}
           className={className}
           data-testid={`preview-renderer-img-${imageId}`}

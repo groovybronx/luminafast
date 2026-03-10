@@ -374,29 +374,29 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 
 ### 4.1 — Composants (après décomposition Phase 0.3)
 
-| Composant             | Fichier                           | Lignes | Description                                                                                 |
-| --------------------- | --------------------------------- | ------ | ------------------------------------------------------------------------------------------- |
-| `App`                 | `src/App.tsx`                     | —      | Orchestrateur UI (stores Zustand, dispatch events, composition layout)                       |
-| `AppInitializer`      | `src/components/AppInitializer.tsx` | —    | Initialisation one-shot : `previewService.initialize()` puis `refreshCatalog()`              |
-| `GlobalStyles`        | `shared/GlobalStyles.tsx`         | 16     | Styles CSS inline                                                                           |
-| `ArchitectureMonitor` | `shared/ArchitectureMonitor.tsx`  | 54     | Console monitoring système                                                                  |
-| `ImportModal`         | `shared/ImportModal.tsx`          | 68     | Modal d'import avec progression                                                             |
-| `BatchBar`            | `shared/BatchBar.tsx`             | —      | Actions batch : pick, favoris, ajout à une collection (popover FolderPlus), clear sélection |
-| `KeyboardOverlay`     | `shared/KeyboardOverlay.tsx`      | 9      | Indicateurs raccourcis                                                                      |
-| `TopNav`              | `layout/TopNav.tsx`               | 29     | Navigation supérieure                                                                       |
-| `LeftSidebar`         | `layout/LeftSidebar.tsx`          | 64     | Catalogue, collections, folders                                                             |
-| `RightSidebar`        | `layout/RightSidebar.tsx`         | 36     | Panneau droit (orchestrateur)                                                               |
-| `Toolbar`             | `layout/Toolbar.tsx`              | 54     | Mode, recherche, taille thumbnails                                                          |
-| `Filmstrip`           | `layout/Filmstrip.tsx`            | 36     | Bande défilante                                                                             |
-| `GridView`            | `library/GridView.tsx`            | 46     | Grille d'images virtualisée (@tanstack/react-virtual)                                       |
-| `LazyLoadedImageCard` | `library/LazyLoadedImageCard.tsx` | —      | Carte image avec lazy loading + drag source (Phase 3.2b)                                    |
-| `ImageCard`           | `library/ImageCard.tsx`           | —      | Carte image avec métadonnées, sélection                                                     |
-| `DevelopView`         | `develop/DevelopView.tsx`         | 38     | Image + mode avant/après                                                                    |
-| `DevelopSliders`      | `develop/DevelopSliders.tsx`      | 37     | Sliders de réglage                                                                          |
-| `HistoryPanel`        | `develop/HistoryPanel.tsx`        | —      | Timeline d'événements + snapshots (create/restore/delete)                                   |
-| `Histogram`           | `metadata/Histogram.tsx`          | 18     | Histogramme simulé                                                                          |
-| `ExifGrid`            | `metadata/ExifGrid.tsx`           | 17     | Grille EXIF compacte                                                                        |
-| `MetadataPanel`       | `metadata/MetadataPanel.tsx`      | 76     | Fiche technique + tags                                                                      |
+| Composant             | Fichier                             | Lignes | Description                                                                                 |
+| --------------------- | ----------------------------------- | ------ | ------------------------------------------------------------------------------------------- |
+| `App`                 | `src/App.tsx`                       | —      | Orchestrateur UI (stores Zustand, dispatch events, composition layout)                      |
+| `AppInitializer`      | `src/components/AppInitializer.tsx` | —      | Initialisation one-shot : `previewService.initialize()` puis `refreshCatalog()`             |
+| `GlobalStyles`        | `shared/GlobalStyles.tsx`           | 16     | Styles CSS inline                                                                           |
+| `ArchitectureMonitor` | `shared/ArchitectureMonitor.tsx`    | 54     | Console monitoring système                                                                  |
+| `ImportModal`         | `shared/ImportModal.tsx`            | 68     | Modal d'import avec progression                                                             |
+| `BatchBar`            | `shared/BatchBar.tsx`               | —      | Actions batch : pick, favoris, ajout à une collection (popover FolderPlus), clear sélection |
+| `KeyboardOverlay`     | `shared/KeyboardOverlay.tsx`        | 9      | Indicateurs raccourcis                                                                      |
+| `TopNav`              | `layout/TopNav.tsx`                 | 29     | Navigation supérieure                                                                       |
+| `LeftSidebar`         | `layout/LeftSidebar.tsx`            | 64     | Catalogue, collections, folders                                                             |
+| `RightSidebar`        | `layout/RightSidebar.tsx`           | 36     | Panneau droit (orchestrateur)                                                               |
+| `Toolbar`             | `layout/Toolbar.tsx`                | 54     | Mode, recherche, taille thumbnails                                                          |
+| `Filmstrip`           | `layout/Filmstrip.tsx`              | 36     | Bande défilante                                                                             |
+| `GridView`            | `library/GridView.tsx`              | 46     | Grille d'images virtualisée (@tanstack/react-virtual)                                       |
+| `LazyLoadedImageCard` | `library/LazyLoadedImageCard.tsx`   | —      | Carte image avec lazy loading + drag source (Phase 3.2b)                                    |
+| `ImageCard`           | `library/ImageCard.tsx`             | —      | Carte image avec métadonnées, sélection                                                     |
+| `DevelopView`         | `develop/DevelopView.tsx`           | 38     | Image + mode avant/après                                                                    |
+| `DevelopSliders`      | `develop/DevelopSliders.tsx`        | 37     | Sliders de réglage                                                                          |
+| `HistoryPanel`        | `develop/HistoryPanel.tsx`          | —      | Timeline d'événements + snapshots (create/restore/delete)                                   |
+| `Histogram`           | `metadata/Histogram.tsx`            | 18     | Histogramme simulé                                                                          |
+| `ExifGrid`            | `metadata/ExifGrid.tsx`             | 17     | Grille EXIF compacte                                                                        |
+| `MetadataPanel`       | `metadata/MetadataPanel.tsx`        | 76     | Fiche technique + tags                                                                      |
 
 ### 4.2 — Stores Zustand (Phase 0.4 + Maintenance Phase 3.1)
 
@@ -421,7 +421,7 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 | Hook/Util                 | Fichier                        | Responsabilité                                                                                                                                                                                       |
 | ------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `useWasmCanvasRender`     | `hooks/useWasmCanvasRender.ts` | Encapsule rendu WASM (chargement image, détection filtres, appel renderWithWasm) — utilisé par SplitViewComparison, OverlayComparison, SideBySideComparison (Phase 4.4-B, Maintenance déduplication) |
-| `useAppShortcuts`         | `hooks/useAppShortcuts.ts`     | Centralise les raccourcis clavier globaux (matching key/modifiers + cleanup listener) (M.3.1)                                                      |
+| `useAppShortcuts`         | `hooks/useAppShortcuts.ts`     | Centralise les raccourcis clavier globaux (matching key/modifiers + cleanup listener) (M.3.1)                                                                                                        |
 | `editStateToPixelFilters` | `lib/filterUtils.ts`           | Convertit EditState UI (sliders -100..+100) → PixelFilterState (plages WASM spécifiques)                                                                                                             |
 | `hasNonNeutralFilters`    | `lib/filterUtils.ts`           | Détecte si AU MOINS un filtre dévie des valeurs neutres (évite rendu inutile)                                                                                                                        |
 

@@ -34,7 +34,7 @@ export const OverlayComparison = ({
       <div className="flex-1 relative overflow-hidden">
         {/* Image "Avant" (fond) - RAW original */}
         <img
-          src={beforeUrl}
+          src={beforeUrl || undefined}
           className="absolute inset-0 w-full h-full object-contain"
           alt="Original RAW"
         />

@@ -19,9 +19,14 @@ static DISCOVERY_SERVICE: OnceLock<Arc<DiscoveryService>> = OnceLock::new();
 /// Global ingestion service instance
 static INGESTION_SERVICE: OnceLock<Arc<IngestionService>> = OnceLock::new();
 
+/// Shared DB path used by ingestion service singleton
+static INGESTION_DB_PATH: OnceLock<PathBuf> = OnceLock::new();
+
 /// Initialize the discovery services (called from lib.rs)
-pub fn initialize_discovery_services() {
-    // Services will be initialized lazily when needed
+pub fn initialize_discovery_services(db_path: PathBuf) {
+    // Services will be initialized lazily when needed.
+    // Persisting the real DB path here avoids path drift between commands.
+    let _ = INGESTION_DB_PATH.set(db_path);
 }
 
 /// Get the global discovery service
@@ -46,8 +51,12 @@ fn get_ingestion_service() -> Arc<IngestionService> {
                 crate::models::hashing::HashConfig::default(),
             ));
 
-            // Open connection to main database
+            // Ensure schema/migrations exist before opening the shared ingestion connection.
             let db_path = get_db_path();
+            ensure_ingestion_schema(&db_path)
+                .expect("Failed to initialize ingestion database schema");
+
+            // Open connection to main database
             let conn = rusqlite::Connection::open(&db_path)
                 .expect("Failed to open database for ingestion service");
 
@@ -65,6 +74,10 @@ fn get_ingestion_service() -> Arc<IngestionService> {
 
 /// Get database path from environment or default location
 fn get_db_path() -> std::path::PathBuf {
+    if let Some(path) = INGESTION_DB_PATH.get() {
+        return path.clone();
+    }
+
     let app_data_dir = std::env::var("TAURI_APP_DATA_DIR").unwrap_or_else(|_| {
         dirs::data_local_dir()
             .expect("Failed to get local data directory")
@@ -73,6 +86,13 @@ fn get_db_path() -> std::path::PathBuf {
             .to_string()
     });
     std::path::PathBuf::from(app_data_dir).join("luminafast.db")
+}
+
+fn ensure_ingestion_schema(db_path: &std::path::Path) -> Result<(), String> {
+    let mut db = crate::database::Database::new(db_path)
+        .map_err(|e| format!("Failed to open DB for migrations: {}", e))?;
+    db.initialize()
+        .map_err(|e| format!("Failed to initialize DB migrations: {}", e))
 }
 
 /// Ingest a single discovered file using the main database
@@ -431,6 +451,25 @@ mod tests {
         assert!(formats.contains(&"jpeg".to_string()));
         assert!(formats.contains(&"png".to_string()));
         assert!(formats.contains(&"webp".to_string()));
+    }
+
+    #[test]
+    fn test_ensure_ingestion_schema_creates_ingestion_sessions_table() {
+        let temp_dir = TempDir::new().unwrap();
+        let db_path = temp_dir.path().join("ingestion_schema_test.db");
+
+        ensure_ingestion_schema(&db_path).expect("Schema initialization should succeed");
+
+        let conn = rusqlite::Connection::open(&db_path).unwrap();
+        let table_exists: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='ingestion_sessions'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(table_exists, 1, "ingestion_sessions table must exist");
     }
 
     #[tokio::test]

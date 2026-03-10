@@ -12,6 +12,43 @@ pub struct SqliteDbRepository {
     db: Arc<Mutex<rusqlite::Connection>>,
 }
 
+fn ensure_ingestion_tracking_schema(db: &rusqlite::Connection) -> Result<(), DiscoveryError> {
+    db.execute_batch(
+        "CREATE TABLE IF NOT EXISTS ingestion_sessions (
+            id TEXT PRIMARY KEY,
+            started_at TEXT DEFAULT (datetime('now')),
+            completed_at TEXT,
+            status TEXT CHECK(status IN ('scanning','ingesting','completed','error','stopped')) DEFAULT 'scanning',
+            total_files INTEGER DEFAULT 0,
+            ingested_files INTEGER DEFAULT 0,
+            failed_files INTEGER DEFAULT 0,
+            skipped_files INTEGER DEFAULT 0,
+            total_size_bytes INTEGER DEFAULT 0,
+            avg_processing_time_ms REAL DEFAULT 0.0,
+            error_message TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS ingestion_file_status (
+            id INTEGER PRIMARY KEY,
+            session_id TEXT NOT NULL REFERENCES ingestion_sessions(id) ON DELETE CASCADE,
+            file_path TEXT NOT NULL,
+            blake3_hash TEXT,
+            status TEXT CHECK(status IN ('pending','processing','ingested','failed','skipped')) DEFAULT 'pending',
+            processing_time_ms INTEGER DEFAULT 0,
+            error_message TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_ingestion_sessions_status ON ingestion_sessions(status);
+        CREATE INDEX IF NOT EXISTS idx_ingestion_sessions_started_at ON ingestion_sessions(started_at);
+        CREATE INDEX IF NOT EXISTS idx_ingestion_file_status_session_id ON ingestion_file_status(session_id);
+        CREATE INDEX IF NOT EXISTS idx_ingestion_file_status_status ON ingestion_file_status(status);
+        CREATE INDEX IF NOT EXISTS idx_ingestion_file_status_blake3_hash ON ingestion_file_status(blake3_hash);",
+    )
+    .map_err(|e| DiscoveryError::IoError(e.to_string()))
+}
+
 impl SqliteDbRepository {
     pub fn new(db: Arc<Mutex<rusqlite::Connection>>) -> Self {
         Self { db }
@@ -237,6 +274,8 @@ impl DBContext for SqliteDbRepository {
             .lock()
             .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
 
+        ensure_ingestion_tracking_schema(&db)?;
+
         db.execute(
             "INSERT OR REPLACE INTO ingestion_sessions (id, started_at, status) VALUES (?, ?, ?)",
             rusqlite::params![
@@ -259,6 +298,8 @@ impl DBContext for SqliteDbRepository {
             .db
             .lock()
             .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
+
+        ensure_ingestion_tracking_schema(&db)?;
 
         db.execute(
             "UPDATE ingestion_sessions SET
@@ -290,6 +331,8 @@ impl DBContext for SqliteDbRepository {
             .lock()
             .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
 
+        ensure_ingestion_tracking_schema(&db)?;
+
         db.execute(
             "UPDATE ingestion_sessions SET
                     status = 'completed',
@@ -310,6 +353,8 @@ impl DBContext for SqliteDbRepository {
             .db
             .lock()
             .map_err(|e| DiscoveryError::IoError(format!("DB lock error: {}", e)))?;
+
+        ensure_ingestion_tracking_schema(&db)?;
 
         let mut stmt = db
             .prepare(
@@ -358,5 +403,33 @@ impl DBContext for SqliteDbRepository {
 
         stmt.query_row([], |row| Ok((row.get(0)?, row.get(1)?)))
             .map_err(|e| DiscoveryError::IoError(e.to_string()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn create_ingestion_session_bootstraps_schema_when_missing() {
+        let conn = rusqlite::Connection::open_in_memory().expect("in-memory DB should open");
+        let repo = SqliteDbRepository::new(Arc::new(Mutex::new(conn)));
+        let session_id = Uuid::new_v4();
+
+        let created = repo.create_ingestion_session(session_id).await;
+        assert!(created.is_ok(), "create_ingestion_session should succeed");
+
+        let shared = repo.shared_connection();
+        let guard = shared.lock().expect("DB lock should succeed");
+
+        let table_exists: i64 = guard
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='ingestion_sessions'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("table existence query should succeed");
+
+        assert_eq!(table_exists, 1);
     }
 }

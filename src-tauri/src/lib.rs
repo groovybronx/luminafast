@@ -56,6 +56,9 @@ pub fn run() {
                 app_data_dir.to_string_lossy().as_ref(),
             );
 
+            // Initialize filesystem whitelist for path validation (M.2.2).
+            let _security_whitelist = services::security::initialize_security_context();
+
             // Initialize discovery services for Phase 2.1
             commands::discovery::initialize_discovery_services(db_path);
 

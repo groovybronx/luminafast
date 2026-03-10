@@ -70,7 +70,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-03-10 (Maintenance M.2.1a clôturée : connection pooling SQLite backend pour ingestion/discovery)
+> **Dernière mise à jour** : 2026-03-10 (Maintenance M.2.2 clôturée : whitelist chemins + hardening CSP/assetProtocol)
 >
 > ### Décisions Projet (validées par le propriétaire)
 
@@ -855,6 +855,22 @@ Depuis la maintenance **M.3.1**, les raccourcis globaux sont gérés par `useApp
 - Retry borné actif sur erreurs transitoires SQLite `database is locked` / `database is busy`.
 - Métriques exposées côté backend : `totalConnections`, `inUseConnections`, `idleConnections`, `acquireTimeoutCount`, `retryCount`, `avgAcquireWaitMs`.
 
+**Durcissement sécurité chemins (M.2.2)** :
+
+- Nouveau module backend `services/security.rs` :
+  - `is_path_traversal_attempt(path)` (détection `../`, `..\\`, encodages `%2e%2e`)
+  - `normalize_path(path)` (résolution canonique)
+  - `validate_path(path, whitelist)` (contrôle d'appartenance à la whitelist)
+- Whitelist dynamique via variable d'environnement `LUMINAFAST_ALLOWED_DIRS` (format multi-chemins OS natif).
+- Fallback whitelist (si variable absente) : dossiers utilisateur `Pictures`, `Documents`, `Desktop`.
+- Défense en profondeur : validation côté `commands/discovery.rs` et `services/discovery.rs`.
+- `catalog::backfill_images_folder_id` ignore désormais les chemins suspects contenant des patterns de traversal.
+
+**Configuration Tauri sécurité (M.2.2)** :
+
+- `assetProtocol.scope` restreint à : `$HOME/Pictures/**`, `$HOME/Documents/**`, `$HOME/Desktop/**`.
+- CSP renforcée : suppression de `unsafe-eval`, ajout `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`.
+
 ### 11.3 — Système de Migrations
 
 - **Automatique** : Migrations `001_initial`, `002_ingestion`, `003_previews` appliquées au démarrage via `execute_batch()`
@@ -1061,6 +1077,14 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 - ✅ Retry borné ajouté pour erreurs transitoires `DatabaseBusy/DatabaseLocked` avec backoff configurable.
 - ✅ Métriques de pool disponibles via `DBContext::get_pool_metrics()` et journalisées en fin de `batch_ingest`.
 - ✅ Tests ciblés passants : concurrence, épuisement de pool (acquire timeout), retry busy/locked, non-régression session methods via DBContext.
+
+**M.2.2 — Durcissement Sécurité (2026-03-10)** :
+
+- ✅ `services/security.rs` introduit la validation canonique de chemins + détection path traversal.
+- ✅ Discovery rejette les chemins hors whitelist (`LUMINAFAST_ALLOWED_DIRS`) avant scan/configuration.
+- ✅ `services/discovery.rs` applique la même validation pour éviter les contournements par appel interne.
+- ✅ `tauri.conf.json` restreint `assetProtocol.scope` et CSP (suppression `unsafe-eval`).
+- ✅ Tests sécurité passants (`services::security::tests`) + non-régression discovery (`test_create_discovery_config`, `test_validate_discovery_path`).
 
 ---
 
@@ -1435,6 +1459,7 @@ getAppliedEdits(imageId: number): EventDTO[]                   // Retrieve
 
 | Date       | Phase               | Modification                                                                  | Raison                                         |
 | ---------- | ------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------- |
+| 2026-03-10 | M.2.2               | Whitelist dynamique paths, validation traversal, hardening `assetProtocol` + CSP | Réduction surface d'attaque filesystem/XSS     |
 | 2026-03-10 | M.2.1a              | Connection pooling SQLite (r2d2), tuning env, retry lock/busy, métriques pool | Robustesse ingestion/discovery sous contention |
 | 2026-03-03 | 4.3                 | Historique interactif + snapshots nommés (create/restore/delete)              | Livraison complète de la Phase 4.3             |
 | 2026-02-27 | 4.2-B.2 Conformity  | Ajout section "Système de Rendu" (Event Sourcing + CSS + WASM)                | Documentation Phase 4.2 pipeline complet       |

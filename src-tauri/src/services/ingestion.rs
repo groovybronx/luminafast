@@ -6,6 +6,7 @@ use crate::models::discovery::{
 use crate::models::exif::ExifMetadata;
 use crate::services::blake3::Blake3Service;
 use crate::services::exif;
+use crate::services::metrics::{DefaultMetricsCollector, MetricsCollector};
 use rusqlite::OptionalExtension;
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -21,7 +22,7 @@ async fn ingest_file_internal(
     db: Arc<std::sync::Mutex<rusqlite::Connection>>,
     file: DiscoveredFile,
 ) -> Result<IngestionResult, DiscoveryError> {
-    let svc = IngestionService { blake3_service, db };
+    let svc = IngestionService::with_max_threads(blake3_service, db, 8);
     svc.ingest_file(&file).await
 }
 
@@ -42,15 +43,30 @@ pub struct IngestionService {
     blake3_service: Arc<Blake3Service>,
     /// Database connection (std::sync::Mutex for Sync safety)
     pub(crate) db: Arc<std::sync::Mutex<rusqlite::Connection>>,
+    /// Threadpool metrics collector for monitoring saturation
+    metrics_collector: Arc<DefaultMetricsCollector>,
 }
 
 impl IngestionService {
-    /// Create a new ingestion service
+    /// Create a new ingestion service with default metrics collector (8 max threads)
     pub fn new(
         blake3_service: Arc<Blake3Service>,
         db: Arc<std::sync::Mutex<rusqlite::Connection>>,
     ) -> Self {
-        Self { blake3_service, db }
+        Self::with_max_threads(blake3_service, db, 8)
+    }
+
+    /// Create a new ingestion service with custom max threads for metrics
+    pub fn with_max_threads(
+        blake3_service: Arc<Blake3Service>,
+        db: Arc<std::sync::Mutex<rusqlite::Connection>>,
+        max_threads: usize,
+    ) -> Self {
+        Self {
+            blake3_service,
+            db,
+            metrics_collector: Arc::new(DefaultMetricsCollector::new(max_threads)),
+        }
     }
 
     /// Ingest a single discovered file
@@ -231,6 +247,9 @@ impl IngestionService {
         let total_size = Arc::new(AtomicUsize::new(0));
         let total_processing_time = Arc::new(AtomicUsize::new(0));
 
+        // Reset metrics collector for this batch operation
+        self.metrics_collector.reset();
+
         // Create progress tracker
         let mut progress = IngestionProgress::new(request.session_id, total_files);
 
@@ -245,6 +264,7 @@ impl IngestionService {
         let semaphore = Arc::new(tokio::sync::Semaphore::new(8)); // Max 8 concurrent tasks
         let blake3_service = Arc::clone(&self.blake3_service); // Extract Arc ONCE
         let db = Arc::clone(&self.db); // Extract Arc ONCE
+        let metrics_collector = Arc::clone(&self.metrics_collector); // Extract Arc ONCE for monitoring
         let mut join_handles = Vec::new();
 
         for file in files_to_process.iter() {
@@ -252,6 +272,7 @@ impl IngestionService {
             let blake3_service_clone = Arc::clone(&blake3_service); // Cheap Arc clone
             let db_clone = Arc::clone(&db); // Cheap Arc clone
             let semaphore_clone = Arc::clone(&semaphore);
+            let metrics_collector_clone = Arc::clone(&metrics_collector); // Clone for this task
             let processed_clone = Arc::clone(&processed_count);
             let successful_clone = Arc::clone(&successful_count);
             let failed_clone = Arc::clone(&failed_count);
@@ -262,7 +283,24 @@ impl IngestionService {
 
             let handle = tokio::spawn(async move {
                 let _permit = semaphore_clone.acquire().await.ok()?;
+
+                // [M.1.1a] Track active task for threadpool monitoring
+                metrics_collector_clone.increment_active_tasks();
+
                 let file_start_time = Instant::now();
+
+                // [M.1.1a] Check threadpool saturation and emit warning if > 80%
+                if metrics_collector_clone.check_saturation(80.0) {
+                    if let Some(metrics) = metrics_collector_clone.get_latest_metrics() {
+                        log::warn!(
+                            "[M.1.1a] Threadpool saturation warning: {:.1}% ({}/{} tasks active, {} queued)",
+                            metrics.saturation_percentage,
+                            metrics.active_tasks,
+                            metrics.max_threads,
+                            metrics.queue_depth
+                        );
+                    }
+                }
 
                 // Ingest file using the internal helper function (works with Arc parameters)
                 let ingest_result =
@@ -325,6 +363,9 @@ impl IngestionService {
                         let _ = handle.emit("ingestion-progress", &prog);
                     }
                 }
+
+                // [M.1.1a] Decrement active task counter before returning
+                metrics_collector_clone.decrement_active_tasks();
 
                 Some((ingest_result, success, skipped, file_clone))
             });
@@ -1154,6 +1195,193 @@ mod tests {
             ms < 1000,
             "100 concurrent spawn tasks should complete in < 1s (got {}ms)",
             ms
+        );
+    }
+
+    // ===== Tests for M.1.1a (Threadpool Monitoring) =====
+
+    /// Test: IngestionService has metrics collector initialized
+    #[test]
+    fn test_ingestion_service_has_metrics_collector() {
+        let db = Arc::new(std::sync::Mutex::new(
+            rusqlite::Connection::open_in_memory().unwrap(),
+        ));
+        let blake3 = Arc::new(Blake3Service::new(
+            crate::models::hashing::HashConfig::default(),
+        ));
+
+        let service = IngestionService::new(blake3, db);
+        // If metrics_collector is properly initialized, get_latest_metrics should work
+        let metrics = service.metrics_collector.get_latest_metrics();
+        assert!(metrics.is_some());
+        if let Some(m) = metrics {
+            assert_eq!(m.active_tasks, 0);
+            assert_eq!(m.max_threads, 8);
+        }
+    }
+
+    /// Test: Metrics collector tracks active task count correctly
+    #[test]
+    fn test_metrics_collector_tracks_active_tasks() {
+        let db = Arc::new(std::sync::Mutex::new(
+            rusqlite::Connection::open_in_memory().unwrap(),
+        ));
+        let blake3 = Arc::new(Blake3Service::new(
+            crate::models::hashing::HashConfig::default(),
+        ));
+
+        let service = IngestionService::new(blake3, db);
+
+        // Initial state: 0 active tasks
+        assert_eq!(
+            service.metrics_collector.get_active_tasks(),
+            0,
+            "Should start with 0 active tasks"
+        );
+
+        // Simulate 3 active tasks
+        service.metrics_collector.increment_active_tasks();
+        service.metrics_collector.increment_active_tasks();
+        service.metrics_collector.increment_active_tasks();
+
+        assert_eq!(
+            service.metrics_collector.get_active_tasks(),
+            3,
+            "Should have 3 active tasks after 3 increments"
+        );
+
+        // Decrement
+        service.metrics_collector.decrement_active_tasks();
+        assert_eq!(
+            service.metrics_collector.get_active_tasks(),
+            2,
+            "Should have 2 active tasks after 1 decrement"
+        );
+    }
+
+    /// Test: Saturation detection works correctly (M.1.1a Checkpoint 1)
+    #[test]
+    fn test_threadpool_saturation_detection() {
+        let db = Arc::new(std::sync::Mutex::new(
+            rusqlite::Connection::open_in_memory().unwrap(),
+        ));
+        let blake3 = Arc::new(Blake3Service::new(
+            crate::models::hashing::HashConfig::default(),
+        ));
+
+        let service = IngestionService::new(blake3, db);
+
+        // Not saturated initially
+        assert!(!service.metrics_collector.check_saturation(80.0));
+
+        // Fill threadpool to 7/8 = 87.5%
+        for _ in 0..7 {
+            service.metrics_collector.increment_active_tasks();
+        }
+
+        // Now should be saturated (>80%)
+        assert!(
+            service.metrics_collector.check_saturation(80.0),
+            "Should be saturated at 87.5% (7/8 tasks)"
+        );
+
+        // But not at 90% threshold
+        assert!(
+            !service.metrics_collector.check_saturation(90.0),
+            "Should not be saturated at 90% threshold"
+        );
+    }
+
+    /// Test: Metrics snapshot contains accurate data (M.1.1a Checkpoint 2)
+    #[test]
+    fn test_metrics_snapshot_accuracy() {
+        let db = Arc::new(std::sync::Mutex::new(
+            rusqlite::Connection::open_in_memory().unwrap(),
+        ));
+        let blake3 = Arc::new(Blake3Service::new(
+            crate::models::hashing::HashConfig::default(),
+        ));
+
+        let service = IngestionService::new(blake3, db);
+
+        // Simulate activity
+        for _ in 0..5 {
+            service.metrics_collector.increment_active_tasks();
+        }
+        service.metrics_collector.set_queue_depth(3);
+
+        let metrics = service.metrics_collector.get_latest_metrics().unwrap();
+
+        assert_eq!(metrics.active_tasks, 5, "Should show 5 active tasks");
+        assert_eq!(metrics.queue_depth, 3, "Should show 3 queued tasks");
+        assert_eq!(metrics.max_threads, 8, "Should show 8 max threads");
+        assert!(
+            (metrics.saturation_percentage - 62.5).abs() < 0.1,
+            "Should be 62.5% saturated (5/8)"
+        );
+    }
+
+    /// Test: Reset clears metrics (M.1.1a Checkpoint 3)
+    #[test]
+    fn test_metrics_reset() {
+        let db = Arc::new(std::sync::Mutex::new(
+            rusqlite::Connection::open_in_memory().unwrap(),
+        ));
+        let blake3 = Arc::new(Blake3Service::new(
+            crate::models::hashing::HashConfig::default(),
+        ));
+
+        let service = IngestionService::new(blake3, db);
+
+        // Add some activity
+        for _ in 0..4 {
+            service.metrics_collector.increment_active_tasks();
+        }
+        service.metrics_collector.set_queue_depth(5);
+
+        // Reset
+        service.metrics_collector.reset();
+
+        // Should be back to zero
+        assert_eq!(
+            service.metrics_collector.get_active_tasks(),
+            0,
+            "Reset should clear active tasks"
+        );
+        assert_eq!(
+            service.metrics_collector.get_queue_depth(),
+            0,
+            "Reset should clear queue depth"
+        );
+    }
+
+    /// Test: Custom max_threads initializer works
+    #[test]
+    fn test_custom_max_threads() {
+        let db = Arc::new(std::sync::Mutex::new(
+            rusqlite::Connection::open_in_memory().unwrap(),
+        ));
+        let blake3 = Arc::new(Blake3Service::new(
+            crate::models::hashing::HashConfig::default(),
+        ));
+
+        let service = IngestionService::with_max_threads(blake3, db, 16); // Custom: 16 threads
+
+        let metrics = service.metrics_collector.get_latest_metrics().unwrap();
+        assert_eq!(
+            metrics.max_threads, 16,
+            "Should use custom max_threads value"
+        );
+
+        // Fill to 8/16 = 50%
+        for _ in 0..8 {
+            service.metrics_collector.increment_active_tasks();
+        }
+
+        let metrics = service.metrics_collector.get_latest_metrics().unwrap();
+        assert!(
+            (metrics.saturation_percentage - 50.0).abs() < 0.1,
+            "Should be 50% saturated with custom threadpool size"
         );
     }
 }

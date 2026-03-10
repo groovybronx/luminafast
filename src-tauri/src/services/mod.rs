@@ -6,6 +6,7 @@ pub mod filesystem;
 pub mod image_processing;
 pub mod ingestion;
 pub mod iptc;
+pub mod metrics;
 pub mod preview;
 pub mod search;
 pub mod smart_query_parser;

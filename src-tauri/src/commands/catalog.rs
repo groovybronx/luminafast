@@ -44,6 +44,13 @@ pub async fn backfill_images_folder_id(state: State<'_, AppState>) -> CommandRes
 
         for img_res in images_iter {
             let (id, file_path) = img_res.map_err(|e| format!("Row error: {}", e))?;
+            if crate::services::security::is_path_traversal_attempt(&file_path) {
+                log::warn!(
+                    "Skipping suspicious file path during folder backfill: {}",
+                    file_path
+                );
+                continue;
+            }
             let folder_id_opt = get_or_create_folder_id_tx(&transaction, &file_path)
                 .map_err(|e| format!("Folder error: {}", e))?;
             if let Some(folder_id) = folder_id_opt {

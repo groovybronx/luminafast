@@ -2,6 +2,7 @@ use crate::models::discovery::{
     DiscoveredFile, DiscoveryConfig, DiscoveryError, DiscoverySession, DiscoveryStatus, RawFormat,
 };
 use crate::services::blake3::Blake3Service;
+use crate::services::security::{validate_runtime_path, SecurityError};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -47,6 +48,18 @@ impl DiscoveryService {
             }
             // Previous session finished — allow a new one
             *current_task = None;
+        }
+
+        match validate_runtime_path(&config.root_path) {
+            Ok(()) => {}
+            Err(SecurityError::InvalidPath(_)) => {
+                return Err(DiscoveryError::InvalidPath(
+                    config.root_path.to_string_lossy().to_string(),
+                ));
+            }
+            Err(error) => {
+                return Err(DiscoveryError::AccessDenied(error.to_string()));
+            }
         }
 
         // Validate the root path with async IO to avoid blocking the Tokio runtime.

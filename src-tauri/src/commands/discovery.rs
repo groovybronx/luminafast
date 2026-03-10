@@ -6,6 +6,7 @@ use crate::services::blake3::Blake3Service;
 use crate::services::db_repository::{SqliteDbRepository, SqlitePoolConfig};
 use crate::services::discovery::DiscoveryService;
 use crate::services::ingestion::IngestionService;
+use crate::services::security::{get_runtime_whitelist, validate_path};
 use crate::types::db_context::DBContext;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -143,6 +144,10 @@ pub async fn batch_ingest(
 /// Start a new discovery session
 #[tauri::command]
 pub async fn start_discovery(config: DiscoveryConfig) -> Result<DiscoverySession, String> {
+    let whitelist = get_runtime_whitelist();
+    let requested = config.root_path.to_string_lossy();
+    validate_path(requested.as_ref(), &whitelist).map_err(|e| e.to_string())?;
+
     let service = get_discovery_service();
     let session_id = service
         .start_discovery(config)
@@ -205,6 +210,9 @@ pub async fn create_discovery_config(
     #[allow(non_snake_case)] maxDepth: Option<usize>,
     #[allow(non_snake_case)] maxFiles: Option<usize>,
 ) -> Result<DiscoveryConfig, String> {
+    let whitelist = get_runtime_whitelist();
+    validate_path(&rootPath, &whitelist).map_err(|e| e.to_string())?;
+
     let path = PathBuf::from(&rootPath);
 
     let metadata = tokio::fs::metadata(&path)
@@ -253,6 +261,9 @@ pub async fn get_supported_formats() -> Result<Vec<String>, String> {
 /// Validate a directory path for discovery
 #[tauri::command]
 pub async fn validate_discovery_path(path: String) -> Result<bool, String> {
+    let whitelist = get_runtime_whitelist();
+    validate_path(&path, &whitelist).map_err(|e| e.to_string())?;
+
     let path_buf = PathBuf::from(&path);
 
     let metadata = tokio::fs::metadata(&path_buf)

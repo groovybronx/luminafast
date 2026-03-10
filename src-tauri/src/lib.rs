@@ -2,6 +2,7 @@ mod commands;
 mod database;
 mod models;
 pub mod services;
+mod types;
 
 use commands::catalog::AppState;
 use database::Database;

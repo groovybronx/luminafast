@@ -70,7 +70,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-03-10 (Maintenance M.1.3 clôturée: suppression code mort backend/WASM + validations lint/tests complètes)
+> **Dernière mise à jour** : 2026-03-10 (Maintenance M.3.1 clôturée : refactoring `App.tsx` avec extraction `AppInitializer` + `useAppShortcuts`)
 >
 > ### Décisions Projet (validées par le propriétaire)
 
@@ -189,7 +189,7 @@ LuminaFast/
 ├── scripts/                        # Utilitaires scripts
 │   └── test-workflow.sh            # Script test workflow
 ├── src/
-│   ├── App.tsx                     # Orchestrateur (152 lignes, pas de useState)
+│   ├── App.tsx                     # Orchestrateur UI principal (logique init + shortcuts extraite en M.3.1)
 │   ├── main.tsx                    # Point d'entrée React
 │   ├── vite-env.d.ts               # Déclarations d'environnement Vite
 │   ├── index.css                   # Styles globaux + TailwindCSS
@@ -239,6 +239,7 @@ LuminaFast/
 │   │   └── __tests__/             # Tests types (6 fichiers)
 │   ├── components/
 │   │   ├── AGENTS.md               # Conventions composants + props typing
+│   │   ├── AppInitializer.tsx      # Bootstrap app (previewService.initialize + refreshCatalog) (M.3.1)
 │   │   ├── layout/                 # Structure de la page
 │   │   │   ├── TopNav.tsx          # Navigation supérieure
 │   │   │   ├── LeftSidebar.tsx     # Catalogue, collections, folders
@@ -267,11 +268,13 @@ LuminaFast/
 │   │       └── __tests__/         # Tests composants partagés (1 fichier)
 │   └── hooks/                       # Hooks React personnalisés
 │       ├── AGENTS.md               # Conventions hooks + async patterns
+│       ├── useAppShortcuts.ts      # Raccourcis clavier globaux + cleanup listeners (M.3.1)
 │       ├── useCatalog.ts           # Hook principal catalogue (mapping DTO→CatalogImage, EXIF, isSynced, callbacks)
 │       ├── useDiscovery.ts         # Hook discovery (reset cleanup, preview séquentiel)
 │       ├── useSearch.ts            # Hook search (debounce 500ms, query parsing)
 │       ├── useWasmCanvasRender.ts  # Hook rendu WASM sur canvas (chargement image, normalisation filtres) — Maintenance
-│       └── __tests__/             # Tests hooks (4 fichiers)
+│       └── __tests__/             # Tests hooks (5 fichiers)
+│           ├── useAppShortcuts.test.ts # Tests listener keydown + matching + ignore champs saisie (M.3.1)
 │           └── useWasmCanvasRender.test.ts # Tests hook WASM canvas render (Maintenance)
 │   ├── test/                       # Infrastructure tests et mocks
 │   │   ├── setup.ts                # Configuration tests globale (setupFilesAfterEnv)
@@ -329,15 +332,19 @@ LuminaFast/
 │   │   │   ├── 002_ingestion.sql    # Tables ingestion_file_status
 │   │   │   ├── 003_previews.sql     # Table previews (libvips)
 │   │   │   └── 004_folders.sql      # Colonnes is_online, name sur folders (Phase 3.4)
+│   │   ├── types/                    # Types partagés et abstractions (Phase M.2.1)
+│   │   │   ├── mod.rs               # Export des types
+│   │   │   └── db_context.rs        # Trait DBContext (7 méthodes async) + SessionStatsUpdate/Record
 │   │   ├── services/                 # Services métier (Layer logique DB→commandes)
 │   │   │   ├── AGENTS.md           # Conventions services Rust
 │   │   │   ├── mod.rs               # Export des services
 │   │   │   ├── blake3.rs            # Service BLAKE3 hashing (Phase 1.3)
+│   │   │   ├── db_repository.rs     # SqliteDbRepository (impl DBContext) + get_or_create_folder_id_tx (M.2.1)
 │   │   │   ├── exif.rs              # Service extraction EXIF kamadak-exif (Phase 2.2)
 │   │   │   ├── iptc.rs              # Service IPTC skeleton (Phase 5.4)
 │   │   │   ├── discovery.rs         # Service découverte récursive (M.1.2: metadata async)
 │   │   │   │   └── tests.rs         # Tests discovery (18 tests)
-│   │   │   ├── ingestion.rs         # Service ingestion batch (M.1.2: metadata async + anti-blocking)
+│   │   │   ├── ingestion.rs         # Service ingestion batch (M.2.1: DBContext DI + M.1.2: async)
 │   │   │   │   └── tests.rs         # Tests ingestion (24 tests)
 │   │   │   ├── collection.rs        # Service collections CRUD + smart queries (Phase 3.2)
 │   │   │   │   └── tests.rs         # Tests collections (28 tests)
@@ -369,7 +376,8 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 
 | Composant             | Fichier                           | Lignes | Description                                                                                 |
 | --------------------- | --------------------------------- | ------ | ------------------------------------------------------------------------------------------- |
-| `App`                 | `src/App.tsx`                     | 152    | Orchestrateur pur (stores Zustand, callbacks)                                               |
+| `App`                 | `src/App.tsx`                     | —      | Orchestrateur UI (stores Zustand, dispatch events, composition layout)                       |
+| `AppInitializer`      | `src/components/AppInitializer.tsx` | —    | Initialisation one-shot : `previewService.initialize()` puis `refreshCatalog()`              |
 | `GlobalStyles`        | `shared/GlobalStyles.tsx`         | 16     | Styles CSS inline                                                                           |
 | `ArchitectureMonitor` | `shared/ArchitectureMonitor.tsx`  | 54     | Console monitoring système                                                                  |
 | `ImportModal`         | `shared/ImportModal.tsx`          | 68     | Modal d'import avec progression                                                             |
@@ -413,6 +421,7 @@ Les composants ont été décomposés en Phase 0.3. Chaque composant est dans so
 | Hook/Util                 | Fichier                        | Responsabilité                                                                                                                                                                                       |
 | ------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `useWasmCanvasRender`     | `hooks/useWasmCanvasRender.ts` | Encapsule rendu WASM (chargement image, détection filtres, appel renderWithWasm) — utilisé par SplitViewComparison, OverlayComparison, SideBySideComparison (Phase 4.4-B, Maintenance déduplication) |
+| `useAppShortcuts`         | `hooks/useAppShortcuts.ts`     | Centralise les raccourcis clavier globaux (matching key/modifiers + cleanup listener) (M.3.1)                                                      |
 | `editStateToPixelFilters` | `lib/filterUtils.ts`           | Convertit EditState UI (sliders -100..+100) → PixelFilterState (plages WASM spécifiques)                                                                                                             |
 | `hasNonNeutralFilters`    | `lib/filterUtils.ts`           | Détecte si AU MOINS un filtre dévie des valeurs neutres (évite rendu inutile)                                                                                                                        |
 
@@ -692,7 +701,9 @@ export interface CatalogEvent {
 
 ---
 
-## 7. Raccourcis Clavier (Mockup)
+## 7. Raccourcis Clavier
+
+Depuis la maintenance **M.3.1**, les raccourcis globaux sont gérés par `useAppShortcuts` (hook dédié) au lieu d’un listener inline dans `App.tsx`.
 
 | Touche       | Action                    | Implémenté ? |
 | ------------ | ------------------------- | ------------ |
@@ -1019,6 +1030,14 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 - ✅ `services/blake3.rs` utilise `tokio::task::spawn_blocking` pour le hash streaming CPU-bound.
 - ✅ Validation backend : `cargo check` OK, `cargo test` OK (**225 tests passants**).
 - ✅ `cargo clippy --all-targets -D warnings` passe.
+
+**M.2.1 — Refactoring Injection Dépendances DB (2026-03-10)** :
+
+- ✅ Trait `DBContext` (async) créé dans `types/db_context.rs` — abstrait toutes les opérations DB de l'ingestion (7 méthodes).
+- ✅ `SqliteDbRepository` implémente `DBContext` dans `services/db_repository.rs`.
+- ✅ `IngestionService` utilise désormais `Arc<dyn DBContext>` au lieu de `Arc<Mutex<Connection>>` directement.
+- ✅ Hack `open_in_memory` supprimé de `commands/catalog.rs` — remplacé par `get_or_create_folder_id_tx`.
+- ✅ `cargo clippy --lib -- -D warnings` : 0 warnings. `cargo test --lib` : **225/225** passants.
 
 ---
 

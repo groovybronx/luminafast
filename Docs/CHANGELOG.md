@@ -57,6 +57,7 @@
 | M           | 1.1a       | Monitoring Threadpool Tokio (Saturation Alerts + Metrics Collection)                            | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 1.2        | Migration Async IO (std::fs → tokio::fs dans contextes async)                                   | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 1.3        | Nettoyage Code Mort (fichier debug + fonctions WASM deprecated)                                 | ✅ Complétée | 2026-03-10 | Copilot |
+| M           | 3.1        | Refactoring App.tsx (AppInitializer + useAppShortcuts)                                          | ✅ Complétée | 2026-03-10 | Copilot |
 
 | 5 | 5.1 | Panneau EXIF Connecté | ✅ Complétée | 2026-07-10 | Copilot |
 | 5 | 5.2 | Système de Tags Hiérarchique | ✅ Complétée | 2026-07-11 | Copilot |
@@ -91,17 +92,56 @@
 
 ## Phase Actuelle
 
-> **Maintenance M.1.3** : Nettoyage Code Mort (clôturée)
+> **Maintenance M.3.1** : Refactoring App.tsx (clôturée)
 >
-> Brief : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.1.3-nettoyage-code-mort.md`
-> Branche : `phase/m.1.3-nettoyage-code-mort`
-> Note qualité : validations backend/frontend ✅ (`cargo check`, `clippy`, `cargo test`, `tsc`, `eslint`)
+> Brief : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.3.1-refactoring-app-tsx.md`
+> Branche : `phase/m.3.1-refactoring-app-tsx`
+> Note qualité : validations ciblées ✅ (tests AppInitializer/useAppShortcuts, `tsc --noEmit`, `eslint`, `cargo check`)
 
 ---
 
 ## Historique des Sous-Phases Complétées
 
 ---
+
+### 2026-03-10 — Phase M.3.1 : Refactoring App.tsx (AppInitializer + useAppShortcuts) (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée**
+**Agent** : LuminaFast Phase Implementation
+**Branche** : `phase/m.3.1-refactoring-app-tsx`
+**Type** : Maintenance
+
+#### Résumé
+
+**Solution** : extraction de l’initialisation applicative vers `AppInitializer` (séquence inchangée `previewService.initialize()` puis `refreshCatalog`) et des raccourcis clavier globaux vers `useAppShortcuts`, avec simplification ciblée de `App.tsx` sans modification du comportement existant.
+
+#### Fichiers créés
+
+- `src/components/AppInitializer.tsx` — initialisation one-shot (preview service + refresh catalogue) avec logs et callback de complétion.
+- `src/components/__tests__/AppInitializer.test.tsx` — tests de succès/erreur de l’initialisation.
+- `src/hooks/useAppShortcuts.ts` — enregistrement/cleanup des listeners clavier globaux.
+- `src/hooks/__tests__/useAppShortcuts.test.ts` — tests listener + déclenchement + ignore input.
+- `src/types/shortcuts.ts` — type strict des définitions de raccourcis.
+
+#### Fichiers modifiés
+
+- `src/App.tsx` — orchestration déléguée à `AppInitializer` et `useAppShortcuts`; mapping des raccourcis conservé (`1..5,0`, `p/x/u`, `g/d`).
+- `Docs/CHANGELOG.md` — entrée M.3.1.
+- `Docs/APP_DOCUMENTATION.md` — architecture/hook/raccourcis mis à jour.
+
+#### Critères de validation remplis
+
+- [x] AppInitializer extrait et testé
+- [x] useAppShortcuts extrait et testé
+- [x] `App.tsx` simplifié sans régression fonctionnelle des shortcuts
+- [x] Event listeners avec cleanup
+- [x] TypeScript strict (`any` non introduit)
+
+#### Impact
+
+- Réduction de la complexité de `App.tsx` sans élargir le scope (LeftSidebar inchangée).
+- Tests : 5 nouveaux tests passants ✅ (`AppInitializer` + `useAppShortcuts`).
+- Validations : `npm run type-check`, `npm run lint`, `npm run rust:check` ✅.
 
 ### 2026-03-07 — P0 + P1 : Conformité TypeScript Strict & Documentation WASM (✅ COMPLÉTÉE)
 
@@ -4749,10 +4789,55 @@ test result: ok. 10 passed; 0 failed
 
 ---
 
+## 2026-03-10 — Phase M.2.1 : Refactoring Injection Dépendances DB (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée**
+**Agent** : GitHub Copilot (Claude Sonnet 4.6)
+**Brief** : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.2.1-refactoring-injection-db.md`
+**Branche** : `phase/m.2.1-refactoring-injection-db`
+
+### Analyse Cause Racine
+
+**Symptôme** : `IngestionService` tenait une référence directe `Arc<Mutex<Connection>>` couplant le service à l'implémentation SQLite concrète, rendant les tests d'intégration difficiles et empêchant les faux doubles. De plus, `backfill_images_folder_id` dans `catalog.rs` utilisait un hack `open_in_memory` pour instancier `IngestionService`.
+
+**Cause racine technique** : Absence d'abstraction entre la couche service métier (ingestion) et la couche persistence (SQLite), violation du principe d'inversion des dépendances (DIP).
+
+**Correction structurelle** : Introduce le pattern Repository/Context avec `DBContext` (async trait) comme abstraction et `SqliteDbRepository` comme implémentation concrète. L'`IngestionService` dépend désormais du trait, plus de l'implémentation.
+
+### Travaux Réalisés
+
+**Nouveaux fichiers** :
+- Créé : `src-tauri/src/types/db_context.rs` — trait `DBContext` (7 méthodes async) + structs `SessionStatsUpdate` / `SessionStatsRecord`
+- Créé : `src-tauri/src/types/mod.rs` — module root `types`
+- Créé : `src-tauri/src/services/db_repository.rs` — `SqliteDbRepository` (impl `DBContext`) + fn libre `get_or_create_folder_id_tx`
+
+**Fichiers modifiés** :
+- `src-tauri/src/services/ingestion.rs` — délégation totale des opérations DB vers `db_context: Arc<dyn DBContext>`; constructeurs backward-compatibles conservés
+- `src-tauri/src/services/mod.rs` — ajout `pub mod db_repository`
+- `src-tauri/src/commands/catalog.rs` — suppression hack `open_in_memory`; utilise `get_or_create_folder_id_tx` directement
+- `src-tauri/src/commands/discovery.rs` — wiring vers `SqliteDbRepository` + `IngestionService::with_context()`
+- `src-tauri/src/lib.rs` — ajout `mod types`
+- `src-tauri/Cargo.toml` — ajout dépendance `async-trait = "0.1"`
+
+### Validation
+
+- ✅ `cargo clippy --lib -- -D warnings` : **0 warnings**
+- ✅ `cargo test --lib` : **225/225 tests passants** (0 régressions)
+- ✅ `get_errors` IDE : **0 erreurs**
+
+### Impact
+
+- Architecture DI propre : `IngestionService` testable sans SQLite réel (mock `DBContext`)
+- Suppression dette technique : hack `open_in_memory` éliminé
+- `SessionStatsUpdate` / `SessionStatsRecord` centralisés dans `types/` (disponibles partout)
+- Dépendance `async-trait` ajoutée (requise pour trait async Rust stable)
+
+---
+
 ## Statistiques du Projet
 
 - **Sous-phases totales** : 38
-- **Complétées** : 24 / 38 (63.2%)
+- **Complétées** : 25 / 38 (65.8%)
 - **En cours** : 0
 - **Bloquées** : 0
 - **Dernière mise à jour** : 2026-03-10

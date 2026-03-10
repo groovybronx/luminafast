@@ -3,8 +3,10 @@ use crate::models::discovery::{
     IngestionResult,
 };
 use crate::services::blake3::Blake3Service;
+use crate::services::db_repository::SqliteDbRepository;
 use crate::services::discovery::DiscoveryService;
 use crate::services::ingestion::IngestionService;
+use crate::types::db_context::DBContext;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::OnceLock;
@@ -54,8 +56,9 @@ fn get_ingestion_service() -> Arc<IngestionService> {
                 .expect("Failed to enable WAL mode");
 
             let db = Arc::new(std::sync::Mutex::new(conn));
+            let db_context: Arc<dyn DBContext> = Arc::new(SqliteDbRepository::new(db));
 
-            Arc::new(IngestionService::new(blake3_service, db))
+            Arc::new(IngestionService::with_context(blake3_service, db_context))
         })
         .clone()
 }

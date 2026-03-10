@@ -57,6 +57,7 @@
 | M           | 1.1a       | Monitoring Threadpool Tokio (Saturation Alerts + Metrics Collection)                            | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 1.2        | Migration Async IO (std::fs → tokio::fs dans contextes async)                                   | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 1.3        | Nettoyage Code Mort (fichier debug + fonctions WASM deprecated)                                 | ✅ Complétée | 2026-03-10 | Copilot |
+| M           | 2.1a       | Connection Pooling SQLite (DBContext repository ingestion/discovery)                            | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 3.1        | Refactoring App.tsx (AppInitializer + useAppShortcuts)                                          | ✅ Complétée | 2026-03-10 | Copilot |
 
 | 5 | 5.1 | Panneau EXIF Connecté | ✅ Complétée | 2026-07-10 | Copilot |
@@ -92,15 +93,59 @@
 
 ## Phase Actuelle
 
-> **Maintenance M.3.1** : Refactoring App.tsx (clôturée)
+> **Maintenance M.2.1a** : Connection Pooling SQLite (clôturée)
 >
-> Brief : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.3.1-refactoring-app-tsx.md`
-> Branche : `phase/m.3.1-refactoring-app-tsx`
-> Note qualité : validations ciblées ✅ (tests AppInitializer/useAppShortcuts, `tsc --noEmit`, `eslint`, `cargo check`)
+> Brief : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.2.1a-connection-pooling.md`
+> Branche : `phase/m.2.1a-connection-pooling`
+> Note qualité : checkpoints 1→4 validés ✅ (`cargo check`, `cargo clippy --all-targets -- -D warnings`, tests pooling + non-régression DBContext)
 
 ---
 
 ## Historique des Sous-Phases Complétées
+
+---
+
+### 2026-03-10 — Phase M.2.1a : Connection Pooling SQLite (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée**
+**Agent** : LuminaFast Phase Implementation
+**Branche** : `phase/m.2.1a-connection-pooling`
+**Type** : Maintenance
+
+#### Résumé
+
+**Cause racine** : la couche `DBContext` backend utilisée par ingestion/discovery reposait sur une connexion SQLite unique protégée par mutex, ce qui créait de la contention sous charge et ne permettait pas de contrôler explicitement acquisition/timeout/retry. Les erreurs transitoires `database is locked` n’étaient pas gérées via une stratégie bornée dédiée.
+
+**Solution** : intégration d’un pool SQLite `r2d2 + r2d2_sqlite` dans `SqliteDbRepository` avec configuration tunable (max/min connexions, timeout d’acquisition, busy timeout SQLite), retry borné sur erreurs lock/busy, métriques de pool (total/in_use/idle, acquires, timeouts, retries, latence moyenne), et initialisation discovery vers repository poolé.
+
+#### Fichiers créés
+
+- Aucun nouveau fichier permanent
+
+#### Fichiers modifiés
+
+- `src-tauri/Cargo.toml` — ajout dépendances `r2d2`, `r2d2_sqlite`
+- `src-tauri/Cargo.lock` — verrouillage des nouvelles dépendances
+- `src-tauri/src/types/db_context.rs` — ajout `DbPoolMetrics` + méthode `get_pool_metrics()`
+- `src-tauri/src/services/db_repository.rs` — backend poolé, config env, retry lock/busy, métriques, tests concurrence/épuisement/retry
+- `src-tauri/src/commands/discovery.rs` — singleton ingestion initialisé via `SqliteDbRepository::from_db_path_with_config`
+- `src-tauri/src/services/ingestion.rs` — exposition/log des métriques pool + correction test clippy (`await_holding_lock`)
+- `Docs/CHANGELOG.md` — entrée M.2.1a
+- `Docs/APP_DOCUMENTATION.md` — architecture/tuning pooling SQLite
+
+#### Critères de validation remplis
+
+- [x] Checkpoint 1 : pool library intégrée + compilation backend OK
+- [x] Checkpoint 2 : tests accès concurrent passants
+- [x] Checkpoint 3 : métriques pool exposées (`active/in_use`, `idle`, `acquire timeout`, `retry`)
+- [x] Checkpoint 4 : tests ciblés M.2.1a + non-régression session DBContext passants
+
+#### Impact
+
+- Discovery/Ingestion utilisent désormais un repository poolé configurable sans casser les commandes Tauri publiques.
+- Robustesse accrue en contention SQLite grâce au retry borné sur `busy/locked`.
+- Observabilité backend améliorée via métriques pool journalisées en fin de batch ingestion.
+- Validations exécutées : `cargo check`, `cargo clippy --all-targets -- -D warnings`, tests ciblés pool + non-régression ✅.
 
 ---
 

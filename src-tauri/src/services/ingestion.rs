@@ -7,7 +7,7 @@ use crate::services::blake3::Blake3Service;
 use crate::services::db_repository::SqliteDbRepository;
 use crate::services::exif;
 use crate::services::metrics::{DefaultMetricsCollector, MetricsCollector};
-use crate::types::db_context::{DBContext, SessionStatsUpdate};
+use crate::types::db_context::{DBContext, DbPoolMetrics, SessionStatsUpdate};
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -485,6 +485,19 @@ impl IngestionService {
             std::cmp::max(1, start_time.elapsed().as_micros() / 1000) as u64;
         result.finalize();
 
+        if let Some(pool_metrics) = self.get_db_pool_metrics() {
+            log::info!(
+                "DB pool metrics after batch ingestion: total={}, in_use={}, idle={}, acquires={}, acquire_timeouts={}, retries={}, avg_acquire_wait_ms={:.2}",
+                pool_metrics.total_connections,
+                pool_metrics.in_use_connections,
+                pool_metrics.idle_connections,
+                pool_metrics.acquire_count,
+                pool_metrics.acquire_timeout_count,
+                pool_metrics.retry_count,
+                pool_metrics.avg_acquire_wait_ms
+            );
+        }
+
         Ok(result)
     }
 
@@ -794,6 +807,11 @@ impl IngestionService {
     pub async fn complete_session(&self, session_id: Uuid) -> Result<(), DiscoveryError> {
         self.db_context.complete_ingestion_session(session_id).await
     }
+
+    /// Return DB pool metrics when the injected DBContext supports pooling.
+    pub fn get_db_pool_metrics(&self) -> Option<DbPoolMetrics> {
+        self.db_context.get_pool_metrics()
+    }
 }
 
 /// Ingestion statistics for a session
@@ -936,15 +954,16 @@ mod tests {
             .await
             .expect("Session creation should succeed via DBContext");
 
-        let guard = shared_db.lock().unwrap();
-        let table_exists: i64 = guard
-            .query_row(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='ingestion_sessions'",
-                [],
-                |row| row.get(0),
-            )
-            .unwrap();
-        drop(guard);
+        let table_exists: i64 = {
+            let guard = shared_db.lock().unwrap();
+            guard
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='ingestion_sessions'",
+                    [],
+                    |row| row.get(0),
+                )
+                .unwrap()
+        };
 
         assert_eq!(table_exists, 1);
 

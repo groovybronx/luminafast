@@ -70,7 +70,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-03-10 (Maintenance M.3.1 clôturée : refactoring `App.tsx` avec extraction `AppInitializer` + `useAppShortcuts`)
+> **Dernière mise à jour** : 2026-03-10 (Maintenance M.2.1a clôturée : connection pooling SQLite backend pour ingestion/discovery)
 >
 > ### Décisions Projet (validées par le propriétaire)
 
@@ -334,12 +334,12 @@ LuminaFast/
 │   │   │   └── 004_folders.sql      # Colonnes is_online, name sur folders (Phase 3.4)
 │   │   ├── types/                    # Types partagés et abstractions (Phase M.2.1)
 │   │   │   ├── mod.rs               # Export des types
-│   │   │   └── db_context.rs        # Trait DBContext (7 méthodes async) + SessionStatsUpdate/Record
+│   │   │   └── db_context.rs        # Trait DBContext (7 méthodes async) + SessionStatsUpdate/Record + DbPoolMetrics
 │   │   ├── services/                 # Services métier (Layer logique DB→commandes)
 │   │   │   ├── AGENTS.md           # Conventions services Rust
 │   │   │   ├── mod.rs               # Export des services
 │   │   │   ├── blake3.rs            # Service BLAKE3 hashing (Phase 1.3)
-│   │   │   ├── db_repository.rs     # SqliteDbRepository (impl DBContext) + get_or_create_folder_id_tx (M.2.1)
+│   │   │   ├── db_repository.rs     # SqliteDbRepository poolé (r2d2_sqlite) + retry lock/busy + métriques (M.2.1a)
 │   │   │   ├── exif.rs              # Service extraction EXIF kamadak-exif (Phase 2.2)
 │   │   │   ├── iptc.rs              # Service IPTC skeleton (Phase 5.4)
 │   │   │   ├── discovery.rs         # Service découverte récursive (M.1.2: metadata async)
@@ -763,21 +763,23 @@ Depuis la maintenance **M.3.1**, les raccourcis globaux sont gérés par `useApp
 
 ### Production
 
-| Crate                 | Version | Usage                   |
-| --------------------- | ------- | ----------------------- |
-| `tauri`               | ^2.9.1  | Framework desktop       |
-| `tauri-plugin-log`    | ^2      | Logging système         |
-| `tauri-plugin-fs`     | ^2      | Accès fichiers          |
-| `tauri-plugin-dialog` | ^2      | Dialogues système       |
-| `tauri-plugin-shell`  | ^2      | Commandes système       |
-| `serde`               | ^1.0    | Sérialisation JSON      |
-| `serde_json`          | ^1.0    | JSON parsing/writing    |
-| `rusqlite`            | ^0.31.0 | Base de données SQLite  |
-| `thiserror`           | ^1.0    | Gestion d'erreurs       |
-| `chrono`              | ^0.4.38 | Dates et timestamps     |
-| `blake3`              | ^1.5    | Hachage cryptographique |
-| `rayon`               | ^1.10   | Parallélisation         |
-| `tokio`               | ^1.40   | Runtime async           |
+| Crate                 | Version | Usage                             |
+| --------------------- | ------- | --------------------------------- |
+| `tauri`               | ^2.9.1  | Framework desktop                 |
+| `tauri-plugin-log`    | ^2      | Logging système                   |
+| `tauri-plugin-fs`     | ^2      | Accès fichiers                    |
+| `tauri-plugin-dialog` | ^2      | Dialogues système                 |
+| `tauri-plugin-shell`  | ^2      | Commandes système                 |
+| `serde`               | ^1.0    | Sérialisation JSON                |
+| `serde_json`          | ^1.0    | JSON parsing/writing              |
+| `rusqlite`            | ^0.31.0 | Base de données SQLite            |
+| `r2d2`                | ^0.8    | Connection pool générique         |
+| `r2d2_sqlite`         | ^0.24   | Connection pool SQLite (rusqlite) |
+| `thiserror`           | ^1.0    | Gestion d'erreurs                 |
+| `chrono`              | ^0.4.38 | Dates et timestamps               |
+| `blake3`              | ^1.5    | Hachage cryptographique           |
+| `rayon`               | ^1.10   | Parallélisation                   |
+| `tokio`               | ^1.40   | Runtime async                     |
 
 ### Développement
 
@@ -839,6 +841,19 @@ Depuis la maintenance **M.3.1**, les raccourcis globaux sont gérés par `useApp
 - `page_size = 4096` : Taille de page optimisée
 - `temp_store = memory` : Tables temporaires en RAM
 - `foreign_keys = ON` : Contraintes référentielles activées
+
+**Connection pooling (M.2.1a)** :
+
+- `SqliteDbRepository` supporte un backend poolé via `r2d2 + r2d2_sqlite` (utilisé par ingestion/discovery).
+- Paramètres tunables via variables d'environnement :
+  - `LUMINAFAST_DB_POOL_MAX_CONNECTIONS` (défaut `12`)
+  - `LUMINAFAST_DB_POOL_MIN_CONNECTIONS` (défaut `2`)
+  - `LUMINAFAST_DB_POOL_ACQUIRE_TIMEOUT_MS` (défaut `1500`)
+  - `LUMINAFAST_DB_POOL_BUSY_TIMEOUT_MS` (défaut `750`)
+  - `LUMINAFAST_DB_POOL_RETRY_MAX_ATTEMPTS` (défaut `3`)
+  - `LUMINAFAST_DB_POOL_RETRY_BACKOFF_MS` (défaut `25`)
+- Retry borné actif sur erreurs transitoires SQLite `database is locked` / `database is busy`.
+- Métriques exposées côté backend : `totalConnections`, `inUseConnections`, `idleConnections`, `acquireTimeoutCount`, `retryCount`, `avgAcquireWaitMs`.
 
 ### 11.3 — Système de Migrations
 
@@ -1038,6 +1053,14 @@ let exif_data = match exif::extract_exif_metadata(&file_path) {
 - ✅ `IngestionService` utilise désormais `Arc<dyn DBContext>` au lieu de `Arc<Mutex<Connection>>` directement.
 - ✅ Hack `open_in_memory` supprimé de `commands/catalog.rs` — remplacé par `get_or_create_folder_id_tx`.
 - ✅ `cargo clippy --lib -- -D warnings` : 0 warnings. `cargo test --lib` : **225/225** passants.
+
+**M.2.1a — Connection Pooling SQLite (2026-03-10)** :
+
+- ✅ `commands/discovery.rs` initialise `IngestionService` avec `SqliteDbRepository::from_db_path_with_config` (pool au lieu d'une connexion unique).
+- ✅ `services/db_repository.rs` introduit `SqlitePoolConfig` (max/min pool, acquire timeout, busy timeout, retry borné).
+- ✅ Retry borné ajouté pour erreurs transitoires `DatabaseBusy/DatabaseLocked` avec backoff configurable.
+- ✅ Métriques de pool disponibles via `DBContext::get_pool_metrics()` et journalisées en fin de `batch_ingest`.
+- ✅ Tests ciblés passants : concurrence, épuisement de pool (acquire timeout), retry busy/locked, non-régression session methods via DBContext.
 
 ---
 
@@ -1410,19 +1433,20 @@ getAppliedEdits(imageId: number): EventDTO[]                   // Retrieve
 
 ## 19. Historique des Modifications de ce Document
 
-| Date       | Phase               | Modification                                                       | Raison                                         |
-| ---------- | ------------------- | ------------------------------------------------------------------ | ---------------------------------------------- |
-| 2026-03-03 | 4.3                 | Historique interactif + snapshots nommés (create/restore/delete)   | Livraison complète de la Phase 4.3             |
-| 2026-02-27 | 4.2-B.2 Conformity  | Ajout section "Système de Rendu" (Event Sourcing + CSS + WASM)     | Documentation Phase 4.2 pipeline complet       |
-| 2026-02-23 | Maintenance SQL     | Refactorisation `get_folder_images()` pour sécurité et performance | Élimination conversions u32→String inutiles    |
-| 2026-02-23 | Maintenance Qualité | Résolution 4 notes bloquantes Review Copilot (PR #20)              | Error handling, volume_name, SQL LIKE, Zustand |
-| 2026-02-13 | 1.4                 | Ajout section Service Filesystem complète                          | Implémentation Phase 1.4 terminée              |
-| 2026-02-13 | 1.3                 | Mise à jour complète après Phase 1.3 (BLAKE3)                      | Synchronisation documentation avec état actuel |
-| 2026-02-12 | 1.2                 | Ajout section API/Commandes Tauri complète                         | Implémentation Phase 1.2 terminée              |
-| 2026-02-11 | 1.1                 | Ajout section Base de Données SQLite complète                      | Implémentation Phase 1.1 terminée              |
-| 2026-02-11 | 1.1                 | Mise à jour stack technique et architecture fichiers               | Ajout src-tauri avec SQLite                    |
-| 2026-02-11 | 1.1                 | Ajout scripts Rust dans section développement                      | Scripts npm pour tests Rust                    |
-| 2026-02-11 | 0.5                 | Mise à jour après complétion Phase 0.5                             | CI/CD implémenté et fonctionnel                |
+| Date       | Phase               | Modification                                                                  | Raison                                         |
+| ---------- | ------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------- |
+| 2026-03-10 | M.2.1a              | Connection pooling SQLite (r2d2), tuning env, retry lock/busy, métriques pool | Robustesse ingestion/discovery sous contention |
+| 2026-03-03 | 4.3                 | Historique interactif + snapshots nommés (create/restore/delete)              | Livraison complète de la Phase 4.3             |
+| 2026-02-27 | 4.2-B.2 Conformity  | Ajout section "Système de Rendu" (Event Sourcing + CSS + WASM)                | Documentation Phase 4.2 pipeline complet       |
+| 2026-02-23 | Maintenance SQL     | Refactorisation `get_folder_images()` pour sécurité et performance            | Élimination conversions u32→String inutiles    |
+| 2026-02-23 | Maintenance Qualité | Résolution 4 notes bloquantes Review Copilot (PR #20)                         | Error handling, volume_name, SQL LIKE, Zustand |
+| 2026-02-13 | 1.4                 | Ajout section Service Filesystem complète                                     | Implémentation Phase 1.4 terminée              |
+| 2026-02-13 | 1.3                 | Mise à jour complète après Phase 1.3 (BLAKE3)                                 | Synchronisation documentation avec état actuel |
+| 2026-02-12 | 1.2                 | Ajout section API/Commandes Tauri complète                                    | Implémentation Phase 1.2 terminée              |
+| 2026-02-11 | 1.1                 | Ajout section Base de Données SQLite complète                                 | Implémentation Phase 1.1 terminée              |
+| 2026-02-11 | 1.1                 | Mise à jour stack technique et architecture fichiers                          | Ajout src-tauri avec SQLite                    |
+| 2026-02-11 | 1.1                 | Ajout scripts Rust dans section développement                                 | Scripts npm pour tests Rust                    |
+| 2026-02-11 | 0.5                 | Mise à jour après complétion Phase 0.5                                        | CI/CD implémenté et fonctionnel                |
 
 | Date       | Sous-Phase            | Nature de la modification                                                            |
 | ---------- | --------------------- | ------------------------------------------------------------------------------------ |

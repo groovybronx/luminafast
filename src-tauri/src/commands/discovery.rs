@@ -3,7 +3,7 @@ use crate::models::discovery::{
     IngestionResult,
 };
 use crate::services::blake3::Blake3Service;
-use crate::services::db_repository::SqliteDbRepository;
+use crate::services::db_repository::{SqliteDbRepository, SqlitePoolConfig};
 use crate::services::discovery::DiscoveryService;
 use crate::services::ingestion::IngestionService;
 use crate::types::db_context::DBContext;
@@ -56,16 +56,10 @@ fn get_ingestion_service() -> Arc<IngestionService> {
             ensure_ingestion_schema(&db_path)
                 .expect("Failed to initialize ingestion database schema");
 
-            // Open connection to main database
-            let conn = rusqlite::Connection::open(&db_path)
-                .expect("Failed to open database for ingestion service");
-
-            // Enable WAL mode for better concurrency
-            conn.execute_batch("PRAGMA journal_mode = WAL;")
-                .expect("Failed to enable WAL mode");
-
-            let db = Arc::new(std::sync::Mutex::new(conn));
-            let db_context: Arc<dyn DBContext> = Arc::new(SqliteDbRepository::new(db));
+            let pool_config = SqlitePoolConfig::from_env();
+            let repository = SqliteDbRepository::from_db_path_with_config(&db_path, pool_config)
+                .expect("Failed to open pooled database repository for ingestion service");
+            let db_context: Arc<dyn DBContext> = Arc::new(repository);
 
             Arc::new(IngestionService::with_context(blake3_service, db_context))
         })

@@ -1,7 +1,21 @@
 use crate::models::discovery::{BasicExif, DiscoveredFile, DiscoveryError};
 use crate::models::exif::ExifMetadata;
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DbPoolMetrics {
+    pub total_connections: u32,
+    pub idle_connections: u32,
+    pub in_use_connections: u32,
+    pub acquire_count: u64,
+    pub acquire_timeout_count: u64,
+    pub retry_count: u64,
+    pub total_acquire_wait_ms: u64,
+    pub avg_acquire_wait_ms: f64,
+}
 
 #[derive(Debug, Clone)]
 pub struct SessionStatsUpdate {
@@ -55,4 +69,8 @@ pub trait DBContext: Send + Sync {
     ) -> Result<Option<SessionStatsRecord>, DiscoveryError>;
 
     async fn get_recent_import_fallback(&self) -> Result<(i64, Option<i64>), DiscoveryError>;
+
+    fn get_pool_metrics(&self) -> Option<DbPoolMetrics> {
+        None
+    }
 }

@@ -15,6 +15,10 @@ use std::time::Instant;
 use tauri::{AppHandle, Emitter};
 use uuid::Uuid;
 
+// TODO [M.1.1a]: Export metrics collector for commands/metrics.rs
+// Add: pub fn get_threadpool_metrics() -> Option<Arc<DefaultMetricsCollector>>
+// This allows commands/metrics.rs::get_threadpool_metrics() to access real metrics instead of mock values
+
 /// Internal helper function for ingestion (works in async contexts without 'self')
 /// Takes owned Arc references to be 'static compatible for tokio::spawn
 async fn ingest_file_internal(

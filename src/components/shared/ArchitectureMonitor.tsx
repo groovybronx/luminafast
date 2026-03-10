@@ -6,6 +6,13 @@ interface ArchitectureMonitorProps {
   logs: LogEntry[];
 }
 
+// TODO [M.1.1a]: Add metrics display to ArchitectureMonitor
+// 1. Create metricsService.ts with onMetricsUpdate() subscription
+// 2. Add useEffect to listen for threadpool-saturation-alert events
+// 3. Display active_tasks, saturation_percentage in real-time (after 'KERNEL MONITOR' title)
+// 4. Add visual indicator (color based on saturation %, red if >80%)
+// Example: "KERNEL MONITOR [Tasks: 4/8 | Saturation: 50%]"
+
 export const ArchitectureMonitor = ({ logs }: ArchitectureMonitorProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isMinimized, setIsMinimized] = useState(false);

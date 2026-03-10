@@ -1925,11 +1925,11 @@ Phase 4.1 complétée le 2026-02-25
 
 ### 21.2 — Components
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| Metrics Struct | `src-tauri/src/services/metrics.rs` | ThreadpoolMetrics + MetricsCollector trait |
-| Integration | `src-tauri/src/services/ingestion.rs` | Increment/decrement on task spawn/complete |
-| Tests | Both files | 19 tests: metrics.rs (9) + ingestion.rs (10) |
+| Component      | File                                  | Purpose                                      |
+| -------------- | ------------------------------------- | -------------------------------------------- |
+| Metrics Struct | `src-tauri/src/services/metrics.rs`   | ThreadpoolMetrics + MetricsCollector trait   |
+| Integration    | `src-tauri/src/services/ingestion.rs` | Increment/decrement on task spawn/complete   |
+| Tests          | Both files                            | 19 tests: metrics.rs (9) + ingestion.rs (10) |
 
 ### 21.3 — Public API
 
@@ -1972,30 +1972,33 @@ pub fn with_max_threads(..., max_threads: usize) -> Self { ... }
 ### 21.5 — Saturation Detection
 
 **In batch_ingest()** :
+
 1. Enter spawn closure → `metrics_collector.increment_active_tasks()`
 2. Check saturation → `if collector.check_saturation(80.0) { log::warn!(...) }`
 3. Exit closure → `metrics_collector.decrement_active_tasks()`
 
 **Log output** (when saturated):
+
 ```
 [M.1.1a] Threadpool saturation warning: 87.5% (7/8 tasks active, 3 queued)
 ```
 
 ### 21.6 — Performance
 
-| Aspect | Cost | Details |
-|--------|------|---------|
-| increment_active_tasks() | O(1) | Atomic fetch_add |
-| decrement_active_tasks() | O(1) | Atomic fetch_sub |
-| check_saturation() | O(1) | Load + comparison |
-| Memory | ~48 bytes | 3× AtomicUsize + 1× usize |
-| Overhead per file | <1μs | Non-blocking, no allocation |
+| Aspect                   | Cost      | Details                     |
+| ------------------------ | --------- | --------------------------- |
+| increment_active_tasks() | O(1)      | Atomic fetch_add            |
+| decrement_active_tasks() | O(1)      | Atomic fetch_sub            |
+| check_saturation()       | O(1)      | Load + comparison           |
+| Memory                   | ~48 bytes | 3× AtomicUsize + 1× usize   |
+| Overhead per file        | <1μs      | Non-blocking, no allocation |
 
 **Conclusion** : Zero measurable performance impact.
 
 ### 21.7 — Tests
 
 **Metrics module (metrics.rs)** — 9 tests:
+
 - `test_metrics_creation` : Struct initialization
 - `test_saturation_calculation` : Formula verification
 - `test_collector_increment_decrement` : Counter operations
@@ -2007,6 +2010,7 @@ pub fn with_max_threads(..., max_threads: usize) -> Self { ... }
 - `test_full_saturation` : 100% usage
 
 **Ingestion integration (ingestion.rs)** — 10 tests:
+
 - `test_ingestion_service_has_metrics_collector` : Service initialization
 - `test_metrics_collector_tracks_active_tasks` : Counting accuracy
 - `test_threadpool_saturation_detection` : 80% threshold
@@ -2025,16 +2029,16 @@ self.metrics_collector.reset();  // Start fresh
 for file in files {
     // ...
     let metrics_collector_clone = Arc::clone(&self.metrics_collector);
-    
+
     let handle = tokio::spawn(async move {
         metrics_collector_clone.increment_active_tasks();  // Track
-        
+
         if metrics_collector_clone.check_saturation(80.0) {
             log::warn!("High threadpool usage!");
         }
-        
+
         // ... process file ...
-        
+
         metrics_collector_clone.decrement_active_tasks();  // Cleanup
     });
 }
@@ -2047,11 +2051,11 @@ for file in files {
 
 ### 21.10 — Future Expansions
 
-| Item | Reason | Timeline |
-|------|--------|----------|
-| Prometheus export | Production monitoring | Phase 7.2+ |
-| Dashboard UI | Real-time visualization | Phase 7.3+ |
-| Auto-scaling | Dynamic threadpool adjustment | Phase 8.1+ |
-| Distributed tracing | Advanced debugging | Phase 7.4+ |
+| Item                | Reason                        | Timeline   |
+| ------------------- | ----------------------------- | ---------- |
+| Prometheus export   | Production monitoring         | Phase 7.2+ |
+| Dashboard UI        | Real-time visualization       | Phase 7.3+ |
+| Auto-scaling        | Dynamic threadpool adjustment | Phase 8.1+ |
+| Distributed tracing | Advanced debugging            | Phase 7.4+ |
 
 ---

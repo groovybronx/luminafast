@@ -189,45 +189,51 @@ fn resolve_image_file_path(
 /// Retourne le chemin absolu du fichier XMP écrit.
 #[tauri::command]
 pub async fn export_image_xmp(image_id: u32, state: State<'_, AppState>) -> CommandResult<String> {
-    let mut db = state
-        .db
-        .lock()
-        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+    let (image_path, xmp_data) = {
+        let mut db = state
+            .db
+            .lock()
+            .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
-    // 0. Résoudre le chemin fichier
-    let image_path = resolve_image_file_path(&mut db, image_id)?;
+        // 0. Résoudre le chemin fichier
+        let image_path = resolve_image_file_path(&mut db, image_id)?;
 
-    // 1. Récupérer rating + flag depuis image_state
-    let image_state: Option<(Option<u8>, Option<String>)> = {
-        let result = db.connection().query_row(
-            "SELECT rating, flag FROM image_state WHERE image_id = ?",
-            [image_id],
-            |row| {
-                Ok((
-                    row.get::<_, Option<u8>>(0)?,
-                    row.get::<_, Option<String>>(1)?,
-                ))
-            },
-        );
-        result.ok()
-    };
+        // 1. Récupérer rating + flag depuis image_state
+        let image_state: Option<(Option<u8>, Option<String>)> = {
+            let result = db.connection().query_row(
+                "SELECT rating, flag FROM image_state WHERE image_id = ?",
+                [image_id],
+                |row| {
+                    Ok((
+                        row.get::<_, Option<u8>>(0)?,
+                        row.get::<_, Option<String>>(1)?,
+                    ))
+                },
+            );
+            result.ok()
+        };
 
-    let (rating, flag) = image_state.unwrap_or((None, None));
+        let (rating, flag) = image_state.unwrap_or((None, None));
 
-    // 2. Récupérer les tags
-    let (flat_tags, hierarchical_subjects) = build_tags_for_image(&mut db, image_id)?;
+        // 2. Récupérer les tags
+        let (flat_tags, hierarchical_subjects) = build_tags_for_image(&mut db, image_id)?;
 
-    // 3. Construire XmpData
-    let xmp_data = XmpData {
-        rating,
-        flag,
-        tags: flat_tags,
-        hierarchical_subjects,
+        // 3. Construire XmpData
+        let xmp_data = XmpData {
+            rating,
+            flag,
+            tags: flat_tags,
+            hierarchical_subjects,
+        };
+
+        (image_path, xmp_data)
     };
 
     // 4. Écrire le fichier XMP
     let xmp_path = xmp::build_xmp_path(&image_path);
-    xmp::write_xmp(&xmp_path, &xmp_data).map_err(|e| format!("XMP write error: {}", e))?;
+    xmp::write_xmp_async(&xmp_path, &xmp_data)
+        .await
+        .map_err(|e| format!("XMP write error: {}", e))?;
 
     Ok(xmp_path.to_string_lossy().to_string())
 }
@@ -241,19 +247,23 @@ pub async fn import_image_xmp(
     image_id: u32,
     state: State<'_, AppState>,
 ) -> CommandResult<XmpImportResultDTO> {
-    let mut db = state
-        .db
-        .lock()
-        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+    let image_path = {
+        let mut db = state
+            .db
+            .lock()
+            .map_err(|e| format!("Database lock poisoned: {}", e))?;
+        resolve_image_file_path(&mut db, image_id)?
+    };
 
-    let image_path = resolve_image_file_path(&mut db, image_id)?;
     let xmp_path = xmp::build_xmp_path(&image_path);
 
-    if !xmp_path.exists() {
+    if tokio::fs::metadata(&xmp_path).await.is_err() {
         return Err(format!("XMP sidecar not found at {:?}", xmp_path));
     }
 
-    let xmp_data = xmp::read_xmp(&xmp_path).map_err(|e| format!("XMP read error: {}", e))?;
+    let xmp_data = xmp::read_xmp_async(&xmp_path)
+        .await
+        .map_err(|e| format!("XMP read error: {}", e))?;
 
     // Convertir le label XMP en flag LuminaFast
     let flag = xmp_data
@@ -261,6 +271,11 @@ pub async fn import_image_xmp(
         .as_deref()
         .and_then(xmp::xmp_label_to_flag)
         .or_else(|| xmp_data.flag.clone());
+
+    let mut db = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
     // 1. Mettre à jour image_state (upsert)
     db.connection()
@@ -324,12 +339,15 @@ pub async fn get_xmp_status(
     image_id: u32,
     state: State<'_, AppState>,
 ) -> CommandResult<XmpStatusDTO> {
-    let mut db = state
-        .db
-        .lock()
-        .map_err(|e| format!("Database lock poisoned: {}", e))?;
+    let resolved_image_path = {
+        let mut db = state
+            .db
+            .lock()
+            .map_err(|e| format!("Database lock poisoned: {}", e))?;
+        resolve_image_file_path(&mut db, image_id)
+    };
 
-    let image_path = match resolve_image_file_path(&mut db, image_id) {
+    let image_path = match resolved_image_path {
         Ok(p) => p,
         Err(_) => {
             // Image sans chemin connu (not yet ingested ou en mémoire)
@@ -341,8 +359,9 @@ pub async fn get_xmp_status(
     };
 
     let xmp_path = xmp::build_xmp_path(&image_path);
+    let exists = tokio::fs::metadata(&xmp_path).await.is_ok();
     Ok(XmpStatusDTO {
-        exists: xmp_path.exists(),
+        exists,
         xmp_path: xmp_path.to_string_lossy().to_string(),
     })
 }

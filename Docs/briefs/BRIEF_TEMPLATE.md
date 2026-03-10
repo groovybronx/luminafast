@@ -38,7 +38,7 @@ Délimiter IN/OUT strictement.
 - Composant B avec ces responsabilités
 - Table DB C avec ce schéma
 
-### ❌ Exclus intentionnellement
+### ❌ Exclus ou reporté intentionnellement. ( il ne doit pas s agir de simpflication de périmètre, mais de ce qui est explicitement hors scope ou necessite un brief dédié car trop complexe en une seule phase. Ce feature,  optimisation .... reporté doit tout de suite faire l objet d'un brief dédié, il ne doit pas être juste "exclue" de celle ci.)
 
 - Feature D (reportée à phase X.Z)
 - Optimisation E (reporter à maintenance)

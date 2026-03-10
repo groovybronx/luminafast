@@ -196,7 +196,7 @@ describe('SmartCollectionBuilder', () => {
 
   it('should display preview count', async () => {
     const user = userEvent.setup();
-    const { container } = render(
+    render(
       <SmartCollectionBuilder
         onSave={mockOnSave}
         initialQuery={{ rules: [{ field: 'rating', operator: '>=', value: 3 }], combinator: 'AND' }}
@@ -208,11 +208,9 @@ describe('SmartCollectionBuilder', () => {
     await user.click(previewButton);
 
     // Check that the preview text mentions the image count and the word "match"
-    const previewDiv = container.querySelector('.mt-2.p-2.bg-white');
-    expect(previewDiv).toBeInTheDocument();
-    const textContent = previewDiv?.textContent || '';
-    expect(textContent).toMatch(/42/);
-    expect(textContent).toMatch(/match/);
+    // The preview div displays: "<strong>42</strong> images match these filters"
+    expect(screen.getByText(/42/)).toBeInTheDocument();
+    expect(screen.getByText(/match these filters/i)).toBeInTheDocument();
   });
 
   it('should update collection name', async () => {

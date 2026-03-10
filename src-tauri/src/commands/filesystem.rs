@@ -151,11 +151,7 @@ pub async fn list_active_watchers() -> Result<Vec<WatcherStats>, String> {
 pub async fn test_permissions(path: String) -> Result<bool, String> {
     let path_buf = PathBuf::from(path);
 
-    // Test simple de lecture
-    match std::fs::metadata(&path_buf) {
-        Ok(_) => Ok(true),
-        Err(_) => Ok(false),
-    }
+    Ok(tokio::fs::metadata(&path_buf).await.is_ok())
 }
 
 /// Récupère les métadonnées d'un fichier
@@ -163,8 +159,9 @@ pub async fn test_permissions(path: String) -> Result<bool, String> {
 pub async fn get_file_metadata(path: String) -> Result<FileEventMetadata, String> {
     let path_buf = PathBuf::from(path);
 
-    let metadata =
-        std::fs::metadata(&path_buf).map_err(|e| FilesystemError::IoError(e.to_string()))?;
+    let metadata = tokio::fs::metadata(&path_buf)
+        .await
+        .map_err(|e| FilesystemError::IoError(e.to_string()))?;
 
     let permissions = {
         #[cfg(unix)]
@@ -245,7 +242,9 @@ fn detect_mime_type(path: &Path) -> Option<String> {
 pub async fn create_directory(path: String) -> Result<(), String> {
     let path_buf = PathBuf::from(path);
 
-    std::fs::create_dir_all(&path_buf).map_err(|e| FilesystemError::IoError(e.to_string()))?;
+    tokio::fs::create_dir_all(&path_buf)
+        .await
+        .map_err(|e| FilesystemError::IoError(e.to_string()))?;
 
     Ok(())
 }
@@ -255,10 +254,18 @@ pub async fn create_directory(path: String) -> Result<(), String> {
 pub async fn delete_path(path: String) -> Result<(), String> {
     let path_buf = PathBuf::from(path);
 
-    if path_buf.is_dir() {
-        std::fs::remove_dir_all(&path_buf).map_err(|e| FilesystemError::IoError(e.to_string()))?;
+    let metadata = tokio::fs::metadata(&path_buf)
+        .await
+        .map_err(|e| FilesystemError::IoError(e.to_string()))?;
+
+    if metadata.is_dir() {
+        tokio::fs::remove_dir_all(&path_buf)
+            .await
+            .map_err(|e| FilesystemError::IoError(e.to_string()))?;
     } else {
-        std::fs::remove_file(&path_buf).map_err(|e| FilesystemError::IoError(e.to_string()))?;
+        tokio::fs::remove_file(&path_buf)
+            .await
+            .map_err(|e| FilesystemError::IoError(e.to_string()))?;
     }
 
     Ok(())
@@ -270,7 +277,9 @@ pub async fn move_path(from: String, to: String) -> Result<(), String> {
     let from_buf = PathBuf::from(from);
     let to_buf = PathBuf::from(to);
 
-    std::fs::rename(&from_buf, &to_buf).map_err(|e| FilesystemError::IoError(e.to_string()))?;
+    tokio::fs::rename(&from_buf, &to_buf)
+        .await
+        .map_err(|e| FilesystemError::IoError(e.to_string()))?;
 
     Ok(())
 }
@@ -284,13 +293,17 @@ pub async fn list_directory(path: String, recursive: Option<bool>) -> Result<Vec
     let mut entries = Vec::new();
 
     if recursive {
-        list_directory_recursive(&path_buf, &mut entries)?;
+        list_directory_recursive(&path_buf, &mut entries).await?;
     } else {
-        let dir_entries =
-            std::fs::read_dir(&path_buf).map_err(|e| FilesystemError::IoError(e.to_string()))?;
+        let mut dir_entries = tokio::fs::read_dir(&path_buf)
+            .await
+            .map_err(|e| FilesystemError::IoError(e.to_string()))?;
 
-        for entry in dir_entries {
-            let entry = entry.map_err(|e| FilesystemError::IoError(e.to_string()))?;
+        while let Some(entry) = dir_entries
+            .next_entry()
+            .await
+            .map_err(|e| FilesystemError::IoError(e.to_string()))?
+        {
             entries.push(entry.path().to_string_lossy().to_string());
         }
     }
@@ -299,23 +312,32 @@ pub async fn list_directory(path: String, recursive: Option<bool>) -> Result<Vec
 }
 
 /// Fonction récursive pour lister les dossiers
-fn list_directory_recursive(
-    path: &PathBuf,
+async fn list_directory_recursive(
+    path: &Path,
     entries: &mut Vec<String>,
 ) -> Result<(), FilesystemError> {
-    let dir_entries = std::fs::read_dir(path)
-        .map_err(|e: std::io::Error| FilesystemError::IoError(e.to_string()))?;
+    let mut stack = vec![path.to_path_buf()];
 
-    for entry in dir_entries {
-        let entry = entry.map_err(|e: std::io::Error| FilesystemError::IoError(e.to_string()))?;
-        let metadata = entry
-            .metadata()
+    while let Some(current_path) = stack.pop() {
+        let mut dir_entries = tokio::fs::read_dir(&current_path)
+            .await
             .map_err(|e: std::io::Error| FilesystemError::IoError(e.to_string()))?;
 
-        entries.push(entry.path().to_string_lossy().to_string());
-        if metadata.is_dir() {
-            // Récursion dans les sous-dossiers
-            list_directory_recursive(&entry.path(), entries)?;
+        while let Some(entry) = dir_entries
+            .next_entry()
+            .await
+            .map_err(|e: std::io::Error| FilesystemError::IoError(e.to_string()))?
+        {
+            let entry_path = entry.path();
+            let metadata = entry
+                .metadata()
+                .await
+                .map_err(|e: std::io::Error| FilesystemError::IoError(e.to_string()))?;
+
+            entries.push(entry_path.to_string_lossy().to_string());
+            if metadata.is_dir() {
+                stack.push(entry_path);
+            }
         }
     }
 
@@ -326,15 +348,16 @@ fn list_directory_recursive(
 #[command]
 pub async fn path_exists(path: String) -> Result<bool, String> {
     let path_buf = PathBuf::from(path);
-    Ok(path_buf.exists())
+    Ok(tokio::fs::metadata(&path_buf).await.is_ok())
 }
 /// Récupère la taille d'un fichier
 #[command]
 pub async fn get_file_size(path: String) -> Result<u64, String> {
     let path_buf = PathBuf::from(path);
 
-    let metadata =
-        std::fs::metadata(&path_buf).map_err(|e| FilesystemError::IoError(e.to_string()))?;
+    let metadata = tokio::fs::metadata(&path_buf)
+        .await
+        .map_err(|e| FilesystemError::IoError(e.to_string()))?;
 
     Ok(metadata.len())
 }

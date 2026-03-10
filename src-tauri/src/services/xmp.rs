@@ -39,12 +39,13 @@ pub fn build_xmp_path(image_path: &str) -> PathBuf {
 /// Retourne `XmpData::default()` si le fichier est introuvable (non une erreur).
 /// Retourne `Err` uniquement sur une erreur de lecture fichier.
 pub fn read_xmp(xmp_path: &Path) -> Result<XmpData, String> {
-    if !xmp_path.exists() {
-        return Ok(XmpData::default());
-    }
-
-    let content = std::fs::read_to_string(xmp_path)
-        .map_err(|e| format!("Cannot read XMP file {:?}: {}", xmp_path, e))?;
+    let content = match std::fs::read_to_string(xmp_path) {
+        Ok(content) => content,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(XmpData::default());
+        }
+        Err(e) => return Err(format!("Cannot read XMP file {:?}: {}", xmp_path, e)),
+    };
 
     parse_xmp_content(&content)
 }
@@ -55,6 +56,27 @@ pub fn read_xmp(xmp_path: &Path) -> Result<XmpData, String> {
 pub fn write_xmp(xmp_path: &Path, data: &XmpData) -> Result<(), String> {
     let content = build_xmp_content(data);
     std::fs::write(xmp_path, content)
+        .map_err(|e| format!("Cannot write XMP file {:?}: {}", xmp_path, e))
+}
+
+/// Lit et parse un fichier `.xmp` de manière asynchrone.
+pub async fn read_xmp_async(xmp_path: &Path) -> Result<XmpData, String> {
+    let content = match tokio::fs::read_to_string(xmp_path).await {
+        Ok(content) => content,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(XmpData::default());
+        }
+        Err(e) => return Err(format!("Cannot read XMP file {:?}: {}", xmp_path, e)),
+    };
+
+    parse_xmp_content(&content)
+}
+
+/// Écrit les données XMP de manière asynchrone.
+pub async fn write_xmp_async(xmp_path: &Path, data: &XmpData) -> Result<(), String> {
+    let content = build_xmp_content(data);
+    tokio::fs::write(xmp_path, content)
+        .await
         .map_err(|e| format!("Cannot write XMP file {:?}: {}", xmp_path, e))
 }
 
@@ -518,5 +540,38 @@ mod tests {
         let parsed = parse_xmp_content(xml).expect("parse should succeed");
         assert_eq!(parsed.rating, Some(5));
         assert_eq!(parsed.flag, Some("Pick".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_write_then_read_xmp_file_async() {
+        let tmp = NamedTempFile::new().expect("tempfile");
+        let xmp_path = tmp.path().with_extension("xmp");
+
+        let original = XmpData {
+            rating: Some(2),
+            flag: Some("reject".to_string()),
+            tags: vec!["async_tag".to_string()],
+            hierarchical_subjects: vec!["Test/Async".to_string()],
+        };
+
+        write_xmp_async(&xmp_path, &original)
+            .await
+            .expect("write_xmp_async should succeed");
+        let parsed = read_xmp_async(&xmp_path)
+            .await
+            .expect("read_xmp_async should succeed");
+
+        assert_eq!(parsed.rating, Some(2));
+        assert_eq!(parsed.tags, vec!["async_tag".to_string()]);
+        assert_eq!(parsed.hierarchical_subjects, vec!["Test/Async".to_string()]);
+    }
+
+    #[tokio::test]
+    async fn test_read_xmp_missing_file_returns_default_async() {
+        let path = Path::new("/nonexistent/path/image-async.xmp");
+        let result = read_xmp_async(path)
+            .await
+            .expect("should not error on missing file");
+        assert_eq!(result, XmpData::default());
     }
 }

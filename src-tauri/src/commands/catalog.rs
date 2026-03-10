@@ -305,6 +305,19 @@ mod get_image_exif_tests {
     fn test_get_image_exif_sql_returns_all_fields() {
         let mut db = setup_test_db();
 
+        struct ExifRow {
+            iso: Option<u32>,
+            aperture: Option<f64>,
+            shutter_speed: Option<f64>,
+            focal_length: Option<f64>,
+            lens: Option<String>,
+            make: Option<String>,
+            model: Option<String>,
+            gps_lat: Option<f64>,
+            gps_lon: Option<f64>,
+            color_space: Option<String>,
+        }
+
         // Créer une image de test
         db.connection()
             .execute(
@@ -328,34 +341,55 @@ mod get_image_exif_tests {
             .unwrap();
 
         // Vérifier que toutes les colonnes sont récupérables
-        let (iso, aperture, shutter_speed, focal_length, lens, make, model, gps_lat, gps_lon, cs): (
-            Option<u32>, Option<f64>, Option<f64>, Option<f64>,
-            Option<String>, Option<String>, Option<String>,
-            Option<f64>, Option<f64>, Option<String>,
-        ) = db.connection()
+        let exif_row: ExifRow = db
+            .connection()
             .query_row(
                 "SELECT iso, aperture, shutter_speed, focal_length, lens, camera_make,
                          camera_model, gps_lat, gps_lon, color_space
                   FROM exif_metadata WHERE image_id = ?",
                 [image_id],
-                |row| Ok((
-                    row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?,
-                    row.get(4)?, row.get(5)?, row.get(6)?,
-                    row.get(7)?, row.get(8)?, row.get(9)?,
-                )),
+                |row| {
+                    Ok(ExifRow {
+                        iso: row.get(0)?,
+                        aperture: row.get(1)?,
+                        shutter_speed: row.get(2)?,
+                        focal_length: row.get(3)?,
+                        lens: row.get(4)?,
+                        make: row.get(5)?,
+                        model: row.get(6)?,
+                        gps_lat: row.get(7)?,
+                        gps_lon: row.get(8)?,
+                        color_space: row.get(9)?,
+                    })
+                },
             )
             .unwrap();
 
-        assert_eq!(iso, Some(200));
-        assert!((aperture.unwrap() - 2.8).abs() < 0.001);
-        assert!((shutter_speed.unwrap() - (-6.97)).abs() < 0.001);
-        assert!((focal_length.unwrap() - 50.0).abs() < 0.001);
-        assert_eq!(lens.as_deref(), Some("EF 50mm"));
-        assert_eq!(make.as_deref(), Some("Canon"));
-        assert_eq!(model.as_deref(), Some("EOS R5"));
-        assert!((gps_lat.unwrap() - 48.8566).abs() < 0.001);
-        assert!((gps_lon.unwrap() - 2.3522).abs() < 0.001);
-        assert_eq!(cs.as_deref(), Some("sRGB"));
+        assert_eq!(exif_row.iso, Some(200));
+        assert!(exif_row
+            .aperture
+            .map(|v| (v - 2.8).abs() < 0.001)
+            .unwrap_or(false));
+        assert!(exif_row
+            .shutter_speed
+            .map(|v| (v - (-6.97)).abs() < 0.001)
+            .unwrap_or(false));
+        assert!(exif_row
+            .focal_length
+            .map(|v| (v - 50.0).abs() < 0.001)
+            .unwrap_or(false));
+        assert_eq!(exif_row.lens.as_deref(), Some("EF 50mm"));
+        assert_eq!(exif_row.make.as_deref(), Some("Canon"));
+        assert_eq!(exif_row.model.as_deref(), Some("EOS R5"));
+        assert!(exif_row
+            .gps_lat
+            .map(|v| (v - 48.8566).abs() < 0.001)
+            .unwrap_or(false));
+        assert!(exif_row
+            .gps_lon
+            .map(|v| (v - 2.3522).abs() < 0.001)
+            .unwrap_or(false));
+        assert_eq!(exif_row.color_space.as_deref(), Some("sRGB"));
     }
 }
 

@@ -1,6 +1,6 @@
 use crate::models::hashing::*;
 use crate::services::blake3::Blake3Service;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 
@@ -80,17 +80,17 @@ pub async fn scan_directory_for_duplicates(
 
     let dir_path = PathBuf::from(directory_path);
 
-    // Vérifier que le répertoire existe
-    if !dir_path.exists() {
-        return Err(format!("Directory not found: {:?}", dir_path));
-    }
+    let metadata = tokio::fs::metadata(&dir_path)
+        .await
+        .map_err(|_| format!("Directory not found: {:?}", dir_path))?;
 
-    if !dir_path.is_dir() {
+    if !metadata.is_dir() {
         return Err(format!("Path is not a directory: {:?}", dir_path));
     }
 
     // Scanner les fichiers du répertoire
     let file_paths = scan_files_in_directory(&dir_path, recursive)
+        .await
         .map_err(|e| format!("Failed to scan directory: {}", e))?;
 
     // Détecter les doublons
@@ -101,25 +101,31 @@ pub async fn scan_directory_for_duplicates(
 }
 
 /// Scan récursivement un répertoire pour trouver tous les fichiers
-fn scan_files_in_directory(dir_path: &PathBuf, recursive: bool) -> Result<Vec<PathBuf>, String> {
+async fn scan_files_in_directory(dir_path: &Path, recursive: bool) -> Result<Vec<PathBuf>, String> {
     let mut files = Vec::new();
+    let mut stack = vec![dir_path.to_path_buf()];
 
-    let entries = std::fs::read_dir(dir_path)
-        .map_err(|e| format!("Cannot read directory {:?}: {}", dir_path, e))?;
+    while let Some(current_dir) = stack.pop() {
+        let mut entries = tokio::fs::read_dir(&current_dir)
+            .await
+            .map_err(|e| format!("Cannot read directory {:?}: {}", current_dir, e))?;
 
-    for entry in entries {
-        let entry = entry.map_err(|e| format!("Cannot read entry: {}", e))?;
-        let path = entry.path();
-        let metadata = entry
-            .metadata()
-            .map_err(|e| format!("Cannot read metadata for {:?}: {}", path, e))?;
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .map_err(|e| format!("Cannot read entry: {}", e))?
+        {
+            let path = entry.path();
+            let metadata = entry
+                .metadata()
+                .await
+                .map_err(|e| format!("Cannot read metadata for {:?}: {}", path, e))?;
 
-        if metadata.is_file() {
-            files.push(path);
-        } else if metadata.is_dir() && recursive {
-            // Récursivement scanner les sous-répertoires
-            let sub_files = scan_files_in_directory(&path, recursive)?;
-            files.extend(sub_files);
+            if metadata.is_file() {
+                files.push(path);
+            } else if metadata.is_dir() && recursive {
+                stack.push(path);
+            }
         }
     }
 
@@ -452,11 +458,11 @@ mod tests {
         File::create(dir_path.join("subdir").join("file3.txt")).unwrap();
 
         // Test non-récursif
-        let files = scan_files_in_directory(&dir_path, false).unwrap();
+        let files = scan_files_in_directory(&dir_path, false).await.unwrap();
         assert_eq!(files.len(), 2); // Seulement file1.txt et file2.txt
 
         // Test récursif
-        let files = scan_files_in_directory(&dir_path, true).unwrap();
+        let files = scan_files_in_directory(&dir_path, true).await.unwrap();
         assert_eq!(files.len(), 3); // file1.txt, file2.txt, et subdir/file3.txt
     }
 
@@ -465,14 +471,14 @@ mod tests {
         let temp_dir = Builder::new().tempdir().unwrap();
         let dir_path = temp_dir.path().to_path_buf();
 
-        let files = scan_files_in_directory(&dir_path, false).unwrap();
+        let files = scan_files_in_directory(&dir_path, false).await.unwrap();
         assert_eq!(files.len(), 0);
     }
 
     #[tokio::test]
     async fn test_scan_files_in_directory_error() {
         let non_existent_path = PathBuf::from("/nonexistent/directory");
-        let result = scan_files_in_directory(&non_existent_path, false);
+        let result = scan_files_in_directory(&non_existent_path, false).await;
         assert!(result.is_err());
     }
 }

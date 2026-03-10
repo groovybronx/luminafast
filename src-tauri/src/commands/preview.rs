@@ -19,6 +19,7 @@ pub async fn init_preview_service() -> Result<(), String> {
 
     let config = PreviewConfig::default();
     let service = PreviewService::new(config)
+        .await
         .map_err(|e| format!("Impossible d'initialiser le service preview: {}", e))?;
 
     let service_arc = Arc::new(service);
@@ -316,7 +317,7 @@ mod tests {
             ..Default::default()
         };
 
-        let service = PreviewService::new(config).unwrap();
+        let service = PreviewService::new(config).await.unwrap();
         let cache_info = service.get_cache_info().await;
 
         assert_eq!(cache_info.total_previews, 0);

@@ -67,11 +67,13 @@ impl FilesystemService {
         let path = config.path.clone();
 
         // Validation du chemin
-        if !path.exists() {
-            return Err(FilesystemError::FileNotFound(
-                path.to_string_lossy().to_string(),
-            ));
-        }
+        tokio::fs::metadata(&path).await.map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                FilesystemError::FileNotFound(path.to_string_lossy().to_string())
+            } else {
+                FilesystemError::IoError(e.to_string())
+            }
+        })?;
 
         // Création du channel pour les événements
         let (event_tx, mut event_rx) = mpsc::unbounded_channel();
@@ -217,11 +219,13 @@ impl FilesystemService {
         }
 
         // Validation du chemin
-        if !path.exists() {
-            return Err(FilesystemError::FileNotFound(
-                path.to_string_lossy().to_string(),
-            ));
-        }
+        tokio::fs::metadata(&path).await.map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                FilesystemError::FileNotFound(path.to_string_lossy().to_string())
+            } else {
+                FilesystemError::IoError(e.to_string())
+            }
+        })?;
 
         // Création du verrou
         let lock = FileLock {

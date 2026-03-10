@@ -171,6 +171,9 @@ pub fn run() {
             commands::xmp::export_image_xmp,
             commands::xmp::import_image_xmp,
             commands::xmp::get_xmp_status,
+            // Metrics commands (Phase M.1.1a)
+            commands::metrics::get_threadpool_metrics,
+            commands::metrics::simulate_threadpool_load,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

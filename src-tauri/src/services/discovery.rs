@@ -49,8 +49,11 @@ impl DiscoveryService {
             *current_task = None;
         }
 
-        // Validate the root path
-        if !config.root_path.exists() {
+        // Validate the root path with async IO to avoid blocking the Tokio runtime.
+        let root_metadata = tokio::fs::metadata(&config.root_path).await.map_err(|_| {
+            DiscoveryError::InvalidPath(config.root_path.to_string_lossy().to_string())
+        })?;
+        if !root_metadata.is_dir() {
             return Err(DiscoveryError::InvalidPath(
                 config.root_path.to_string_lossy().to_string(),
             ));
@@ -279,8 +282,9 @@ impl DiscoveryService {
         session_id: Uuid,
     ) -> Result<Option<DiscoveredFile>, DiscoveryError> {
         // Get file metadata
-        let metadata =
-            std::fs::metadata(path).map_err(|e| DiscoveryError::IoError(e.to_string()))?;
+        let metadata = tokio::fs::metadata(path)
+            .await
+            .map_err(|e| DiscoveryError::IoError(e.to_string()))?;
 
         // Get file extension
         let extension = path
@@ -355,14 +359,13 @@ impl DiscoveryService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::File;
-    use std::io::Write;
     use tempfile::TempDir;
 
-    fn create_test_file(dir: &TempDir, filename: &str, content: &[u8]) -> PathBuf {
+    async fn create_test_file(dir: &TempDir, filename: &str, content: &[u8]) -> PathBuf {
         let file_path = dir.path().join(filename);
-        let mut file = File::create(&file_path).unwrap();
-        file.write_all(content).unwrap();
+        tokio::fs::write(&file_path, content)
+            .await
+            .expect("Failed to create test file");
         file_path
     }
 
@@ -454,14 +457,15 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
 
         // Create test files
-        create_test_file(&temp_dir, "test.cr3", b"ftypcr3 test content");
-        create_test_file(&temp_dir, "test.raf", b"FUJIFILMCCD-RAW test content");
+        create_test_file(&temp_dir, "test.cr3", b"ftypcr3 test content").await;
+        create_test_file(&temp_dir, "test.raf", b"FUJIFILMCCD-RAW test content").await;
         create_test_file(
             &temp_dir,
             "test.arw",
             b"\x00\x00\x00\x18ftyparw test content",
-        );
-        create_test_file(&temp_dir, "test.jpg", b"not a raw file");
+        )
+        .await;
+        create_test_file(&temp_dir, "test.jpg", b"not a raw file").await;
 
         let session_id = Uuid::new_v4();
         let formats = vec![RawFormat::CR3, RawFormat::RAF, RawFormat::ARW];
@@ -530,5 +534,15 @@ mod tests {
         // Cleanup with 0 hours (should remove non-scanning sessions)
         // Note: This test might be flaky depending on timing
         let _cleaned = service.cleanup_old_sessions(0).await.unwrap();
+    }
+
+    #[test]
+    fn test_source_has_no_std_fs_usage() {
+        let source = include_str!("discovery.rs");
+        let forbidden = ["std", "::", "fs"].concat();
+        assert!(
+            !source.contains(&forbidden),
+            "discovery.rs must not use sync filesystem APIs"
+        );
     }
 }

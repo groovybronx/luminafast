@@ -1416,35 +1416,37 @@ mod tests {
             )
             .unwrap();
 
-        let (iso, aperture, shutter_speed, focal_length, lens, make, model): (
-            Option<i64>,
-            Option<f64>,
-            Option<f64>,
-            Option<f64>,
-            Option<String>,
-            Option<String>,
-            Option<String>,
-        ) = stmt
+        struct ExifNullColumns {
+            iso: Option<i64>,
+            aperture: Option<f64>,
+            shutter_speed: Option<f64>,
+            focal_length: Option<f64>,
+            lens: Option<String>,
+            make: Option<String>,
+            model: Option<String>,
+        }
+
+        let exif_null_columns = stmt
             .query_row([], |row| {
-                Ok((
-                    row.get(0)?,
-                    row.get(1)?,
-                    row.get(2)?,
-                    row.get(3)?,
-                    row.get(4)?,
-                    row.get(5)?,
-                    row.get(6)?,
-                ))
+                Ok(ExifNullColumns {
+                    iso: row.get(0)?,
+                    aperture: row.get(1)?,
+                    shutter_speed: row.get(2)?,
+                    focal_length: row.get(3)?,
+                    lens: row.get(4)?,
+                    make: row.get(5)?,
+                    model: row.get(6)?,
+                })
             })
             .unwrap();
 
-        assert!(iso.is_none());
-        assert!(aperture.is_none());
-        assert!(shutter_speed.is_none());
-        assert!(focal_length.is_none());
-        assert!(lens.is_none());
-        assert!(make.is_none());
-        assert!(model.is_none());
+        assert!(exif_null_columns.iso.is_none());
+        assert!(exif_null_columns.aperture.is_none());
+        assert!(exif_null_columns.shutter_speed.is_none());
+        assert!(exif_null_columns.focal_length.is_none());
+        assert!(exif_null_columns.lens.is_none());
+        assert!(exif_null_columns.make.is_none());
+        assert!(exif_null_columns.model.is_none());
     }
 
     #[test]

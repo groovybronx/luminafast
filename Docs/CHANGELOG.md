@@ -61,8 +61,8 @@
 | M           | 2.1a       | Connection Pooling SQLite (DBContext repository ingestion/discovery)                            | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 2.2        | Durcissement Sécurité (path whitelist + validation traversal + CSP/assetProtocol restreints)    | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 3.1        | Refactoring App.tsx (AppInitializer + useAppShortcuts)                                          | ✅ Complétée | 2026-03-10 | Copilot |
-| M           | 3.2        | Optimisation Grille & Données (lazy EXIF + liste sans EXIF + prefetch hover)                    | 🔄 En cours  | 2026-03-10 | Copilot |
-| M           | 3.2a       | LeftSidebar Refactor (extraction composants inline + tests unitaires dédiés)                    | 🔄 En cours  | 2026-03-10 | Copilot |
+| M           | 3.2        | Optimisation Grille & Données (lazy EXIF + liste sans EXIF + prefetch hover)                    | ✅ Complétée | 2026-03-10 | Copilot |
+| M           | 3.2a       | LeftSidebar Refactor (extraction composants inline + tests unitaires dédiés)                    | ✅ Complétée | 2026-03-10 | Copilot |
 
 | 5 | 5.1 | Panneau EXIF Connecté | ✅ Complétée | 2026-07-10 | Copilot |
 | 5 | 5.2 | Système de Tags Hiérarchique | ✅ Complétée | 2026-07-11 | Copilot |
@@ -97,11 +97,12 @@
 
 ## Phase Actuelle
 
-> **Maintenance M.1.2a** : Cleanup Sync Code (audit std::fs + consolidation async XMP)
+> **Maintenance M.3.2 + M.3.2a** : Clôture optimisation grille/données + refactor LeftSidebar
 >
-> Brief : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.1.2a-cleanup-sync-code.md`
-> Branche : `phase/m.1.2a-cleanup-sync-code`
-> Note qualité : `cargo check` ✅, `cargo clippy --all-targets -- -D warnings` ✅, tests XMP ciblés ✅ (16), non-régression test catalog ciblé ✅
+> Brief : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.3.2-optimisation-grille-donnees.md`
+> Brief : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.3.2a-leftsidebar-refactor.md`
+> Branche : `phase/m.3.2-closure-runtime-metrics`
+> Note qualité : `cargo check` ✅, `cargo clippy --all-targets -- -D warnings` ✅, benchmarks backend M.3.2 ✅, tests GridView/lazy EXIF ✅ (5), `tsc --noEmit` ✅, `npm run lint` ✅
 >
 > Décision produit : **M.2.2a (CSP review approfondie) reportée** et conservée pour reprise ultérieure.
 

@@ -96,4 +96,42 @@ describe('GridView performance profile', () => {
     const renderedCards = container.querySelectorAll('[draggable="true"]');
     expect(renderedCards.length).toBeLessThan(300);
   });
+
+  it('keeps initial render latency bounded with 5000 images', () => {
+    const startedAt = performance.now();
+
+    render(
+      <GridView
+        images={images}
+        selection={[]}
+        thumbnailSize={5}
+        onToggleSelection={vi.fn()}
+        onSetActiveView={vi.fn()}
+      />,
+    );
+
+    const elapsedMs = performance.now() - startedAt;
+
+    // Proxy metric for smoothness in test harness: first paint under 100ms budget.
+    expect(elapsedMs).toBeLessThan(100);
+  });
+
+  it('keeps heap growth under 100MB for 5000-image render', () => {
+    const beforeHeap = process.memoryUsage().heapUsed;
+
+    render(
+      <GridView
+        images={images}
+        selection={[]}
+        thumbnailSize={5}
+        onToggleSelection={vi.fn()}
+        onSetActiveView={vi.fn()}
+      />,
+    );
+
+    const afterHeap = process.memoryUsage().heapUsed;
+    const heapDeltaMb = (afterHeap - beforeHeap) / (1024 * 1024);
+
+    expect(heapDeltaMb).toBeLessThan(100);
+  });
 });

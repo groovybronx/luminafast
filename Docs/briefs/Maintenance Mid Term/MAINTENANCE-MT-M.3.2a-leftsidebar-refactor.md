@@ -1,6 +1,6 @@
 # Phase M.3.2a — LeftSidebar Refactor (Extract Components)
 
-> **Statut** : 🔄 **En cours (implémentation validée, commit groupé M.3.2 + M.3.2a)**
+> **Statut** : ✅ **Complétée** (2026-03-10)
 > **Durée estimée** : 1-2 jours
 > **Priorité** : P2 (Moyenne)
 > **Dépendance** : Phase M.3.2 complétée

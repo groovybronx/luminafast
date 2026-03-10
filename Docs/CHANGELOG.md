@@ -61,6 +61,7 @@
 | M           | 2.2        | Durcissement Sécurité (path whitelist + validation traversal + CSP/assetProtocol restreints)    | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 3.1        | Refactoring App.tsx (AppInitializer + useAppShortcuts)                                          | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 3.2        | Optimisation Grille & Données (lazy EXIF + liste sans EXIF + prefetch hover)                    | 🔄 En cours  | 2026-03-10 | Copilot |
+| M           | 3.2a       | LeftSidebar Refactor (extraction composants inline + tests unitaires dédiés)                    | 🔄 En cours  | 2026-03-10 | Copilot |
 
 | 5 | 5.1 | Panneau EXIF Connecté | ✅ Complétée | 2026-07-10 | Copilot |
 | 5 | 5.2 | Système de Tags Hiérarchique | ✅ Complétée | 2026-07-11 | Copilot |
@@ -95,11 +96,12 @@
 
 ## Phase Actuelle
 
-> **Maintenance M.3.2** : Optimisation Grille & Données (lazy EXIF + virtualisation)
+> **Maintenance M.3.2 + M.3.2a** : Optimisation Grille & Données + Refactor LeftSidebar
 >
 > Brief : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.3.2-optimisation-grille-donnees.md`
-> Branche : `phase/m.3.2-optimisation-grille-donnees`
-> Note qualité : `cargo check` ✅, `cargo clippy --all-targets -- -D warnings` ✅, `tsc --noEmit` ✅, tests M.3.2 ciblés ✅
+> Brief : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.3.2a-leftsidebar-refactor.md`
+> Branche : `phase/m.3.2-performance-benchmarks`
+> Note qualité : `cargo check` ✅, `cargo clippy --all-targets -- -D warnings` ✅, `tsc --noEmit` ✅, `npm run lint` ✅, tests M.3.2 ciblés ✅, tests LeftSidebar/sidebar extraits ✅ (20), benchmarks backend ✅ (`get_all_images` 5000 rows `brief=211us`, `get_image_exif` `avg=2us`)
 >
 > Décision produit : **M.2.2a (CSP review approfondie) reportée** et conservée pour reprise ultérieure.
 

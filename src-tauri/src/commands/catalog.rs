@@ -292,6 +292,7 @@ pub async fn get_image_exif(id: u32, state: State<'_, AppState>) -> CommandResul
 #[cfg(test)]
 mod get_image_exif_tests {
     use crate::database::Database;
+    use std::time::Instant;
     use tempfile::tempdir;
 
     fn setup_test_db() -> Database {
@@ -402,6 +403,59 @@ mod get_image_exif_tests {
             .map(|v| (v - 2.3522).abs() < 0.001)
             .unwrap_or(false));
         assert_eq!(exif_row.color_space.as_deref(), Some("sRGB"));
+    }
+
+    #[test]
+    fn benchmark_get_image_exif_query_latency() {
+        let mut db = setup_test_db();
+
+        db.connection()
+            .execute(
+                "INSERT INTO images (blake3_hash, filename, extension, imported_at) VALUES (?, ?, ?, ?)",
+                ["hash_exif_bench", "bench.CR3", "CR3", "2026-01-01T00:00:00Z"],
+            )
+            .unwrap();
+        let image_id = db.connection().last_insert_rowid() as u32;
+
+        db.connection()
+            .execute(
+                "INSERT INTO exif_metadata (image_id, iso, aperture, shutter_speed, focal_length,
+                 lens, camera_make, camera_model, gps_lat, gps_lon, color_space)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                rusqlite::params![
+                    image_id, 400u32, 2.0f64, -8.0f64, 85.0f64, "RF 85mm", "Canon", "EOS R6",
+                    43.6047f64, 1.4442f64, "AdobeRGB"
+                ],
+            )
+            .unwrap();
+
+        let iterations: u128 = 1000;
+        let start = Instant::now();
+        for _ in 0..iterations {
+            let _: (Option<u32>, Option<f64>, Option<String>) = db
+                .connection()
+                .query_row(
+                    "SELECT iso, aperture, camera_model
+                     FROM exif_metadata
+                     WHERE image_id = ?",
+                    [image_id],
+                    |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+                )
+                .unwrap();
+        }
+        let elapsed = start.elapsed();
+        let avg_us = elapsed.as_micros() / iterations;
+
+        println!(
+            "M3.2 benchmark get_image_exif: total={}us, avg={}us per query",
+            elapsed.as_micros(),
+            avg_us
+        );
+
+        assert!(
+            avg_us < 200_000,
+            "average get_image_exif query should stay under 200ms"
+        );
     }
 }
 
@@ -1296,6 +1350,7 @@ pub async fn update_volume_status(
 mod tests {
     // use super::*;
     use crate::database::Database;
+    use std::time::Instant;
     use tempfile::tempdir;
 
     fn setup_test_db() -> Database {
@@ -1318,6 +1373,165 @@ mod tests {
 
         let count: i64 = stmt.query_row([], |row| row.get(0)).unwrap();
         assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_get_all_images_brief_query_returns_null_exif_columns() {
+        let mut db = setup_test_db();
+
+        // Seed one image + EXIF row to ensure brief query does not hydrate EXIF payload.
+        db.connection()
+            .execute(
+                "INSERT INTO images (blake3_hash, filename, extension, imported_at) VALUES (?, ?, ?, ?)",
+                ["brief_hash", "brief.CR3", "CR3", "2026-03-10T00:00:00Z"],
+            )
+            .unwrap();
+        let image_id = db.connection().last_insert_rowid();
+
+        db.connection()
+            .execute(
+                "INSERT INTO exif_metadata (image_id, iso, aperture, shutter_speed, focal_length, lens, camera_make, camera_model)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                rusqlite::params![
+                    image_id,
+                    Some(400i64),
+                    Some(2.8f64),
+                    Some(-6.9f64),
+                    Some(35.0f64),
+                    Some("XF 35mm".to_string()),
+                    Some("FUJIFILM".to_string()),
+                    Some("X-T5".to_string())
+                ],
+            )
+            .unwrap();
+
+        let mut stmt = db
+            .connection()
+            .prepare(
+                "SELECT NULL AS iso, NULL AS aperture, NULL AS shutter_speed, NULL AS focal_length,
+                        NULL AS lens, NULL AS camera_make, NULL AS camera_model
+                 FROM images i
+                 LEFT JOIN image_state ist ON i.id = ist.image_id
+                 ORDER BY i.imported_at DESC",
+            )
+            .unwrap();
+
+        let (iso, aperture, shutter_speed, focal_length, lens, make, model): (
+            Option<i64>,
+            Option<f64>,
+            Option<f64>,
+            Option<f64>,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+        ) = stmt
+            .query_row([], |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                    row.get(6)?,
+                ))
+            })
+            .unwrap();
+
+        assert!(iso.is_none());
+        assert!(aperture.is_none());
+        assert!(shutter_speed.is_none());
+        assert!(focal_length.is_none());
+        assert!(lens.is_none());
+        assert!(make.is_none());
+        assert!(model.is_none());
+    }
+
+    #[test]
+    fn benchmark_get_all_images_queries_with_5000_rows() {
+        let mut db = setup_test_db();
+        let tx = db.connection().transaction().unwrap();
+
+        for i in 0..5000 {
+            let hash = format!("bench_hash_{i:05}");
+            let filename = format!("IMG_{i:05}.CR3");
+
+            tx.execute(
+                "INSERT INTO images (blake3_hash, filename, extension, imported_at) VALUES (?, ?, ?, ?)",
+                rusqlite::params![hash, filename, "CR3", "2026-03-10T00:00:00Z"],
+            )
+            .unwrap();
+
+            let image_id = tx.last_insert_rowid();
+            tx.execute(
+                "INSERT INTO exif_metadata (image_id, iso, aperture, shutter_speed, focal_length, lens, camera_make, camera_model)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                rusqlite::params![
+                    image_id,
+                    Some(100 + (i % 800) as i64),
+                    Some(2.8f64),
+                    Some(-6.9f64),
+                    Some(35.0f64),
+                    Some("XF 35mm".to_string()),
+                    Some("FUJIFILM".to_string()),
+                    Some("X-T5".to_string())
+                ],
+            )
+            .unwrap();
+        }
+        tx.commit().unwrap();
+
+        let start_brief = Instant::now();
+        let brief_count: usize = {
+            let mut stmt = db
+                .connection()
+                .prepare(
+                    "SELECT i.id
+                     FROM images i
+                     LEFT JOIN image_state ist ON i.id = ist.image_id
+                     ORDER BY i.imported_at DESC",
+                )
+                .unwrap();
+            let rows = stmt.query_map([], |_row| Ok(())).unwrap();
+            rows.count()
+        };
+        let brief_elapsed = start_brief.elapsed();
+
+        let start_exif = Instant::now();
+        let exif_count: usize = {
+            let mut stmt = db
+                .connection()
+                .prepare(
+                    "SELECT i.id
+                     FROM images i
+                     LEFT JOIN image_state ist ON i.id = ist.image_id
+                     LEFT JOIN exif_metadata e ON i.id = e.image_id
+                     ORDER BY i.imported_at DESC",
+                )
+                .unwrap();
+            let rows = stmt.query_map([], |_row| Ok(())).unwrap();
+            rows.count()
+        };
+        let exif_elapsed = start_exif.elapsed();
+
+        println!(
+            "M3.2 benchmark (5000 rows): brief={}us ({}ms), with_exif={}us ({}ms)",
+            brief_elapsed.as_micros(),
+            brief_elapsed.as_millis(),
+            exif_elapsed.as_micros(),
+            exif_elapsed.as_millis()
+        );
+
+        assert_eq!(brief_count, 5000);
+        assert_eq!(exif_count, 5000);
+        assert!(
+            brief_elapsed.as_millis() < 1000,
+            "brief query should stay under 1s"
+        );
+        assert!(
+            exif_elapsed.as_millis() < 2000,
+            "full query should stay under 2s"
+        );
     }
 
     #[test]

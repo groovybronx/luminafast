@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import type { FlagType, EditState, CatalogEvent, EventPayload, EventType } from './types';
 import { safeID } from './lib/helpers';
 
@@ -7,9 +7,11 @@ import { useCatalogStore } from './stores/catalogStore';
 import { useCollectionStore } from './stores/collectionStore';
 import { useFolderStore } from './stores/folderStore';
 import { useCatalog } from './hooks/useCatalog';
-import { previewService } from './services/previewService';
+import { useAppShortcuts } from './hooks/useAppShortcuts';
 import { CatalogService } from './services/catalogService';
 import type { EventDTO } from './services/eventService';
+import type { AppShortcut } from './types/shortcuts';
+import { AppInitializer } from './components/AppInitializer';
 import { GlobalStyles } from './components/shared/GlobalStyles';
 import { ArchitectureMonitor } from './components/shared/ArchitectureMonitor';
 import { ImportModal } from './components/shared/ImportModal';
@@ -118,28 +120,6 @@ export default function App() {
   const sidebarOpen = useUiStore((state) => state.leftSidebarOpen);
   const comparisonMode = useUiStore((state) => state.comparisonMode);
   const setComparisonMode = useUiStore((state) => state.setComparisonMode);
-
-  // Track if initial load has been triggered
-  const initialLoadTriggered = useRef(false);
-
-  // Initialize services and load catalog on mount (once only)
-  useEffect(() => {
-    if (!initialLoadTriggered.current) {
-      initialLoadTriggered.current = true;
-
-      // Initialize PreviewService first (Phase 2.3 du plan)
-      previewService
-        .initialize()
-        .then(() => {
-          addLog('PreviewService initialized', 'system');
-          return refreshCatalog();
-        })
-        .catch((err) => {
-          addLog(`Initialization error: ${err}`, 'error');
-        });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty deps - run only once on mount
 
   // Handle catalog errors
   useEffect(() => {
@@ -292,60 +272,70 @@ export default function App() {
     }
   }, [filteredImages, filterText, addLog, setActiveView]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-      if (['1', '2', '3', '4', '5', '0'].includes(e.key)) dispatchEvent('RATING', parseInt(e.key));
-      if (e.key === 'p') dispatchEvent('FLAG', 'pick');
-      if (e.key === 'x') dispatchEvent('FLAG', 'reject');
-      if (e.key === 'u') dispatchEvent('FLAG', null);
-      if (e.key === 'g') setActiveView('library');
-      if (e.key === 'd') setActiveView('develop');
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [dispatchEvent, setActiveView]);
+  const shortcuts = useMemo<AppShortcut[]>(
+    () => [
+      { key: '1', action: () => dispatchEvent('RATING', 1), description: 'Rating 1 star' },
+      { key: '2', action: () => dispatchEvent('RATING', 2), description: 'Rating 2 stars' },
+      { key: '3', action: () => dispatchEvent('RATING', 3), description: 'Rating 3 stars' },
+      { key: '4', action: () => dispatchEvent('RATING', 4), description: 'Rating 4 stars' },
+      { key: '5', action: () => dispatchEvent('RATING', 5), description: 'Rating 5 stars' },
+      { key: '0', action: () => dispatchEvent('RATING', 0), description: 'Clear rating' },
+      { key: 'p', action: () => dispatchEvent('FLAG', 'pick'), description: 'Flag pick' },
+      { key: 'x', action: () => dispatchEvent('FLAG', 'reject'), description: 'Flag reject' },
+      { key: 'u', action: () => dispatchEvent('FLAG', null), description: 'Clear flag' },
+      { key: 'g', action: () => setActiveView('library'), description: 'Switch to library' },
+      { key: 'd', action: () => setActiveView('develop'), description: 'Switch to develop' },
+    ],
+    [dispatchEvent, setActiveView],
+  );
+
+  useAppShortcuts(shortcuts);
 
   const activeImg = images.find((i) => i.id === selection[0]) ?? images[0];
 
   // Show loading state while catalog is loading
   if (catalogLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-zinc-950 text-zinc-400">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          <p>Loading catalog from database...</p>
+      <>
+        <AppInitializer refreshCatalog={refreshCatalog} addLog={addLog} />
+        <div className="flex items-center justify-center h-screen bg-zinc-950 text-zinc-400">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <p>Loading catalog from database...</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   // Show empty state if no images after loading
   if (!hasImages && !catalogLoading) {
     return (
-      <div className="flex flex-col h-screen w-full bg-zinc-950 text-zinc-300 font-sans">
-        <GlobalStyles />
-        <TopNav activeView={activeView} onSetActiveView={setActiveView} />
+      <>
+        <AppInitializer refreshCatalog={refreshCatalog} addLog={addLog} />
+        <div className="flex flex-col h-screen w-full bg-zinc-950 text-zinc-300 font-sans">
+          <GlobalStyles />
+          <TopNav activeView={activeView} onSetActiveView={setActiveView} />
 
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-zinc-400 mb-4">Catalog is empty</h2>
-            <p className="text-zinc-500 mb-8">Import your first photos to get started</p>
-            <button
-              onClick={() => setShowImport(true)}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-            >
-              Import Photos
-            </button>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-zinc-400 mb-4">Catalog is empty</h2>
+              <p className="text-zinc-500 mb-8">Import your first photos to get started</p>
+              <button
+                onClick={() => setShowImport(true)}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                Import Photos
+              </button>
+            </div>
           </div>
-        </div>
 
-        {showImport && (
-          <ImportModal onClose={() => setShowImport(false)} onImportComplete={handleImport} />
-        )}
-        <ArchitectureMonitor logs={logs} />
-      </div>
+          {showImport && (
+            <ImportModal onClose={() => setShowImport(false)} onImportComplete={handleImport} />
+          )}
+          <ArchitectureMonitor logs={logs} />
+        </div>
+      </>
     );
   }
 
@@ -355,88 +345,94 @@ export default function App() {
   // Safety check - should not happen after hasImages check, but TypeScript needs it
   if (!displayImg) {
     return (
-      <div className="flex items-center justify-center h-screen bg-zinc-950 text-zinc-400">
-        <div className="text-center">
-          <p className="text-xl text-zinc-500">No images available</p>
-          <button
-            onClick={() => setShowImport(true)}
-            className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
-          >
-            Import Photos
-          </button>
+      <>
+        <AppInitializer refreshCatalog={refreshCatalog} addLog={addLog} />
+        <div className="flex items-center justify-center h-screen bg-zinc-950 text-zinc-400">
+          <div className="text-center">
+            <p className="text-xl text-zinc-500">No images available</p>
+            <button
+              onClick={() => setShowImport(true)}
+              className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+            >
+              Import Photos
+            </button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen w-full bg-zinc-950 text-zinc-300 font-sans overflow-hidden select-none">
-      <GlobalStyles />
-      <TopNav activeView={activeView} onSetActiveView={setActiveView} />
+    <>
+      <AppInitializer refreshCatalog={refreshCatalog} addLog={addLog} />
+      <div className="flex flex-col h-screen w-full bg-zinc-950 text-zinc-300 font-sans overflow-hidden select-none">
+        <GlobalStyles />
+        <TopNav activeView={activeView} onSetActiveView={setActiveView} />
 
-      <div className="flex flex-1 min-h-0">
-        <LeftSidebar
-          sidebarOpen={sidebarOpen}
-          imageCount={images.length}
-          onSetFilterText={setFilterText}
-          onShowImport={() => setShowImport(true)}
-        />
-
-        <div className="flex-1 flex flex-col bg-zinc-950 min-h-0 relative">
-          <Toolbar
-            activeView={activeView}
-            onSetActiveView={setActiveView}
-            filterText={filterText}
+        <div className="flex flex-1 min-h-0">
+          <LeftSidebar
+            sidebarOpen={sidebarOpen}
+            imageCount={images.length}
             onSetFilterText={setFilterText}
-            thumbnailSize={thumbnailSize}
-            onSetThumbnailSize={setThumbnailSize}
-            showBeforeAfter={showBeforeAfter}
-            onToggleBeforeAfter={toggleBeforeAfter}
-            comparisonMode={comparisonMode}
-            onComparisonModeChange={setComparisonMode}
+            onShowImport={() => setShowImport(true)}
           />
 
-          <div className="flex-1 overflow-hidden">
-            {activeView === 'library' ? (
-              <GridView
-                images={filteredImages}
-                selection={selection}
-                thumbnailSize={thumbnailSize}
-                onToggleSelection={handleToggleSelection}
-                onSetActiveView={setActiveView}
+          <div className="flex-1 flex flex-col bg-zinc-950 min-h-0 relative">
+            <Toolbar
+              activeView={activeView}
+              onSetActiveView={setActiveView}
+              filterText={filterText}
+              onSetFilterText={setFilterText}
+              thumbnailSize={thumbnailSize}
+              onSetThumbnailSize={setThumbnailSize}
+              showBeforeAfter={showBeforeAfter}
+              onToggleBeforeAfter={toggleBeforeAfter}
+              comparisonMode={comparisonMode}
+              onComparisonModeChange={setComparisonMode}
+            />
+
+            <div className="flex-1 overflow-hidden">
+              {activeView === 'library' ? (
+                <GridView
+                  images={filteredImages}
+                  selection={selection}
+                  thumbnailSize={thumbnailSize}
+                  onToggleSelection={handleToggleSelection}
+                  onSetActiveView={setActiveView}
+                />
+              ) : (
+                <DevelopView activeImg={displayImg} showBeforeAfter={showBeforeAfter} />
+              )}
+              <BatchBar
+                selectionCount={selection.length}
+                onDispatchEvent={dispatchEvent}
+                onAddLog={addLog}
+                onClearSelection={() => setSingleSelection(selection[0] ?? 0)}
               />
-            ) : (
-              <DevelopView activeImg={displayImg} showBeforeAfter={showBeforeAfter} />
-            )}
-            <BatchBar
+            </div>
+
+            <Filmstrip
+              images={images}
+              selection={selection}
               selectionCount={selection.length}
-              onDispatchEvent={dispatchEvent}
-              onAddLog={addLog}
-              onClearSelection={() => setSingleSelection(selection[0] ?? 0)}
+              imageCount={images.length}
+              onToggleSelection={handleToggleSelection}
             />
           </div>
 
-          <Filmstrip
-            images={images}
-            selection={selection}
-            selectionCount={selection.length}
-            imageCount={images.length}
-            onToggleSelection={handleToggleSelection}
+          <RightSidebar
+            activeView={activeView}
+            activeImg={displayImg}
+            onDispatchEvent={dispatchEvent}
           />
         </div>
 
-        <RightSidebar
-          activeView={activeView}
-          activeImg={displayImg}
-          onDispatchEvent={dispatchEvent}
-        />
+        <ArchitectureMonitor logs={logs} />
+        {showImport && (
+          <ImportModal onClose={() => setShowImport(false)} onImportComplete={handleImport} />
+        )}
+        <KeyboardOverlay />
       </div>
-
-      <ArchitectureMonitor logs={logs} />
-      {showImport && (
-        <ImportModal onClose={() => setShowImport(false)} onImportComplete={handleImport} />
-      )}
-      <KeyboardOverlay />
-    </div>
+    </>
   );
 }

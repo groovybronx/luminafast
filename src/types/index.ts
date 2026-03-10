@@ -10,6 +10,7 @@ export * from './folder';
 export * from './hashing';
 export * from './image';
 export * from './preview';
+export * from './shortcuts';
 export * from './ui';
 
 export type { CatalogEvent, EventPayload, EventType } from './events';

@@ -1,9 +1,14 @@
 # Phase M.2.2a — CSP Review & Hardening
 
-> **Statut** : ⬜ **En attente**
+> **Statut** : ↩️ **Reportée** (décision 2026-03-10, reprise après M.3.1)
 > **Durée estimée** : 1-2 jours
 > **Priorité** : P2 (Moyenne)
 > **Dépendance** : Phase M.2.2 complétée
+
+## Décision de Report
+
+- Report validé pour éviter le scope creep pendant la reprise du refactoring frontend M.3.1.
+- Le hardening CSP avancé (suppression complète `unsafe-inline`) sera repris dans cette sous-phase dédiée après stabilisation M.3.1.
 
 ## Objectif
 

@@ -74,6 +74,7 @@ pub async fn backfill_images_folder_id(state: State<'_, AppState>) -> CommandRes
 #[tauri::command]
 pub async fn get_all_images(
     filter: Option<ImageFilter>,
+    #[allow(non_snake_case)] includeExif: Option<bool>,
     state: State<'_, AppState>,
 ) -> CommandResult<Vec<ImageDTO>> {
     let mut db = state
@@ -81,17 +82,32 @@ pub async fn get_all_images(
         .lock()
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
-    let mut query = String::from(
-        "SELECT i.id, i.blake3_hash, i.filename, i.extension,
-                i.width, i.height, i.file_size_bytes, i.orientation,
-                i.captured_at, i.imported_at, i.folder_id,
-                ist.rating, ist.flag, ist.color_label,
-                e.iso, e.aperture, e.shutter_speed, e.focal_length,
-                e.lens, e.camera_make, e.camera_model
-         FROM images i
-         LEFT JOIN image_state ist ON i.id = ist.image_id
-         LEFT JOIN exif_metadata e ON i.id = e.image_id",
-    );
+    let include_exif = includeExif.unwrap_or(false);
+
+    let mut query = if include_exif {
+        String::from(
+            "SELECT i.id, i.blake3_hash, i.filename, i.extension,
+                    i.width, i.height, i.file_size_bytes, i.orientation,
+                    i.captured_at, i.imported_at, i.folder_id,
+                    ist.rating, ist.flag, ist.color_label,
+                    e.iso, e.aperture, e.shutter_speed, e.focal_length,
+                    e.lens, e.camera_make, e.camera_model
+             FROM images i
+             LEFT JOIN image_state ist ON i.id = ist.image_id
+             LEFT JOIN exif_metadata e ON i.id = e.image_id",
+        )
+    } else {
+        String::from(
+            "SELECT i.id, i.blake3_hash, i.filename, i.extension,
+                    i.width, i.height, i.file_size_bytes, i.orientation,
+                    i.captured_at, i.imported_at, i.folder_id,
+                    ist.rating, ist.flag, ist.color_label,
+                    NULL AS iso, NULL AS aperture, NULL AS shutter_speed, NULL AS focal_length,
+                    NULL AS lens, NULL AS camera_make, NULL AS camera_model
+             FROM images i
+             LEFT JOIN image_state ist ON i.id = ist.image_id",
+        )
+    };
 
     let mut params = Vec::new();
 
@@ -100,17 +116,17 @@ pub async fn get_all_images(
         let mut conditions = Vec::new();
 
         if let Some(rating_min) = f.rating_min {
-            conditions.push("image_state.rating >= ?");
+            conditions.push("ist.rating >= ?");
             params.push(rating_min.to_string());
         }
 
         if let Some(rating_max) = f.rating_max {
-            conditions.push("image_state.rating <= ?");
+            conditions.push("ist.rating <= ?");
             params.push(rating_max.to_string());
         }
 
         if let Some(flag) = f.flag {
-            conditions.push("image_state.flag = ?");
+            conditions.push("ist.flag = ?");
             params.push(flag);
         }
 

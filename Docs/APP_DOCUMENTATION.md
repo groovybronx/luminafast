@@ -70,7 +70,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-03-10 (Maintenance M.3.2 + M.3.2a en cours : lazy EXIF + refactor LeftSidebar en composants dédiés)
+> **Dernière mise à jour** : 2026-03-10 (Maintenance M.1.2a complétée : cleanup std::fs résiduel + flux XMP full async)
 >
 > ### Décisions Projet (validées par le propriétaire)
 

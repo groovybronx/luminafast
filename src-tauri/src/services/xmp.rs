@@ -34,31 +34,6 @@ pub fn build_xmp_path(image_path: &str) -> PathBuf {
     Path::new(image_path).with_extension("xmp")
 }
 
-/// Lit et parse un fichier `.xmp` existant.
-///
-/// Retourne `XmpData::default()` si le fichier est introuvable (non une erreur).
-/// Retourne `Err` uniquement sur une erreur de lecture fichier.
-pub fn read_xmp(xmp_path: &Path) -> Result<XmpData, String> {
-    let content = match std::fs::read_to_string(xmp_path) {
-        Ok(content) => content,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            return Ok(XmpData::default());
-        }
-        Err(e) => return Err(format!("Cannot read XMP file {:?}: {}", xmp_path, e)),
-    };
-
-    parse_xmp_content(&content)
-}
-
-/// Écrit les données XMP dans un fichier `.xmp`.
-///
-/// Le fichier est réécrit entièrement à chaque appel (format simple, non incrémental).
-pub fn write_xmp(xmp_path: &Path, data: &XmpData) -> Result<(), String> {
-    let content = build_xmp_content(data);
-    std::fs::write(xmp_path, content)
-        .map_err(|e| format!("Cannot write XMP file {:?}: {}", xmp_path, e))
-}
-
 /// Lit et parse un fichier `.xmp` de manière asynchrone.
 pub async fn read_xmp_async(xmp_path: &Path) -> Result<XmpData, String> {
     let content = match tokio::fs::read_to_string(xmp_path).await {
@@ -493,36 +468,6 @@ mod tests {
     }
 
     // ── read_xmp / write_xmp (fichier réel) ───────────────────────────────────
-
-    #[test]
-    fn test_write_then_read_xmp_file() {
-        let tmp = NamedTempFile::new().expect("tempfile");
-        let xmp_path = tmp.path().with_extension("xmp");
-
-        let original = XmpData {
-            rating: Some(3),
-            flag: Some("pick".to_string()),
-            tags: vec!["test_tag".to_string()],
-            hierarchical_subjects: vec!["Animaux/Oiseaux".to_string()],
-        };
-
-        write_xmp(&xmp_path, &original).expect("write_xmp should succeed");
-        let parsed = read_xmp(&xmp_path).expect("read_xmp should succeed");
-
-        assert_eq!(parsed.rating, Some(3));
-        assert_eq!(parsed.tags, vec!["test_tag".to_string()]);
-        assert_eq!(
-            parsed.hierarchical_subjects,
-            vec!["Animaux/Oiseaux".to_string()]
-        );
-    }
-
-    #[test]
-    fn test_read_xmp_missing_file_returns_default() {
-        let path = Path::new("/nonexistent/path/image.xmp");
-        let result = read_xmp(path).expect("should not error on missing file");
-        assert_eq!(result, XmpData::default());
-    }
 
     #[test]
     fn test_parse_xmp_from_lightroom_style() {

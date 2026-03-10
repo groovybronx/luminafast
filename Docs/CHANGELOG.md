@@ -56,6 +56,7 @@
 | M           | 1.1        | Correction Runtime Ingestion (Élimination O(n) Runtime::new bottleneck)                         | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 1.1a       | Monitoring Threadpool Tokio (Saturation Alerts + Metrics Collection)                            | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 1.2        | Migration Async IO (std::fs → tokio::fs dans contextes async)                                   | ✅ Complétée | 2026-03-10 | Copilot |
+| M           | 1.2a       | Cleanup Sync Code (audit std::fs + suppression API XMP sync + justifications résiduelles)       | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 1.3        | Nettoyage Code Mort (fichier debug + fonctions WASM deprecated)                                 | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 2.1a       | Connection Pooling SQLite (DBContext repository ingestion/discovery)                            | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 2.2        | Durcissement Sécurité (path whitelist + validation traversal + CSP/assetProtocol restreints)    | ✅ Complétée | 2026-03-10 | Copilot |
@@ -96,12 +97,11 @@
 
 ## Phase Actuelle
 
-> **Maintenance M.3.2 + M.3.2a** : Optimisation Grille & Données + Refactor LeftSidebar
+> **Maintenance M.1.2a** : Cleanup Sync Code (audit std::fs + consolidation async XMP)
 >
-> Brief : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.3.2-optimisation-grille-donnees.md`
-> Brief : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.3.2a-leftsidebar-refactor.md`
-> Branche : `phase/m.3.2-performance-benchmarks`
-> Note qualité : `cargo check` ✅, `cargo clippy --all-targets -- -D warnings` ✅, `tsc --noEmit` ✅, `npm run lint` ✅, tests M.3.2 ciblés ✅, tests LeftSidebar/sidebar extraits ✅ (20), benchmarks backend ✅ (`get_all_images` 5000 rows `brief=211us`, `get_image_exif` `avg=2us`)
+> Brief : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.1.2a-cleanup-sync-code.md`
+> Branche : `phase/m.1.2a-cleanup-sync-code`
+> Note qualité : `cargo check` ✅, `cargo clippy --all-targets -- -D warnings` ✅, tests XMP ciblés ✅ (16), non-régression test catalog ciblé ✅
 >
 > Décision produit : **M.2.2a (CSP review approfondie) reportée** et conservée pour reprise ultérieure.
 

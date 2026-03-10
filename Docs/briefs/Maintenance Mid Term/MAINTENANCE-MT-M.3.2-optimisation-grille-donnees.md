@@ -50,7 +50,7 @@ Optimiser requête `get_all_images` avec lazy loading EXIF, vérifier virtualisa
 
 ### À modifier
 
-- `src-tauri/src/commands/catalog.rs` — `get_all_images` retourner EXIF optionnel 
+- `src-tauri/src/commands/catalog.rs` — `get_all_images` retourner EXIF optionnel
 - `src/components/GridView.tsx` — Utiliser virtualisation optimale, lazy-load EXIF au hover
 - `src/stores/catalogStore.ts` — Adapter pour données sans EXIF par défaut
 

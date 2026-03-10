@@ -60,7 +60,7 @@
 | M           | 2.1a       | Connection Pooling SQLite (DBContext repository ingestion/discovery)                            | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 2.2        | Durcissement Sécurité (path whitelist + validation traversal + CSP/assetProtocol restreints)    | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 3.1        | Refactoring App.tsx (AppInitializer + useAppShortcuts)                                          | ✅ Complétée | 2026-03-10 | Copilot |
-| M           | 3.2        | Optimisation Grille & Données (lazy EXIF + liste sans EXIF + prefetch hover)                   | 🔄 En cours  | 2026-03-10 | Copilot |
+| M           | 3.2        | Optimisation Grille & Données (lazy EXIF + liste sans EXIF + prefetch hover)                    | 🔄 En cours  | 2026-03-10 | Copilot |
 
 | 5 | 5.1 | Panneau EXIF Connecté | ✅ Complétée | 2026-07-10 | Copilot |
 | 5 | 5.2 | Système de Tags Hiérarchique | ✅ Complétée | 2026-07-11 | Copilot |

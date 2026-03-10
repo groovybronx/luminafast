@@ -32,10 +32,8 @@ export class PreviewService {
   /**
    * Log uniquement en mode développement (pas en production)
    */
-  private static logDev(message: string, ...args: unknown[]): void {
-    if (import.meta.env.DEV) {
-      console.warn(message, ...args);
-    }
+  private static logDev(_message: string, ..._args: unknown[]): void {
+    // Logs disabled
   }
 
   private constructor() {

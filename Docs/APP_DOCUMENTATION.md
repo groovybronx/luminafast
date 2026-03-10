@@ -1457,21 +1457,21 @@ getAppliedEdits(imageId: number): EventDTO[]                   // Retrieve
 
 ## 19. Historique des Modifications de ce Document
 
-| Date       | Phase               | Modification                                                                  | Raison                                         |
-| ---------- | ------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------- |
+| Date       | Phase               | Modification                                                                     | Raison                                         |
+| ---------- | ------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------- |
 | 2026-03-10 | M.2.2               | Whitelist dynamique paths, validation traversal, hardening `assetProtocol` + CSP | Réduction surface d'attaque filesystem/XSS     |
-| 2026-03-10 | M.2.1a              | Connection pooling SQLite (r2d2), tuning env, retry lock/busy, métriques pool | Robustesse ingestion/discovery sous contention |
-| 2026-03-03 | 4.3                 | Historique interactif + snapshots nommés (create/restore/delete)              | Livraison complète de la Phase 4.3             |
-| 2026-02-27 | 4.2-B.2 Conformity  | Ajout section "Système de Rendu" (Event Sourcing + CSS + WASM)                | Documentation Phase 4.2 pipeline complet       |
-| 2026-02-23 | Maintenance SQL     | Refactorisation `get_folder_images()` pour sécurité et performance            | Élimination conversions u32→String inutiles    |
-| 2026-02-23 | Maintenance Qualité | Résolution 4 notes bloquantes Review Copilot (PR #20)                         | Error handling, volume_name, SQL LIKE, Zustand |
-| 2026-02-13 | 1.4                 | Ajout section Service Filesystem complète                                     | Implémentation Phase 1.4 terminée              |
-| 2026-02-13 | 1.3                 | Mise à jour complète après Phase 1.3 (BLAKE3)                                 | Synchronisation documentation avec état actuel |
-| 2026-02-12 | 1.2                 | Ajout section API/Commandes Tauri complète                                    | Implémentation Phase 1.2 terminée              |
-| 2026-02-11 | 1.1                 | Ajout section Base de Données SQLite complète                                 | Implémentation Phase 1.1 terminée              |
-| 2026-02-11 | 1.1                 | Mise à jour stack technique et architecture fichiers                          | Ajout src-tauri avec SQLite                    |
-| 2026-02-11 | 1.1                 | Ajout scripts Rust dans section développement                                 | Scripts npm pour tests Rust                    |
-| 2026-02-11 | 0.5                 | Mise à jour après complétion Phase 0.5                                        | CI/CD implémenté et fonctionnel                |
+| 2026-03-10 | M.2.1a              | Connection pooling SQLite (r2d2), tuning env, retry lock/busy, métriques pool    | Robustesse ingestion/discovery sous contention |
+| 2026-03-03 | 4.3                 | Historique interactif + snapshots nommés (create/restore/delete)                 | Livraison complète de la Phase 4.3             |
+| 2026-02-27 | 4.2-B.2 Conformity  | Ajout section "Système de Rendu" (Event Sourcing + CSS + WASM)                   | Documentation Phase 4.2 pipeline complet       |
+| 2026-02-23 | Maintenance SQL     | Refactorisation `get_folder_images()` pour sécurité et performance               | Élimination conversions u32→String inutiles    |
+| 2026-02-23 | Maintenance Qualité | Résolution 4 notes bloquantes Review Copilot (PR #20)                            | Error handling, volume_name, SQL LIKE, Zustand |
+| 2026-02-13 | 1.4                 | Ajout section Service Filesystem complète                                        | Implémentation Phase 1.4 terminée              |
+| 2026-02-13 | 1.3                 | Mise à jour complète après Phase 1.3 (BLAKE3)                                    | Synchronisation documentation avec état actuel |
+| 2026-02-12 | 1.2                 | Ajout section API/Commandes Tauri complète                                       | Implémentation Phase 1.2 terminée              |
+| 2026-02-11 | 1.1                 | Ajout section Base de Données SQLite complète                                    | Implémentation Phase 1.1 terminée              |
+| 2026-02-11 | 1.1                 | Mise à jour stack technique et architecture fichiers                             | Ajout src-tauri avec SQLite                    |
+| 2026-02-11 | 1.1                 | Ajout scripts Rust dans section développement                                    | Scripts npm pour tests Rust                    |
+| 2026-02-11 | 0.5                 | Mise à jour après complétion Phase 0.5                                           | CI/CD implémenté et fonctionnel                |
 
 | Date       | Sous-Phase            | Nature de la modification                                                            |
 | ---------- | --------------------- | ------------------------------------------------------------------------------------ |

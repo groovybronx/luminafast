@@ -58,7 +58,7 @@
 | M           | 1.2        | Migration Async IO (std::fs → tokio::fs dans contextes async)                                   | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 1.3        | Nettoyage Code Mort (fichier debug + fonctions WASM deprecated)                                 | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 2.1a       | Connection Pooling SQLite (DBContext repository ingestion/discovery)                            | ✅ Complétée | 2026-03-10 | Copilot |
-| M           | 2.2        | Durcissement Sécurité (path whitelist + validation traversal + CSP/assetProtocol restreints)   | ✅ Complétée | 2026-03-10 | Copilot |
+| M           | 2.2        | Durcissement Sécurité (path whitelist + validation traversal + CSP/assetProtocol restreints)    | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 3.1        | Refactoring App.tsx (AppInitializer + useAppShortcuts)                                          | ✅ Complétée | 2026-03-10 | Copilot |
 
 | 5 | 5.1 | Panneau EXIF Connecté | ✅ Complétée | 2026-07-10 | Copilot |
@@ -94,11 +94,13 @@
 
 ## Phase Actuelle
 
-> **Maintenance M.2.2** : Durcissement Sécurité (clôturée)
+> **Maintenance M.3.1** : Refactoring App.tsx (AppInitializer + useAppShortcuts)
 >
-> Brief : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.2.2-durcissement-securite.md`
-> Branche : `phase/m.2.2-durcissement-securite`
-> Note qualité : `cargo check` ✅, `cargo clippy --all-targets -- -D warnings` ✅, tests sécurité + discovery impactés ✅
+> Brief : `Docs/briefs/Maintenance Mid Term/MAINTENANCE-MT-M.3.1-refactoring-app-tsx.md`
+> Branche : `phase/m.3.1-refactoring-app-tsx-v2`
+> Note qualité : `npm run type-check` ✅, tests M.3.1 ciblés ✅, lint fichiers M.3.1 ✅
+>
+> Décision produit : **M.2.2a (CSP review approfondie) reportée** après stabilisation M.3.1.
 
 ---
 
@@ -196,7 +198,7 @@
 
 **Statut** : ✅ **Complétée**
 **Agent** : LuminaFast Phase Implementation
-**Branche** : `phase/m.3.1-refactoring-app-tsx`
+**Branche** : `phase/m.3.1-refactoring-app-tsx-v2`
 **Type** : Maintenance
 
 #### Résumé

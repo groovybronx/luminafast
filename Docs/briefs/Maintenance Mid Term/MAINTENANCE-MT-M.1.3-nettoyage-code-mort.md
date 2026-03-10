@@ -1,6 +1,6 @@
 # Phase M.1.3 — Nettoyage Code Mort
 
-> **Statut** : ⬜ **En attente**
+> **Statut** : ✅ **Complétée** (2026-03-10)
 > **Durée estimée** : 1-2 jours
 > **Priorité** : P1 (Élevée)
 
@@ -101,11 +101,11 @@ Après nettoyage :
 
 ## Checkpoints
 
-- [ ] **Checkpoint 1** : Audit complet identifiée dans analyse (files list)
-- [ ] **Checkpoint 2** : Code compile (`cargo check` + `tsc` ✅)
-- [ ] **Checkpoint 3** : Tests passent 100% (non-régression)
-- [ ] **Checkpoint 4** : Aucun import non-résolu restant
-- [ ] **Checkpoint 5** : Clippy 0 warnings
+- [x] **Checkpoint 1** : Audit complet identifiée dans analyse (files list)
+- [x] **Checkpoint 2** : Code compile (`cargo check` + `tsc` ✅)
+- [x] **Checkpoint 3** : Tests passent 100% (non-régression)
+- [x] **Checkpoint 4** : Aucun import non-résolu restant
+- [x] **Checkpoint 5** : Clippy 0 warnings
 
 ## Pièges & Risques
 
@@ -153,20 +153,38 @@ Après nettoyage :
 
 ### Backend
 
-- [ ] `cargo check` ✅
-- [ ] `cargo clippy` ✅ (0 warnings)
-- [ ] Tests Rust passent 100% (non-régression)
-- [ ] Aucune import non-résolu
-- [ ] `cargo tree` clean (no unused)
+- [x] `cargo check` ✅
+- [x] `cargo clippy` ✅ (0 warnings)
+- [x] Tests Rust passent 100% (non-régression)
+- [x] Aucune import non-résolu
+- [x] `cargo tree` clean (no unused) — audit des crates ciblées (usages actifs)
 
 ### Frontend
 
-- [ ] `tsc --noEmit` ✅
-- [ ] `npm run lint` ✅
-- [ ] Aucun import non-résolu
+- [x] `tsc --noEmit` ✅
+- [x] `npm run lint` ✅
+- [x] Aucun import non-résolu
 
 ### Integration
 
-- [ ] Tests M.1.1, M.1.2 passent (non-régression)
-- [ ] CHANGELOG et APP_DOCUMENTATION mis à jour
-- [ ] Code compile sans warning
+- [x] Tests M.1.1, M.1.2 passent (non-régression)
+- [x] CHANGELOG et APP_DOCUMENTATION mis à jour
+- [x] Code compile sans warning
+
+## Résultats de clôture (2026-03-10)
+
+### Suppressions réalisées
+
+- `src-tauri/src/test_hook.rs` supprimé (fichier debug mort, non référencé)
+- Bloc WASM legacy supprimé dans `luminafast-wasm/src/image_processing.rs` (`OLD FUNCTIONS (DEPRECATED FOR OPTIMIZATION)`)
+
+### Audit complémentaire
+
+- Commandes Tauri catalog : pas de commande morte détectée (exposition cohérente via `lib.rs`)
+- Dépendances Cargo/npm : aucun retrait appliqué dans cette passe (usages actifs détectés sur les dépendances auditées)
+
+### Validation exécutée
+
+- `cargo check` + `cargo clippy --all-targets -- -D warnings` + `cargo test` (src-tauri) ✅
+- `cargo check` + `cargo test` (luminafast-wasm) ✅
+- `npm run type-check` + `npm run lint` ✅

@@ -59,6 +59,7 @@
 20. [Conformité TypeScript Strict & Documentation WASM](#20-conformité-typescript-strict--documentation-wasm)
 21. [Service Metrics — Monitoring Threadpool (M.1.1a)](#21-service-metrics--monitoring-threadpool-m11a)
 22. [Migration Async IO (M.1.2)](#22-migration-async-io-m12)
+23. [Nettoyage Code Mort (M.1.3)](#23-nettoyage-code-mort-m13)
 
 **Annexes** :
 
@@ -69,7 +70,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-03-10 (Maintenance M.1.2 clôturée: migration async IO `std::fs` → `tokio::fs` sur services/commandes backend + validation 225 tests Rust)
+> **Dernière mise à jour** : 2026-03-10 (Maintenance M.1.3 clôturée: suppression code mort backend/WASM + validations lint/tests complètes)
 >
 > ### Décisions Projet (validées par le propriétaire)
 
@@ -2095,3 +2096,26 @@ for file in files {
 
 - Stabilisation des imports/scans sur runtime Tokio (moins de risques de freeze par IO sync).
 - Cohérence async renforcée avant les futures optimisations IO/DB (M.2.x).
+
+---
+
+## 23. Nettoyage Code Mort (M.1.3)
+
+> ✅ **Complétée** — 2026-03-10
+> **Objectif** : réduire le bruit technique en retirant le code non utilisé.
+
+### 23.1 — Nettoyage réalisé
+
+- Suppression du fichier debug mort `src-tauri/src/test_hook.rs`.
+- Suppression du bloc de fonctions WASM dépréciées dans `luminafast-wasm/src/image_processing.rs`.
+
+### 23.2 — Audit M.1.3
+
+- Commandes Tauri catalog : pas de commande morte détectée.
+- Dépendances Cargo/npm auditées : pas de suppression sûre appliquée dans cette passe (usages actifs sur les dépendances ciblées).
+
+### 23.3 — Validation
+
+- `cargo check` + `cargo clippy --all-targets -- -D warnings` + `cargo test` (src-tauri) ✅
+- `cargo check` + `cargo test` (luminafast-wasm) ✅
+- `npm run type-check` + `npm run lint` ✅

@@ -30,7 +30,7 @@ L'application LuminaFast a atteint un niveau de complétion **MVP fonctionnel** 
 **Gaps critiques identifiés** :
 1. 🔴 Artefact WASM non compilé dans `public/` → rendu pixel avancé inopérant en prod jusqu'au `npm run wasm:build`
 2. 🟠 CI/CD Linux-only (Phase 0.5 exigeait macOS + Windows + Linux)
-3. 🟡 `src/App.jsx.old` (fichier mort non supprimé)
+3. 🟡 `src/App.jsx.old` (fichier obsolète non supprimé)
 4. 🟡 Pas de commande Tauri `batch_update_image_state` — le BatchBar effectue des appels en boucle
 
 ---
@@ -256,7 +256,7 @@ L'application LuminaFast a atteint un niveau de complétion **MVP fonctionnel** 
 - Tokio v1.40 avec `rt-multi-thread`, `fs`, `io-util`, `macros`
 
 #### M.1.3 — Nettoyage Code Mort ⚠️ PARTIEL
-- `src/App.jsx.old` est toujours présent dans le répertoire `src/`. Ce fichier devrait être supprimé.
+- `src/App.jsx.old` est toujours présent dans le répertoire `src/`. Ce fichier obsolète (legacy JSX) devrait être supprimé.
 
 #### M.2.1a — Connection Pooling ✅ COMPLET
 - `Cargo.toml` : `r2d2 = "0.8"`, `r2d2_sqlite = "0.24"`
@@ -307,7 +307,7 @@ Les phases 6 (Performance Avancée), 7 (Production-Ready), et 8 (Mode Déconnect
 
 | # | Gap | Fichiers concernés | Impact |
 |---|---|---|---|
-| **M-1** | **`src/App.jsx.old` non supprimé** | `src/App.jsx.old` | Fichier mort de l'ancienne version JSX. Confusant pour les agents/développeurs. Phase M.1.3 incomplète. |
+| **M-1** | **`src/App.jsx.old` non supprimé** | `src/App.jsx.old` | Fichier obsolète (legacy JSX) non supprimé. Confusant pour les agents/développeurs. Phase M.1.3 incomplète. |
 | **M-2** | **App.tsx encore volumineux (438 lignes)** | `src/App.tsx` | Après refactoring M.3.1, App.tsx reste à 438 lignes d'orchestration. Contient encore de la logique d'event dispatch significative. Fonctionnel mais plus difficile à maintenir. |
 | **M-3** | **DevelopView ne montre pas HistoryPanel inline** | `src/components/develop/DevelopView.tsx` | `HistoryPanel` est dans `RightSidebar`, pas dans `DevelopView` directement. Architectural choice cohérente avec la sidebar droite, mais différent du layout originel du plan. |
 | **M-4** | **Phases 6-8 entièrement absentes** | — | Fonctionnalités post-MVP (DuckDB, multi-plateforme complet, offline, sync) non démarrées. Attendu pour versions futures. |

@@ -1,6 +1,6 @@
 # Phase M0.3 - Gouvernance et Roadmap des Briefs
 
-> **Statut** : ⬜ En attente
+> **Statut** : ✅ Completee
 > **Duree estimee** : 0.5 jour
 
 ## Objectif
@@ -68,11 +68,11 @@ Produire et ordonnancer tous les briefs M1 a M5 avec un graphe de dependances ac
 
 ## Checkpoints
 
-- [ ] Checkpoint 1: briefs M1
-- [ ] Checkpoint 2: briefs M2
-- [ ] Checkpoint 3: briefs M3
-- [ ] Checkpoint 4: briefs M4
-- [ ] Checkpoint 5: briefs M5
+- [x] Checkpoint 1: briefs M1
+- [x] Checkpoint 2: briefs M2
+- [x] Checkpoint 3: briefs M3
+- [x] Checkpoint 4: briefs M4
+- [x] Checkpoint 5: briefs M5
 
 ## Pieges et Risques
 
@@ -90,5 +90,5 @@ Produire et ordonnancer tous les briefs M1 a M5 avec un graphe de dependances ac
 
 ## Criteres de Completion
 
-- [ ] Ensemble des briefs de migration present
-- [ ] Ordonnancement explicite et coherent
+- [x] Ensemble des briefs de migration present
+- [x] Ordonnancement explicite et coherent

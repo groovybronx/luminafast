@@ -1,8 +1,16 @@
 # Index Execution Agent - Migration WASM Core
 
-Statut : Pret a execution
+Statut : En execution
 Date : 2026-03-12
 Portee : Orchestration complete M0.1 -> M5.3
+
+## 0) Etat d avancement actuel
+
+- M0.1 : ✅ Completee
+- M0.2 : ✅ Completee
+- M0.3 : ✅ Completee
+- M1.1 : ⬜ Prochaine etape
+- M1.2 -> M5.3 : ⬜ En attente
 
 ## 1) Ordre d execution officiel
 

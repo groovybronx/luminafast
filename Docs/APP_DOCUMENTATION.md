@@ -70,7 +70,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-03-13 (Maintenance WASM M2.3 complétée : parite visuelle WASM validee)
+> **Dernière mise à jour** : 2026-03-13 (Maintenance WASM M3.2 complétée : pipeline export non destructif events/snapshots -> JPEG/TIFF)
 >
 > ### Décisions Projet (validées par le propriétaire)
 
@@ -86,7 +86,7 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : Phases 0 à 3.5 complétées + Maintenance Phase 3.1 stabilisée
+### État actuel : Phases 0 à 3.5 complétées + Maintenance WASM M3.2 stabilisée
 
 **Pipeline d'import production-ready** :
 
@@ -105,7 +105,7 @@
 - **30-70%** : ingestion + hashing + EXIF
 - **70-100%** : previews
 
-**État actuel de l'application** (Phases 0 → 3.5 complétées + Maintenance Phase 3.1 stabilisée) :
+**État actuel de l'application** (Phases 0 → 3.5 complétées + Maintenance WASM M3.2 stabilisée) :
 
 - **Grille virtualisée avec lazy-loading** : `@tanstack/react-virtual` (10K+ images, 60fps) + IntersectionObserver (prefetch 100px)
 - **Collections & Smart Collections** : créations, renommages, suppressions, filtrage via stores dédiés (Phase 3.2)
@@ -298,6 +298,7 @@ LuminaFast/
 │   │   │   ├── discovery.rs         # Commandes ingestion + découverte (M.1.2: validations chemin async)
 │   │   │   ├── hashing.rs           # Commandes BLAKE3 batch (M.1.2: scan dossier async)
 │   │   │   ├── preview.rs           # Commandes génération previews RAW (M.1.2: init async du service)
+│   │   │   ├── export.rs            # Commande export non destructif (`export_image_edited`) (Maintenance WASM M3.2)
 │   │   │   ├── __tests__/preview_performance.rs # Tests perf batch vs séquentiel
 │   │   │   ├── __tests__/preview_unit.rs        # Tests unitaires preview pyramide
 │   │   │   └── types.rs             # Types réponse partagés
@@ -346,6 +347,8 @@ LuminaFast/
 │   │   │   ├── filesystem.rs        # Service système de fichiers (M.1.2: checks async dans chemins async)
 │   │   │   ├── preview.rs           # Service génération previews RAW (M.1.2: create/read/write async)
 │   │   │   │   └── tests.rs         # Tests preview pyramide (27 tests)
+│   │   │   ├── export_rendering.rs  # Service rendu export branché sur `luminafast-image-core` (Maintenance WASM M3.1)
+│   │   │   ├── export_pipeline.rs   # Pipeline non destructif events/snapshots -> export fichier (Maintenance WASM M3.2)
 │   │   │   └── __tests__/           # Tests integration transversales
 │   └── icons/                      # Icônes d'application (16 fichiers)
 ├── luminafast-image-core/           # Crate Rust partagee backend + WASM (Maintenance WASM M1.1-M2.1)
@@ -1461,6 +1464,20 @@ getAppliedEdits(imageId: number): EventDTO[]                   // Retrieve
 
 - `luminafast-image-core` : 17/17 ✅ (algorithmes + contrat API)
 - `luminafast-wasm/src/lib.rs` : 2/2 ✅ (wrappers wasm-bindgen)
+- `src-tauri/src/services/export_rendering.rs` : 2/2 ✅ (rendu export backend via core partage)
+- `src-tauri/src/services/image_processing.rs` : 2/2 ✅ (wrapper legacy de compatibilite vers core)
+- `src-tauri/src/services/export_pipeline.rs` : 3/3 ✅ (pipeline export non destructif JPEG/TIFF)
+
+**Backend Export (M3.1)** :
+
+- `src-tauri/src/services/export_rendering.rs` delegue le rendu pixel export vers `luminafast-image-core::apply_filters`.
+- `src-tauri/src/services/image_processing.rs` n'embarque plus d'algorithme local: il agit comme pont de compatibilite deprecie vers le core partage.
+
+**Backend Export Non Destructif (M3.2)** :
+
+- `src-tauri/src/services/export_pipeline.rs` reconstruit l'etat d'edition depuis `edit_snapshots` + `events`, mappe vers `PixelFilters`, puis delegue le rendu a `export_rendering`.
+- `src-tauri/src/commands/export.rs` expose la commande Tauri `export_image_edited(image_id, output_path, format)` et retourne `ExportResultDTO` (camelCase).
+- Les formats supportes sont `jpeg/jpg` et `tiff/tif`, avec erreurs explicites en cas de format invalide ou source image indisponible.
 
 **Non-Régression** : Phases 1-4.1 à 100% ✅
 
@@ -1468,28 +1485,30 @@ getAppliedEdits(imageId: number): EventDTO[]                   // Retrieve
 
 ## 19. Historique des Modifications de ce Document
 
-| Date       | Phase                 | Modification                                                                                         | Raison                                                             |
-| ---------- | --------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 2026-03-13 | Maintenance WASM M2.3 | Ajout validation parite visuelle WASM (dataset 5 cas + delta moyen RGB <= 2 sur buffers bruts)       | Verrouiller la regression visuelle avant integration backend M3.1  |
-| 2026-03-12 | Maintenance WASM M2.2 | Validation non-regression frontend (`loadWasmModule`, `hasWasmSupport`, fallback CSS, normalisation) | Verrouiller le comportement frontend avant la parite visuelle M2.3 |
-| 2026-03-12 | Maintenance WASM M2.1 | Integration `luminafast-wasm` -> `luminafast-image-core` (wrapper stable + suppression duplication)  | Supprimer le risque de divergence backend/WASM                     |
-| 2026-03-12 | Maintenance WASM M1.3 | Stabilisation API v1 (`lib.rs`, ranges/no-op documentes, tests `api_contract`)                       | Geler un contrat unique avant integration WASM/backend             |
-| 2026-03-12 | Maintenance WASM M1.2 | Portage de `apply_filters` (passe unique) + histogramme RGB dans `luminafast-image-core`             | Centraliser les algorithmes pour garantir la parite WASM/backend   |
-| 2026-03-12 | Maintenance WASM M1.1 | Initialisation crate `luminafast-image-core` (errors, filters, histogram, tests unitaires)           | Lancer le socle partage pour supprimer la duplication WASM/backend |
-| 2026-03-10 | M.3.2 (en cours)      | get_all_images sans EXIF par défaut + lazy EXIF on-demand (hook/service + prefetch hover)            | Réduction coût chargement grille volumineuse                       |
-| 2026-03-10 | M.2.2                 | Whitelist dynamique paths, validation traversal, hardening `assetProtocol` + CSP                     | Réduction surface d'attaque filesystem/XSS                         |
-| 2026-03-10 | M.2.1a                | Connection pooling SQLite (r2d2), tuning env, retry lock/busy, métriques pool                        | Robustesse ingestion/discovery sous contention                     |
-| 2026-03-03 | 4.3                   | Historique interactif + snapshots nommés (create/restore/delete)                                     | Livraison complète de la Phase 4.3                                 |
-| 2026-02-27 | 4.2-B.2 Conformity    | Ajout section "Système de Rendu" (Event Sourcing + CSS + WASM)                                       | Documentation Phase 4.2 pipeline complet                           |
-| 2026-02-23 | Maintenance SQL       | Refactorisation `get_folder_images()` pour sécurité et performance                                   | Élimination conversions u32→String inutiles                        |
-| 2026-02-23 | Maintenance Qualité   | Résolution 4 notes bloquantes Review Copilot (PR #20)                                                | Error handling, volume_name, SQL LIKE, Zustand                     |
-| 2026-02-13 | 1.4                   | Ajout section Service Filesystem complète                                                            | Implémentation Phase 1.4 terminée                                  |
-| 2026-02-13 | 1.3                   | Mise à jour complète après Phase 1.3 (BLAKE3)                                                        | Synchronisation documentation avec état actuel                     |
-| 2026-02-12 | 1.2                   | Ajout section API/Commandes Tauri complète                                                           | Implémentation Phase 1.2 terminée                                  |
-| 2026-02-11 | 1.1                   | Ajout section Base de Données SQLite complète                                                        | Implémentation Phase 1.1 terminée                                  |
-| 2026-02-11 | 1.1                   | Mise à jour stack technique et architecture fichiers                                                 | Ajout src-tauri avec SQLite                                        |
-| 2026-02-11 | 1.1                   | Ajout scripts Rust dans section développement                                                        | Scripts npm pour tests Rust                                        |
-| 2026-02-11 | 0.5                   | Mise à jour après complétion Phase 0.5                                                               | CI/CD implémenté et fonctionnel                                    |
+| Date       | Phase                 | Modification                                                                                             | Raison                                                                        |
+| ---------- | --------------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| 2026-03-13 | Maintenance WASM M3.2 | Pipeline export non destructif (`export_pipeline`) + commande Tauri `export_image_edited` + DTO résultat | Activer l'export final base sur events/snapshots avant contrat de parite M3.3 |
+| 2026-03-13 | Maintenance WASM M3.1 | Raccord backend export vers core partage (`export_rendering`) + deprecation `image_processing` local     | Supprimer la divergence algorithmique backend/WASM avant M3.2                 |
+| 2026-03-13 | Maintenance WASM M2.3 | Ajout validation parite visuelle WASM (dataset 5 cas + delta moyen RGB <= 2 sur buffers bruts)           | Verrouiller la regression visuelle avant integration backend M3.1             |
+| 2026-03-12 | Maintenance WASM M2.2 | Validation non-regression frontend (`loadWasmModule`, `hasWasmSupport`, fallback CSS, normalisation)     | Verrouiller le comportement frontend avant la parite visuelle M2.3            |
+| 2026-03-12 | Maintenance WASM M2.1 | Integration `luminafast-wasm` -> `luminafast-image-core` (wrapper stable + suppression duplication)      | Supprimer le risque de divergence backend/WASM                                |
+| 2026-03-12 | Maintenance WASM M1.3 | Stabilisation API v1 (`lib.rs`, ranges/no-op documentes, tests `api_contract`)                           | Geler un contrat unique avant integration WASM/backend                        |
+| 2026-03-12 | Maintenance WASM M1.2 | Portage de `apply_filters` (passe unique) + histogramme RGB dans `luminafast-image-core`                 | Centraliser les algorithmes pour garantir la parite WASM/backend              |
+| 2026-03-12 | Maintenance WASM M1.1 | Initialisation crate `luminafast-image-core` (errors, filters, histogram, tests unitaires)               | Lancer le socle partage pour supprimer la duplication WASM/backend            |
+| 2026-03-10 | M.3.2 (en cours)      | get_all_images sans EXIF par défaut + lazy EXIF on-demand (hook/service + prefetch hover)                | Réduction coût chargement grille volumineuse                                  |
+| 2026-03-10 | M.2.2                 | Whitelist dynamique paths, validation traversal, hardening `assetProtocol` + CSP                         | Réduction surface d'attaque filesystem/XSS                                    |
+| 2026-03-10 | M.2.1a                | Connection pooling SQLite (r2d2), tuning env, retry lock/busy, métriques pool                            | Robustesse ingestion/discovery sous contention                                |
+| 2026-03-03 | 4.3                   | Historique interactif + snapshots nommés (create/restore/delete)                                         | Livraison complète de la Phase 4.3                                            |
+| 2026-02-27 | 4.2-B.2 Conformity    | Ajout section "Système de Rendu" (Event Sourcing + CSS + WASM)                                           | Documentation Phase 4.2 pipeline complet                                      |
+| 2026-02-23 | Maintenance SQL       | Refactorisation `get_folder_images()` pour sécurité et performance                                       | Élimination conversions u32→String inutiles                                   |
+| 2026-02-23 | Maintenance Qualité   | Résolution 4 notes bloquantes Review Copilot (PR #20)                                                    | Error handling, volume_name, SQL LIKE, Zustand                                |
+| 2026-02-13 | 1.4                   | Ajout section Service Filesystem complète                                                                | Implémentation Phase 1.4 terminée                                             |
+| 2026-02-13 | 1.3                   | Mise à jour complète après Phase 1.3 (BLAKE3)                                                            | Synchronisation documentation avec état actuel                                |
+| 2026-02-12 | 1.2                   | Ajout section API/Commandes Tauri complète                                                               | Implémentation Phase 1.2 terminée                                             |
+| 2026-02-11 | 1.1                   | Ajout section Base de Données SQLite complète                                                            | Implémentation Phase 1.1 terminée                                             |
+| 2026-02-11 | 1.1                   | Mise à jour stack technique et architecture fichiers                                                     | Ajout src-tauri avec SQLite                                                   |
+| 2026-02-11 | 1.1                   | Ajout scripts Rust dans section développement                                                            | Scripts npm pour tests Rust                                                   |
+| 2026-02-11 | 0.5                   | Mise à jour après complétion Phase 0.5                                                                   | CI/CD implémenté et fonctionnel                                               |
 
 | Date       | Sous-Phase            | Nature de la modification                                                            |
 | ---------- | --------------------- | ------------------------------------------------------------------------------------ |

@@ -14,8 +14,9 @@ Portee : Orchestration complete M0.1 -> M5.3
 - M1.3 : ✅ Completee
 - M2.1 : ✅ Completee
 - M2.2 : ✅ Completee
-- M2.3 : ⬜ Prochaine etape
-- M3.1 -> M5.3 : ⬜ En attente
+- M2.3 : ✅ Completee
+- M3.1 : ⬜ Prochaine etape
+- M3.2 -> M5.3 : ⬜ En attente
 
 ## 1) Ordre d execution officiel
 

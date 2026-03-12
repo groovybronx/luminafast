@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import {
   loadWasmModule,
   hasWasmSupport,
@@ -27,6 +28,202 @@ const DEFAULT_TEST_FILTERS: PixelFilterState = {
   colorTemp: 5500,
   tint: 0,
 };
+
+interface WasmParityExports {
+  initSync: (input: { module: Uint8Array }) => unknown;
+  PixelFiltersWasm: new (
+    exposure: number,
+    contrast: number,
+    saturation: number,
+    highlights: number,
+    shadows: number,
+    clarity: number,
+    vibrance: number,
+    colorTemp: number,
+    tint: number,
+  ) => {
+    apply_filters(pixels: Uint8Array, width: number, height: number): Uint8Array;
+  };
+}
+
+interface VisualParityCase {
+  name: string;
+  width: number;
+  height: number;
+  sourcePixels: number[];
+  filters: PixelFilterState;
+  referencePixels: number[];
+}
+
+const VISUAL_PARITY_DELTA_THRESHOLD = 2;
+
+const VISUAL_PARITY_DATASET: VisualParityCase[] = [
+  {
+    name: 'low_light',
+    width: 3,
+    height: 2,
+    sourcePixels: [
+      12, 15, 18, 255, 20, 18, 14, 255, 28, 22, 19, 255, 16, 20, 24, 255, 24, 25, 21, 255, 32, 30,
+      26, 255,
+    ],
+    filters: {
+      exposure: 35,
+      contrast: 10,
+      saturation: 12,
+      highlights: -20,
+      shadows: 65,
+      clarity: 15,
+      vibrance: 18,
+      colorTemp: 5600,
+      tint: 5,
+    },
+    referencePixels: [
+      8, 13, 17, 255, 20, 17, 11, 255, 31, 22, 18, 255, 13, 20, 26, 255, 25, 27, 21, 255, 36, 34,
+      27, 255,
+    ],
+  },
+  {
+    name: 'highlights',
+    width: 3,
+    height: 2,
+    sourcePixels: [
+      220, 210, 200, 255, 235, 228, 215, 255, 245, 240, 232, 255, 210, 205, 198, 255, 230, 220, 210,
+      255, 250, 246, 238, 255,
+    ],
+    filters: {
+      exposure: -12,
+      contrast: 8,
+      saturation: -5,
+      highlights: -72,
+      shadows: 18,
+      clarity: 10,
+      vibrance: 8,
+      colorTemp: 5200,
+      tint: -6,
+    },
+    referencePixels: [
+      174, 159, 149, 255, 186, 173, 161, 255, 195, 182, 174, 255, 166, 155, 148, 255, 182, 166, 157,
+      255, 199, 187, 178, 255,
+    ],
+  },
+  {
+    name: 'high_contrast',
+    width: 3,
+    height: 2,
+    sourcePixels: [
+      8, 8, 8, 255, 250, 250, 250, 255, 30, 32, 28, 255, 225, 220, 215, 255, 45, 40, 35, 255, 245,
+      240, 235, 255,
+    ],
+    filters: {
+      exposure: 5,
+      contrast: 45,
+      saturation: 18,
+      highlights: -35,
+      shadows: 35,
+      clarity: 45,
+      vibrance: 22,
+      colorTemp: 5400,
+      tint: 2,
+    },
+    referencePixels: [
+      0, 0, 0, 255, 254, 253, 249, 255, 9, 12, 5, 255, 227, 219, 209, 255, 31, 22, 14, 255, 249,
+      242, 231, 255,
+    ],
+  },
+  {
+    name: 'skin_warm',
+    width: 3,
+    height: 2,
+    sourcePixels: [
+      172, 126, 108, 255, 186, 140, 122, 255, 160, 116, 98, 255, 194, 148, 128, 255, 180, 134, 114,
+      255, 168, 122, 102, 255,
+    ],
+    filters: {
+      exposure: 8,
+      contrast: -4,
+      saturation: 14,
+      highlights: -10,
+      shadows: 12,
+      clarity: 8,
+      vibrance: 26,
+      colorTemp: 6400,
+      tint: 14,
+    },
+    referencePixels: [
+      161, 130, 114, 255, 174, 145, 129, 255, 150, 120, 104, 255, 181, 153, 136, 255, 168, 139, 120,
+      255, 157, 126, 108, 255,
+    ],
+  },
+  {
+    name: 'mixed_interior_exterior',
+    width: 3,
+    height: 2,
+    sourcePixels: [
+      62, 78, 98, 255, 118, 130, 146, 255, 188, 178, 162, 255, 42, 52, 70, 255, 138, 146, 152, 255,
+      214, 202, 188, 255,
+    ],
+    filters: {
+      exposure: 12,
+      contrast: 14,
+      saturation: 10,
+      highlights: -28,
+      shadows: 28,
+      clarity: 20,
+      vibrance: 16,
+      colorTemp: 5750,
+      tint: 3,
+    },
+    referencePixels: [
+      61, 84, 113, 255, 117, 136, 158, 255, 178, 173, 157, 255, 38, 53, 78, 255, 139, 153, 163, 255,
+      204, 197, 185, 255,
+    ],
+  },
+];
+
+function computeMeanAbsoluteRgbDelta(actual: number[], expected: number[]): number {
+  if (actual.length !== expected.length) {
+    throw new Error('Buffer length mismatch for visual parity comparison');
+  }
+
+  let sum = 0;
+  let count = 0;
+
+  for (let i = 0; i < actual.length; i += 4) {
+    const actualR = actual[i];
+    const actualG = actual[i + 1];
+    const actualB = actual[i + 2];
+    const expectedR = expected[i];
+    const expectedG = expected[i + 1];
+    const expectedB = expected[i + 2];
+
+    if (
+      actualR === undefined ||
+      actualG === undefined ||
+      actualB === undefined ||
+      expectedR === undefined ||
+      expectedG === undefined ||
+      expectedB === undefined
+    ) {
+      throw new Error('Unexpected undefined channel value during visual parity comparison');
+    }
+
+    sum += Math.abs(actualR - expectedR);
+    sum += Math.abs(actualG - expectedG);
+    sum += Math.abs(actualB - expectedB);
+    count += 3;
+  }
+
+  return sum / count;
+}
+
+async function loadWasmParityModule(): Promise<WasmParityExports> {
+  const wasmModule = (await import('@wasm/luminafast_wasm')) as unknown as WasmParityExports;
+  const wasmBinary = readFileSync('luminafast-wasm/pkg/luminafast_wasm_bg.wasm');
+
+  wasmModule.initSync({ module: wasmBinary });
+
+  return wasmModule;
+}
 
 describe('wasmRenderingService', () => {
   beforeEach(() => {
@@ -442,6 +639,39 @@ describe('wasmRenderingService', () => {
       expect(normalized.clarity).toBe(0);
       expect(normalized.vibrance).toBe(0);
       expect(normalized.tint).toBe(0);
+    });
+
+    it('should keep visual parity on reference dataset with mean RGB delta <= 2', async () => {
+      const wasmModule = await loadWasmParityModule();
+
+      for (const visualCase of VISUAL_PARITY_DATASET) {
+        const normalized = normalizeFiltersForWasm(visualCase.filters);
+
+        const wasmFilters = new wasmModule.PixelFiltersWasm(
+          normalized.exposure,
+          normalized.contrast,
+          normalized.saturation,
+          normalized.highlights ?? 0,
+          normalized.shadows ?? 0,
+          normalized.clarity ?? 0,
+          normalized.vibrance ?? 0,
+          normalized.colorTemp ?? 5500,
+          normalized.tint ?? 0,
+        );
+
+        const output = wasmFilters.apply_filters(
+          new Uint8Array(visualCase.sourcePixels),
+          visualCase.width,
+          visualCase.height,
+        );
+
+        const meanDelta = computeMeanAbsoluteRgbDelta(
+          Array.from(output),
+          visualCase.referencePixels,
+        );
+
+        expect(meanDelta).toBeLessThanOrEqual(VISUAL_PARITY_DELTA_THRESHOLD);
+      }
     });
   });
 });

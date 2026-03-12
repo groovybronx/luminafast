@@ -13,9 +13,8 @@ Toute violation des règles absolues (section 1) invalide le travail produit.
 1. **Lire le fichier** : `Docs/CHANGELOG.md` pour connaître l’état actuel du projet
 2. **Vérifier l’existence du brief de la prochaine phase** : `Docs/briefs/PHASE-X.Y.md` (créer si absent, selon `BRIEF_TEMPLATE.md` en se référant au plan de développement `Docs/archives/luminafast_developement_plan.md`)
 3. **Lire ce fichier** entièrement
-4. **Consulter l’AGENTS spécialisé** (voir section 4 ci-dessous)
-5. **Vérifier les dépendances** dans CHANGELOG — phases précédentes ✅
-6. **Créer branche** : `phase/X.Y-description-kebab-case`
+4. **Vérifier les dépendances** dans CHANGELOG — phases précédentes ✅
+5. **Créer branche** : `phase/X.Y-description-kebab-case`
 
 ### Pendant le travail
 

@@ -1,6 +1,6 @@
 # Phase M3.2 - Service Export Non Destructif
 
-> **Statut** : ⬜ En attente
+> **Statut** : ✅ Completee
 > **Duree estimee** : 1.5 jour
 
 ## Objectif
@@ -76,9 +76,9 @@ pub fn export_image_edited(
 
 ## Checkpoints
 
-- [ ] Checkpoint 1: pipeline unitaire valide
-- [ ] Checkpoint 2: commande export fonctionnelle
-- [ ] Checkpoint 3: fichier export verifie
+- [x] Checkpoint 1: pipeline unitaire valide
+- [x] Checkpoint 2: commande export fonctionnelle
+- [x] Checkpoint 3: fichier export verifie
 
 ## Pieges et Risques
 
@@ -94,5 +94,17 @@ pub fn export_image_edited(
 
 ## Criteres de Completion
 
-- [ ] Tests integration export verts
-- [ ] Export JPEG/TIFF operationnel
+- [x] Tests integration export verts
+- [x] Export JPEG/TIFF operationnel
+
+## Resultat de phase
+
+Pipeline livre dans `src-tauri/src/services/export_pipeline.rs` avec resolution source image SQL (`images` + `ingestion_file_status`), reconstruction filtres via snapshots + events, rendu via core partage (`export_rendering`), puis ecriture disque JPEG/TIFF.
+
+Commande Tauri exposee dans `src-tauri/src/commands/export.rs` : `export_image_edited(image_id, output_path, format)` avec reponse `ExportResultDTO`.
+
+Validation executee:
+
+- `cd src-tauri && cargo check` ✅
+- `cd src-tauri && cargo test export_pipeline` ✅ (3/3)
+- `cd src-tauri && cargo clippy --all-targets -- -D warnings` ✅

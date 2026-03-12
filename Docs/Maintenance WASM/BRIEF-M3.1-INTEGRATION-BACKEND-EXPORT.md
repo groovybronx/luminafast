@@ -1,6 +1,6 @@
 # Phase M3.1 - Integration Backend Export sur Core
 
-> **Statut** : ⬜ En attente
+> **Statut** : ✅ Completee
 > **Duree estimee** : 1 jour
 
 ## Objectif
@@ -73,9 +73,9 @@ pub fn export_image_edited(...) -> Result<ExportResultDTO, String>;
 
 ## Checkpoints
 
-- [ ] Checkpoint 1: build backend vert
-- [ ] Checkpoint 2: tests export unitaires verts
-- [ ] Checkpoint 3: usages copie backend supprimes
+- [x] Checkpoint 1: build backend vert
+- [x] Checkpoint 2: tests export unitaires verts
+- [x] Checkpoint 3: usages copie backend supprimes
 
 ## Pieges et Risques
 
@@ -91,5 +91,5 @@ pub fn export_image_edited(...) -> Result<ExportResultDTO, String>;
 
 ## Criteres de Completion
 
-- [ ] `cargo check` backend OK
-- [ ] Tests export cibles OK
+- [x] `cargo check` backend OK
+- [x] Tests export cibles OK

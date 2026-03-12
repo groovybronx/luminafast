@@ -3,6 +3,8 @@ pub mod db_repository;
 pub mod discovery;
 pub mod event_sourcing;
 pub mod exif;
+pub mod export_pipeline;
+pub mod export_rendering;
 pub mod filesystem;
 pub mod image_processing;
 pub mod ingestion;

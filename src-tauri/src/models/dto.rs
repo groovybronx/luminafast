@@ -55,6 +55,19 @@ pub struct ExifMetadataDTO {
     pub color_space: Option<String>,
 }
 
+/// DTO returned by non-destructive export command (M3.2)
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportResultDTO {
+    pub image_id: i64,
+    pub output_path: String,
+    pub format: String,
+    pub width: u32,
+    pub height: u32,
+    pub applied_edit_events: usize,
+    pub used_snapshot: bool,
+}
+
 /// DTO for collection responses
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CollectionDTO {

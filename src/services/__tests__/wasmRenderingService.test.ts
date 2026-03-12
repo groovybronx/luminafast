@@ -83,6 +83,18 @@ describe('wasmRenderingService', () => {
       ).rejects.toThrow();
     });
 
+    it('should log CSS fallback path when WASM is unavailable', async () => {
+      const canvas = document.createElement('canvas');
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+      await expect(
+        renderWithWasm(canvas, 'http://invalid.test/image.png', DEFAULT_TEST_FILTERS, 1, 1),
+      ).rejects.toThrow();
+
+      expect(warnSpy).toHaveBeenCalledWith('[WASM] Fallback à CSS filters');
+      warnSpy.mockRestore();
+    });
+
     it('should handle missing canvas context gracefully', async () => {
       const canvas = {
         getContext: () => null,

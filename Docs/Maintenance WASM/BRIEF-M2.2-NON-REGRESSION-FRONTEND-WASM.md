@@ -1,6 +1,6 @@
 # Phase M2.2 - Non-Regression Frontend WASM
 
-> **Statut** : ⬜ En attente
+> **Statut** : ✅ Completee (2026-03-12)
 > **Duree estimee** : 0.5 jour
 
 ## Objectif
@@ -42,8 +42,8 @@ Verifier que le frontend conserve le meme comportement apres migration interne W
 
 ### A modifier
 
-- `src/services/wasmRenderingService.ts`
-- `src/services/__tests__/wasmRenderingService.test.ts`
+- `src/services/wasmRenderingService.ts` (verifie, aucun changement fonctionnel requis en M2.2)
+- `src/services/__tests__/wasmRenderingService.test.ts` (modifie : test explicite du fallback CSS)
 
 ## Interfaces Publiques
 
@@ -68,9 +68,9 @@ export async function renderWithWasm(...): Promise<void>;
 
 ## Checkpoints
 
-- [ ] Checkpoint 1: tests service WASM verts
-- [ ] Checkpoint 2: fallback CSS valide
-- [ ] Checkpoint 3: `tsc --noEmit` vert
+- [x] Checkpoint 1: tests service WASM verts
+- [x] Checkpoint 2: fallback CSS valide
+- [x] Checkpoint 3: `tsc --noEmit` vert
 
 ## Pieges et Risques
 
@@ -86,6 +86,6 @@ export async function renderWithWasm(...): Promise<void>;
 
 ## Criteres de Completion
 
-- [ ] Type-check vert
-- [ ] Tests service verts
-- [ ] Fallback confirme
+- [x] Type-check vert
+- [x] Tests service verts
+- [x] Fallback confirme

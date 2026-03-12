@@ -1,6 +1,6 @@
 # Phase M2.1 - Integration WASM sur Core Partage
 
-> **Statut** : ⬜ En attente
+> **Statut** : ✅ Completee (2026-03-12)
 > **Duree estimee** : 1 jour
 
 ## Objectif
@@ -79,9 +79,9 @@ pub fn compute_histogram(...)
 
 ## Checkpoints
 
-- [ ] Checkpoint 1: `wasm-pack build` OK
-- [ ] Checkpoint 2: import dynamique frontend OK
-- [ ] Checkpoint 3: tests wrappers OK
+- [x] Checkpoint 1: `wasm-pack build` OK
+- [x] Checkpoint 2: import dynamique frontend OK
+- [x] Checkpoint 3: tests wrappers OK
 
 ## Pieges et Risques
 
@@ -99,6 +99,6 @@ pub fn compute_histogram(...)
 
 ## Criteres de Completion
 
-- [ ] Build WASM vert
-- [ ] Tests wrappers verts
-- [ ] Duplication WASM retiree
+- [x] Build WASM vert
+- [x] Tests wrappers verts
+- [x] Duplication WASM retiree

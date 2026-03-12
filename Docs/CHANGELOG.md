@@ -68,6 +68,7 @@
 | Maintenance WASM | M1.3       | Stabilisation API core v1 (ranges/no-op documentes + tests de contrat)                            | ✅ Complétée | 2026-03-12 | Copilot |
 | Maintenance WASM | M2.1       | Integration WASM sur core partage (wrapper wasm-bindgen + suppression duplication locale)         | ✅ Complétée | 2026-03-12 | Copilot |
 | Maintenance WASM | M2.2       | Non-regression frontend WASM (validation fallback CSS + normalisation + contrat TS)               | ✅ Complétée | 2026-03-12 | Copilot |
+| Maintenance WASM | M2.3       | Parite visuelle WASM (dataset reference + comparaison buffer brute + seuil delta <= 2 RGB)        | ✅ Complétée | 2026-03-13 | Copilot |
 
 | 5 | 5.1 | Panneau EXIF Connecté | ✅ Complétée | 2026-07-10 | Copilot |
 | 5 | 5.2 | Système de Tags Hiérarchique | ✅ Complétée | 2026-07-11 | Copilot |
@@ -102,15 +103,49 @@
 
 ## Phase Actuelle
 
-> **Maintenance WASM M2.3** : Parite visuelle WASM (prochaine sous-phase)
+> **Maintenance WASM M3.1** : Integration backend export sur core partage (prochaine sous-phase)
 >
-> Brief : `Docs/Maintenance WASM/BRIEF-M2.3-PARITE-VISUELLE-WASM.md`
-> Branche recommandée : `phase/m2.3-parite-visuelle-wasm`
-> Note qualité M2.2 : `src/services/__tests__/wasmRenderingService.test.ts` ✅ (32/32)
+> Brief : `Docs/Maintenance WASM/BRIEF-M3.1-INTEGRATION-BACKEND-EXPORT.md`
+> Branche recommandée : `phase/m3.1-integration-backend-export`
+> Note qualité M2.3 : `src/services/__tests__/wasmRenderingService.test.ts` ✅ (33/33)
 
 ---
 
 ## Historique des Sous-Phases Complétées
+
+---
+
+### 2026-03-13 — Maintenance WASM M2.3 : Parite visuelle WASM (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée**
+**Agent** : Copilot
+**Branche** : `phase/m2.3-parite-visuelle-wasm`
+**Type** : Maintenance
+
+#### Résumé
+
+**Cause racine** : après migration interne WASM sur core partagé, le principal risque résiduel était une régression visuelle subtile non détectée par les tests de contrat API, faute de comparaison pixel objective sur un dataset de référence.
+
+**Solution** : ajout d'un test automatisé de parité visuelle sur buffers RGBA non recompressés (5 cas de référence M0.2), comparaison de la sortie `PixelFiltersWasm.apply_filters` face à des snapshots figés, avec vérification d'un seuil explicite de delta moyen RGB `<= 2`.
+
+#### Fichiers créés
+
+- `Docs/Maintenance WASM/PARITE-VISUELLE-WASM.md` — rapport de parité M2.3 (dataset, méthode, résultats)
+
+#### Fichiers modifiés
+
+- `src/services/__tests__/wasmRenderingService.test.ts` — test de parité visuelle WASM (dataset + métrique delta)
+
+#### Critères de validation remplis
+
+- [x] Checkpoint 1 : dataset de référence en place (5 cas : low_light, highlights, high_contrast, skin_warm, mixed_interior_exterior)
+- [x] Checkpoint 2 : comparaison automatisée exécutée (`src/services/__tests__/wasmRenderingService.test.ts` : 33/33)
+- [x] Checkpoint 3 : seuil respecté (delta moyen RGB `<= 2`, mesuré `0.00` sur tous les cas)
+
+#### Impact
+
+- Parité visuelle WASM objectivée avec garde-fou automatisé reproductible.
+- Risque de dérive visuelle post-migration réduit avant passage à M3.1 (backend export).
 
 ---
 

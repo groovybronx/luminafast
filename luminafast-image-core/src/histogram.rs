@@ -75,11 +75,51 @@ mod tests {
             0_u8, 255_u8, 0_u8, 255_u8, // green
         ];
 
-        let histogram = compute_histogram_from_pixels(&pixels, 2, 1).expect("valid input");
+        let histogram = compute_histogram_from_pixels(&pixels, 2, 1).unwrap();
 
         assert_eq!(histogram.len(), 768);
         assert_eq!(histogram[255], 1); // R=255
         assert_eq!(histogram[256 + 255], 1); // G=255
         assert_eq!(histogram[512], 2); // B=0 appears twice
+    }
+
+    #[test]
+    fn histogram_counts_all_pixels_per_channel() {
+        let pixels: Vec<u8> = vec![
+            10, 20, 30, 255, 40, 50, 60, 255, 10, 20, 30, 255, 70, 80, 90, 255,
+        ];
+
+        let histogram = compute_histogram_from_pixels(&pixels, 2, 2).unwrap();
+
+        assert_eq!(histogram[10], 2);
+        assert_eq!(histogram[40], 1);
+        assert_eq!(histogram[70], 1);
+
+        assert_eq!(histogram[256 + 20], 2);
+        assert_eq!(histogram[256 + 50], 1);
+        assert_eq!(histogram[256 + 80], 1);
+
+        assert_eq!(histogram[512 + 30], 2);
+        assert_eq!(histogram[512 + 60], 1);
+        assert_eq!(histogram[512 + 90], 1);
+
+        let total_r: u32 = histogram[0..256].iter().sum();
+        let total_g: u32 = histogram[256..512].iter().sum();
+        let total_b: u32 = histogram[512..768].iter().sum();
+
+        assert_eq!(total_r, 4);
+        assert_eq!(total_g, 4);
+        assert_eq!(total_b, 4);
+    }
+
+    #[test]
+    fn histogram_ignores_alpha_channel() {
+        let opaque = vec![128_u8, 64, 32, 255];
+        let transparent = vec![128_u8, 64, 32, 0];
+
+        let h1 = compute_histogram_from_pixels(&opaque, 1, 1).unwrap();
+        let h2 = compute_histogram_from_pixels(&transparent, 1, 1).unwrap();
+
+        assert_eq!(h1, h2);
     }
 }

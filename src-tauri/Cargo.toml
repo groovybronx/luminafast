@@ -44,6 +44,7 @@ quick-xml = { version = "0.37", features = ["serialize"] }
 async-trait = "0.1"
 r2d2 = "0.8"
 r2d2_sqlite = "0.24"
+luminafast-image-core = { path = "../luminafast-image-core" }
 
 [dev-dependencies]
 tempfile = "3.0"

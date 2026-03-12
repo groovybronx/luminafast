@@ -70,7 +70,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-03-12 (Maintenance WASM M1.3 complétée : API core v1 stabilisee)
+> **Dernière mise à jour** : 2026-03-12 (Maintenance WASM M2.2 complétée : non-regression frontend WASM validee)
 >
 > ### Décisions Projet (validées par le propriétaire)
 
@@ -348,7 +348,7 @@ LuminaFast/
 │   │   │   │   └── tests.rs         # Tests preview pyramide (27 tests)
 │   │   │   └── __tests__/           # Tests integration transversales
 │   └── icons/                      # Icônes d'application (16 fichiers)
-├── luminafast-image-core/           # Crate Rust partagee backend + WASM (Maintenance WASM M1.1-M1.3)
+├── luminafast-image-core/           # Crate Rust partagee backend + WASM (Maintenance WASM M1.1-M2.1)
 │   ├── Cargo.toml                   # Manifest crate core image
 │   └── src/
 │       ├── lib.rs                   # API publique (reexports)
@@ -782,7 +782,7 @@ Depuis la maintenance **M.3.2a (en cours)**, `LeftSidebar` délègue ses sous-pa
 | `blake3`                | ^1.5                              | Hachage cryptographique                      |
 | `rayon`                 | ^1.10                             | Parallélisation                              |
 | `tokio`                 | ^1.40                             | Runtime async                                |
-| `luminafast-image-core` | path (`../luminafast-image-core`) | Noyau image partage backend/WASM (M1.1-M1.3) |
+| `luminafast-image-core` | path (`../luminafast-image-core`) | Noyau image partage backend/WASM (M1.1-M2.1) |
 
 ### Développement
 
@@ -1321,7 +1321,13 @@ imgElement.style.filter = cssString;
 
 **Crate WASM** : `luminafast-wasm/` (zéro dépendances desktop)
 
-**Pixel Filters** (9 algorithmes) :
+**Architecture M2.1 (wrapper sur core partagé)** :
+
+- `luminafast-image-core` = source de vérité algorithmique (`PixelFilters`, `apply_filters`, `compute_histogram_from_pixels`)
+- `luminafast-wasm/src/lib.rs` = wrapper `wasm-bindgen` stable (`PixelFiltersWasm`, `compute_histogram`)
+- Frontend = inchangé (`wasmRenderingService.ts` continue d'appeler `PixelFiltersWasm.apply_filters`)
+
+**Pixel Filters** (9 paramètres exposés) :
 
 ```rust
 struct PixelFilters {
@@ -1336,15 +1342,8 @@ struct PixelFilters {
     tint: f32,          // Green-magenta shift
 }
 
-impl PixelFilters {
-    pub fn apply_filters(&self, pixels: &mut [u8], width: u32, height: u32) {
-        // For each pixel [R, G, B, A]:
-        // - apply_exposure() → brightness_factor = 1 + exposure × 0.15
-        // - apply_contrast() → (pixel - 128) × factor + 128
-        // - apply_saturation() → luma_aware shift
-        // - ... (7 autres)
-    }
-}
+// Algorithmes appliqués dans luminafast-image-core::apply_filters()
+// Le crate WASM relaye ce moteur sans duplication locale
 ```
 
 **Wrapper TypeScript** : `src/services/wasmRenderingService.ts`
@@ -1372,7 +1371,7 @@ async function renderWithWasm(
 ```bash
 cd luminafast-wasm
 wasm-pack build --target web --release
-# Génère : src/wasm/luminafast_wasm.js + .wasm + .d.ts
+# Génère : luminafast-wasm/pkg/luminafast_wasm.js + .wasm + .d.ts
 ```
 
 **Fallback Strategy** :
@@ -1456,11 +1455,12 @@ getAppliedEdits(imageId: number): EventDTO[]                   // Retrieve
 **TypeScript Tests** :
 
 - `renderingService.test.ts` : 25/25 ✅ (CSS filters conversion)
-- `wasmRenderingService.test.ts` : 18/18 ✅ (WASM wrapper + fallback)
+- `wasmRenderingService.test.ts` : 32/32 ✅ (WASM wrapper + fallback)
 
 **Rust Tests** :
 
-- `image_processing.test.rs` : 5/5 ✅ (pixel algorithms)
+- `luminafast-image-core` : 17/17 ✅ (algorithmes + contrat API)
+- `luminafast-wasm/src/lib.rs` : 2/2 ✅ (wrappers wasm-bindgen)
 
 **Non-Régression** : Phases 1-4.1 à 100% ✅
 
@@ -1468,25 +1468,27 @@ getAppliedEdits(imageId: number): EventDTO[]                   // Retrieve
 
 ## 19. Historique des Modifications de ce Document
 
-| Date       | Phase                 | Modification                                                                               | Raison                                                             |
-| ---------- | --------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| 2026-03-12 | Maintenance WASM M1.3 | Stabilisation API v1 (`lib.rs`, ranges/no-op documentes, tests `api_contract`)             | Geler un contrat unique avant integration WASM/backend             |
-| 2026-03-12 | Maintenance WASM M1.2 | Portage de `apply_filters` (passe unique) + histogramme RGB dans `luminafast-image-core`   | Centraliser les algorithmes pour garantir la parite WASM/backend   |
-| 2026-03-12 | Maintenance WASM M1.1 | Initialisation crate `luminafast-image-core` (errors, filters, histogram, tests unitaires) | Lancer le socle partage pour supprimer la duplication WASM/backend |
-| 2026-03-10 | M.3.2 (en cours)      | get_all_images sans EXIF par défaut + lazy EXIF on-demand (hook/service + prefetch hover)  | Réduction coût chargement grille volumineuse                       |
-| 2026-03-10 | M.2.2                 | Whitelist dynamique paths, validation traversal, hardening `assetProtocol` + CSP           | Réduction surface d'attaque filesystem/XSS                         |
-| 2026-03-10 | M.2.1a                | Connection pooling SQLite (r2d2), tuning env, retry lock/busy, métriques pool              | Robustesse ingestion/discovery sous contention                     |
-| 2026-03-03 | 4.3                   | Historique interactif + snapshots nommés (create/restore/delete)                           | Livraison complète de la Phase 4.3                                 |
-| 2026-02-27 | 4.2-B.2 Conformity    | Ajout section "Système de Rendu" (Event Sourcing + CSS + WASM)                             | Documentation Phase 4.2 pipeline complet                           |
-| 2026-02-23 | Maintenance SQL       | Refactorisation `get_folder_images()` pour sécurité et performance                         | Élimination conversions u32→String inutiles                        |
-| 2026-02-23 | Maintenance Qualité   | Résolution 4 notes bloquantes Review Copilot (PR #20)                                      | Error handling, volume_name, SQL LIKE, Zustand                     |
-| 2026-02-13 | 1.4                   | Ajout section Service Filesystem complète                                                  | Implémentation Phase 1.4 terminée                                  |
-| 2026-02-13 | 1.3                   | Mise à jour complète après Phase 1.3 (BLAKE3)                                              | Synchronisation documentation avec état actuel                     |
-| 2026-02-12 | 1.2                   | Ajout section API/Commandes Tauri complète                                                 | Implémentation Phase 1.2 terminée                                  |
-| 2026-02-11 | 1.1                   | Ajout section Base de Données SQLite complète                                              | Implémentation Phase 1.1 terminée                                  |
-| 2026-02-11 | 1.1                   | Mise à jour stack technique et architecture fichiers                                       | Ajout src-tauri avec SQLite                                        |
-| 2026-02-11 | 1.1                   | Ajout scripts Rust dans section développement                                              | Scripts npm pour tests Rust                                        |
-| 2026-02-11 | 0.5                   | Mise à jour après complétion Phase 0.5                                                     | CI/CD implémenté et fonctionnel                                    |
+| Date       | Phase                 | Modification                                                                                        | Raison                                                             |
+| ---------- | --------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 2026-03-12 | Maintenance WASM M2.2 | Validation non-regression frontend (`loadWasmModule`, `hasWasmSupport`, fallback CSS, normalisation) | Verrouiller le comportement frontend avant la parite visuelle M2.3 |
+| 2026-03-12 | Maintenance WASM M2.1 | Integration `luminafast-wasm` -> `luminafast-image-core` (wrapper stable + suppression duplication) | Supprimer le risque de divergence backend/WASM                     |
+| 2026-03-12 | Maintenance WASM M1.3 | Stabilisation API v1 (`lib.rs`, ranges/no-op documentes, tests `api_contract`)                      | Geler un contrat unique avant integration WASM/backend             |
+| 2026-03-12 | Maintenance WASM M1.2 | Portage de `apply_filters` (passe unique) + histogramme RGB dans `luminafast-image-core`            | Centraliser les algorithmes pour garantir la parite WASM/backend   |
+| 2026-03-12 | Maintenance WASM M1.1 | Initialisation crate `luminafast-image-core` (errors, filters, histogram, tests unitaires)          | Lancer le socle partage pour supprimer la duplication WASM/backend |
+| 2026-03-10 | M.3.2 (en cours)      | get_all_images sans EXIF par défaut + lazy EXIF on-demand (hook/service + prefetch hover)           | Réduction coût chargement grille volumineuse                       |
+| 2026-03-10 | M.2.2                 | Whitelist dynamique paths, validation traversal, hardening `assetProtocol` + CSP                    | Réduction surface d'attaque filesystem/XSS                         |
+| 2026-03-10 | M.2.1a                | Connection pooling SQLite (r2d2), tuning env, retry lock/busy, métriques pool                       | Robustesse ingestion/discovery sous contention                     |
+| 2026-03-03 | 4.3                   | Historique interactif + snapshots nommés (create/restore/delete)                                    | Livraison complète de la Phase 4.3                                 |
+| 2026-02-27 | 4.2-B.2 Conformity    | Ajout section "Système de Rendu" (Event Sourcing + CSS + WASM)                                      | Documentation Phase 4.2 pipeline complet                           |
+| 2026-02-23 | Maintenance SQL       | Refactorisation `get_folder_images()` pour sécurité et performance                                  | Élimination conversions u32→String inutiles                        |
+| 2026-02-23 | Maintenance Qualité   | Résolution 4 notes bloquantes Review Copilot (PR #20)                                               | Error handling, volume_name, SQL LIKE, Zustand                     |
+| 2026-02-13 | 1.4                   | Ajout section Service Filesystem complète                                                           | Implémentation Phase 1.4 terminée                                  |
+| 2026-02-13 | 1.3                   | Mise à jour complète après Phase 1.3 (BLAKE3)                                                       | Synchronisation documentation avec état actuel                     |
+| 2026-02-12 | 1.2                   | Ajout section API/Commandes Tauri complète                                                          | Implémentation Phase 1.2 terminée                                  |
+| 2026-02-11 | 1.1                   | Ajout section Base de Données SQLite complète                                                       | Implémentation Phase 1.1 terminée                                  |
+| 2026-02-11 | 1.1                   | Mise à jour stack technique et architecture fichiers                                                | Ajout src-tauri avec SQLite                                        |
+| 2026-02-11 | 1.1                   | Ajout scripts Rust dans section développement                                                       | Scripts npm pour tests Rust                                        |
+| 2026-02-11 | 0.5                   | Mise à jour après complétion Phase 0.5                                                              | CI/CD implémenté et fonctionnel                                    |
 
 | Date       | Sous-Phase            | Nature de la modification                                                            |
 | ---------- | --------------------- | ------------------------------------------------------------------------------------ |

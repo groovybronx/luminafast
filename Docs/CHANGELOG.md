@@ -66,6 +66,8 @@
 | Maintenance WASM | M1.1       | Initialisation crate partagée `luminafast-image-core` (API de base + tests)                       | ✅ Complétée | 2026-03-12 | Copilot |
 | Maintenance WASM | M1.2       | Portage algorithmes image vers `luminafast-image-core` (passe unique + histogramme + validations) | ✅ Complétée | 2026-03-12 | Copilot |
 | Maintenance WASM | M1.3       | Stabilisation API core v1 (ranges/no-op documentes + tests de contrat)                            | ✅ Complétée | 2026-03-12 | Copilot |
+| Maintenance WASM | M2.1       | Integration WASM sur core partage (wrapper wasm-bindgen + suppression duplication locale)         | ✅ Complétée | 2026-03-12 | Copilot |
+| Maintenance WASM | M2.2       | Non-regression frontend WASM (validation fallback CSS + normalisation + contrat TS)               | ✅ Complétée | 2026-03-12 | Copilot |
 
 | 5 | 5.1 | Panneau EXIF Connecté | ✅ Complétée | 2026-07-10 | Copilot |
 | 5 | 5.2 | Système de Tags Hiérarchique | ✅ Complétée | 2026-07-11 | Copilot |
@@ -100,15 +102,88 @@
 
 ## Phase Actuelle
 
-> **Maintenance WASM M2.1** : Integration WASM sur core partage (prochaine sous-phase)
+> **Maintenance WASM M2.3** : Parite visuelle WASM (prochaine sous-phase)
 >
-> Brief : `Docs/Maintenance WASM/BRIEF-M2.1-INTEGRATION-WASM-SUR-CORE.md`
-> Branche : `phase/m1.2-portage-algorithmes-vers-core`
-> Note qualité M1.3 : `cd luminafast-image-core && cargo test` ✅ (17/17)
+> Brief : `Docs/Maintenance WASM/BRIEF-M2.3-PARITE-VISUELLE-WASM.md`
+> Branche recommandée : `phase/m2.3-parite-visuelle-wasm`
+> Note qualité M2.2 : `src/services/__tests__/wasmRenderingService.test.ts` ✅ (32/32)
 
 ---
 
 ## Historique des Sous-Phases Complétées
+
+---
+
+### 2026-03-12 — Maintenance WASM M2.2 : Non-regression frontend WASM (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée**
+**Agent** : Copilot
+**Branche** : `phase/m2.2-non-regression-frontend-wasm`
+**Type** : Maintenance
+
+#### Résumé
+
+**Cause racine** : après l’intégration interne sur core partagé (M2.1), le risque principal frontend était une régression silencieuse du fallback CSS ou des conversions de plages UI -> moteur WASM, sans changement d’API visible.
+
+**Solution** : ajout d’un test explicite sur le chemin de fallback CSS (`console.warn` dédié), conservation du contrat public (`loadWasmModule`, `hasWasmSupport`, `renderWithWasm`) et revalidation complète du service WASM en TypeScript strict.
+
+#### Fichiers créés
+
+- Aucun nouveau fichier
+
+#### Fichiers modifiés
+
+- `src/services/__tests__/wasmRenderingService.test.ts` — ajout du test explicite de fallback CSS
+
+#### Critères de validation remplis
+
+- [x] Checkpoint 1 : tests service WASM verts (`src/services/__tests__/wasmRenderingService.test.ts` : 32/32)
+- [x] Checkpoint 2 : fallback CSS validé (test dédié sur la branche fallback)
+- [x] Checkpoint 3 : `npm run type-check` vert
+
+#### Impact
+
+- Contrat frontend WASM inchangé et vérifié.
+- Couverture non-régression fallback/normalisation renforcée pour préparer M2.3.
+- Validation complémentaire : `npm run lint` ✅.
+
+---
+
+### 2026-03-12 — Maintenance WASM M2.1 : Integration WASM sur core partage (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée**
+**Agent** : Copilot
+**Branche** : `phase/m2.1-integration-wasm-core`
+**Type** : Maintenance
+
+#### Résumé
+
+**Cause racine** : le crate `luminafast-wasm` conservait encore une implémentation locale de `PixelFilters`/`apply_filters`/`compute_histogram_from_pixels`, ce qui créait un risque de divergence avec le moteur partagé `luminafast-image-core` et donc avec le backend.
+
+**Solution** : conversion de `luminafast-wasm` en wrapper pur du core partagé (réexports directs), suppression du module dupliqué `image_processing.rs`, maintien strict des signatures wasm-bindgen (`PixelFiltersWasm`, `compute_histogram`) et ajout de tests unitaires dédiés au wrapper WASM.
+
+#### Fichiers créés
+
+- Aucun nouveau fichier permanent
+
+#### Fichiers modifiés
+
+- `luminafast-wasm/src/lib.rs` — réexports vers `luminafast-image-core` + tests wrapper WASM
+- `luminafast-wasm/src/image_processing.rs` — suppression de la duplication algorithmique locale
+- `src/services/wasmRenderingService.ts` — références documentation mises à jour vers le core partagé
+- `luminafast-wasm/README.md` — architecture mise à jour (wrapper sur core)
+
+#### Critères de validation remplis
+
+- [x] Checkpoint 1 : `cd luminafast-wasm && wasm-pack build --target web --release` OK
+- [x] Checkpoint 2 : import dynamique frontend valide (`src/services/__tests__/wasmRenderingService.test.ts` : 31/31)
+- [x] Checkpoint 3 : tests wrappers OK (`cd luminafast-wasm && cargo test` : 2/2)
+
+#### Impact
+
+- Le code algorithmique n'existe plus qu'à un seul endroit (`luminafast-image-core`) pour WASM + backend.
+- API JS/TS conservée sans changement (`PixelFiltersWasm` et `compute_histogram`).
+- Validations complémentaires : `cd luminafast-image-core && cargo test` : 17/17 ✅.
 
 ---
 
@@ -3536,9 +3611,6 @@ const reset = useCallback((): void => {
   });
 }, [setImportState, cleanupProgressListener, cleanupIngestionListener]);
 ```
-````
-
-````
 
 **Intégrations** :
 
@@ -3778,6 +3850,7 @@ GOVERNANCE 3.3 (Critères de Complétion) : ✅ Tous remplis
 #### Phase A ✅ — CSS Filters (complétée 2026-02-26 10:00)
 
 **TypeScript Services créés** :
+
 - `src/services/renderingService.ts` (213 LOC) : Moteur CSS filters
   - `eventsToCSSFilters(events)` : Event Sourcing → CSSFilterState (exposure, contrast, saturation)
   - `eventsToPixelFilters(events)` : Event Sourcing → PixelFilterState (9 filtres avancés)
@@ -3790,14 +3863,17 @@ GOVERNANCE 3.3 (Critères de Complétion) : ✅ Tous remplis
     - Impact perf : <1ms latency (W3C standard, GPU-accelerated)
 
 **React Component créé** :
+
 - `src/components/library/PreviewRenderer.tsx` : Intégration Event Sourcing
   - Affiche image avec CSS filters appliqués en real-time
   - Connecté à editStore pour recalc au changement événement
 
 **Types créés** :
+
 - `src/types/rendering.ts` : CSSFilterState + PixelFilterState interfaces
 
 **Tests TypeScript Phase A** ✅
+
 - `src/services/__tests__/renderingService.test.ts` : **25/25 tests ✅**
   - `eventsToCSSFilters()` : Conversion exposure/contrast/saturation
   - `filtersToCSS()` : Génération chaîne CSS (edge cases brightness/contrast clamping)
@@ -3806,6 +3882,7 @@ GOVERNANCE 3.3 (Critères de Complétion) : ✅ Tous remplis
   - Cas limites : values extrêmes, undefined filters, NaN handling
 
 **Code Quality Phase A** ✅
+
 - 0 `any` TypeScript
 - Strict mode activé
 - Pas de simplification abusive (type defaults vs EditState defaults validés)
@@ -3813,6 +3890,7 @@ GOVERNANCE 3.3 (Critères de Complétion) : ✅ Tous remplis
 #### Phase B ✅ — WASM + Pixel Processing (complétée 2026-02-26 01:06)
 
 **Rust Backend créé** :
+
 - `src-tauri/src/services/image_processing.rs` (250 LOC) : Moteur traitement pixel
   - Struct `PixelFilters` : 9 paramètres (exposure, contrast, saturation, highlights, shadows, clarity, vibrance, colorTemp, tint)
   - `apply_filters()` : pixels[u8] × width × height → processed pixels
@@ -3826,6 +3904,7 @@ GOVERNANCE 3.3 (Critères de Complétion) : ✅ Tous remplis
   - **Particularités** : Per-pixel RGBA, pas de allocation temporaire
 
 **WASM Crate Séparée créée** :
+
 - `luminafast-wasm/` : Crate indépendante zero-dependency desktop
   - `Cargo.toml` : crate-type = ["cdylib"], wasm-bindgen only
   - `src/lib.rs` : PixelFiltersWasm struct + apply_filters() avec wasm-bindgen
@@ -3839,12 +3918,14 @@ GOVERNANCE 3.3 (Critères de Complétion) : ✅ Tous remplis
   - **Raison crate séparée** : Éviter conflits uuid/tauri desktop deps avec wasm32-unknown-unknown target
 
 **Script Build WASM** :
+
 - `scripts/build-wasm.sh` : Automatisation build + copie vers src/wasm/
   - Compile avec wasm-pack (wasm-opt activé automatiquement)
-  - Copie pkg/*.{js,wasm,d.ts} vers src/wasm/
+  - Copie pkg/\*.{js,wasm,d.ts} vers src/wasm/
   - Exécutable : `chmod +x scripts/build-wasm.sh`
 
 **Tests Rust Phase B** ✅
+
 - `src-tauri/src/services/image_processing.rs` : **5/5 tests ✅**
   - `test_apply_exposure_brighten` : Validation luminosité
   - `test_apply_saturation_desaturate` : Validation saturation
@@ -3853,6 +3934,7 @@ GOVERNANCE 3.3 (Critères de Complétion) : ✅ Tous remplis
   - `test_apply_filters_idempotent_with_zero_exposure` : Idempotence
 
 **TypeScript WASM Wrapper créé** :
+
 - `src/services/wasmRenderingService.ts` (288 LOC) : Orchestration WASM
   - `loadWasmModule()` : Import dynamique depuis `@/wasm/luminafast_wasm.js` + init()
   - `hasWasmSupport()` : Détection `window.luminafastWasm.PixelFiltersWasm`
@@ -3865,6 +3947,7 @@ GOVERNANCE 3.3 (Critères de Complétion) : ✅ Tous remplis
   - **Fallback Strategy** : Transparent – pas d'erreur utilisateur, graceful degradation vers CSS
 
 **Tests TypeScript Phase B** ✅
+
 - `src/services/__tests__/wasmRenderingService.test.ts` : **18/18 tests ✅**
   - Tests WASM module loading (mock PixelFiltersWasm class)
   - Tests fallback CSS si WASM unavailable
@@ -3873,6 +3956,7 @@ GOVERNANCE 3.3 (Critères de Complétion) : ✅ Tous remplis
   - **Particularités** : jsdom Canvas.getContext('2d') peut retourner null — accepté avec fallback
 
 **Code Quality Phase B** ✅
+
 - 0 `any` TypeScript
 - 0 `unwrap()` Rust
 - Strict error handling — `Result<T, E>` systématique
@@ -3882,12 +3966,14 @@ GOVERNANCE 3.3 (Critères de Complétion) : ✅ Tous remplis
 
 **Problème rencontré** : wasm-opt validation échouait (features modernes WASM manquantes)
 **Cause racine** :
+
 1. Tentative initiale : Compilation src-tauri/ directement → échec (uuid crate incompatible wasm32)
 2. Solution : Crate WASM séparée zero-dependency desktop
 3. wasm-opt v112 conservateur : Ne passe pas automatiquement les flags modern features
 4. wasm-bindgen génère code avec bulk memory + nontrapping float conversions → validation échoue
 
 **Résolution systématique** :
+
 1. ✅ Créer crate séparée `luminafast-wasm/` (zéro dépendances desktop)
 2. ✅ Configurer `[package.metadata.wasm-pack.profile.release]` avec 4 flags wasm-opt
 3. ✅ Test manuel wasm-opt → validation réussie avec tous les flags
@@ -3896,17 +3982,20 @@ GOVERNANCE 3.3 (Critères de Complétion) : ✅ Tous remplis
 6. ✅ Refactoriser TypeScript pour utiliser API wasm-bindgen class-based
 
 **Fichiers WASM générés** :
+
 - `src/wasm/luminafast_wasm_bg.wasm` (19KB) : Module WASM optimisé
 - `src/wasm/luminafast_wasm.js` (11KB) : Wrapper wasm-bindgen ES module
 - `src/wasm/luminafast_wasm.d.ts` (3.6KB) : Type definitions TypeScript
 
 **Installation wasm-opt** ✅
+
 - Version : wasm-opt v112 (binaryen)
 - Installé via : `npm install -g wasm-opt`
 - Path : `/opt/homebrew/bin/wasm-opt`
 - Configuration : Flags automatiques via Cargo.toml
 
 **Impact Phase B finale** :
+
 - ✅ Module WASM compile et s'optimise automatiquement
 - ✅ Intégration Vite complète (import ES dynamique depuis src/wasm/)
 - ✅ Tests 100% passants (18/18 TypeScript + 5/5 Rust)
@@ -3960,16 +4049,19 @@ GOVERNANCE 3.3 (Critères de Complétion) : ✅ Tous remplis
 Le multiplicateur d'exposition dans la formule brightness CSS a été **incorrectement implémenté à `0.35`** au lieu de **`0.3`** comme spécifié dans le brief [PHASE-4.2.md](Docs/briefs/PHASE-4.2.md) ligne 276.
 
 **Brief spécification** :
+
 ```javascript
 brightness(${1 + exposure * 0.3})
 ```
 
 **Implémentation incorrecte** :
+
 ```typescript
 const brightness = 1 + filters.exposure * 0.35; // ❌ INCORRECT
 ```
 
 **Impact** :
+
 - Pour `exposure = 0.5` : `1 + 0.5 * 0.35 = 1.175` → arrondi `1.18` (attendu `1.15`)
 - Pour `exposure = 1.0` : `1 + 1.0 * 0.35 = 1.35` (attendu `1.30`)
 - Pour `exposure = -2.0` : `1 + (-2) * 0.35 = 0.3` → clamped (attendu `0.4`)
@@ -3979,6 +4071,7 @@ const brightness = 1 + filters.exposure * 0.35; // ❌ INCORRECT
 **Fichiers modifiés** :
 
 1. **`src/services/renderingService.ts`** (ligne 139) :
+
    ```typescript
    // ✅ CORRIGÉ
    const brightness = Math.max(0.3, Math.min(1.7, 1 + filters.exposure * 0.3));
@@ -3989,6 +4082,7 @@ const brightness = 1 + filters.exposure * 0.35; // ❌ INCORRECT
    - Ligne 324 : `expect(css).toContain('brightness(0.40)')` (était `'0.30'`)
 
 **Justification des changements de tests** :
+
 - Les tests étaient corrects sur les entrées (`exposure = 1`, `exposure = -2`)
 - Les valeurs attendues étaient basées sur le multiplicateur incorrect `0.35`
 - Correction pour aligner sur la spécification du brief (`0.3`)
@@ -4013,10 +4107,12 @@ const brightness = 1 + filters.exposure * 0.35; // ❌ INCORRECT
 #### Impact Produit
 
 **Avant** :
+
 - Exposure +0.5 appliquait brightness 1.18 (trop lumineux)
 - Désalignement visuel avec attentes utilisateur (calibrage Lightroom-like)
 
 **Après** :
+
 - Exposure +0.5 applique brightness 1.15 (correct)
 - Rendu visuel conforme spécifications brief
 - Cohérence avec algorithmes pixel WASM (multiplicateur 0.15, différent car pixel-based)
@@ -4036,12 +4132,14 @@ const brightness = 1 + filters.exposure * 0.35; // ❌ INCORRECT
 #### Phase 4.2-B.1 ✅ — Tauri Command `get_edit_events` (complétée 2026-02-27 08:00)
 
 **Cause Racine Identifiée** (Tauri v2 macOS Compatibility Bug):
+
 - **Symptôme** : PreviewService logs montraient "Tauri event system not available" même en fenêtre Tauri native
 - **Cause** : Tauri v2 sur macOS n'injecte pas `window.__TAURI__` directement; ancien code cherchait cet objet avec retry logic inefficace
 - **Correction** : Migrer PreviewService de `window.__TAURI__` searches vers imports directs depuis `@tauri-apps/api` (official Tauri v2 pattern)
 - **Impact** : PreviewService maintenant fiable sur tous les plateformes (macOS, Linux, Windows)
 
 **Rust Backend créé** :
+
 - `src-tauri/src/commands/event_sourcing.rs` **`get_edit_events(image_id: i64)`** :
   - Filtre tous les événements par `target_id == image_id`
   - Retourne `Vec<EventDTO>` triés par timestamp
@@ -4049,6 +4147,7 @@ const brightness = 1 + filters.exposure * 0.35; // ❌ INCORRECT
   - Result<T, CommandError> error handling systématique
 
 **Frontend Wrappers créés** :
+
 - `src/services/eventService.ts` **`getEditEvents(imageId)`** : Invoque commande Tauri
 - `src/services/catalogService.ts` **`getEditEvents(imageId)`** : Wrapper typé avec `EventDTO[]` (fixed: was `any[]`)
 
@@ -4057,6 +4156,7 @@ const brightness = 1 + filters.exposure * 0.35; // ❌ INCORRECT
 #### Phase 4.2-B.2 ✅ — EditStore Integration pour Persistance Événements (complétée 2026-02-27 09:15)
 
 **Architecture Implémentée** :
+
 ```
 PreviewRenderer
   → useEffect: call CatalogService.getEditEvents(imageId)
@@ -4066,6 +4166,7 @@ PreviewRenderer
 ```
 
 **Modifications editStore.ts** (Zustand store):
+
 - **State ajouté** : `editEventsPerImage: Record<number, EventDTO[]>`
 - **Actions ajoutées** :
   - `setEditEventsForImage(imageId, events)` : Cache events pour une image
@@ -4073,39 +4174,46 @@ PreviewRenderer
 - **Getter ajouté** : `getAppliedEdits(imageId)` : Récupère events cachés
 
 **Modifications PreviewRenderer.tsx** :
+
 - **Imports updated** :
   - Remplacé: `getEvents()` (global fetch) → `CatalogService.getEditEvents(imageId)` (per-image)
   - Ajout: `useEditStore` hooks + selectors
 - **useEffect refactorisé** :
+
   ```typescript
-  const imageEvents = await CatalogService.getEditEvents(imageId);  // Per-image call
-  setEditEventsForImage(imageId, imageEvents);                      // Cache in EditStore
+  const imageEvents = await CatalogService.getEditEvents(imageId); // Per-image call
+  setEditEventsForImage(imageId, imageEvents); // Cache in EditStore
   const cssFilters = eventsToCSSFilters(imageEvents);
 
   // Cleanup
   return () => clearEditEventsForImage(imageId);
   ```
+
 - **Dépendances** : `[imageId, setEditEventsForImage, clearEditEventsForImage]`
 
 **Type System Fixes** :
+
 - ✅ Corrected import: `EventDTO from '@/services/eventService'` (was incorrect `from '../types'`)
 - ✅ Removed unused imports in PreviewRenderer
 - ✅ Removed unused selectors (getAppliedEdits)
 - ✅ Fixed template string formatting per ESLint max-len rule
 
 **Tauri v2 Compatibility Fix (Included in B.1)** :
+
 - `src/services/previewService.ts` fully migrated to `@tauri-apps/api/core` + `@tauri-apps/api/event`
 - Removed: complex `window.__TAURI__` object searches with retry logic
 - Added: direct imports with graceful fallback to mock if unavailable
 - Result: ✅ Tauri commands now reliable on macOS
 
 **Validation** :
+
 - ✅ Pre-commit checks passed: ESLint + TypeScript strict mode
 - ✅ `npm run type-check` : 0 errors
 - ✅ Compilation: `cargo check` (backend) + `tsc` (frontend) both ✅
 - ✅ Non-régression: Phases 1-4.2-B.1 unchanged ✅
 
 **Commits** :
+
 - `500ff98` : phase(4.2-b.2): EditStore integration pour persistance événements par image
 
 #### Conformité Gouvernance
@@ -4130,6 +4238,7 @@ PreviewRenderer
 #### Phase 4.2-1 ✅ — Event Sourcing Persistence (complétée 2026-03-02 09:00)
 
 **Cause Racine Identifiée** :
+
 - **Symptôme** : User adjusts sliders in DevelopView → no visual changes → data lost on refresh
 - **Cause** : App.tsx EDIT branches stored locally ONLY; never called `CatalogService.appendEvent()` to persist to Event Store (Phase 4.1)
 - **Impact** : Event Sourcing system (Phase 4.1) was implemented but never used; PreviewRenderer received zero events
@@ -4155,6 +4264,7 @@ PreviewRenderer
    - Test 2: `appendEvent()` error handling works
 
 **Architecture Flux** :
+
 ```
 Slider change → onDispatchEvent('EDIT', { exposure: 0.5 })
   → App.tsx creates EventDTO + calls CatalogService.appendEvent()
@@ -4164,6 +4274,7 @@ Slider change → onDispatchEvent('EDIT', { exposure: 0.5 })
 ```
 
 **Validation** :
+
 - ✅ TypeScript strict: 0 errors
 - ✅ Tests: 11/11 catalogService pass (9 existing + 2 new appendEvent)
 - ✅ Commits: `phase(4.2-1): Event Sourcing persistence for EDIT operations`
@@ -4171,11 +4282,13 @@ Slider change → onDispatchEvent('EDIT', { exposure: 0.5 })
 #### Phase 4.2-2 ✅ — PreviewRenderer Event Store Subscription (complétée 2026-03-02 09:30)
 
 **Problème Identifié** :
+
 - PreviewRenderer loaded events only on mount (imageId change)
 - When editStore.editEventsPerImage changed (Phase 4.2-1 appended new event), component didn't re-render
 - Result: CSS filters not updated even though data persisted
 
 **Solution Implémentée** :
+
 - PreviewRenderer already had Phase 4.2-2 implementation (discovered during code review)
 - Two useEffects working correctly:
   1. Initial load: `useEffect(..., [imageId])` loads events from Event Store
@@ -4184,6 +4297,7 @@ Slider change → onDispatchEvent('EDIT', { exposure: 0.5 })
      - Calls eventsToCSSFilters() and updates DOM
 
 **Code** : `src/components/library/PreviewRenderer.tsx` lines 113-125
+
 ```typescript
 // Phase 4.2-2: Monitor editStore changes for this image
 useEffect(() => {
@@ -4196,10 +4310,12 @@ useEffect(() => {
 ```
 
 **Tests** : `src/components/__tests__/PreviewRenderer.test.tsx`
+
 - 4/4 tests pass covering subscription workflow
 - Removed obsolete/conflicting test file: `src/components/library/__tests__/PreviewRenderer.test.tsx`
 
 **Validation** :
+
 - ✅ PreviewRenderer tests: 4/4 pass
 - ✅ Total tests: 395/395 pass (0 regressions)
 - ✅ Commit: Included in Phase 4.2-1 commit
@@ -4264,16 +4380,19 @@ Le workflow **Slider → Persist → Render** était cassé à 3 niveaux :
 Trois bugs en cascade :
 
 **Bug #1 : eventService endpoint params**
+
 - App.tsx envoyait `{ eventType: 'edit_applied' }`
 - Rust struct EventDTO attendait `{ event_type }`
 - Tauri ne convertit PAS automatiquement camelCase→snake_case
 
 **Bug #2 : Missing editStore update in App.tsx**
+
 - Après `CatalogService.appendEvent()` succès, App.tsx ne faisait RIEN
 - PreviewRenderer ne détectait pas la nouvelle EventDTO
 - useEffect subscription restait inactif (condition jamais vraie)
 
 **Bug #3 : renderingService event type filter**
+
 - `eventsToCSSFilters()` filtrait `event.eventType !== 'ImageEdited'`
 - Mais App.tsx envoyait `'edit_applied'` (constant Rust EventType)
 - Tous les événements étaient rejetés silencieusement → aucun filtre CSS appliqué
@@ -4281,6 +4400,7 @@ Trois bugs en cascade :
 #### Corrections Appliquées
 
 **Fichier 1: `src/services/eventService.ts` (Tauri parameter conversion)**
+
 ```typescript
 export async function appendEvent(event: EventDTO): Promise<void> {
   try {
@@ -4304,6 +4424,7 @@ export async function appendEvent(event: EventDTO): Promise<void> {
 ```
 
 **Fichier 2: `src/App.tsx` (editStore notification post-persist)**
+
 ```typescript
 CatalogService.appendEvent(eventDto)
   .then(() => {
@@ -4319,24 +4440,29 @@ CatalogService.appendEvent(eventDto)
 ```
 
 **Fichier 3: `src/services/renderingService.ts` (Event type filter fix)**
+
 ```typescript
 // Étape 1 : eventsToCSSFilters()
-if (event.eventType !== 'edit_applied') {  // ← Was 'ImageEdited'❌
+if (event.eventType !== 'edit_applied') {
+  // ← Was 'ImageEdited'❌
   continue;
 }
 
 // Étape 2 : eventsToPixelFilters()
-if (event.eventType !== 'edit_applied') {  // ← Was 'ImageEdited'❌
+if (event.eventType !== 'edit_applied') {
+  // ← Was 'ImageEdited'❌
   continue;
 }
 ```
 
 **Fichier 4: `src/services/catalogService.ts` (getEditEvents parameter)**
+
 ```typescript
 const result = await invoke('get_edit_events', { imageId }); // camelCase ✓
 ```
 
 **Fichier 5: `src-tauri/build.rs` (Clippy compliance)**
+
 ```rust
 // Replace .unwrap() with .expect()
 let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
@@ -4427,6 +4553,7 @@ let workspace_root = std::path::Path::new(&manifest_dir)
 #### Contexte & Problème Racine
 
 **Phase A** (précédente) avait restructuré `CatalogImage` pour supporter 3 formats de preview:
+
 - Thumbnail: 240px, ~50KB (utilisé partout dans L'UI)
 - Standard: 1440px, ~500KB (prévu pour DevelopView, jamais activé)
 - OneToOne: natif, ~2MB (zoom 1:1, optionnel)
@@ -4459,10 +4586,12 @@ Fichiers modifiés : `useCatalog.ts` (refreshCatalog + syncAfterImport), 5 test 
 #### Contexte
 
 **Phase A & B** avaient mis en place :
+
 - Type structure `CatalogImage.urls` avec 3 formats
 - Chargement parallèle en Promise.all()
 
 **Phase C** : Utiliser le format approprié dans chaque vue :
+
 - **GridView** : Continue d'utiliser Thumbnail (240px) — optimisation mémoire
 - **DevelopView** : Utilise Standard (1440px) — pour édition haute qualité
 
@@ -4479,6 +4608,7 @@ previewUrl={activeImg.urls.standard}
 ```
 
 **Changements** :
+
 - Ligne 29 : PreviewRenderer (vue "Avant" — original RAW) : thumbnail → standard
 - Ligne 51 : PreviewRenderer (vue "Après" — modifiée) : thumbnail → standard
 
@@ -4490,10 +4620,10 @@ previewUrl={activeImg.urls.standard}
 
 #### Visual Result
 
-| Vue | Avant | Après | Amélioration |
-|-----|-------|-------|-------------|
-| GridView | 240px thumbnail | 240px thumbnail | ➖ (inchangé) |
-| DevelopView | 240px thumbnail ❌ | **1440px standard** ✅ | **6×** |
+| Vue         | Avant              | Après                  | Amélioration  |
+| ----------- | ------------------ | ---------------------- | ------------- |
+| GridView    | 240px thumbnail    | 240px thumbnail        | ➖ (inchangé) |
+| DevelopView | 240px thumbnail ❌ | **1440px standard** ✅ | **6×**        |
 
 #### Performance Note
 
@@ -4513,6 +4643,7 @@ previewUrl={activeImg.urls.standard}
 #### Contexte
 
 **Phases A, B, C** ont implémenté le système 3-format complet :
+
 - A : Type structure
 - B : Parallel loading
 - C : View-specific usage
@@ -4619,6 +4750,7 @@ Implémenter un système de monitoring et d'alertes pour saturation du threadpoo
 ### Problème Identifié
 
 **Symptôme** : Après phase M.1.1, l'ingestion utilise correctement `tokio::spawn` avec semaphore (8 concurrent max). Cependant, **aucune visibilité** sur l'utilisation du threadpool :
+
 - Impossible de détecter si 8 threads suffisent pour la charge réelle
 - Aucun log/métrique si la saturation approche du maximum (>80%)
 - Risque de performance dégradée sans indication précoce
@@ -4626,6 +4758,7 @@ Implémenter un système de monitoring et d'alertes pour saturation du threadpoo
 **Cause Racine** : Pas d'instrumentation threadpool metrics dans la couche d'ingestion. Le semaphore contrôle la concurrence au niveau applicatif (8 max simultaneous file tasks), mais on n'observe pas l'état réel du threadpool Tokio global.
 
 **Solution Structurelle** : Ajouter une couche de monitoring threadpool avec :
+
 1. Compteurs atomiques pour tâches actives + queue depth
 2. Calcul de saturation en temps réel (active_tasks / max_threads)
 3. Logs warnings si saturation > 80%
@@ -4636,6 +4769,7 @@ Implémenter un système de monitoring et d'alertes pour saturation du threadpoo
 #### 1. Création du service `services/metrics.rs` (Checkpoint 1 ✅)
 
 **Structures publiques** :
+
 ```rust
 pub struct ThreadpoolMetrics {
     pub active_tasks: usize,
@@ -4658,6 +4792,7 @@ pub struct ActiveTaskGuard { ... }  // RAII for automatic decrement
 ```
 
 **Implémentation** :
+
 - Compteurs atomiques (AtomicUsize) pour O(1) thread-safe updates
 - Pas d'allocation lors de l'enregistrement (zero-cost metrics)
 - RAII guard pour automatic cleanup (`Drop` trait)
@@ -4666,6 +4801,7 @@ pub struct ActiveTaskGuard { ... }  // RAII for automatic decrement
 #### 2. Intégration dans `IngestionService` (Checkpoint 2 ✅)
 
 **Modifications** :
+
 ```rust
 pub struct IngestionService {
     blake3_service: Arc<Blake3Service>,
@@ -4690,12 +4826,14 @@ impl IngestionService {
 #### 3. Instrumentation de `batch_ingest()` (Checkpoint 3 ✅)
 
 **Patterns appliqués** :
+
 1. **Avant la boucle** : `self.metrics_collector.reset()` pour démarrer frais
 2. **À l'entrée de chaque task** : `metrics_collector_clone.increment_active_tasks()`
 3. **Pendant la boucle** : Vérifier saturation et émettre logs warnings
 4. **À la sortie** : `metrics_collector_clone.decrement_active_tasks()`
 
 **Code ajouté** :
+
 ```rust
 // Dans tokio::spawn closure:
 metrics_collector_clone.increment_active_tasks();
@@ -4722,8 +4860,9 @@ metrics_collector_clone.decrement_active_tasks();
 **Coverage** : 19 tests (9 metrics.rs + 10 ingestion.rs) = **>80% coverage**
 
 **Tests metrics.rs** :
+
 - `test_metrics_creation` : Création et initialisation
-- `test_saturation_calculation` : Formule saturation = (active_tasks / max_threads) * 100
+- `test_saturation_calculation` : Formule saturation = (active_tasks / max_threads) \* 100
 - `test_collector_increment_decrement` : Compteurs atomiques
 - `test_collector_queue_depth` : Suivi de la profondeur queue
 - `test_collector_saturation_check` : Seuils de saturation (50%, 80%, 100%)
@@ -4733,6 +4872,7 @@ metrics_collector_clone.decrement_active_tasks();
 - `test_full_saturation` : 100% threadpool usage
 
 **Tests ingestion.rs** :
+
 - `test_ingestion_service_has_metrics_collector` : Initialisation du service
 - `test_metrics_collector_tracks_active_tasks` : Comptage tasks actives
 - `test_threadpool_saturation_detection` : Détection 80% threshold
@@ -4741,6 +4881,7 @@ metrics_collector_clone.decrement_active_tasks();
 - `test_custom_max_threads` : Initialisation threadpool size custom
 
 **Résultats** :
+
 ```bash
 $ cargo test --lib services::metrics
 running 9 tests
@@ -4755,33 +4896,37 @@ test result: ok. 10 passed; 0 failed
 
 ### Validation Checkpoints
 
-| Checkpoint | Résultat | Détails |
-|---|---|---|
-| 1. Metrics collection | ✅ | ThreadpoolMetrics + DefaultMetricsCollector impl ✅ |
-| 2. Integration | ✅ | IngestionService.metrics_collector initialized + used ✅ |
-| 3. Saturation warnings | ✅ | log::warn! emitted when >80% ✅ |
-| 4. Tests pass | ✅ | 19 tests, 100% pass rate ✅ |
-| 5. Cargo check | ✅ | 0 compilation errors ✅ |
-| 6. Clippy | ✅ | 0 new warnings (unwrap issue fixed) ✅ |
+| Checkpoint             | Résultat | Détails                                                  |
+| ---------------------- | -------- | -------------------------------------------------------- |
+| 1. Metrics collection  | ✅       | ThreadpoolMetrics + DefaultMetricsCollector impl ✅      |
+| 2. Integration         | ✅       | IngestionService.metrics_collector initialized + used ✅ |
+| 3. Saturation warnings | ✅       | log::warn! emitted when >80% ✅                          |
+| 4. Tests pass          | ✅       | 19 tests, 100% pass rate ✅                              |
+| 5. Cargo check         | ✅       | 0 compilation errors ✅                                  |
+| 6. Clippy              | ✅       | 0 new warnings (unwrap issue fixed) ✅                   |
 
 ### Performance Impact
 
 **Zero overhead if monitoring disabled** (via atomics only, no allocations) :
+
 - Increment: O(1) atomic fetch_add
 - Decrement: O(1) atomic fetch_sub
 - Saturation check: O(1) load + comparison
 - No locks, no malloc, non-blocking
 
 **Measured** :
+
 - Before: Semaphore only, no metrics
 - After: + Atomic counters (unmeasurable overhead <1μs/operation)
 
 ### Fichiers Modifiés
 
 #### Nouveaux
+
 - `src-tauri/src/services/metrics.rs` : Complet (270 lignes, 9 tests)
 
 #### Modifiés
+
 - `src-tauri/src/services/mod.rs` : + `pub mod metrics;`
 - `src-tauri/src/services/ingestion.rs` :
   - Imports: + `use crate::services::metrics::{...}`
@@ -4791,6 +4936,7 @@ test result: ok. 10 passed; 0 failed
   - 10 tests ajoutés pour M.1.1a
 
 #### Updated Documentation
+
 - `Docs/CHANGELOG.md` : + M.1.1 & M.1.1a entries (this section)
 
 ### Dépendances Satisfaites
@@ -4802,6 +4948,7 @@ test result: ok. 10 passed; 0 failed
 ### Prochaines Phases
 
 **M.1.2 — Async IO Migration** dépend de M.1.1 (pas de M.1.1a).
+
 - M.1.1a est optionnel pour M.1.2, mais améliore observabilité
 - Recommandé: Lancer M.1.2 après M.1.1a complétée (meilleur debugging)
 
@@ -4901,11 +5048,13 @@ test result: ok. 10 passed; 0 failed
 ### Travaux Réalisés
 
 **Nouveaux fichiers** :
+
 - Créé : `src-tauri/src/types/db_context.rs` — trait `DBContext` (7 méthodes async) + structs `SessionStatsUpdate` / `SessionStatsRecord`
 - Créé : `src-tauri/src/types/mod.rs` — module root `types`
 - Créé : `src-tauri/src/services/db_repository.rs` — `SqliteDbRepository` (impl `DBContext`) + fn libre `get_or_create_folder_id_tx`
 
 **Fichiers modifiés** :
+
 - `src-tauri/src/services/ingestion.rs` — délégation totale des opérations DB vers `db_context: Arc<dyn DBContext>`; constructeurs backward-compatibles conservés
 - `src-tauri/src/services/mod.rs` — ajout `pub mod db_repository`
 - `src-tauri/src/commands/catalog.rs` — suppression hack `open_in_memory`; utilise `get_or_create_folder_id_tx` directement
@@ -4937,10 +5086,10 @@ test result: ok. 10 passed; 0 failed
 - **Dernière mise à jour** : 2026-03-10
 
 **Preview Format Selection (Phases A-D)** : ✅ 100% Complete
+
 - Architecture: ✅ Type-safe 3-format pyramid
 - Performance: ✅ Parallel loading (66% faster)
 - Quality: ✅ DevelopView displays 1440px Standard (6× improvement)
 - Testing: ✅ 17 comprehensive tests
 - Documentation: ✅ Full API + implementation details
-
 ````

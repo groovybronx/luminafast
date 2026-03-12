@@ -11,8 +11,8 @@ Cette crate est **intentionnellement séparée** de `src-tauri/` pour éviter le
 
 ## Contenu
 
-- `src/lib.rs` : Wrapper wasm-bindgen exposant `PixelFiltersWasm` class
-- `src/image_processing.rs` : Copie du module `src-tauri/src/services/image_processing.rs`
+- `src/lib.rs` : Wrapper wasm-bindgen exposant `PixelFiltersWasm` et `compute_histogram`
+- `luminafast-image-core` : dépendance path contenant les algorithmes partagés
 
 ## Compilation
 
@@ -73,16 +73,14 @@ const processed = filters.apply_filters(pixels, width, height);
 
 ## Tests
 
-Les tests sont dans `src-tauri/src/services/image_processing.rs` (5 tests unitaires).
-Le wrapper TypeScript est testé dans `src/services/__tests__/wasmRenderingService.test.ts` (18 tests).
+Les algorithmes sont testés dans `luminafast-image-core/src/` (tests unitaires + contrat API).
+Le wrapper WASM est testé dans `luminafast-wasm/src/lib.rs`.
+Le wrapper TypeScript est testé dans `src/services/__tests__/wasmRenderingService.test.ts` (32 tests).
 
 ## Maintenance
 
-⚠️ **Ce module est une COPIE du code `src-tauri/src/services/image_processing.rs`**.
-Toute modification des algorithmes pixel doit être **synchronisée manuellement** dans les deux endroits :
-
-1. `src-tauri/src/services/image_processing.rs` (source de vérité, tests)
-2. `luminafast-wasm/src/image_processing.rs` (copie WASM)
+⚠️ **Le crate WASM est un wrapper du core partagé**.
+Toute évolution algorithmique doit être faite dans `luminafast-image-core` pour préserver la parité backend/WASM.
 
 ## CI/CD
 

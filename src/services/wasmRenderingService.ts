@@ -124,7 +124,7 @@ export function hasWasmSupport(): boolean {
  * - Center slider: 0 (neutral)
  * - Right slider: +100 (max expansion)
  *
- * **WASM Expected Ranges** (from luminafast-wasm/src/image_processing.rs):
+ * **WASM Expected Ranges** (from luminafast-image-core/src/filters.rs):
  *
  * | Param        | WASM Range   | Conversion Formula                    | Notes                                      |
  * |--------------|--------------|---------------------------------------|-------------------------------------------|
@@ -154,7 +154,7 @@ export function hasWasmSupport(): boolean {
  *
  * @throws Never — assumes valid PixelFilterState input
  *
- * @see luminafast-wasm/src/image_processing.rs — WASM implementation with clamping
+ * @see luminafast-image-core/src/filters.rs — Shared core implementation with clamping
  * @see src/lib/filterUtils.ts — Détection des filtres non-neutres
  */
 export function normalizeFiltersForWasm(filters: PixelFilterState): PixelFilterState {

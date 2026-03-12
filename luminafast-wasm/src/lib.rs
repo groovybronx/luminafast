@@ -1,14 +1,14 @@
 /**
  * LuminaFast WASM Library — Pixel Processing
  *
- * Crate séparée zero-dependency pour compilation WebAssembly
- * Contient SEULEMENT image_processing.rs, aucune dépendance desktop
+ * Crate séparée zero-dependency desktop pour compilation WebAssembly.
+ * Le moteur algorithmique est fourni par `luminafast-image-core`.
  */
 
-pub mod image_processing;
-
-// Réexporter publiquement pour wasm-bindgen
-pub use image_processing::{apply_filters, compute_histogram_from_pixels, PixelFilters, ProcessingError};
+// Réexports publics depuis le core partagé (contrat unifié backend/WASM)
+pub use luminafast_image_core::{
+    apply_filters, compute_histogram_from_pixels, PixelFilters, ProcessingError,
+};
 
 use wasm_bindgen::prelude::*;
 
@@ -91,4 +91,34 @@ impl PixelFiltersWasm {
 pub fn compute_histogram(pixels: &[u8], width: u32, height: u32) -> Result<Vec<u32>, JsValue> {
     compute_histogram_from_pixels(pixels, width, height)
         .map_err(|e| JsValue::from_str(&e.to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pixel_filters_wasm_apply_filters_keeps_noop_pixels() {
+        let filters = PixelFiltersWasm::new(0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 5500.0, 0.0);
+        let pixels = vec![100_u8, 150_u8, 200_u8, 255_u8];
+
+        let result = filters
+            .apply_filters(&pixels, 1, 1)
+            .expect("WASM wrapper should apply core filters without error");
+
+        assert_eq!(result, pixels);
+    }
+
+    #[test]
+    fn compute_histogram_wrapper_returns_768_bins() {
+        let pixels = vec![255_u8, 0_u8, 0_u8, 255_u8];
+
+        let histogram =
+            compute_histogram(&pixels, 1, 1).expect("WASM wrapper should return core histogram");
+
+        assert_eq!(histogram.len(), 768);
+        assert_eq!(histogram[255], 1);
+        assert_eq!(histogram[256], 1);
+        assert_eq!(histogram[512], 1);
+    }
 }

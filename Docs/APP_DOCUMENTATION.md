@@ -88,22 +88,7 @@
 
 ### État actuel : Phases 0 à 3.5 complétées + Maintenance Phase 3.1 stabilisée
 
-**Pipeline d'import production-ready** :
 
-- **Discovery** (scan récursif)
-- **BLAKE3 hashing**
-- **Extraction EXIF** (`kamadak-exif v0.6.1`)
-- **Insertion SQLite**
-- **Ingestion parallélisée** (Rayon)
-- **Génération previews séquentielle**
-- **Synchronisation catalogue**
-- **Modal réinitialisable**
-
-Progression temps réel visible sur 3 phases :
-
-- **0-30%** : scan
-- **30-70%** : ingestion
-- **70-100%** : previews
 
 **Pipeline d'import production-ready** :
 

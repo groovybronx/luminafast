@@ -1,16 +1,28 @@
-import { useEffect, useCallback, useMemo, useState } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { History, RotateCcw, Save } from 'lucide-react';
 import { useEditStore } from '@/stores/editStore';
 import * as snapshotService from '@/services/snapshotService';
 import { SnapshotModal } from './SnapshotModal';
+import type { EventDTO } from '@/services/eventService';
 import type { SnapshotDTO } from '@/services/snapshotService';
 
 interface HistoryPanelProps {
   selectedImageId?: number;
 }
 
+const EMPTY_EVENTS: EventDTO[] = [];
+
 export const HistoryPanel = ({ selectedImageId }: HistoryPanelProps) => {
-  const editStore = useEditStore();
+  const selectedImageEvents = useEditStore((state) =>
+    selectedImageId ? state.editEventsPerImage[selectedImageId] : undefined,
+  );
+  const currentEvents = selectedImageEvents ?? EMPTY_EVENTS;
+  const restoreToEvent = useEditStore((state) => state.restoreToEvent);
+  const setEditEventsForImage = useEditStore((state) => state.setEditEventsForImage);
+  const setSnapshotsForImage = useEditStore((state) => state.setSnapshots);
+  const addSnapshotForImage = useEditStore((state) => state.addSnapshot);
+  const deleteSnapshotLocal = useEditStore((state) => state.deleteSnapshotLocal);
+
   const [isSnapshotModalOpen, setIsSnapshotModalOpen] = useState(false);
   const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
   const [isDeletingSnapshot, setIsDeletingSnapshot] = useState<number | null>(null);
@@ -27,7 +39,7 @@ export const HistoryPanel = ({ selectedImageId }: HistoryPanelProps) => {
       try {
         const loaded = await snapshotService.getSnapshots(selectedImageId);
         setSnapshots(loaded);
-        editStore.setSnapshots(selectedImageId, loaded);
+        setSnapshotsForImage(selectedImageId, loaded);
       } catch (error) {
         if (import.meta.env.DEV) {
           console.warn('Failed to load snapshots:', error);
@@ -36,15 +48,7 @@ export const HistoryPanel = ({ selectedImageId }: HistoryPanelProps) => {
     };
 
     loadSnapshots();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedImageId]);
-
-  // Get current events for the image
-  const currentEvents = useMemo(
-    () => (selectedImageId ? editStore.getAppliedEdits(selectedImageId) : []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedImageId],
-  );
+  }, [selectedImageId, setSnapshotsForImage]);
 
   /**
    * Handle restoration to a specific event
@@ -52,10 +56,9 @@ export const HistoryPanel = ({ selectedImageId }: HistoryPanelProps) => {
   const handleRestoreToEvent = useCallback(
     (eventIndex: number) => {
       if (!selectedImageId) return;
-      editStore.restoreToEvent(selectedImageId, eventIndex);
+      restoreToEvent(selectedImageId, eventIndex);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedImageId],
+    [selectedImageId, restoreToEvent],
   );
 
   /**
@@ -63,9 +66,8 @@ export const HistoryPanel = ({ selectedImageId }: HistoryPanelProps) => {
    */
   const handleReset = useCallback(() => {
     if (!selectedImageId) return;
-    editStore.setEditEventsForImage(selectedImageId, []);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedImageId]);
+    setEditEventsForImage(selectedImageId, []);
+  }, [selectedImageId, setEditEventsForImage]);
 
   /**
    * Handle snapshot creation
@@ -87,15 +89,14 @@ export const HistoryPanel = ({ selectedImageId }: HistoryPanelProps) => {
         );
 
         setSnapshots((prev) => [newSnapshot, ...prev]);
-        editStore.addSnapshot(selectedImageId, newSnapshot);
+        addSnapshotForImage(selectedImageId, newSnapshot);
       } catch (error) {
         throw error instanceof Error ? error : new Error('Failed to create snapshot');
       } finally {
         setIsCreatingSnapshot(false);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedImageId, currentEvents],
+    [selectedImageId, currentEvents, addSnapshotForImage],
   );
 
   /**
@@ -105,10 +106,9 @@ export const HistoryPanel = ({ selectedImageId }: HistoryPanelProps) => {
     (snapshot: SnapshotDTO) => {
       if (!selectedImageId) return;
       const events = JSON.parse(snapshot.snapshotData);
-      editStore.setEditEventsForImage(selectedImageId, events);
+      setEditEventsForImage(selectedImageId, events);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedImageId],
+    [selectedImageId, setEditEventsForImage],
   );
 
   /**
@@ -122,7 +122,7 @@ export const HistoryPanel = ({ selectedImageId }: HistoryPanelProps) => {
       try {
         await snapshotService.deleteSnapshot(snapshotId);
         setSnapshots((prev) => prev.filter((s) => s.id !== snapshotId));
-        editStore.deleteSnapshotLocal(selectedImageId, snapshotId);
+        deleteSnapshotLocal(selectedImageId, snapshotId);
       } catch (error) {
         if (import.meta.env.DEV) {
           console.error('Failed to delete snapshot:', error);
@@ -131,8 +131,7 @@ export const HistoryPanel = ({ selectedImageId }: HistoryPanelProps) => {
         setIsDeletingSnapshot(null);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedImageId],
+    [selectedImageId, deleteSnapshotLocal],
   );
 
   if (!selectedImageId) {

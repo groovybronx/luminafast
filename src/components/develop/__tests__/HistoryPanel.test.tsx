@@ -3,15 +3,59 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { HistoryPanel } from '../HistoryPanel';
 import { useEditStore } from '@/stores/editStore';
 import * as snapshotService from '@/services/snapshotService';
+import type { EventDTO } from '@/services/eventService';
 
 vi.mock('../../../stores/editStore');
 vi.mock('../../../services/snapshotService');
 
 const mockUseEditStore = useEditStore as unknown as ReturnType<typeof vi.fn>;
 
+interface MockEditStoreState {
+  editEventsPerImage: Record<number, EventDTO[]>;
+  restoreToEvent: ReturnType<typeof vi.fn>;
+  setEditEventsForImage: ReturnType<typeof vi.fn>;
+  setSnapshots: ReturnType<typeof vi.fn>;
+  addSnapshot: ReturnType<typeof vi.fn>;
+  deleteSnapshotLocal: ReturnType<typeof vi.fn>;
+}
+
+let mockEditStoreState: MockEditStoreState;
+
+function makeEvent(id: string, targetId: number, eventType = 'edit_applied'): EventDTO {
+  return {
+    id,
+    timestamp: Date.now(),
+    eventType,
+    payload: { edits: { exposure: 0.5 } },
+    targetType: 'image',
+    targetId,
+    userId: undefined,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function installStoreSelectorMock() {
+  mockUseEditStore.mockImplementation((selector?: (state: MockEditStoreState) => unknown) => {
+    if (typeof selector === 'function') {
+      return selector(mockEditStoreState);
+    }
+    return mockEditStoreState;
+  });
+}
+
 describe('HistoryPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    mockEditStoreState = {
+      editEventsPerImage: {},
+      restoreToEvent: vi.fn(),
+      setEditEventsForImage: vi.fn(),
+      setSnapshots: vi.fn(),
+      addSnapshot: vi.fn(),
+      deleteSnapshotLocal: vi.fn(),
+    };
+    installStoreSelectorMock();
 
     // Setup default mocks for snapshotService
     vi.mocked(snapshotService.getSnapshots).mockResolvedValue([]);
@@ -29,40 +73,13 @@ describe('HistoryPanel', () => {
   });
 
   it('should render empty state when no selectedImageId', () => {
-    mockUseEditStore.mockReturnValue({
-      getAppliedEdits: vi.fn(() => []),
-      restoreToEvent: vi.fn(),
-      setEditEventsForImage: vi.fn(),
-      setSnapshots: vi.fn(),
-      addSnapshot: vi.fn(),
-    });
-
     render(<HistoryPanel />);
 
     expect(screen.getByText(/select an image to view history/i)).toBeInTheDocument();
   });
 
   it('should render event timeline when image is selected', async () => {
-    const mockEvents = [
-      {
-        id: 'evt-1',
-        type: 'exposure',
-        targetType: 'image' as const,
-        targetId: 100,
-        timestamp: new Date('2025-03-02T12:00:00Z'),
-        payload: 0.5,
-        eventType: 'exposure',
-        createdAt: '2025-03-02T12:00:00Z',
-      },
-    ];
-
-    mockUseEditStore.mockReturnValue({
-      getAppliedEdits: vi.fn(() => mockEvents),
-      restoreToEvent: vi.fn(),
-      setEditEventsForImage: vi.fn(),
-      setSnapshots: vi.fn(),
-      addSnapshot: vi.fn(),
-    });
+    mockEditStoreState.editEventsPerImage[100] = [makeEvent('evt-1', 100, 'exposure')];
 
     render(<HistoryPanel selectedImageId={100} />);
 
@@ -83,14 +100,6 @@ describe('HistoryPanel', () => {
       },
     ];
 
-    mockUseEditStore.mockReturnValue({
-      getAppliedEdits: vi.fn(() => []),
-      restoreToEvent: vi.fn(),
-      setEditEventsForImage: vi.fn(),
-      setSnapshots: vi.fn(),
-      addSnapshot: vi.fn(),
-    });
-
     vi.mocked(snapshotService.getSnapshots).mockResolvedValue(mockSnapshots);
 
     render(<HistoryPanel selectedImageId={100} />);
@@ -101,14 +110,6 @@ describe('HistoryPanel', () => {
   });
 
   it('should handle no events gracefully', () => {
-    mockUseEditStore.mockReturnValue({
-      getAppliedEdits: vi.fn(() => []),
-      restoreToEvent: vi.fn(),
-      setEditEventsForImage: vi.fn(),
-      setSnapshots: vi.fn(),
-      addSnapshot: vi.fn(),
-    });
-
     render(<HistoryPanel selectedImageId={100} />);
 
     // Component should render without errors
@@ -117,26 +118,8 @@ describe('HistoryPanel', () => {
 
   it('should call restoreToEvent when event is clicked', async () => {
     const mockRestoreToEvent = vi.fn();
-    const mockEvents = [
-      {
-        id: 'evt-1',
-        type: 'exposure',
-        targetType: 'image' as const,
-        targetId: 100,
-        timestamp: new Date('2025-03-02T12:00:00Z'),
-        payload: 0.5,
-        eventType: 'exposure',
-        createdAt: '2025-03-02T12:00:00Z',
-      },
-    ];
-
-    mockUseEditStore.mockReturnValue({
-      getAppliedEdits: vi.fn(() => mockEvents),
-      restoreToEvent: mockRestoreToEvent,
-      setEditEventsForImage: vi.fn(),
-      setSnapshots: vi.fn(),
-      addSnapshot: vi.fn(),
-    });
+    mockEditStoreState.restoreToEvent = mockRestoreToEvent;
+    mockEditStoreState.editEventsPerImage[100] = [makeEvent('evt-1', 100, 'exposure')];
 
     render(<HistoryPanel selectedImageId={100} />);
 
@@ -164,20 +147,25 @@ describe('HistoryPanel', () => {
       },
     ];
 
-    mockUseEditStore.mockReturnValue({
-      getAppliedEdits: vi.fn(() => []),
-      restoreToEvent: vi.fn(),
-      setEditEventsForImage: vi.fn(),
-      setSnapshots: vi.fn(),
-      addSnapshot: vi.fn(),
-    });
-
     vi.mocked(snapshotService.getSnapshots).mockResolvedValue(mockSnapshots);
 
     render(<HistoryPanel selectedImageId={100} />);
 
     await waitFor(() => {
       expect(screen.getByText('Test Snapshot')).toBeInTheDocument();
+    });
+  });
+
+  it('should update timeline when store events change for same image', async () => {
+    const { rerender } = render(<HistoryPanel selectedImageId={100} />);
+
+    expect(screen.getByText(/No edits recorded yet/i)).toBeInTheDocument();
+
+    mockEditStoreState.editEventsPerImage[100] = [makeEvent('evt-2', 100, 'contrast_changed')];
+    rerender(<HistoryPanel selectedImageId={100} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/contrast_changed/i)).toBeInTheDocument();
     });
   });
 });

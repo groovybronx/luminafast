@@ -182,11 +182,9 @@ export const PreviewRenderer: React.FC<PreviewRendererProps> = ({
 
   // Monitor EditStore changes and update filters reactively (all 9 filters for WASM)
   useEffect(() => {
-    if (editEventsForImage && editEventsForImage.length > 0) {
-      const allPixelFilters = eventsToPixelFilters(editEventsForImage);
-      setPixelFilters(allPixelFilters);
-    }
-  }, [editEventsForImage, imageId]);
+    const allPixelFilters = eventsToPixelFilters(editEventsForImage ?? []);
+    setPixelFilters(allPixelFilters);
+  }, [editEventsForImage]);
 
   return (
     <div

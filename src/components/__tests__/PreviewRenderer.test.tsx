@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import { PreviewRenderer } from '../library/PreviewRenderer';
 import { CatalogService } from '@/services/catalogService';
+import { useEditStore } from '@/stores/editStore';
 
 // Mock CatalogService.getEditEvents
 vi.mock('@/services/catalogService', () => ({
@@ -22,6 +23,7 @@ const mockGetEditEvents = vi.mocked(CatalogService.getEditEvents);
 describe('PreviewRenderer — Phase 4.2-2 (Event Store Subscription)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useEditStore.setState({ editEventsPerImage: {} });
   });
 
   it('should load events from Event Store on mount', async () => {
@@ -142,6 +144,51 @@ describe('PreviewRenderer — Phase 4.2-2 (Event Store Subscription)', () => {
       const img = container.querySelector('img');
       const canvas = container.querySelector('canvas');
       expect(img || canvas).toBeTruthy();
+    });
+  });
+
+  it('should reset filters when events become empty for same image', async () => {
+    const initialEvents = [
+      {
+        id: 'evt-1',
+        timestamp: Date.now(),
+        eventType: 'edit_applied',
+        payload: { edits: { exposure: 1.0, contrast: 0.4 } },
+        targetType: 'Image',
+        targetId: 42,
+        userId: undefined,
+        createdAt: new Date().toISOString(),
+      },
+    ];
+
+    mockGetEditEvents.mockResolvedValue(initialEvents);
+
+    const { container } = render(
+      <PreviewRenderer
+        imageId={42}
+        previewUrl="/test-preview.jpg"
+        className="test"
+        useWasm={false}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockGetEditEvents).toHaveBeenCalledWith(42);
+    });
+
+    const img = container.querySelector('img');
+    expect(img).toBeTruthy();
+
+    await waitFor(() => {
+      expect(img?.style.filter).not.toBe('none');
+    });
+
+    act(() => {
+      useEditStore.getState().setEditEventsForImage(42, []);
+    });
+
+    await waitFor(() => {
+      expect(img?.style.filter).toBe('none');
     });
   });
 });

@@ -1,6 +1,6 @@
 # Phase M1.2 - Portage des Algorithmes vers le Core
 
-> **Statut** : ⬜ En attente
+> **Statut** : ✅ Completee
 > **Duree estimee** : 1 jour
 
 ## Objectif
@@ -72,9 +72,9 @@ Migrer les algorithmes pixel vers `luminafast-image-core` en prenant la version 
 
 ## Checkpoints
 
-- [ ] Checkpoint 1: parite fonctionnelle atteinte
-- [ ] Checkpoint 2: histogramme valide
-- [ ] Checkpoint 3: tests limites OK
+- [x] Checkpoint 1: parite fonctionnelle atteinte
+- [x] Checkpoint 2: histogramme valide
+- [x] Checkpoint 3: tests limites OK
 
 ## Pieges et Risques
 
@@ -92,5 +92,5 @@ Migrer les algorithmes pixel vers `luminafast-image-core` en prenant la version 
 
 ## Criteres de Completion
 
-- [ ] Tests core complets verts
-- [ ] Aucun comportement perdu vs reference
+- [x] Tests core complets verts
+- [x] Aucun comportement perdu vs reference

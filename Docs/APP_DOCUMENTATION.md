@@ -70,7 +70,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-03-12 (Maintenance WASM M1.1 complétée : création de la crate partagée `luminafast-image-core`)
+> **Dernière mise à jour** : 2026-03-12 (Maintenance WASM M1.3 complétée : API core v1 stabilisee)
 >
 > ### Décisions Projet (validées par le propriétaire)
 
@@ -348,7 +348,7 @@ LuminaFast/
 │   │   │   │   └── tests.rs         # Tests preview pyramide (27 tests)
 │   │   │   └── __tests__/           # Tests integration transversales
 │   └── icons/                      # Icônes d'application (16 fichiers)
-├── luminafast-image-core/           # Crate Rust partagee backend + WASM (Maintenance WASM M1.1)
+├── luminafast-image-core/           # Crate Rust partagee backend + WASM (Maintenance WASM M1.1-M1.3)
 │   ├── Cargo.toml                   # Manifest crate core image
 │   └── src/
 │       ├── lib.rs                   # API publique (reexports)
@@ -765,24 +765,24 @@ Depuis la maintenance **M.3.2a (en cours)**, `LeftSidebar` délègue ses sous-pa
 
 ### Production
 
-| Crate                   | Version                           | Usage                                   |
-| ----------------------- | --------------------------------- | --------------------------------------- |
-| `tauri`                 | ^2.9.1                            | Framework desktop                       |
-| `tauri-plugin-log`      | ^2                                | Logging système                         |
-| `tauri-plugin-fs`       | ^2                                | Accès fichiers                          |
-| `tauri-plugin-dialog`   | ^2                                | Dialogues système                       |
-| `tauri-plugin-shell`    | ^2                                | Commandes système                       |
-| `serde`                 | ^1.0                              | Sérialisation JSON                      |
-| `serde_json`            | ^1.0                              | JSON parsing/writing                    |
-| `rusqlite`              | ^0.31.0                           | Base de données SQLite                  |
-| `r2d2`                  | ^0.8                              | Connection pool générique               |
-| `r2d2_sqlite`           | ^0.24                             | Connection pool SQLite (rusqlite)       |
-| `thiserror`             | ^1.0                              | Gestion d'erreurs                       |
-| `chrono`                | ^0.4.38                           | Dates et timestamps                     |
-| `blake3`                | ^1.5                              | Hachage cryptographique                 |
-| `rayon`                 | ^1.10                             | Parallélisation                         |
-| `tokio`                 | ^1.40                             | Runtime async                           |
-| `luminafast-image-core` | path (`../luminafast-image-core`) | Noyau image partage backend/WASM (M1.1) |
+| Crate                   | Version                           | Usage                                        |
+| ----------------------- | --------------------------------- | -------------------------------------------- |
+| `tauri`                 | ^2.9.1                            | Framework desktop                            |
+| `tauri-plugin-log`      | ^2                                | Logging système                              |
+| `tauri-plugin-fs`       | ^2                                | Accès fichiers                               |
+| `tauri-plugin-dialog`   | ^2                                | Dialogues système                            |
+| `tauri-plugin-shell`    | ^2                                | Commandes système                            |
+| `serde`                 | ^1.0                              | Sérialisation JSON                           |
+| `serde_json`            | ^1.0                              | JSON parsing/writing                         |
+| `rusqlite`              | ^0.31.0                           | Base de données SQLite                       |
+| `r2d2`                  | ^0.8                              | Connection pool générique                    |
+| `r2d2_sqlite`           | ^0.24                             | Connection pool SQLite (rusqlite)            |
+| `thiserror`             | ^1.0                              | Gestion d'erreurs                            |
+| `chrono`                | ^0.4.38                           | Dates et timestamps                          |
+| `blake3`                | ^1.5                              | Hachage cryptographique                      |
+| `rayon`                 | ^1.10                             | Parallélisation                              |
+| `tokio`                 | ^1.40                             | Runtime async                                |
+| `luminafast-image-core` | path (`../luminafast-image-core`) | Noyau image partage backend/WASM (M1.1-M1.3) |
 
 ### Développement
 
@@ -1470,6 +1470,8 @@ getAppliedEdits(imageId: number): EventDTO[]                   // Retrieve
 
 | Date       | Phase                 | Modification                                                                               | Raison                                                             |
 | ---------- | --------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| 2026-03-12 | Maintenance WASM M1.3 | Stabilisation API v1 (`lib.rs`, ranges/no-op documentes, tests `api_contract`)             | Geler un contrat unique avant integration WASM/backend             |
+| 2026-03-12 | Maintenance WASM M1.2 | Portage de `apply_filters` (passe unique) + histogramme RGB dans `luminafast-image-core`   | Centraliser les algorithmes pour garantir la parite WASM/backend   |
 | 2026-03-12 | Maintenance WASM M1.1 | Initialisation crate `luminafast-image-core` (errors, filters, histogram, tests unitaires) | Lancer le socle partage pour supprimer la duplication WASM/backend |
 | 2026-03-10 | M.3.2 (en cours)      | get_all_images sans EXIF par défaut + lazy EXIF on-demand (hook/service + prefetch hover)  | Réduction coût chargement grille volumineuse                       |
 | 2026-03-10 | M.2.2                 | Whitelist dynamique paths, validation traversal, hardening `assetProtocol` + CSP           | Réduction surface d'attaque filesystem/XSS                         |

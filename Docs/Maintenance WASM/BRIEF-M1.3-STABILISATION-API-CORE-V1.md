@@ -1,6 +1,6 @@
 # Phase M1.3 - Stabilisation API Core v1
 
-> **Statut** : ⬜ En attente
+> **Statut** : ✅ Completee
 > **Duree estimee** : 0.5 jour
 
 ## Objectif
@@ -73,9 +73,9 @@ pub fn compute_histogram_from_pixels(...);
 
 ## Checkpoints
 
-- [ ] Checkpoint 1: signatures gelees
-- [ ] Checkpoint 2: tests de contrat verts
-- [ ] Checkpoint 3: doc API a jour
+- [x] Checkpoint 1: signatures gelees
+- [x] Checkpoint 2: tests de contrat verts
+- [x] Checkpoint 3: doc API a jour
 
 ## Pieges et Risques
 
@@ -93,6 +93,6 @@ pub fn compute_histogram_from_pixels(...);
 
 ## Criteres de Completion
 
-- [ ] API v1 stable validee
-- [ ] Tests de contrat OK
-- [ ] M2 et M3 debloques
+- [x] API v1 stable validee
+- [x] Tests de contrat OK
+- [x] M2 et M3 debloques

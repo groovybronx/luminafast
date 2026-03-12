@@ -1,6 +1,6 @@
 # Phase M0.1 - Cadrage Root Cause
 
-> **Statut** : ⬜ En attente
+> **Statut** : ✅ Completee
 > **Duree estimee** : 0.5 jour
 
 ## Objectif
@@ -72,10 +72,10 @@ Formaliser le symptome, la cause racine et la correction structurelle de la dupl
 
 ## Checkpoints
 
-- [ ] Checkpoint 1: symptome documente
-- [ ] Checkpoint 2: cause racine documentee
-- [ ] Checkpoint 3: correction structurelle cible validee
-- [ ] Checkpoint 4: perimetre IN/OUT fige
+- [x] Checkpoint 1: symptome documente
+- [x] Checkpoint 2: cause racine documentee
+- [x] Checkpoint 3: correction structurelle cible validee
+- [x] Checkpoint 4: perimetre IN/OUT fige
 
 ## Pieges et Risques
 
@@ -100,6 +100,6 @@ Formaliser le symptome, la cause racine et la correction structurelle de la dupl
 
 ## Criteres de Completion
 
-- [ ] Root cause explicite validee
-- [ ] Scope clair et non ambigu
-- [ ] Decision cible crate partagee formalisee
+- [x] Root cause explicite validee
+- [x] Scope clair et non ambigu
+- [x] Decision cible crate partagee formalisee

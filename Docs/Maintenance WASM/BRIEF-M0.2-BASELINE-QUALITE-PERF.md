@@ -1,6 +1,6 @@
 # Phase M0.2 - Baseline Qualite et Performance
 
-> **Statut** : ⬜ En attente
+> **Statut** : ✅ Completee
 > **Duree estimee** : 0.5 jour
 
 ## Objectif
@@ -69,10 +69,10 @@ Capturer un etat initial mesurable avant migration pour comparer objectivement l
 
 ## Checkpoints
 
-- [ ] Checkpoint 1: baseline tests capturee
-- [ ] Checkpoint 2: baseline latence capturee
-- [ ] Checkpoint 3: dataset reference valide
-- [ ] Checkpoint 4: seuils de regression valides
+- [x] Checkpoint 1: baseline tests capturee
+- [x] Checkpoint 2: baseline latence capturee
+- [x] Checkpoint 3: dataset reference valide
+- [x] Checkpoint 4: seuils de regression valides
 
 ## Pieges et Risques
 
@@ -90,6 +90,6 @@ Capturer un etat initial mesurable avant migration pour comparer objectivement l
 
 ## Criteres de Completion
 
-- [ ] Baseline tests disponible
-- [ ] Baseline perf disponible
-- [ ] Seuils de regression approuves
+- [x] Baseline tests disponible
+- [x] Baseline perf disponible
+- [x] Seuils de regression approuves

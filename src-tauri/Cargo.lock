@@ -2464,6 +2464,7 @@ dependencies = [
  "image",
  "kamadak-exif",
  "log",
+ "luminafast-image-core",
  "notify",
  "num_cpus",
  "parking_lot",
@@ -2486,6 +2487,13 @@ dependencies = [
  "tokio",
  "uuid",
  "walkdir",
+]
+
+[[package]]
+name = "luminafast-image-core"
+version = "0.1.0"
+dependencies = [
+ "thiserror 1.0.69",
 ]
 
 [[package]]

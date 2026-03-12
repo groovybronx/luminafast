@@ -63,6 +63,7 @@
 | M           | 3.1        | Refactoring App.tsx (AppInitializer + useAppShortcuts)                                          | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 3.2        | Optimisation Grille & Données (lazy EXIF + liste sans EXIF + prefetch hover)                    | ✅ Complétée | 2026-03-10 | Copilot |
 | M           | 3.2a       | LeftSidebar Refactor (extraction composants inline + tests unitaires dédiés)                    | ✅ Complétée | 2026-03-10 | Copilot |
+| Maintenance WASM | M1.1   | Initialisation crate partagée `luminafast-image-core` (API de base + tests)                     | ✅ Complétée | 2026-03-12 | Copilot |
 
 | 5 | 5.1 | Panneau EXIF Connecté | ✅ Complétée | 2026-07-10 | Copilot |
 | 5 | 5.2 | Système de Tags Hiérarchique | ✅ Complétée | 2026-07-11 | Copilot |

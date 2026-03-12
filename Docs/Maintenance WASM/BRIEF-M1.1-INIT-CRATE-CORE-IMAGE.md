@@ -1,6 +1,6 @@
 # Phase M1.1 - Initialisation Crate Core Image
 
-> **Statut** : ⬜ En attente
+> **Statut** : ✅ Completee (2026-03-12)
 > **Duree estimee** : 1 jour
 
 ## Objectif
@@ -99,9 +99,9 @@ pub fn compute_histogram_from_pixels(
 
 ## Checkpoints
 
-- [ ] Checkpoint 1: crate compile
-- [ ] Checkpoint 2: tests de base passent
-- [ ] Checkpoint 3: API publique exposee
+- [x] Checkpoint 1: crate compile
+- [x] Checkpoint 2: tests de base passent
+- [x] Checkpoint 3: API publique exposee
 
 ## Pieges et Risques
 
@@ -120,6 +120,6 @@ pub fn compute_histogram_from_pixels(
 
 ## Criteres de Completion
 
-- [ ] `cargo check` crate core OK
-- [ ] tests unitaires initiaux OK
-- [ ] API de base validee
+- [x] `cargo check` crate core OK
+- [x] tests unitaires initiaux OK
+- [x] API de base validee

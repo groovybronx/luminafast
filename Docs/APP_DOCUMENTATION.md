@@ -70,7 +70,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-03-13 (Maintenance WASM M4.3 complétée : pilote RAW backend avec decodeur concret rsraw)
+> **Dernière mise à jour** : 2026-03-13 (Maintenance WASM M5.3 complétée : garde-fous CI source unique — script + job `guard-single-source`, Gate G6 fermée)
 >
 > ### Décisions Projet (validées par le propriétaire)
 
@@ -86,7 +86,7 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : Phases 0 à 3.5 complétées + Maintenance WASM M4.3 stabilisée
+### État actuel : Phases 0 à 3.5 complétées + Maintenance WASM M5.3 stabilisée (Gate G6 fermée)
 
 **Pipeline d'import production-ready** :
 
@@ -105,7 +105,7 @@
 - **30-70%** : ingestion + hashing + EXIF
 - **70-100%** : previews
 
-**État actuel de l'application** (Phases 0 → 3.5 complétées + Maintenance WASM M4.3 stabilisée) :
+**État actuel de l'application** (Phases 0 → 3.5 complétées + Maintenance WASM M5.3 stabilisée) :
 
 - **Grille virtualisée avec lazy-loading** : `@tanstack/react-virtual` (10K+ images, 60fps) + IntersectionObserver (prefetch 100px)
 - **Collections & Smart Collections** : créations, renommages, suppressions, filtrage via stores dédiés (Phase 3.2)
@@ -934,6 +934,7 @@ Depuis la maintenance **M.3.2a (en cours)**, `LeftSidebar` délègue ses sous-pa
 - **Backend** : Formatting, clippy, build, tests
 - **Integration** : Build Tauri complet
 - **Security** : Audit des dépendances (Node.js + Rust)
+- **Guard — Single Source** (M5.3) : Vérifie qu'aucun algorithme image n'est défini hors de `luminafast-image-core` (script `scripts/check-single-source-image-core.sh`, 3 règles : absence de fichiers legacy, absence de fonctions libres dupliquées, présence de la dépendance core dans les deux crates)
 - **Déclenchement** : Push sur main/develop/phase/\*, PRs
 
 ### 12.4 — Scripts de Développement
@@ -1469,14 +1470,13 @@ getAppliedEdits(imageId: number): EventDTO[]                   // Retrieve
 - `luminafast-image-core` : 26/26 ✅ (algorithmes + contrat API + pipeline M4.1 + contrat decodeur RAW M4.2)
 - `luminafast-wasm/src/lib.rs` : 2/2 ✅ (wrappers wasm-bindgen)
 - `src-tauri/src/services/export_rendering.rs` : 2/2 ✅ (rendu export backend via core partage)
-- `src-tauri/src/services/image_processing.rs` : 2/2 ✅ (wrapper legacy de compatibilite vers core)
 - `src-tauri/src/services/export_pipeline.rs` : 8/8 ✅ (pipeline export non destructif + pilote RAW backend)
 - `src-tauri/src/services/tests/parity_preview_export.rs` : 2/2 ✅ (parite preview/export via presets communs et seuil fixe)
 
 **Backend Export (M3.1)** :
 
 - `src-tauri/src/services/export_rendering.rs` delegue le rendu pixel export vers `luminafast-image-core::apply_filters`.
-- `src-tauri/src/services/image_processing.rs` n'embarque plus d'algorithme local: il agit comme pont de compatibilite deprecie vers le core partage.
+- Le module de compatibilite backend `src-tauri/src/services/image_processing.rs` a ete supprime en M5.1; le chemin canonique reste `export_rendering` -> `luminafast-image-core`.
 
 **Backend Export Non Destructif (M3.2)** :
 
@@ -1511,7 +1511,7 @@ getAppliedEdits(imageId: number): EventDTO[]                   // Retrieve
 - `src-tauri/src/commands/export.rs` expose une commande dediee `export_raw_edited(image_id, output_path, format)` en plus de `export_image_edited`.
 - Le rapport de pilotage et de limites est formalise dans `Docs/Maintenance WASM/RAPPORT-PILOTE-RAW.md`.
 
-**Non-Régression** : Phases 1-4.3 à 100% ✅
+**Non-Régression** : Phases 1-5.2 à 100% ✅
 
 ---
 
@@ -1519,7 +1519,10 @@ getAppliedEdits(imageId: number): EventDTO[]                   // Retrieve
 
 | Date       | Phase                 | Modification                                                                                                | Raison                                                                        |
 | ---------- | --------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| 2026-03-13 | Maintenance WASM M4.3 | Pilote RAW backend (`rsraw`), commande `export_raw_edited`, tests integration export_pipeline 8/8, rapport | Valider un premier flux RAW reel sous scope controle avant suppression legacy |
+| 2026-03-13 | Maintenance WASM M5.3 | Garde-fous CI : script `check-single-source-image-core.sh` + job `guard-single-source`, Gate G6 fermée     | Bloquer toute réintroduction de duplication algorithmique via CI automatique  |
+| 2026-03-13 | Maintenance WASM M5.2 | README WASM (32→35 tests + parité), PLAN_COMPLET (statut + contexte historique), coherénce docs finalisée  | Garantir que la documentation ne mentionne plus de copie algorithmique active |
+| 2026-03-13 | Maintenance WASM M5.1 | Suppression du module backend legacy `image_processing` + validation usages residuels/build/tests          | Retirer la derniere dette de duplication backend avant M5.2                  |
+| 2026-03-13 | Maintenance WASM M4.3 | Pilote RAW backend (`rsraw`), commande `export_raw_edited`, tests integration export_pipeline 8/8, rapport  | Valider un premier flux RAW reel sous scope controle avant suppression legacy |
 | 2026-03-13 | Maintenance WASM M4.2 | Contrat `RawDecoder` + `LinearImage`, conversion pipeline lineaire->RGBA, tests `raw_decoder_contract`      | Preparer M4.3 avec un point d extension decodeur stable et independant vendor |
 | 2026-03-13 | Maintenance WASM M4.1 | Introduction d un pipeline core compose (`pipeline.rs`) + branchement `apply_filters` via etape interne     | Preparer M4.2 (abstraction decodeur RAW) sans casser le contrat API v1        |
 | 2026-03-13 | Maintenance WASM M3.3 | Contrat de parite preview/export (tests backend buffer-a-buffer + presets communs frontend + rapport dedie) | Verrouiller Gate G4 avec une preuve automatisee de coherence preview/export   |

@@ -1,6 +1,6 @@
 # Phase M5.2 - Synchronisation Documentation
 
-> **Statut** : ⬜ En attente
+> **Statut** : ✅ Completee (2026-03-13)
 > **Duree estimee** : 0.5 jour
 
 ## Objectif
@@ -66,9 +66,9 @@ Mettre a jour l'ensemble de la documentation pour refleter sans ambiguite l'arch
 
 ## Checkpoints
 
-- [ ] Checkpoint 1: CHANGELOG synchronise
-- [ ] Checkpoint 2: APP_DOCUMENTATION synchronisee
-- [ ] Checkpoint 3: README WASM corrige
+- [x] Checkpoint 1: CHANGELOG synchronisé
+- [x] Checkpoint 2: APP_DOCUMENTATION synchronisée
+- [x] Checkpoint 3: README WASM corrigé
 
 ## Pieges et Risques
 
@@ -84,5 +84,5 @@ Mettre a jour l'ensemble de la documentation pour refleter sans ambiguite l'arch
 
 ## Criteres de Completion
 
-- [ ] Tous docs cibles sont coherents
-- [ ] Contradictions supprimees
+- [x] Tous docs cibles sont coherents
+- [x] Contradictions supprimees

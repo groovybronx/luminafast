@@ -1,6 +1,6 @@
 # Phase M5.1 - Suppression de la Duplication Legacy
 
-> **Statut** : ⬜ En attente
+> **Statut** : ✅ Completee (2026-03-13)
 > **Duree estimee** : 0.5 jour
 
 ## Objectif
@@ -69,9 +69,9 @@ Supprimer proprement les anciennes copies algorithmiques et etablir definitiveme
 
 ## Checkpoints
 
-- [ ] Checkpoint 1: usages residuels = 0
-- [ ] Checkpoint 2: build wasm/backend OK
-- [ ] Checkpoint 3: tests non-regression OK
+- [x] Checkpoint 1: usages residuels = 0
+- [x] Checkpoint 2: build wasm/backend OK
+- [x] Checkpoint 3: tests non-regression OK
 
 ## Pieges et Risques
 
@@ -89,5 +89,5 @@ Supprimer proprement les anciennes copies algorithmiques et etablir definitiveme
 
 ## Criteres de Completion
 
-- [ ] Duplication retiree
-- [ ] Builds et tests verts
+- [x] Duplication retiree
+- [x] Builds et tests verts

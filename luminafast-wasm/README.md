@@ -75,7 +75,7 @@ const processed = filters.apply_filters(pixels, width, height);
 
 Les algorithmes sont testés dans `luminafast-image-core/src/` (tests unitaires + contrat API).
 Le wrapper WASM est testé dans `luminafast-wasm/src/lib.rs`.
-Le wrapper TypeScript est testé dans `src/services/__tests__/wasmRenderingService.test.ts` (32 tests).
+Le wrapper TypeScript est testé dans `src/services/__tests__/wasmRenderingService.test.ts` (35 tests : non-régression + parité visuelle M2.3 + contrat M3.3).
 
 ## Maintenance
 

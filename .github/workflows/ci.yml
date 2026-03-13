@@ -37,6 +37,9 @@ jobs:
             backend:
               - 'src-tauri/**'
               - 'Cargo.lock'
+              - 'luminafast-wasm/**'
+              - 'luminafast-image-core/**'
+              - 'scripts/check-single-source-image-core.sh'
 
   # Quick validation (Frontend) for pushes and PRs to develop
   validate-frontend:
@@ -95,6 +98,20 @@ jobs:
       - run: cd src-tauri && cargo fmt --all -- --check
 
       - run: cd src-tauri && cargo clippy --lib -- -D warnings -A dead_code -A unused_variables
+
+  # Guard-fou M5.3 : verifie la source unique algorithmique (pas de duplication hors luminafast-image-core)
+  guard-single-source:
+    name: Guard — Single Source (Image Algorithms)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: detect-changes
+    if: |
+      (github.event_name == 'push' || github.event_name == 'pull_request') &&
+      needs.detect-changes.outputs.backend == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check single algorithmic source
+        run: bash scripts/check-single-source-image-core.sh
 
   # Optimized frontend pipeline for PRs to main (non-draft)
   frontend:

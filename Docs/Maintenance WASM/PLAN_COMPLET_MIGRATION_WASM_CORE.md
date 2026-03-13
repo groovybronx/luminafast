@@ -1,18 +1,20 @@
 # Plan Complet — Migration vers un Moteur Image Partagé (WASM + Backend Export)
 
-> **Statut** : ⬜ En attente
+> **Statut** : ✅ Complétée intégralement M0.1→M5.3 (2026-03-13) — Gate G6 fermée
 > **Date** : 2026-03-12
 > **Type** : Maintenance structurante
 > **Décision architecture** : Crate partagée Cargo (moteur unique)
 
 ## 1. Contexte
 
-Le projet contient actuellement deux implémentations Rust du traitement pixel :
+> **Note historique (M5.1 complétée — 2026-03-13)** : Les deux copies algorithmiques décrites ci-dessous ont été supprimées. La source unique est désormais `luminafast-image-core`. Ce contexte est conservé à titre d'historique de la décision.
 
-- `src-tauri/src/services/image_processing.rs`
-- `luminafast-wasm/src/image_processing.rs`
+Le projet contenait deux implémentations Rust du traitement pixel :
 
-Ce modèle en copie manuelle crée un risque de désynchronisation. Le risque est déjà matérialisé : la version WASM contient des optimisations et des capacités (passe unique + histogramme) absentes de la version backend.
+- `src-tauri/src/services/image_processing.rs` *(supprimé en M5.1)*
+- `luminafast-wasm/src/image_processing.rs` *(supprimé en M2.1)*
+
+Ce modèle en copie manuelle créait un risque de désynchronisation. Le risque s'était déjà matérialisé : la version WASM contenait des optimisations et des capacités (passe unique + histogramme) absentes de la version backend.
 
 ## 2. Objectif global
 

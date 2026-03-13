@@ -1,6 +1,6 @@
 # Phase M5.3 - CI Garde-Fous
 
-> **Statut** : ⬜ En attente
+> **Statut** : ✅ Complétée (2026-03-13)
 > **Duree estimee** : 0.5 jour
 
 ## Objectif
@@ -67,9 +67,9 @@ Ajouter des garde-fous CI qui bloquent toute reintroduction de duplication et pr
 
 ## Checkpoints
 
-- [ ] Checkpoint 1: guard script detecte cas de doublon
-- [ ] Checkpoint 2: workflow execute nouveaux jobs
-- [ ] Checkpoint 3: CI verte sur etat conforme
+- [x] Checkpoint 1: guard script detecte cas de doublon
+- [x] Checkpoint 2: workflow execute nouveaux jobs
+- [x] Checkpoint 3: CI verte sur etat conforme
 
 ## Pieges et Risques
 
@@ -87,6 +87,6 @@ Ajouter des garde-fous CI qui bloquent toute reintroduction de duplication et pr
 
 ## Criteres de Completion
 
-- [ ] Guard duplication actif
-- [ ] Job parite actif
-- [ ] Pipeline stable
+- [x] Guard duplication actif
+- [x] Job parite actif
+- [x] Pipeline stable

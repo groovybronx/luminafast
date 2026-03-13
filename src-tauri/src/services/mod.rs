@@ -6,7 +6,6 @@ pub mod exif;
 pub mod export_pipeline;
 pub mod export_rendering;
 pub mod filesystem;
-pub mod image_processing;
 pub mod ingestion;
 pub mod iptc;
 pub mod metrics;

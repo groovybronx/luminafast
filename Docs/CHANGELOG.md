@@ -75,6 +75,9 @@
 | Maintenance WASM | M4.1       | Architecture pipeline RAW-ready (pipeline compose + validation centralisee + compat API v1)        | ✅ Complétée | 2026-03-13 | Copilot |
 | Maintenance WASM | M4.2       | Abstraction decodeur RAW (LinearImage + RawDecoder + contrat decodeur/pipeline)                    | ✅ Complétée | 2026-03-13 | Copilot |
 | Maintenance WASM | M4.3       | Pilote RAW reel backend (decodeur rsraw + export_raw_edited + rapport compatibilite)               | ✅ Complétée | 2026-03-13 | Copilot |
+| Maintenance WASM | M5.1       | Suppression duplication legacy (suppression module backend `image_processing`)                      | ✅ Complétée | 2026-03-13 | Copilot |
+| Maintenance WASM | M5.2       | Synchronisation documentation (README WASM, PLAN_COMPLET, APP_DOC, CHANGELOG coherents)            | ✅ Complétée | 2026-03-13 | Copilot |
+| Maintenance WASM | M5.3       | CI garde-fous source unique (script check-single-source-image-core.sh + job guard-single-source)    | ✅ Complétée | 2026-03-13 | Copilot |
 
 | 5 | 5.1 | Panneau EXIF Connecté | ✅ Complétée | 2026-07-10 | Copilot |
 | 5 | 5.2 | Système de Tags Hiérarchique | ✅ Complétée | 2026-07-11 | Copilot |
@@ -109,17 +112,116 @@
 
 ## Phase Actuelle
 
-> **Maintenance WASM M5.1** : Suppression de la duplication legacy (prochaine sous-phase)
+> **Gate G6 fermée** — Migration WASM Core M0.1 → M5.3 intégralement complétée.
 >
-> Brief : `Docs/Maintenance WASM/BRIEF-M5.1-SUPPRESSION-DUPLICATION.md`
-> Branche recommandée : `phase/m5.1-suppression-duplication`
-> Note qualité M4.3 : `src-tauri/src/services/export_pipeline.rs` ✅ (8/8) + `Docs/Maintenance WASM/RAPPORT-PILOTE-RAW.md` ✅
+> Duplication algorithmique retirée ✅ | Docs synchronisées ✅ | Garde-fous CI actifs ✅
+>
+> Prochaine étape : Phase 6.1 (Cache multiniveau) ou nouvelle maintenance selon priorités.
 
 ---
 
 ## Historique des Sous-Phases Complétées
 
 ---
+
+### 2026-03-13 — Maintenance WASM M5.3 : CI Garde-Fous Source Unique (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée**
+**Agent** : Copilot
+**Branche** : `phase/m5.3-ci-garde-fous`
+
+**Symptôme** : Absence de protection automatisée contre la réintroduction de duplication algorithmique après M5.1.
+
+**Cause racine** : Aucun mécanisme CI ne vérifiait les 3 conditions de source unique (absence de fichiers legacy, absence de fonctions libres dupliquées hors core, dépendance core déclarée).
+
+**Correction structurelle** : Création d'un script shell minimaliste (`check-single-source-image-core.sh`) qui encode ces 3 règles et d'un job CI dédié (`guard-single-source`) qui l'exécute à chaque push/PR sur les fichiers Rust.
+
+**Impact** :
+- Gate G6 fermée : migration M0.1→M5.3 intégralement complétée
+- Toute réintroduction de duplication algorithmique est désormais bloquée à la CI
+- Script local disponible pour validation pre-commit
+
+**Fichiers créés/modifiés** :
+- `scripts/check-single-source-image-core.sh` — NOUVEAU (script 3 règles, exit 0 sur état conforme)
+- `.github/workflows/ci.yml` — ajout job `guard-single-source` (timeout 5min) + extension filtre `backend` (luminafast-wasm, luminafast-image-core)
+- `Docs/APP_DOCUMENTATION.md` — section 12.3 mise à jour (job Guard documenté)
+- Fichiers de traçabilité M5.3 : BRIEF ✅, INDEX ✅, PLAN_COMPLET ✅, CHANGELOG ✅
+
+**Validation** :
+- [x] `bash scripts/check-single-source-image-core.sh` → SUCCES (3/3 règles, exit 0)
+- [x] Règle 1 : `src-tauri/src/services/image_processing.rs` absent ✅
+- [x] Règle 2 : 0 fonctions libres algorithmiques hors core ✅
+- [x] Règle 3 : `luminafast-image-core` déclaré dans les deux Cargo.toml ✅
+- [x] Gate G6 : toutes conditions remplies
+
+---
+
+### 2026-03-13 — Maintenance WASM M5.2 : Synchronisation documentation (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée**
+**Agent** : Copilot
+**Branche** : `phase/m5.2-synchronisation-documentation`
+**Type** : Maintenance
+
+#### Résumé
+
+**Cause racine** : apres M5.1, quatre fichiers de documentation presentaient encore des incoherences (statut, compte de tests perime, contexte decrivant les copies comme actives) non resolues pendant les phases de code precedentes.
+
+**Solution** : audit croise ligne a ligne de chaque fichier cible, corrections ciblées sur `luminafast-wasm/README.md` (32 → 35 tests), `PLAN_COMPLET_MIGRATION_WASM_CORE.md` (statut + contexte historique), puis ajout des entrees de completion M5.2 dans CHANGELOG et APP_DOCUMENTATION.
+
+#### Fichiers modifiés
+
+- `luminafast-wasm/README.md` — compte de tests corrigé (32 → 35), precision parite visuelle M2.3 + contrat M3.3
+- `Docs/Maintenance WASM/PLAN_COMPLET_MIGRATION_WASM_CORE.md` — statut mis a jour + section 1 contexte annote historique
+- `Docs/CHANGELOG.md` — entree M5.2 + phase actuelle basculee sur M5.3
+- `Docs/APP_DOCUMENTATION.md` — derniere mise a jour + entree historique M5.2
+- `Docs/Maintenance WASM/BRIEF-M5.2-SYNCHRO-DOCUMENTATION.md` — checkpoints coches + statut completee
+- `Docs/Maintenance WASM/INDEX_EXECUTION_AGENT.md` — M5.2 completee, M5.3 prochaine etape
+
+#### Critères de validation remplis
+
+- [x] Checkpoint 1 : CHANGELOG synchronisé (entree M5.2 + phase actuelle M5.3)
+- [x] Checkpoint 2 : APP_DOCUMENTATION synchronisée (derniere mise a jour + historique)
+- [x] Checkpoint 3 : README WASM corrigé (32 → 35 tests + details parite)
+
+#### Impact
+
+- Documentation fiable pour revue M5.3 et futures phases.
+- Plus aucune mention de copie algorithmique active residuelle dans les docs cibles.
+
+---
+
+### 2026-03-13 — Maintenance WASM M5.1 : Suppression de la duplication legacy (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée**
+**Agent** : Copilot
+**Branche** : `phase/m5.1-suppression-duplication`
+**Type** : Maintenance
+
+#### Résumé
+
+**Cause racine** : apres M3.1, un module backend legacy de compatibilite (`services/image_processing.rs`) etait encore exporte, ce qui maintenait une dette de duplication potentielle malgre la migration effective sur `luminafast-image-core`.
+
+**Solution** : suppression du module backend legacy et de son export dans `services/mod.rs`, avec verification explicite d absence d usages residuels, puis revalidation complete build/tests backend + WASM.
+
+#### Fichiers supprimés
+
+- `src-tauri/src/services/image_processing.rs` — dernier wrapper backend legacy
+
+#### Fichiers modifiés
+
+- `src-tauri/src/services/mod.rs` — retrait du module `image_processing`
+
+#### Critères de validation remplis
+
+- [x] Checkpoint 1 : usages residuels = 0 (`grep -R "image_processing" -n src-tauri/src luminafast-wasm/src`)
+- [x] Checkpoint 2 : build wasm/backend OK (`cargo check` backend + `cargo check` wasm + `wasm-pack build --target web --release`)
+- [x] Checkpoint 3 : tests non-regression OK (`cargo test` backend 243/243 + `cargo test` wasm 2/2)
+
+#### Impact
+
+- Un seul chemin algorithmique backend/WASM actif vers le core partage.
+- Dette de compatibilite legacy retiree avant M5.2.
 
 ### 2026-03-13 — Maintenance WASM M4.3 : Pilote RAW reel (✅ COMPLÉTÉE)
 

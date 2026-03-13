@@ -1,12 +1,13 @@
-import { Cloud, Settings } from 'lucide-react';
+import { Cloud, Settings as SettingsIcon } from 'lucide-react';
 import type { ActiveView } from '../../types';
 
 interface TopNavProps {
   activeView: ActiveView;
   onSetActiveView: (view: ActiveView) => void;
+  onOpenSettings?: () => void;
 }
 
-export const TopNav = ({ activeView, onSetActiveView }: TopNavProps) => (
+export const TopNav: React.FC<TopNavProps> = ({ activeView, onSetActiveView, onOpenSettings }) => (
   <div className="h-9 bg-black border-b border-zinc-900 flex items-center px-4 justify-between shrink-0 z-50">
     <div className="flex gap-6 items-center">
       <div className="flex items-center gap-2">
@@ -37,8 +38,18 @@ export const TopNav = ({ activeView, onSetActiveView }: TopNavProps) => (
         <Cloud size={12} className="text-green-500" /> SQLite
       </div>
       <div className="w-px h-3 bg-zinc-800"></div>
+      <button
+        className="flex items-center gap-1 px-2 py-1 hover:bg-zinc-800 rounded text-zinc-300 hover:text-blue-400 transition-colors"
+        onClick={onOpenSettings}
+        aria-label="Paramètres"
+        title="Paramètres (Cmd+,)"
+        type="button"
+      >
+        <SettingsIcon size={16} />
+        <span className="hidden md:inline">Paramètres</span>
+      </button>
       <div className="flex items-center gap-2">
-        <Settings size={12} /> V1.7.2-BETA
+        <span className="text-zinc-500">V1.7.2-BETA</span>
       </div>
     </div>
   </div>

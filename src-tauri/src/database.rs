@@ -110,6 +110,9 @@ impl Database {
         // Run previews schema fix migration (Phase 2.3 MAINTENANCE)
         self.run_migration("007_fix_previews_schema")?;
 
+        // Run app settings persistence migration (Phase 6.0.1)
+        self.run_migration("008_app_settings_table")?;
+
         Ok(())
     }
 
@@ -157,6 +160,7 @@ impl Database {
             "005_event_sourcing" => include_str!("../migrations/005_event_sourcing.sql"),
             "006_snapshots" => include_str!("../migrations/006_snapshots.sql"),
             "007_fix_previews_schema" => include_str!("../migrations/007_fix_previews_schema.sql"),
+            "008_app_settings_table" => include_str!("../migrations/008_app_settings_table.sql"),
             _ => {
                 return Err(DatabaseError::MigrationFailed(format!(
                     "Unknown migration version: {}",
@@ -360,14 +364,15 @@ mod tests {
         db.initialize()?;
         db.initialize()?;
 
-        // 6 migrations: 001_initial, 002_ingestion_sessions, 003_previews,
-        // 004_add_folder_online_status, 005_event_sourcing, 006_snapshots
+        // 8 migrations: 001_initial, 002_ingestion_sessions, 003_previews,
+        // 004_add_folder_online_status, 005_event_sourcing, 006_snapshots,
+        // 007_fix_previews_schema, 008_app_settings_table
         let migration_count: i64 = db
             .connection()
             .prepare("SELECT COUNT(*) FROM migrations")?
             .query_row([], |row| row.get(0))?;
 
-        assert_eq!(migration_count, 6);
+        assert_eq!(migration_count, 8);
 
         Ok(())
     }

@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo, useState } from 'react';
 import type { FlagType, EditState, CatalogEvent, EventPayload, EventType } from './types';
 import { safeID } from './lib/helpers';
 
@@ -6,6 +6,7 @@ import { useUiStore, useEditStore, useSystemStore } from './stores';
 import { useCatalogStore } from './stores/catalogStore';
 import { useCollectionStore } from './stores/collectionStore';
 import { useFolderStore } from './stores/folderStore';
+import { useSettingsStore } from './stores/settingsStore';
 import { useCatalog } from './hooks/useCatalog';
 import { useAppShortcuts } from './hooks/useAppShortcuts';
 import { CatalogService } from './services/catalogService';
@@ -18,6 +19,7 @@ import { ImportModal } from './components/shared/ImportModal';
 import { BatchBar } from './components/shared/BatchBar';
 import { KeyboardOverlay } from './components/shared/KeyboardOverlay';
 import { TopNav } from './components/layout/TopNav';
+import { SettingsModal } from './components/settings/SettingsModal';
 import { LeftSidebar } from './components/layout/LeftSidebar';
 import { Toolbar } from './components/layout/Toolbar';
 import { Filmstrip } from './components/layout/Filmstrip';
@@ -26,6 +28,8 @@ import { GridView } from './components/library/GridView';
 import { DevelopView } from './components/develop/DevelopView';
 
 export default function App() {
+  // Settings modal state
+  const [settingsOpen, setSettingsOpen] = useState(false);
   // Catalog hook - loads images from SQLite
   const {
     images,
@@ -120,6 +124,19 @@ export default function App() {
   const sidebarOpen = useUiStore((state) => state.leftSidebarOpen);
   const comparisonMode = useUiStore((state) => state.comparisonMode);
   const setComparisonMode = useUiStore((state) => state.setComparisonMode);
+
+  // Load settings from database on app start
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        await useSettingsStore.getState().loadFromDB();
+      } catch (error) {
+        console.error('Failed to load settings on app start:', error);
+        addLog('Failed to load settings from database', 'error');
+      }
+    };
+    loadSettings();
+  }, [addLog]);
 
   // Handle catalog errors
   useEffect(() => {
@@ -358,6 +375,7 @@ export default function App() {
             </button>
           </div>
         </div>
+        <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
       </>
     );
   }
@@ -367,7 +385,12 @@ export default function App() {
       <AppInitializer refreshCatalog={refreshCatalog} addLog={addLog} />
       <div className="flex flex-col h-screen w-full bg-zinc-950 text-zinc-300 font-sans overflow-hidden select-none">
         <GlobalStyles />
-        <TopNav activeView={activeView} onSetActiveView={setActiveView} />
+        <TopNav
+          activeView={activeView}
+          onSetActiveView={setActiveView}
+          onOpenSettings={() => setSettingsOpen(true)}
+        />
+        <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
         <div className="flex flex-1 min-h-0">
           <LeftSidebar

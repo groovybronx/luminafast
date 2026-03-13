@@ -8,6 +8,7 @@ pub mod hashing;
 pub mod metrics;
 pub mod preview;
 pub mod search;
+pub mod settings;
 pub mod snapshots;
 pub mod tags;
 pub mod xmp;

@@ -1,3 +1,4 @@
+// ...existing code...
 use crate::database::Database;
 use crate::models::preview::{NewPreviewRecord, PreviewCacheInfo, PreviewRecord, PreviewType};
 use rusqlite::OptionalExtension;
@@ -55,6 +56,18 @@ pub struct PreviewDbService {
 }
 
 impl PreviewDbService {
+    /// Permet d'exécuter une closure avec un accès temporaire à la connexion SQLite (usage interne)
+    pub fn with_db_conn<F, R>(&self, f: F) -> Result<R, PreviewDbError>
+    where
+        F: FnOnce(&rusqlite::Connection) -> Result<R, rusqlite::Error>,
+    {
+        let mut db_guard = self.db.lock().map_err(|e| PreviewDbError::DatabaseError {
+            message: format!("Database lock poisoned: {}", e),
+        })?;
+        f(db_guard.connection()).map_err(|e| PreviewDbError::DatabaseError {
+            message: format!("DB access error: {}", e),
+        })
+    }
     /// Create a new PreviewDbService from the shared Database
     pub fn new(db: Arc<Mutex<Database>>) -> Self {
         Self { db }
@@ -71,16 +84,17 @@ impl PreviewDbService {
         let conn = db_guard.connection();
 
         conn.execute(
-            "INSERT INTO previews (source_hash, preview_type, relative_path, file_size, width, height, generation_time, quality, access_count, last_accessed)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, datetime('now'))
+            "INSERT INTO previews (image_id, source_hash, preview_type, relative_path, file_size, width, height, generation_time, quality, access_count, last_accessed)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, datetime('now'))
              ON CONFLICT(image_id, preview_type) DO UPDATE SET
-               relative_path = ?3,
-               file_size = ?4,
-               width = ?5,
-               height = ?6,
-               quality = ?8,
+               relative_path = ?4,
+               file_size = ?5,
+               width = ?6,
+               height = ?7,
+               quality = ?9,
                updated_at = datetime('now')",
             [
+                &preview.image_id.to_string(),
                 preview.source_hash.as_str(),
                 preview.preview_type.to_db_string(),
                 preview.relative_path.as_str(),
@@ -227,7 +241,7 @@ impl PreviewDbService {
 
         let thumbnail_count: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM previews WHERE preview_type = 'Thumbnail'",
+                "SELECT COUNT(*) FROM previews WHERE preview_type = 'thumbnail'",
                 [],
                 |row| row.get(0),
             )
@@ -235,7 +249,7 @@ impl PreviewDbService {
 
         let preview_count: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM previews WHERE preview_type = 'Standard'",
+                "SELECT COUNT(*) FROM previews WHERE preview_type = 'standard'",
                 [],
                 |row| row.get(0),
             )
@@ -287,14 +301,21 @@ impl PreviewDbService {
 
         let conn = db_guard.connection();
 
+        // Utiliser la version minuscule pour la base
+        let preview_type_lower = preview_type.to_lowercase();
+        let preview_type_db: String = match preview_type_lower.as_str() {
+            "thumbnail" => "thumbnail".to_string(),
+            "standard" => "standard".to_string(),
+            "onetoone" | "one_to_one" | "1:1" => "onetoone".to_string(),
+            other => other.to_string(),
+        };
         conn.execute(
             "DELETE FROM previews WHERE source_hash = ?1 AND preview_type = ?2",
-            [source_hash, preview_type],
+            [source_hash, &preview_type_db],
         )
         .map_err(|e| PreviewDbError::DatabaseError {
             message: format!("Failed to delete preview: {}", e),
         })?;
-
         Ok(())
     }
 

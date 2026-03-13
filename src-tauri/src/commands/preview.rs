@@ -84,24 +84,39 @@ pub async fn generate_preview(
 
     // Persistence in database (Phase 2.3 MAINTENANCE-PHASE-2.3-PREVIEW-DB-ALIGNMENT)
     if let Ok(db_service) = get_preview_db_service() {
-        let new_record = NewPreviewRecord {
-            source_hash: source_hash.clone(),
-            preview_type,
-            relative_path: result
-                .path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or(&format!("{}.jpg", source_hash))
-                .to_string(),
-            width: result.size.0,
-            height: result.size.1,
-            file_size: result.file_size,
-            jpeg_quality: preview_type.jpeg_quality(),
-        };
-
-        if let Err(e) = db_service.upsert_preview(new_record) {
-            log::warn!("Failed to persist preview to database: {}", e);
-            // Non-blocking: continue even if DB persistence fails
+        // Chercher l'image_id correspondant au source_hash via la méthode publique
+        let image_id_res = db_service.with_db_conn(|conn| {
+            conn.query_row(
+                "SELECT id FROM images WHERE blake3_hash = ?1",
+                [source_hash.as_str()],
+                |row| row.get::<_, i64>(0),
+            )
+        });
+        if let Ok(image_id) = image_id_res {
+            let new_record = NewPreviewRecord {
+                image_id,
+                source_hash: source_hash.clone(),
+                preview_type,
+                relative_path: result
+                    .path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or(&format!("{}.jpg", source_hash))
+                    .to_string(),
+                width: result.size.0,
+                height: result.size.1,
+                file_size: result.file_size,
+                jpeg_quality: preview_type.jpeg_quality(),
+            };
+            if let Err(e) = db_service.upsert_preview(new_record) {
+                log::warn!("Failed to persist preview to database: {}", e);
+                // Non-blocking: continue even if DB persistence fails
+            }
+        } else {
+            log::warn!(
+                "No image found in DB for hash {}: preview not persisted",
+                source_hash
+            );
         }
     }
 
@@ -152,24 +167,38 @@ pub async fn generate_preview_pyramid(
 
         // Persistence in database (Phase 2.3 MAINTENANCE-PHASE-2.3-PREVIEW-DB-ALIGNMENT)
         if let Some(ref db_svc) = db_service {
-            let new_record = NewPreviewRecord {
-                source_hash: source_hash.clone(),
-                preview_type,
-                relative_path: result
-                    .path
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or(&format!("{}_{:?}.jpg", source_hash, preview_type))
-                    .to_string(),
-                width: result.size.0,
-                height: result.size.1,
-                file_size: result.file_size,
-                jpeg_quality: preview_type.jpeg_quality(),
-            };
-
-            if let Err(e) = db_svc.upsert_preview(new_record) {
-                log::warn!("Failed to persist preview to database: {}", e);
-                // Non-blocking: continue even if DB persistence fails
+            let image_id_res = db_svc.with_db_conn(|conn| {
+                conn.query_row(
+                    "SELECT id FROM images WHERE blake3_hash = ?1",
+                    [source_hash.as_str()],
+                    |row| row.get::<_, i64>(0),
+                )
+            });
+            if let Ok(image_id) = image_id_res {
+                let new_record = NewPreviewRecord {
+                    image_id,
+                    source_hash: source_hash.clone(),
+                    preview_type,
+                    relative_path: result
+                        .path
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or(&format!("{}_{:?}.jpg", source_hash, preview_type))
+                        .to_string(),
+                    width: result.size.0,
+                    height: result.size.1,
+                    file_size: result.file_size,
+                    jpeg_quality: preview_type.jpeg_quality(),
+                };
+                if let Err(e) = db_svc.upsert_preview(new_record) {
+                    log::warn!("Failed to persist preview to database: {}", e);
+                    // Non-blocking: continue even if DB persistence fails
+                }
+            } else {
+                log::warn!(
+                    "No image found in DB for hash {}: preview not persisted",
+                    source_hash
+                );
             }
         }
 

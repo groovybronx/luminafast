@@ -26,7 +26,12 @@
 - [11.1 Architecture du Catalogue](#111--architecture-du-catalogue)
 - [11.2 Configuration SQLite](#112--configuration-sqlite)
 - [11.3 Système de Migrations](#113--système-de-migrations)
-- [11.4 Preview Database Persistence & Access Tracking](#114--preview-database-persistence--access-tracking-phase-23-maintenance)
+- [11.4 Settings Persistence Architecture](#114--settings-persistence-architecture-phase-601)
+  - [11.4.1 Schéma app_settings](#1141--schéma-app_settings)
+  - [11.4.2 Commandes Tauri](#1142--commandes-tauri)
+  - [11.4.3 Service Frontend & Store](#1143--service-frontend--store)
+  - [11.4.4 Validation & Sécurité](#1144--validation--sécurité)
+  - [11.4.5 Tests & Couverture](#1145--tests--couverture)
 - [11.5 Types Rust](#115--types-rust)
 - [11.6 Tests Unitaires](#116--tests-unitaires)
 
@@ -891,7 +896,49 @@ Depuis la maintenance **M.3.2a (en cours)**, `LeftSidebar` délègue ses sous-pa
 - **Migration 007** : Refactorisation schéma previews (Phase 2.3 MAINTENANCE) — voir section 11.4 ci-dessous
 - **Tests** : 11 tests unitaires valident le système complet
 
-### 11.4 — Preview Database Persistence & Access Tracking (Phase 2.3 MAINTENANCE)
+### 11.4 — Settings Persistence Architecture (Phase 6.0.1)
+
+**Résumé** :
+La persistance des paramètres utilisateur (settings) repose sur une architecture unifiée : stockage unique en base SQLite (`app_settings`), accès via commandes Tauri Rust, synchronisation avec le store Zustand frontend, et validation stricte côté TS/Rust.
+
+#### 11.4.1 — Schéma `app_settings`
+
+- Table unique `app_settings` (clé primaire `id=1`, JSON blob `settings_json`, timestamp `updated_at`)
+- Migration 008 idempotente, insert par défaut si absent
+- Accès atomique (1 seule ligne, update/insert)
+
+#### 11.4.2 — Commandes Tauri
+
+- `load_settings_from_db()` : charge le JSON depuis la DB, désérialise en `SettingsConfig`
+- `save_settings_to_db(config)` : sérialise le config en JSON, update la ligne unique
+- Gestion d’erreur Rust via enum `SettingsError` (derive thiserror, pas de unwrap)
+- Toutes les erreurs converties en String pour IPC Tauri
+
+#### 11.4.3 — Service Frontend & Store
+
+- `settingsService.ts` : wrappers invoke Tauri, validation email/paths/shortcuts, masking API keys
+- `settingsStore.ts` : actions `loadFromDB`, `saveToDBDebounced` (debounce 1s, UX safe)
+- Chargement auto au mount (`App.tsx`), feedback UI (toast, spinner, error)
+
+#### 11.4.4 — Validation & Sécurité
+
+- Validation frontend AVANT envoi (email, chemins, conflits raccourcis)
+- Validation Rust à la sauvegarde (type, structure, non-null)
+- Pas de `any` ni de `unwrap()`
+- Sérialisation JSON commentée (voir code Rust/TS)
+
+#### 11.4.5 — Tests & Couverture
+
+- Tests unitaires Rust (happy/error path, 4+ cas)
+- Tests unitaires TS (service, store, debounce, erreurs)
+- Mock Tauri invoke dans tests frontend
+
+**Commentaires inline** :
+
+- Rust : chaque (de)sérialisation JSON annotée, gestion d’erreur explicite
+- TypeScript : validation, masking, try/catch documentés
+
+**Phase 6.0.1** : la persistance settings est atomique, testée, et synchronisée UI/DB.
 
 **Migration 007** (`src-tauri/migrations/007_fix_previews_schema.sql`) :
 

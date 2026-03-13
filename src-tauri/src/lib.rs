@@ -184,6 +184,9 @@ pub fn run() {
             // Metrics commands (Phase M.1.1a)
             commands::metrics::get_threadpool_metrics,
             commands::metrics::simulate_threadpool_load,
+            // Settings commands (Phase 6.0.1)
+            commands::settings::load_settings_from_db,
+            commands::settings::save_settings_to_db,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

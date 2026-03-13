@@ -145,6 +145,7 @@ pub struct PreviewRecord {
 /// Nouvelle preview à insérer dans la base
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NewPreviewRecord {
+    pub image_id: i64,
     pub source_hash: String,
     pub preview_type: PreviewType,
     pub relative_path: String,

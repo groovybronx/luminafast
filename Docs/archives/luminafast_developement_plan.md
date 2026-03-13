@@ -398,7 +398,27 @@ Chaque sous-phase est conçue pour :
 ## PHASE 6 — Performance & Optimisation
 
 > **Objectif** : Scalabilité à 100K+ images avec réactivité <100ms.
-> **Durée estimée** : 2 semaines
+> **Durée estimée** : 4-5 semaines
+
+### 6.0 — Settings Framework Professionnel (Fondation Complète)
+
+- Créer système Settings **exhaustif** (niveau Lightroom) : 9 catégories couvrant TOUS les paramètres
+- Architecture : `SettingsModal` multi-tabs → 9 composants catégories
+- **9 Catégories** :
+  1. **Storage** : catalogue root, DB path, previews path, smart previews path
+  2. **Cache** : L1/L2/L3 limits, eviction priority, prune threshold
+  3. **Preview** : thumbnail/standard/native sizes + quality, auto-generate, parallel workers
+  4. **Keyboard Shortcuts** : full command rebinding, Lightroom profiles, conflict detection
+  5. **User Profile** : name, email, organization, license key + type + expiry
+  6. **AI/API** : provider, API key (masked), face/tagging/descriptions model selection, confidence threshold, privacy mode
+  7. **Appearance** : theme, font size, sidebar position, grid, filmstrip position, tooltips, window state
+  8. **About** : version, credits, license, links, telemetry toggle, reset all settings
+- Persistence : SQLite `app_settings` table (JSON blob or normalized)
+- Validation : path checking (exist + writable), email regex, shortcut conflicts, license format
+- Zustand store `settingsStore` : typed SettingsConfig, auto-persistence (debounced 1s)
+- UI atomic components : SettingToggle, SettingSlider, SettingDropdown, SettingTextInput, SettingFileInput, ValidationBadge
+- TopNav integration : Settings icon → modal (keyboard shortcut Cmd+, / Ctrl+,)
+- **Critère de validation** : Modal functional, all 9 tabs work, persistence tested, no console errors
 
 ### 6.1 — Système de Cache Multiniveau
 

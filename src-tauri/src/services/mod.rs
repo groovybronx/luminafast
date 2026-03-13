@@ -13,6 +13,7 @@ pub mod preview;
 pub mod preview_db;
 pub mod search;
 pub mod security;
+pub mod settings;
 pub mod smart_query_parser;
 pub mod snapshot_service;
 pub mod xmp;

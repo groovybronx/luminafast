@@ -23,9 +23,34 @@ mod preview_db_integration_tests {
     #[test]
     fn test_upsert_preview_creates_record() {
         let (db, _temp) = setup_test_db();
-        let service = PreviewDbService::new(db);
+        let service = PreviewDbService::new(db.clone());
+
+        // Insérer une image pour obtenir un image_id valide
+        let mut db_guard = db.lock().unwrap();
+        db_guard.connection().execute(
+            "INSERT INTO images (blake3_hash, filename, extension, width, height, orientation, file_size_bytes) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            [
+                "test_hash_abc123",
+                "test.CR3",
+                "CR3",
+                &240.to_string(),
+                &240.to_string(),
+                &0.to_string(),
+                &25000.to_string(),
+            ],
+        ).unwrap();
+        let image_id: i64 = db_guard
+            .connection()
+            .query_row(
+                "SELECT id FROM images WHERE blake3_hash = ?1",
+                ["test_hash_abc123"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        drop(db_guard);
 
         let preview = NewPreviewRecord {
+            image_id,
             source_hash: "test_hash_abc123".to_string(),
             preview_type: PreviewType::Thumbnail,
             relative_path: "thumbnails/test_hash_abc123.jpg".to_string(),
@@ -45,9 +70,34 @@ mod preview_db_integration_tests {
     #[test]
     fn test_upsert_preview_idempotent_on_same_hash_type() {
         let (db, _temp) = setup_test_db();
-        let service = PreviewDbService::new(db);
+        let service = PreviewDbService::new(db.clone());
+
+        // Insérer une image pour obtenir un image_id valide
+        let mut db_guard = db.lock().unwrap();
+        db_guard.connection().execute(
+            "INSERT INTO images (blake3_hash, filename, extension, width, height, orientation, file_size_bytes) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            [
+                "test_hash_xyz789",
+                "test2.CR3",
+                "CR3",
+                &1440.to_string(),
+                &1080.to_string(),
+                &0.to_string(),
+                &350000.to_string(),
+            ],
+        ).unwrap();
+        let image_id: i64 = db_guard
+            .connection()
+            .query_row(
+                "SELECT id FROM images WHERE blake3_hash = ?1",
+                ["test_hash_xyz789"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        drop(db_guard);
 
         let preview = NewPreviewRecord {
+            image_id,
             source_hash: "test_hash_xyz789".to_string(),
             preview_type: PreviewType::Standard,
             relative_path: "standard/test_hash_xyz789.jpg".to_string(),
@@ -58,20 +108,41 @@ mod preview_db_integration_tests {
         };
 
         let id1 = service.upsert_preview(preview.clone()).unwrap();
-
-        // Insert again with same hash/type - should be update (ON CONFLICT)
         let id2 = service.upsert_preview(preview).unwrap();
-
-        // Should return same ID (update, not insert)
         assert_eq!(id1, id2, "Second upsert should return same ID");
     }
 
     #[test]
     fn test_record_access_increments_count() {
         let (db, _temp) = setup_test_db();
-        let service = PreviewDbService::new(db);
+        let service = PreviewDbService::new(db.clone());
+
+        // Insérer une image pour obtenir un image_id valide
+        let mut db_guard = db.lock().unwrap();
+        db_guard.connection().execute(
+            "INSERT INTO images (blake3_hash, filename, extension, width, height, orientation, file_size_bytes) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            [
+                "test_hash_access",
+                "test3.CR3",
+                "CR3",
+                &4000.to_string(),
+                &3000.to_string(),
+                &0.to_string(),
+                &2000000.to_string(),
+            ],
+        ).unwrap();
+        let image_id: i64 = db_guard
+            .connection()
+            .query_row(
+                "SELECT id FROM images WHERE blake3_hash = ?1",
+                ["test_hash_access"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        drop(db_guard);
 
         let preview = NewPreviewRecord {
+            image_id,
             source_hash: "test_hash_access".to_string(),
             preview_type: PreviewType::OneToOne,
             relative_path: "native/test_hash_access.jpg".to_string(),
@@ -96,9 +167,54 @@ mod preview_db_integration_tests {
     #[test]
     fn test_get_cache_stats_reports_totals() {
         let (db, _temp) = setup_test_db();
-        let service = PreviewDbService::new(db);
+        let service = PreviewDbService::new(db.clone());
+
+        // Insérer deux images pour obtenir deux image_id valides
+        let mut db_guard = db.lock().unwrap();
+        db_guard.connection().execute(
+            "INSERT INTO images (blake3_hash, filename, extension, width, height, orientation, file_size_bytes) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            [
+                "hash1",
+                "test4.CR3",
+                "CR3",
+                &240.to_string(),
+                &240.to_string(),
+                &0.to_string(),
+                &20000.to_string(),
+            ],
+        ).unwrap();
+        let image_id1: i64 = db_guard
+            .connection()
+            .query_row(
+                "SELECT id FROM images WHERE blake3_hash = ?1",
+                ["hash1"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        db_guard.connection().execute(
+            "INSERT INTO images (blake3_hash, filename, extension, width, height, orientation, file_size_bytes) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            [
+                "hash2",
+                "test5.CR3",
+                "CR3",
+                &1440.to_string(),
+                &1080.to_string(),
+                &0.to_string(),
+                &300000.to_string(),
+            ],
+        ).unwrap();
+        let image_id2: i64 = db_guard
+            .connection()
+            .query_row(
+                "SELECT id FROM images WHERE blake3_hash = ?1",
+                ["hash2"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        drop(db_guard);
 
         let preview1 = NewPreviewRecord {
+            image_id: image_id1,
             source_hash: "hash1".to_string(),
             preview_type: PreviewType::Thumbnail,
             relative_path: "thumbnails/hash1.jpg".to_string(),
@@ -109,6 +225,7 @@ mod preview_db_integration_tests {
         };
 
         let preview2 = NewPreviewRecord {
+            image_id: image_id2,
             source_hash: "hash2".to_string(),
             preview_type: PreviewType::Standard,
             relative_path: "standard/hash2.jpg".to_string(),
@@ -135,10 +252,35 @@ mod preview_db_integration_tests {
     #[test]
     fn test_prune_stale_previews_removes_old_unused() {
         let (db, _temp) = setup_test_db();
-        let service = PreviewDbService::new(db);
+        let service = PreviewDbService::new(db.clone());
+
+        // Insérer une image pour obtenir un image_id valide
+        let mut db_guard = db.lock().unwrap();
+        db_guard.connection().execute(
+            "INSERT INTO images (blake3_hash, filename, extension, width, height, orientation, file_size_bytes) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            [
+                "old_hash",
+                "test6.CR3",
+                "CR3",
+                &240.to_string(),
+                &240.to_string(),
+                &0.to_string(),
+                &25000.to_string(),
+            ],
+        ).unwrap();
+        let image_id: i64 = db_guard
+            .connection()
+            .query_row(
+                "SELECT id FROM images WHERE blake3_hash = ?1",
+                ["old_hash"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        drop(db_guard);
 
         // Insert a preview
         let preview = NewPreviewRecord {
+            image_id,
             source_hash: "old_hash".to_string(),
             preview_type: PreviewType::Thumbnail,
             relative_path: "thumbnails/old_hash.jpg".to_string(),
@@ -163,9 +305,34 @@ mod preview_db_integration_tests {
     #[test]
     fn test_delete_preview_removes_record() {
         let (db, _temp) = setup_test_db();
-        let service = PreviewDbService::new(db);
+        let service = PreviewDbService::new(db.clone());
+
+        // Insérer une image pour obtenir un image_id valide
+        let mut db_guard = db.lock().unwrap();
+        db_guard.connection().execute(
+            "INSERT INTO images (blake3_hash, filename, extension, width, height, orientation, file_size_bytes) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            [
+                "delete_test",
+                "test7.CR3",
+                "CR3",
+                &1440.to_string(),
+                &1080.to_string(),
+                &0.to_string(),
+                &350000.to_string(),
+            ],
+        ).unwrap();
+        let image_id: i64 = db_guard
+            .connection()
+            .query_row(
+                "SELECT id FROM images WHERE blake3_hash = ?1",
+                ["delete_test"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        drop(db_guard);
 
         let preview = NewPreviewRecord {
+            image_id,
             source_hash: "delete_test".to_string(),
             preview_type: PreviewType::Standard,
             relative_path: "standard/delete_test.jpg".to_string(),
@@ -189,7 +356,31 @@ mod preview_db_integration_tests {
     #[test]
     fn test_multiple_types_per_image_hash() {
         let (db, _temp) = setup_test_db();
-        let service = PreviewDbService::new(db);
+        let service = PreviewDbService::new(db.clone());
+
+        // Insérer une image pour obtenir un image_id valide
+        let mut db_guard = db.lock().unwrap();
+        db_guard.connection().execute(
+            "INSERT INTO images (blake3_hash, filename, extension, width, height, orientation, file_size_bytes) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            [
+                "same_source",
+                "test8.CR3",
+                "CR3",
+                &240.to_string(),
+                &240.to_string(),
+                &0.to_string(),
+                &20000.to_string(),
+            ],
+        ).unwrap();
+        let image_id: i64 = db_guard
+            .connection()
+            .query_row(
+                "SELECT id FROM images WHERE blake3_hash = ?1",
+                ["same_source"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        drop(db_guard);
 
         // Same source hash, different types
         let base_hash = "same_source";
@@ -199,6 +390,7 @@ mod preview_db_integration_tests {
             (PreviewType::OneToOne, "native", 2000000),
         ] {
             let preview = NewPreviewRecord {
+                image_id,
                 source_hash: base_hash.to_string(),
                 preview_type,
                 relative_path: format!("{}/{}.jpg", subdir, base_hash),
@@ -224,13 +416,44 @@ mod preview_db_integration_tests {
     #[test]
     fn test_concurrent_upserts_safe() {
         let (db, _temp) = setup_test_db();
-        let service = Arc::new(PreviewDbService::new(db));
+        let service = Arc::new(PreviewDbService::new(db.clone()));
+
+        // Insérer 5 images pour obtenir 5 image_id valides
+        let mut db_guard = db.lock().unwrap();
+        let mut image_ids = vec![];
+        for i in 0..5 {
+            let hash = format!("concurrent_hash_{}", i);
+            db_guard.connection().execute(
+                "INSERT INTO images (blake3_hash, filename, extension, width, height, orientation, file_size_bytes) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                [
+                    &hash,
+                    &format!("test_concurrent_{}.CR3", i),
+                    "CR3",
+                    &240.to_string(),
+                    &240.to_string(),
+                    &0.to_string(),
+                    &(20000 + i as u64).to_string(),
+                ],
+            ).unwrap();
+            let image_id: i64 = db_guard
+                .connection()
+                .query_row(
+                    "SELECT id FROM images WHERE blake3_hash = ?1",
+                    [&hash],
+                    |row| row.get(0),
+                )
+                .unwrap();
+            image_ids.push(image_id);
+        }
+        drop(db_guard);
 
         let handles: Vec<_> = (0..5)
             .map(|i| {
                 let service_clone = service.clone();
+                let image_id = image_ids[i];
                 std::thread::spawn(move || {
                     let preview = NewPreviewRecord {
+                        image_id,
                         source_hash: format!("concurrent_hash_{}", i),
                         preview_type: PreviewType::Thumbnail,
                         relative_path: format!("thumbnails/hash_{}.jpg", i),

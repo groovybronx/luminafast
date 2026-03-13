@@ -1,5 +1,15 @@
 # LuminaFast — Configuration de l'Environnement de Développement
 
+## Compilation du module WASM
+
+La compilation du module WASM (`luminafast-wasm`) doit être effectuée via les scripts npm dédiés (voir `scripts/build-wasm.sh` ou `npm run build`).
+
+Le script Rust `build.rs` ne lance plus la compilation automatique du module WASM : cela évite les duplications et garantit une compilation reproductible.
+
+**En production et CI/CD, assurez-vous que le module WASM est compilé avant de lancer le build Tauri.**
+
+Voir la documentation dans `Docs/APP_DOCUMENTATION.md` et les scripts dans le dossier `scripts/`.
+
 ## Extensions VS Code Requises
 
 Pour bénéficier du formatage automatique, installez ces extensions (recommandations dans `.vscode/extensions.json`) :

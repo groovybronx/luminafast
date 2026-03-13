@@ -37,15 +37,13 @@ export const DevelopView = ({ activeImg, showBeforeAfter }: DevelopViewProps) =>
           editState={activeImg.state.edits}
         />
       ) : (
-        <div className="flex w-full h-full items-center justify-center p-12">
-          <PreviewRenderer
-            imageId={activeImg.id}
-            previewUrl={activeImg.urls.standard}
-            className="w-full h-full object-contain img-render"
-            isSelected={true}
-            useWasm={true}
-          />
-        </div>
+        <PreviewRenderer
+          imageId={activeImg.id}
+          previewUrl={activeImg.urls.standard}
+          className="w-full h-full object-contain img-render"
+          isSelected={true}
+          useWasm={true}
+        />
       )}
     </div>
   );

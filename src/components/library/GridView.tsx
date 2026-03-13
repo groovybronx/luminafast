@@ -19,7 +19,7 @@ interface GridViewProps {
  *
  * Thumbnail size calculation (pixels):
  * - Size 1-10 maps to 120px-600px per side
- * - Aspect ratio: 3/2 (width × 1.5 height)
+ * - Aspect ratio: native image aspect ratio is preserved within the square cell
  * - Gap: 12px (gap-x-3 gap-y-4 × 4px = 3/4 × 12px)
  */
 export const GridView = ({
@@ -62,7 +62,7 @@ export const GridView = ({
   }, [thumbnailSize]);
 
   const itemWidth = pixelSize;
-  const itemHeight = Math.round(pixelSize / 1.5); // 3:2 aspect ratio
+  const itemHeight = pixelSize;
   const gap = 12; // gap-x-3 gap-y-4
 
   // Calculate columns based on measured container width (reacts to resize)

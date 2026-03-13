@@ -15,7 +15,7 @@ interface ArchitectureMonitorProps {
 
 export const ArchitectureMonitor = ({ logs }: ArchitectureMonitorProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(true);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;

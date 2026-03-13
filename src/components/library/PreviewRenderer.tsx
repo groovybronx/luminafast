@@ -3,13 +3,16 @@
  * Affiche un aperçu d'image avec filtres appliqués en temps réel
  * Phase A: CSS filters (toujours disponible)
  * Phase B: WASM pixel processing (optionnel, activation via useWasm=true)
+ *
+ * NOTE: Maintenance refactoring — Utilise useWasmCanvasRender pour encapsuler
+ * la logique d'image loading + WASM rendering (élimine duplication code)
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { applyCSSFilters, eventsToPixelFilters } from '@/services/renderingService';
-import { loadWasmModule, hasWasmSupport, renderWithWasm } from '@/services/wasmRenderingService';
 import { CatalogService } from '@/services/catalogService';
 import { useEditStore } from '@/stores/editStore';
+import { useWasmCanvasRender } from '@/hooks/useWasmCanvasRender';
 import type { PixelFilterState } from '@/types/rendering';
 
 interface PreviewRendererProps {
@@ -57,32 +60,11 @@ export const PreviewRenderer: React.FC<PreviewRendererProps> = ({
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [wasmAvailable, setWasmAvailable] = useState(false);
-  const [useWasmMode, setUseWasmMode] = useState(useWasm);
 
   // Get edit store actions + selector for subscription
   const setEditEventsForImage = useEditStore((state) => state.setEditEventsForImage);
   const clearEditEventsForImage = useEditStore((state) => state.clearEditEventsForImage);
   const editEventsForImage = useEditStore((state) => state.editEventsPerImage[imageId]);
-
-  // Initialize WASM module on mount
-  useEffect(() => {
-    if (!useWasm) return;
-
-    loadWasmModule()
-      .then(() => {
-        setWasmAvailable(hasWasmSupport());
-        if (import.meta.env.DEV) {
-          console.warn('[PreviewRenderer] WASM module loaded successfully');
-        }
-      })
-      .catch((err) => {
-        if (import.meta.env.DEV) {
-          console.warn('[PreviewRenderer] WASM module failed to load:', err);
-        }
-        setWasmAvailable(false);
-      });
-  }, [useWasm]);
 
   // Load filters from Event Sourcing on mount and when imageId changes
   useEffect(() => {
@@ -135,50 +117,25 @@ export const PreviewRenderer: React.FC<PreviewRendererProps> = ({
 
   // Apply CSS filters to <img> (Phase A fallback) — derive from pixelFilters
   useEffect(() => {
-    if (!useWasmMode && imgRef.current) {
+    if (!useWasm && imgRef.current) {
       applyCSSFilters(imgRef.current, {
         exposure: pixelFilters.exposure,
         contrast: pixelFilters.contrast,
         saturation: pixelFilters.saturation,
       });
     }
-  }, [pixelFilters, useWasmMode]);
+  }, [pixelFilters, useWasm]);
 
-  // Render WASM canvas (Phase B) when filters change
-  useEffect(() => {
-    if (!useWasmMode || !canvasRef.current || !wasmAvailable) return;
-
-    const renderFrame = async () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      try {
-        await renderWithWasm(
-          canvas,
-          previewUrl,
-          pixelFilters,
-          1440, // Standard preview width
-          1440, // Standard preview height
-        );
-      } catch (err) {
-        if (import.meta.env.DEV) {
-          console.warn('[PreviewRenderer] WASM render failed, falling back to CSS:', err);
-        }
-        // Fallback: show image avec CSS filters
-        setUseWasmMode(false);
-      }
-    };
-
-    // PERF: Debounce rendering (300ms) to avoid multiple renders during slider movement
-    // Without debounce: slider change -100→+10 triggers 110 renders (one per value change)
-    // With debounce: only 1 render 300ms after slider release
-    const debounceTimer = setTimeout(() => {
-      renderFrame();
-    }, 300);
-
-    // Cleanup: cancel timeout if effect runs again
-    return () => clearTimeout(debounceTimer);
-  }, [pixelFilters, previewUrl, useWasmMode, wasmAvailable]);
+  // Render canvas using WASM via hook (Phase B)
+  // Hook encapsulates: image loading, canvas sizing, WASM rendering, error handling
+  // Standard max width for canvas (CSS will scale it to fit container)
+  useWasmCanvasRender(
+    canvasRef,
+    previewUrl,
+    pixelFilters,
+    2048, // Standard max width for clean rendering
+    1536, // Standard max height (aspect ratio 4:3)
+  );
 
   // Monitor EditStore changes and update filters reactively (all 9 filters for WASM)
   useEffect(() => {
@@ -190,26 +147,33 @@ export const PreviewRenderer: React.FC<PreviewRendererProps> = ({
     <div
       ref={containerRef}
       className={`preview-renderer${isSelected ? ' selected' : ''}${error ? ' error' : ''}`}
-      style={{ position: 'relative', overflow: 'hidden' }}
+      style={{
+        position: 'relative',
+        overflow: 'auto',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
     >
-      {/* Phase B: WASM Canvas (hidden if not active) */}
-      {useWasmMode && wasmAvailable && (
+      {/* Phase B: WASM Canvas (shown if useWasm enabled) */}
+      {useWasm && (
         <canvas
           ref={canvasRef}
           className={className}
           data-testid={`preview-renderer-canvas-${imageId}`}
-          style={{ display: 'block', width: '100%', height: '100%' }}
+          style={{ display: 'block', width: '100%', height: 'auto' }}
         />
       )}
 
       {/* Phase A: CSS Filtered Image (fallback or CSS-only mode) */}
-      {!useWasmMode && (
+      {!useWasm && (
         <img
           ref={imgRef}
           src={previewUrl || undefined}
           alt={`Preview for image ${imageId}`}
           className={className}
           data-testid={`preview-renderer-img-${imageId}`}
+          style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
           onError={() => {
             setError('Failed to load image');
             if (import.meta.env.DEV) {

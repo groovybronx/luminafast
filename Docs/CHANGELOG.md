@@ -71,6 +71,7 @@
 | Maintenance WASM | M2.3       | Parite visuelle WASM (dataset reference + comparaison buffer brute + seuil delta <= 2 RGB)         | ✅ Complétée | 2026-03-13 | Copilot |
 | Maintenance WASM | M3.1       | Integration backend export sur core partage (service export_rendering + deprecation copie backend) | ✅ Complétée | 2026-03-13 | Copilot |
 | Maintenance WASM | M3.2       | Service export non destructif (events/snapshots -> filtres -> rendu core -> ecriture JPEG/TIFF)    | ✅ Complétée | 2026-03-13 | Copilot |
+| Maintenance WASM | M3.3       | Contrat de parite preview/export (presets communs + comparaison buffers + seuil fixe delta <= 2)   | ✅ Complétée | 2026-03-13 | Copilot |
 
 | 5 | 5.1 | Panneau EXIF Connecté | ✅ Complétée | 2026-07-10 | Copilot |
 | 5 | 5.2 | Système de Tags Hiérarchique | ✅ Complétée | 2026-07-11 | Copilot |
@@ -105,15 +106,52 @@
 
 ## Phase Actuelle
 
-> **Maintenance WASM M3.3** : Contrat de parite preview/export (prochaine sous-phase)
+> **Maintenance WASM M4.1** : Architecture pipeline RAW-ready (prochaine sous-phase)
 >
-> Brief : `Docs/Maintenance WASM/BRIEF-M3.3-CONTRAT-PARITE-PREVIEW-EXPORT.md`
-> Branche recommandée : `phase/m3.3-contrat-parite-preview-export`
-> Note qualité M3.2 : `src-tauri/src/services/export_pipeline.rs` ✅ (3/3)
+> Brief : `Docs/Maintenance WASM/BRIEF-M4.1-ARCHI-PIPELINE-RAW-READY.md`
+> Branche recommandée : `phase/m4.1-architecture-pipeline-raw-ready`
+> Note qualité M3.3 : `src-tauri/src/services/tests/parity_preview_export.rs` ✅ (2/2)
 
 ---
 
 ## Historique des Sous-Phases Complétées
+
+---
+
+### 2026-03-13 — Maintenance WASM M3.3 : Contrat de parite preview/export (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée**
+**Agent** : Copilot
+**Branche** : `phase/m3.3-contrat-parite-preview-export`
+**Type** : Maintenance
+
+#### Résumé
+
+**Cause racine** : apres M3.2, la preview WASM et l export backend utilisaient deja le meme moteur partage, mais aucun test de contrat n attestait que la reconstruction backend events/snapshots restait coherente avec la preview pour des presets reels.
+
+**Solution** : ajout d une suite de parite backend buffer-a-buffer (sortie TIFF lossless) avec presets communs et seuil fixe `delta moyen RGB <= 2`, puis alignement du test frontend sur ces memes presets/constantes de contrat.
+
+#### Fichiers créés
+
+- `Docs/Maintenance WASM/PARITE-PREVIEW-EXPORT.md` — protocole de comparaison, seuils et resultats
+- `src-tauri/src/services/tests/parity_preview_export.rs` — tests de parite preview/export (events + snapshots)
+- `src-tauri/src/services/tests/mod.rs` — module de tests services
+
+#### Fichiers modifiés
+
+- `src-tauri/src/services/mod.rs` — branchement du module `tests`
+- `src/services/__tests__/wasmRenderingService.test.ts` — presets communs M3.3 + verrouillage normalisation
+
+#### Critères de validation remplis
+
+- [x] Checkpoint 1 : protocole comparaison valide (rapport `PARITE-PREVIEW-EXPORT.md`)
+- [x] Checkpoint 2 : tests parite automatises verts (`cargo test parity_preview_export` 2/2, `vitest wasmRenderingService` 35/35)
+- [x] Checkpoint 3 : seuils documentes (`delta moyen RGB <= 2` cote frontend + backend)
+
+#### Impact
+
+- Contrat preview/export durable active avant Gate G4.
+- Toute derive future de normalisation UI->core ou de replay backend est maintenant detectee automatiquement.
 
 ---
 

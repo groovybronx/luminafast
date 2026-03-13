@@ -1,6 +1,6 @@
 # Phase M3.3 - Contrat de Parite Preview/Export
 
-> **Statut** : ⬜ En attente
+> **Statut** : ✅ Completee
 > **Duree estimee** : 1 jour
 
 ## Objectif
@@ -70,9 +70,9 @@ Garantir la coherence entre preview (WASM) et export (backend) pour les memes pa
 
 ## Checkpoints
 
-- [ ] Checkpoint 1: protocole comparaison valide
-- [ ] Checkpoint 2: tests parite automatises verts
-- [ ] Checkpoint 3: seuils documentes
+- [x] Checkpoint 1: protocole comparaison valide
+- [x] Checkpoint 2: tests parite automatises verts
+- [x] Checkpoint 3: seuils documentes
 
 ## Pieges et Risques
 
@@ -89,5 +89,22 @@ Garantir la coherence entre preview (WASM) et export (backend) pour les memes pa
 
 ## Criteres de Completion
 
-- [ ] Aucune divergence bloquante
-- [ ] Suite parite runnable en CI
+- [x] Aucune divergence bloquante
+- [x] Suite parite runnable en CI
+
+## Resultat de phase
+
+Contrat M3.3 implemente avec un test backend dedie `src-tauri/src/services/tests/parity_preview_export.rs` qui compare un buffer preview de reference (core partage + normalisation UI) a la sortie export backend TIFF, sur 5 presets communs.
+
+Le test frontend `src/services/__tests__/wasmRenderingService.test.ts` inclut maintenant ces memes presets M3.3 et verrouille la normalisation attendue UI -> core, avec seuil fixe `delta moyen RGB <= 2`.
+
+Validation executee:
+
+- `cd src-tauri && cargo test parity_preview_export` ✅ (2/2)
+- `npx vitest run src/services/__tests__/wasmRenderingService.test.ts` ✅ (35/35)
+- `npm run type-check` ✅
+- `npm run lint` ✅
+- `npm run test:ci` ✅ (693/693)
+- `cd src-tauri && cargo check` ✅
+- `cd src-tauri && cargo clippy --all-targets -- -D warnings` ✅
+- `cd src-tauri && cargo test` ✅ (240/240)

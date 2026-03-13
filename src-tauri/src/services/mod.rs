@@ -16,3 +16,6 @@ pub mod security;
 pub mod smart_query_parser;
 pub mod snapshot_service;
 pub mod xmp;
+
+#[cfg(test)]
+mod tests;

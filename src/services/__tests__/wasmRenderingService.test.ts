@@ -55,7 +55,152 @@ interface VisualParityCase {
   referencePixels: number[];
 }
 
-const VISUAL_PARITY_DELTA_THRESHOLD = 2;
+interface PreviewExportParityPreset {
+  name: string;
+  filters: PixelFilterState;
+  expectedNormalized: {
+    exposure: number;
+    contrast: number;
+    saturation: number;
+    highlights: number;
+    shadows: number;
+    clarity: number;
+    vibrance: number;
+    colorTemp: number;
+    tint: number;
+  };
+}
+
+const PREVIEW_EXPORT_PARITY_DELTA_THRESHOLD = 2;
+const VISUAL_PARITY_DELTA_THRESHOLD = PREVIEW_EXPORT_PARITY_DELTA_THRESHOLD;
+
+const PREVIEW_EXPORT_PARITY_PRESETS: PreviewExportParityPreset[] = [
+  {
+    name: 'low_light',
+    filters: {
+      exposure: 35,
+      contrast: 10,
+      saturation: 12,
+      highlights: -20,
+      shadows: 65,
+      clarity: 15,
+      vibrance: 18,
+      colorTemp: 5600,
+      tint: 5,
+    },
+    expectedNormalized: {
+      exposure: 0.7,
+      contrast: 0.2,
+      saturation: 1.12,
+      highlights: -0.2,
+      shadows: 0.65,
+      clarity: 0.15,
+      vibrance: 0.18,
+      colorTemp: 5600,
+      tint: 2.5,
+    },
+  },
+  {
+    name: 'highlights',
+    filters: {
+      exposure: -12,
+      contrast: 8,
+      saturation: -5,
+      highlights: -72,
+      shadows: 18,
+      clarity: 10,
+      vibrance: 8,
+      colorTemp: 5200,
+      tint: -6,
+    },
+    expectedNormalized: {
+      exposure: -0.24,
+      contrast: 0.16,
+      saturation: 0.95,
+      highlights: -0.72,
+      shadows: 0.18,
+      clarity: 0.1,
+      vibrance: 0.08,
+      colorTemp: 5200,
+      tint: -3,
+    },
+  },
+  {
+    name: 'high_contrast',
+    filters: {
+      exposure: 5,
+      contrast: 45,
+      saturation: 18,
+      highlights: -35,
+      shadows: 35,
+      clarity: 45,
+      vibrance: 22,
+      colorTemp: 5400,
+      tint: 2,
+    },
+    expectedNormalized: {
+      exposure: 0.1,
+      contrast: 0.9,
+      saturation: 1.18,
+      highlights: -0.35,
+      shadows: 0.35,
+      clarity: 0.45,
+      vibrance: 0.22,
+      colorTemp: 5400,
+      tint: 1,
+    },
+  },
+  {
+    name: 'skin_warm',
+    filters: {
+      exposure: 8,
+      contrast: -4,
+      saturation: 14,
+      highlights: -10,
+      shadows: 12,
+      clarity: 8,
+      vibrance: 26,
+      colorTemp: 6400,
+      tint: 14,
+    },
+    expectedNormalized: {
+      exposure: 0.16,
+      contrast: -0.08,
+      saturation: 1.14,
+      highlights: -0.1,
+      shadows: 0.12,
+      clarity: 0.08,
+      vibrance: 0.26,
+      colorTemp: 6400,
+      tint: 7,
+    },
+  },
+  {
+    name: 'mixed_interior_exterior',
+    filters: {
+      exposure: 12,
+      contrast: 14,
+      saturation: 10,
+      highlights: -28,
+      shadows: 28,
+      clarity: 20,
+      vibrance: 16,
+      colorTemp: 5750,
+      tint: 3,
+    },
+    expectedNormalized: {
+      exposure: 0.24,
+      contrast: 0.28,
+      saturation: 1.1,
+      highlights: -0.28,
+      shadows: 0.28,
+      clarity: 0.2,
+      vibrance: 0.16,
+      colorTemp: 5750,
+      tint: 1.5,
+    },
+  },
+];
 
 const VISUAL_PARITY_DATASET: VisualParityCase[] = [
   {
@@ -471,6 +616,32 @@ describe('wasmRenderingService', () => {
   });
 
   describe('normalizeFiltersForWasm', () => {
+    it('should keep M3.3 preview/export presets aligned with visual parity dataset', () => {
+      const visualCaseNames = new Set(VISUAL_PARITY_DATASET.map((visualCase) => visualCase.name));
+
+      for (const preset of PREVIEW_EXPORT_PARITY_PRESETS) {
+        expect(visualCaseNames.has(preset.name)).toBe(true);
+      }
+
+      expect(PREVIEW_EXPORT_PARITY_DELTA_THRESHOLD).toBe(2);
+    });
+
+    it('should normalize M3.3 preview/export contract presets to stable backend ranges', () => {
+      for (const preset of PREVIEW_EXPORT_PARITY_PRESETS) {
+        const normalized = normalizeFiltersForWasm(preset.filters);
+
+        expect(normalized.exposure).toBeCloseTo(preset.expectedNormalized.exposure, 6);
+        expect(normalized.contrast).toBeCloseTo(preset.expectedNormalized.contrast, 6);
+        expect(normalized.saturation).toBeCloseTo(preset.expectedNormalized.saturation, 6);
+        expect(normalized.highlights).toBeCloseTo(preset.expectedNormalized.highlights, 6);
+        expect(normalized.shadows).toBeCloseTo(preset.expectedNormalized.shadows, 6);
+        expect(normalized.clarity).toBeCloseTo(preset.expectedNormalized.clarity, 6);
+        expect(normalized.vibrance).toBeCloseTo(preset.expectedNormalized.vibrance, 6);
+        expect(normalized.colorTemp).toBe(preset.expectedNormalized.colorTemp);
+        expect(normalized.tint).toBeCloseTo(preset.expectedNormalized.tint, 6);
+      }
+    });
+
     it('should normalize exposure from UI range to WASM range', () => {
       const filters: PixelFilterState = {
         ...DEFAULT_TEST_FILTERS,

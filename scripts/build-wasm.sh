@@ -10,9 +10,7 @@ echo "🔧 Building WASM module..."
 cd luminafast-wasm
 wasm-pack build --target web --release
 
-echo "📦 Copying WASM module to src/wasm/..."
-mkdir -p ../src/wasm
-cp pkg/* ../src/wasm/
 
-echo "✅ WASM module built and copied successfully"
-ls -lh ../src/wasm/
+
+echo "✅ WASM module built  successfully"
+

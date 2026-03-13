@@ -11,8 +11,8 @@
 
 Le projet contenait deux implémentations Rust du traitement pixel :
 
-- `src-tauri/src/services/image_processing.rs` *(supprimé en M5.1)*
-- `luminafast-wasm/src/image_processing.rs` *(supprimé en M2.1)*
+- `src-tauri/src/services/image_processing.rs` _(supprimé en M5.1)_
+- `luminafast-wasm/src/image_processing.rs` _(supprimé en M2.1)_
 
 Ce modèle en copie manuelle créait un risque de désynchronisation. Le risque s'était déjà matérialisé : la version WASM contenait des optimisations et des capacités (passe unique + histogramme) absentes de la version backend.
 

@@ -8,10 +8,24 @@ set -e
 echo "📊 LuminaFast M.1.1 Ingestion Benchmark"
 echo "========================================"
 echo ""
+echo "Usage: $(basename "$0") [WORKSPACE_DIR]"
+echo "  WORKSPACE_DIR: optional path to app workspace (defaults to git root or current directory)"
+echo ""
 
-WORKSPACE="/Users/davidmichels/gravity app/LuminaFast"
-BENCHMARK_DIR="/tmp/luminafast_benchmark"
+# Determine workspace directory:
+# - Use first argument if provided
+# - Else use git repository root if available
+# - Else fall back to current directory
+if [ -n "${1:-}" ]; then
+    WORKSPACE="$1"
+elif command -v git >/dev/null 2>&1 && git rev-parse --show-toplevel >/dev/null 2>&1; then
+    WORKSPACE="$(git rev-parse --show-toplevel)"
+else
+    WORKSPACE="$(pwd)"
+fi
 
+# Allow overriding benchmark directory via BENCHMARK_DIR env var
+BENCHMARK_DIR="${BENCHMARK_DIR:-/tmp/luminafast_benchmark}"
 # Create test dataset
 mkdir -p "$BENCHMARK_DIR"
 

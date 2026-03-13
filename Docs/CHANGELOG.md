@@ -75,9 +75,9 @@
 | Maintenance WASM | M4.1       | Architecture pipeline RAW-ready (pipeline compose + validation centralisee + compat API v1)        | ✅ Complétée | 2026-03-13 | Copilot |
 | Maintenance WASM | M4.2       | Abstraction decodeur RAW (LinearImage + RawDecoder + contrat decodeur/pipeline)                    | ✅ Complétée | 2026-03-13 | Copilot |
 | Maintenance WASM | M4.3       | Pilote RAW reel backend (decodeur rsraw + export_raw_edited + rapport compatibilite)               | ✅ Complétée | 2026-03-13 | Copilot |
-| Maintenance WASM | M5.1       | Suppression duplication legacy (suppression module backend `image_processing`)                      | ✅ Complétée | 2026-03-13 | Copilot |
+| Maintenance WASM | M5.1       | Suppression duplication legacy (suppression module backend `image_processing`)                     | ✅ Complétée | 2026-03-13 | Copilot |
 | Maintenance WASM | M5.2       | Synchronisation documentation (README WASM, PLAN_COMPLET, APP_DOC, CHANGELOG coherents)            | ✅ Complétée | 2026-03-13 | Copilot |
-| Maintenance WASM | M5.3       | CI garde-fous source unique (script check-single-source-image-core.sh + job guard-single-source)    | ✅ Complétée | 2026-03-13 | Copilot |
+| Maintenance WASM | M5.3       | CI garde-fous source unique (script check-single-source-image-core.sh + job guard-single-source)   | ✅ Complétée | 2026-03-13 | Copilot |
 
 | 5 | 5.1 | Panneau EXIF Connecté | ✅ Complétée | 2026-07-10 | Copilot |
 | 5 | 5.2 | Système de Tags Hiérarchique | ✅ Complétée | 2026-07-11 | Copilot |
@@ -137,17 +137,20 @@
 **Correction structurelle** : Création d'un script shell minimaliste (`check-single-source-image-core.sh`) qui encode ces 3 règles et d'un job CI dédié (`guard-single-source`) qui l'exécute à chaque push/PR sur les fichiers Rust.
 
 **Impact** :
+
 - Gate G6 fermée : migration M0.1→M5.3 intégralement complétée
 - Toute réintroduction de duplication algorithmique est désormais bloquée à la CI
 - Script local disponible pour validation pre-commit
 
 **Fichiers créés/modifiés** :
+
 - `scripts/check-single-source-image-core.sh` — NOUVEAU (script 3 règles, exit 0 sur état conforme)
 - `.github/workflows/ci.yml` — ajout job `guard-single-source` (timeout 5min) + extension filtre `backend` (luminafast-wasm, luminafast-image-core)
 - `Docs/APP_DOCUMENTATION.md` — section 12.3 mise à jour (job Guard documenté)
 - Fichiers de traçabilité M5.3 : BRIEF ✅, INDEX ✅, PLAN_COMPLET ✅, CHANGELOG ✅
 
 **Validation** :
+
 - [x] `bash scripts/check-single-source-image-core.sh` → SUCCES (3/3 règles, exit 0)
 - [x] Règle 1 : `src-tauri/src/services/image_processing.rs` absent ✅
 - [x] Règle 2 : 0 fonctions libres algorithmiques hors core ✅

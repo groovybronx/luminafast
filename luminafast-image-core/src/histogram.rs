@@ -1,29 +1,12 @@
 use crate::errors::ProcessingError;
-
-fn expected_rgba_len(width: u32, height: u32) -> Option<usize> {
-    (width as usize)
-        .checked_mul(height as usize)
-        .and_then(|px| px.checked_mul(4))
-}
+use crate::pipeline::validate_rgba_input;
 
 pub fn compute_histogram_from_pixels(
     pixels: &[u8],
     width: u32,
     height: u32,
 ) -> Result<Vec<u32>, ProcessingError> {
-    if width == 0 || height == 0 {
-        return Err(ProcessingError::InvalidDimensions { width, height });
-    }
-
-    let expected = expected_rgba_len(width, height)
-        .ok_or(ProcessingError::InvalidDimensions { width, height })?;
-
-    if pixels.len() != expected {
-        return Err(ProcessingError::InvalidPixelCount {
-            expected,
-            got: pixels.len(),
-        });
-    }
+    validate_rgba_input(pixels, width, height)?;
 
     let mut histogram = vec![0_u32; 768];
 

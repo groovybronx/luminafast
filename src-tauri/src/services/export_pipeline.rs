@@ -2,12 +2,19 @@ use crate::models::event::{EventPayload, EventType};
 use crate::services::event_sourcing::{EventStore, EventStoreError};
 use crate::services::export_rendering::render_pixels_for_export;
 use image::{DynamicImage, ImageFormat, RgbImage, RgbaImage};
-use luminafast_image_core::{PixelFilters, ProcessingError};
+use luminafast_image_core::pipeline::decode_raw_to_rgba8;
+use luminafast_image_core::{LinearImage, PixelFilters, ProcessingError, RawDecoder};
 use rusqlite::{Connection, OptionalExtension};
 use serde_json::{Map, Value};
 use std::collections::HashSet;
+use std::fs;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
+
+const KNOWN_RAW_EXTENSIONS: &[&str] = &[
+    "cr3", "cr2", "nef", "arw", "raf", "orf", "pef", "rw2", "dng",
+];
+const PILOT_RAW_EXTENSIONS: &[&str] = &["arw", "raf", "dng"];
 
 #[derive(Debug, Clone, Copy)]
 pub enum ExportFormat {
@@ -84,6 +91,12 @@ pub enum ExportPipelineError {
 
     #[error("Unsupported export format: {0}")]
     InvalidOutputFormat(String),
+
+    #[error("RAW export command requires a RAW source file, got extension: {0}")]
+    RawSourceRequired(String),
+
+    #[error("RAW format '{0}' is outside pilot scope (supported pilot formats: arw, raf, dng)")]
+    RawFormatOutOfPilotScope(String),
 
     #[error("Invalid pixel buffer for {width}x{height}: expected {expected}, got {got}")]
     InvalidPixelBuffer {
@@ -165,19 +178,82 @@ struct SnapshotSeed {
     patches: Vec<Map<String, Value>>,
 }
 
+#[derive(Debug, Default)]
+struct RsRawDecoder;
+
+impl RawDecoder for RsRawDecoder {
+    fn decode_to_linear_rgb(&self, input: &[u8]) -> Result<LinearImage, ProcessingError> {
+        let mut raw_image =
+            rsraw::RawImage::open(input).map_err(|e| ProcessingError::RawDecodeError {
+                message: format!("rsraw open failed: {e:?}"),
+            })?;
+
+        raw_image
+            .unpack()
+            .map_err(|e| ProcessingError::RawDecodeError {
+                message: format!("rsraw unpack failed: {e:?}"),
+            })?;
+
+        let processed = raw_image
+            .process::<{ rsraw::BIT_DEPTH_16 }>()
+            .map_err(|e| ProcessingError::RawDecodeError {
+                message: format!("rsraw process failed: {e:?}"),
+            })?;
+
+        let width = processed.width();
+        let height = processed.height();
+        let channels = processed.colors();
+
+        if channels != 3 {
+            return Err(ProcessingError::RawDecodeError {
+                message: format!("unsupported RAW channel count: {channels}"),
+            });
+        }
+
+        let pixels_rgb_f32 = processed
+            .iter()
+            .map(|&sample| sample as f32 / 65535.0)
+            .collect::<Vec<_>>();
+
+        LinearImage::new(width, height, pixels_rgb_f32)
+    }
+}
+
 pub fn export_image_with_edits(
     conn: &Connection,
     request: &ExportRequest,
 ) -> Result<ExportResult, ExportPipelineError> {
+    export_image_with_edits_internal(conn, request, false, &RsRawDecoder)
+}
+
+pub fn export_raw_image_with_edits(
+    conn: &Connection,
+    request: &ExportRequest,
+) -> Result<ExportResult, ExportPipelineError> {
+    export_image_with_edits_internal(conn, request, true, &RsRawDecoder)
+}
+
+fn export_image_with_edits_internal(
+    conn: &Connection,
+    request: &ExportRequest,
+    require_raw_source: bool,
+    raw_decoder: &dyn RawDecoder,
+) -> Result<ExportResult, ExportPipelineError> {
     let source_path = resolve_source_image_path(conn, request.image_id)?;
+
+    if require_raw_source && !is_known_raw_extension(&source_path) {
+        return Err(ExportPipelineError::RawSourceRequired(
+            source_extension_or_unknown(&source_path),
+        ));
+    }
+
     let (filters, applied_edit_events, used_snapshot) =
         resolve_filters_from_history(conn, request.image_id)?;
 
-    let decoded = image::open(&source_path)?;
-    let rgba = decoded.to_rgba8();
-    let (width, height) = rgba.dimensions();
+    let (source_pixels, width, height) =
+        decode_source_pixels_for_export(&source_path, raw_decoder)?;
 
-    let processed_pixels = render_pixels_for_export(rgba.as_raw(), width, height, &filters)?;
+    let processed_pixels = render_pixels_for_export(&source_pixels, width, height, &filters)?;
 
     write_export_image(
         &processed_pixels,
@@ -196,6 +272,44 @@ pub fn export_image_with_edits(
         applied_edit_events,
         used_snapshot,
     })
+}
+
+fn decode_source_pixels_for_export(
+    source_path: &Path,
+    raw_decoder: &dyn RawDecoder,
+) -> Result<(Vec<u8>, u32, u32), ExportPipelineError> {
+    if let Some(ext) = source_extension(source_path) {
+        if KNOWN_RAW_EXTENSIONS.contains(&ext.as_str()) {
+            if !PILOT_RAW_EXTENSIONS.contains(&ext.as_str()) {
+                return Err(ExportPipelineError::RawFormatOutOfPilotScope(ext));
+            }
+
+            let raw_bytes = fs::read(source_path)?;
+            return decode_raw_to_rgba8(raw_decoder, &raw_bytes)
+                .map_err(ExportPipelineError::Processing);
+        }
+    }
+
+    let decoded = image::open(source_path)?;
+    let rgba = decoded.to_rgba8();
+    let (width, height) = rgba.dimensions();
+    Ok((rgba.into_raw(), width, height))
+}
+
+fn source_extension(path: &Path) -> Option<String> {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.to_ascii_lowercase())
+}
+
+fn source_extension_or_unknown(path: &Path) -> String {
+    source_extension(path).unwrap_or_else(|| "<none>".to_string())
+}
+
+fn is_known_raw_extension(path: &Path) -> bool {
+    source_extension(path)
+        .map(|ext| KNOWN_RAW_EXTENSIONS.contains(&ext.as_str()))
+        .unwrap_or(false)
 }
 
 fn resolve_source_image_path(
@@ -512,6 +626,13 @@ mod tests {
         must_ok(image.save(path), "save source image");
     }
 
+    fn create_mock_raw_file(path: &Path) {
+        must_ok(
+            std::fs::write(path, [1_u8, 2_u8, 3_u8, 4_u8]),
+            "write mock raw file",
+        );
+    }
+
     fn insert_image_with_path(conn: &Connection, image_id: i64, hash: &str, image_path: &Path) {
         must_ok(
             conn.execute(
@@ -551,6 +672,24 @@ mod tests {
             EventStore::new(conn).append_event(&event),
             "append edit event",
         );
+    }
+
+    struct MockPilotRawDecoder;
+
+    impl RawDecoder for MockPilotRawDecoder {
+        fn decode_to_linear_rgb(&self, _input: &[u8]) -> Result<LinearImage, ProcessingError> {
+            LinearImage::new(2, 1, vec![0.2, 0.2, 0.2, 0.7, 0.7, 0.7])
+        }
+    }
+
+    struct MockFailingRawDecoder;
+
+    impl RawDecoder for MockFailingRawDecoder {
+        fn decode_to_linear_rgb(&self, _input: &[u8]) -> Result<LinearImage, ProcessingError> {
+            Err(ProcessingError::RawDecodeError {
+                message: "mock decode failure".to_string(),
+            })
+        }
     }
 
     #[test]
@@ -654,5 +793,176 @@ mod tests {
         assert_eq!(result.format, "tiff");
         assert!(result.used_snapshot);
         assert_eq!(result.applied_edit_events, 2);
+    }
+
+    #[test]
+    fn test_export_pipeline_raw_pilot_writes_tiff_with_mock_decoder() {
+        let conn = setup_test_db();
+        let temp = must_ok(tempdir(), "create temp directory");
+
+        let source_path = temp.path().join("pilot.raf");
+        let output_path = temp.path().join("export-raw.tiff");
+
+        create_mock_raw_file(&source_path);
+        insert_image_with_path(&conn, 3, "hash-raw-pilot", &source_path);
+        append_edit_event(
+            &conn,
+            "evt-raw-1",
+            3,
+            serde_json::json!({ "contrast": 20.0 }),
+        );
+
+        let request = ExportRequest {
+            image_id: 3,
+            output_path: output_path.clone(),
+            format: ExportFormat::Tiff,
+        };
+
+        let result = must_ok(
+            export_image_with_edits_internal(&conn, &request, false, &MockPilotRawDecoder),
+            "run raw pilot export pipeline",
+        );
+
+        assert!(output_path.exists());
+        assert_eq!(result.format, "tiff");
+        assert_eq!(result.width, 2);
+        assert_eq!(result.height, 1);
+    }
+
+    #[test]
+    fn test_export_raw_pipeline_rejects_non_raw_source() {
+        let conn = setup_test_db();
+        let temp = must_ok(tempdir(), "create temp directory");
+
+        let source_path = temp.path().join("source.png");
+        let output_path = temp.path().join("export-raw.jpg");
+
+        create_source_image(&source_path, [120, 120, 120, 255]);
+        insert_image_with_path(&conn, 4, "hash-non-raw", &source_path);
+
+        let request = ExportRequest {
+            image_id: 4,
+            output_path,
+            format: ExportFormat::Jpeg,
+        };
+
+        let result = export_image_with_edits_internal(&conn, &request, true, &MockPilotRawDecoder);
+
+        assert!(matches!(
+            result,
+            Err(ExportPipelineError::RawSourceRequired(ext)) if ext == "png"
+        ));
+    }
+
+    #[test]
+    fn test_export_pipeline_rejects_raw_outside_pilot_scope() {
+        let conn = setup_test_db();
+        let temp = must_ok(tempdir(), "create temp directory");
+
+        let source_path = temp.path().join("outside.cr3");
+        let output_path = temp.path().join("export-outside.tiff");
+
+        create_mock_raw_file(&source_path);
+        insert_image_with_path(&conn, 5, "hash-outside-pilot", &source_path);
+
+        let request = ExportRequest {
+            image_id: 5,
+            output_path,
+            format: ExportFormat::Tiff,
+        };
+
+        let result = export_image_with_edits_internal(&conn, &request, false, &MockPilotRawDecoder);
+
+        assert!(matches!(
+            result,
+            Err(ExportPipelineError::RawFormatOutOfPilotScope(ext)) if ext == "cr3"
+        ));
+    }
+
+    #[test]
+    fn test_export_pipeline_propagates_raw_decoder_failure() {
+        let conn = setup_test_db();
+        let temp = must_ok(tempdir(), "create temp directory");
+
+        let source_path = temp.path().join("pilot.dng");
+        let output_path = temp.path().join("export-fail.tiff");
+
+        create_mock_raw_file(&source_path);
+        insert_image_with_path(&conn, 6, "hash-raw-fail", &source_path);
+
+        let request = ExportRequest {
+            image_id: 6,
+            output_path,
+            format: ExportFormat::Tiff,
+        };
+
+        let result =
+            export_image_with_edits_internal(&conn, &request, true, &MockFailingRawDecoder);
+
+        assert!(matches!(
+            result,
+            Err(ExportPipelineError::Processing(ProcessingError::RawDecodeError { message })) if message == "mock decode failure"
+        ));
+    }
+
+    #[test]
+    fn test_export_raw_pilot_real_dataset_if_configured() {
+        let Some(test_raw_path) = std::env::var("LUMINAFAST_TEST_RAW").ok() else {
+            eprintln!("[SKIP] LUMINAFAST_TEST_RAW not set for RAW pilot integration test");
+            return;
+        };
+
+        let source_path = PathBuf::from(&test_raw_path);
+        if !source_path.exists() {
+            eprintln!(
+                "[SKIP] RAW pilot dataset missing at {}",
+                source_path.to_string_lossy()
+            );
+            return;
+        }
+
+        if !is_known_raw_extension(&source_path) {
+            eprintln!(
+                "[SKIP] LUMINAFAST_TEST_RAW is not a RAW extension: {}",
+                source_path.to_string_lossy()
+            );
+            return;
+        }
+
+        let conn = setup_test_db();
+        let temp = must_ok(tempdir(), "create temp directory");
+        let output_path = temp.path().join("pilot-real.tiff");
+
+        insert_image_with_path(&conn, 7, "hash-raw-real", &source_path);
+        append_edit_event(
+            &conn,
+            "evt-raw-real-1",
+            7,
+            serde_json::json!({ "exposure": 10.0 }),
+        );
+
+        let request = ExportRequest {
+            image_id: 7,
+            output_path: output_path.clone(),
+            format: ExportFormat::Tiff,
+        };
+
+        let result = export_raw_image_with_edits(&conn, &request);
+
+        if let Some(ext) = source_extension(&source_path) {
+            if !PILOT_RAW_EXTENSIONS.contains(&ext.as_str()) {
+                assert!(matches!(
+                    result,
+                    Err(ExportPipelineError::RawFormatOutOfPilotScope(ref got)) if got == &ext
+                ));
+                return;
+            }
+        }
+
+        let export = must_ok(result, "run raw pilot export with real dataset");
+        assert!(output_path.exists());
+        assert_eq!(export.format, "tiff");
+        assert!(export.width > 0);
+        assert!(export.height > 0);
     }
 }

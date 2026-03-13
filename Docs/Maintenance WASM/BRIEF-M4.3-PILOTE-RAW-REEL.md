@@ -1,6 +1,6 @@
 # Phase M4.3 - Pilote RAW Reel
 
-> **Statut** : ⬜ En attente
+> **Statut** : ✅ Completee
 > **Duree estimee** : 1.5 jour
 
 ## Objectif
@@ -76,9 +76,9 @@ pub fn export_raw_edited(
 
 ## Checkpoints
 
-- [ ] Checkpoint 1: pilote compile
-- [ ] Checkpoint 2: exports RAW pilotes valides
-- [ ] Checkpoint 3: rapport compatibilite produit
+- [x] Checkpoint 1: pilote compile
+- [x] Checkpoint 2: exports RAW pilotes valides
+- [x] Checkpoint 3: rapport compatibilite produit
 
 ## Pieges et Risques
 
@@ -96,5 +96,5 @@ pub fn export_raw_edited(
 
 ## Criteres de Completion
 
-- [ ] Pilote valide sur scope defini
-- [ ] Limites et extension future documentees
+- [x] Pilote valide sur scope defini
+- [x] Limites et extension future documentees

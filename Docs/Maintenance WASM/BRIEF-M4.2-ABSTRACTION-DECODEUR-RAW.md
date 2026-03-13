@@ -1,6 +1,6 @@
 # Phase M4.2 - Abstraction Decodeur RAW
 
-> **Statut** : ⬜ En attente
+> **Statut** : ✅ Completee
 > **Duree estimee** : 1 jour
 
 ## Objectif
@@ -79,9 +79,9 @@ pub trait RawDecoder {
 
 ## Checkpoints
 
-- [ ] Checkpoint 1: trait decodeur defini
-- [ ] Checkpoint 2: mock decodeur passe tests
-- [ ] Checkpoint 3: pipeline compile avec abstraction
+- [x] Checkpoint 1: trait decodeur defini
+- [x] Checkpoint 2: mock decodeur passe tests
+- [x] Checkpoint 3: pipeline compile avec abstraction
 
 ## Pieges et Risques
 
@@ -99,5 +99,5 @@ pub trait RawDecoder {
 
 ## Criteres de Completion
 
-- [ ] Abstraction decodeur validee
-- [ ] Tests de contrat verts
+- [x] Abstraction decodeur validee
+- [x] Tests de contrat verts

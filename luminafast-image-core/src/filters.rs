@@ -1,4 +1,5 @@
 use crate::errors::ProcessingError;
+use crate::pipeline::{validate_rgba_input, ImagePipeline, ImagePipelineStep};
 
 pub const EPSILON: f32 = 0.001;
 pub const EXPOSURE_MIN: f32 = -2.0;
@@ -61,10 +62,22 @@ impl Default for PixelFilters {
     }
 }
 
-fn expected_rgba_len(width: u32, height: u32) -> Option<usize> {
-    (width as usize)
-        .checked_mul(height as usize)
-        .and_then(|px| px.checked_mul(4))
+#[derive(Clone, Copy)]
+struct FilterTransformStep {
+    filters: PixelFilters,
+}
+
+impl FilterTransformStep {
+    fn new(filters: PixelFilters) -> Self {
+        Self { filters }
+    }
+}
+
+impl ImagePipelineStep for FilterTransformStep {
+    fn apply(&self, pixels: &mut [u8], _width: u32, _height: u32) -> Result<(), ProcessingError> {
+        apply_filters_single_pass(pixels, &self.filters);
+        Ok(())
+    }
 }
 
 fn apply_filters_single_pass(pixels: &mut [u8], filters: &PixelFilters) {
@@ -149,19 +162,7 @@ pub fn apply_filters(
     height: u32,
     filters: &PixelFilters,
 ) -> Result<Vec<u8>, ProcessingError> {
-    if width == 0 || height == 0 {
-        return Err(ProcessingError::InvalidDimensions { width, height });
-    }
-
-    let expected = expected_rgba_len(width, height)
-        .ok_or(ProcessingError::InvalidDimensions { width, height })?;
-
-    if pixels.len() != expected {
-        return Err(ProcessingError::InvalidPixelCount {
-            expected,
-            got: pixels.len(),
-        });
-    }
+    validate_rgba_input(pixels, width, height)?;
 
     let mut result = pixels.to_vec();
 
@@ -184,7 +185,9 @@ pub fn apply_filters(
         return Ok(result);
     }
 
-    apply_filters_single_pass(&mut result, filters);
+    let pipeline = ImagePipeline::new().with_step(FilterTransformStep::new(*filters));
+    debug_assert!(!pipeline.is_empty());
+    pipeline.execute(&mut result, width, height)?;
 
     Ok(result)
 }

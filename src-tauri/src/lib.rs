@@ -159,6 +159,7 @@ pub fn run() {
             commands::event_sourcing::replay_events,
             // Export commands (M3.2)
             commands::export::export_image_edited,
+            commands::export::export_raw_edited,
             // Snapshot commands (Phase 4.3)
             commands::snapshots::create_snapshot,
             commands::snapshots::get_snapshots,

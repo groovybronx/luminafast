@@ -1,6 +1,6 @@
 # Phase M4.1 - Architecture Pipeline RAW-Ready
 
-> **Statut** : ⬜ En attente
+> **Statut** : ✅ Completee
 > **Duree estimee** : 1 jour
 
 ## Objectif
@@ -72,9 +72,9 @@ pub trait ImagePipelineStep {
 
 ## Checkpoints
 
-- [ ] Checkpoint 1: architecture pipeline codee
-- [ ] Checkpoint 2: tests unitaires pipeline verts
-- [ ] Checkpoint 3: compat API v1 preservee
+- [x] Checkpoint 1: architecture pipeline codee
+- [x] Checkpoint 2: tests unitaires pipeline verts
+- [x] Checkpoint 3: compat API v1 preservee
 
 ## Pieges et Risques
 
@@ -90,5 +90,5 @@ pub trait ImagePipelineStep {
 
 ## Criteres de Completion
 
-- [ ] Pipeline interne extensible valide
-- [ ] Non-regression core verifiee
+- [x] Pipeline interne extensible valide
+- [x] Non-regression core verifiee

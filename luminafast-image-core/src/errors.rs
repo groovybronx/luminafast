@@ -14,4 +14,8 @@ pub enum ProcessingError {
     /// Reserved for explicit filter validation errors.
     #[error("Invalid filter value for {field}: {value}")]
     InvalidFilterValue { field: String, value: f32 },
+
+    /// RAW decoder failed to produce a valid linear RGB buffer.
+    #[error("RAW decode error: {message}")]
+    RawDecodeError { message: String },
 }

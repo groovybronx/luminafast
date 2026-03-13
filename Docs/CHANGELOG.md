@@ -72,6 +72,9 @@
 | Maintenance WASM | M3.1       | Integration backend export sur core partage (service export_rendering + deprecation copie backend) | ✅ Complétée | 2026-03-13 | Copilot |
 | Maintenance WASM | M3.2       | Service export non destructif (events/snapshots -> filtres -> rendu core -> ecriture JPEG/TIFF)    | ✅ Complétée | 2026-03-13 | Copilot |
 | Maintenance WASM | M3.3       | Contrat de parite preview/export (presets communs + comparaison buffers + seuil fixe delta <= 2)   | ✅ Complétée | 2026-03-13 | Copilot |
+| Maintenance WASM | M4.1       | Architecture pipeline RAW-ready (pipeline compose + validation centralisee + compat API v1)        | ✅ Complétée | 2026-03-13 | Copilot |
+| Maintenance WASM | M4.2       | Abstraction decodeur RAW (LinearImage + RawDecoder + contrat decodeur/pipeline)                    | ✅ Complétée | 2026-03-13 | Copilot |
+| Maintenance WASM | M4.3       | Pilote RAW reel backend (decodeur rsraw + export_raw_edited + rapport compatibilite)               | ✅ Complétée | 2026-03-13 | Copilot |
 
 | 5 | 5.1 | Panneau EXIF Connecté | ✅ Complétée | 2026-07-10 | Copilot |
 | 5 | 5.2 | Système de Tags Hiérarchique | ✅ Complétée | 2026-07-11 | Copilot |
@@ -106,15 +109,124 @@
 
 ## Phase Actuelle
 
-> **Maintenance WASM M4.1** : Architecture pipeline RAW-ready (prochaine sous-phase)
+> **Maintenance WASM M5.1** : Suppression de la duplication legacy (prochaine sous-phase)
 >
-> Brief : `Docs/Maintenance WASM/BRIEF-M4.1-ARCHI-PIPELINE-RAW-READY.md`
-> Branche recommandée : `phase/m4.1-architecture-pipeline-raw-ready`
-> Note qualité M3.3 : `src-tauri/src/services/tests/parity_preview_export.rs` ✅ (2/2)
+> Brief : `Docs/Maintenance WASM/BRIEF-M5.1-SUPPRESSION-DUPLICATION.md`
+> Branche recommandée : `phase/m5.1-suppression-duplication`
+> Note qualité M4.3 : `src-tauri/src/services/export_pipeline.rs` ✅ (8/8) + `Docs/Maintenance WASM/RAPPORT-PILOTE-RAW.md` ✅
 
 ---
 
 ## Historique des Sous-Phases Complétées
+
+---
+
+### 2026-03-13 — Maintenance WASM M4.3 : Pilote RAW reel (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée**
+**Agent** : Copilot
+**Branche** : `phase/m4.3-pilote-raw-reel`
+**Type** : Maintenance
+
+#### Résumé
+
+**Cause racine** : apres M4.2, le contrat `RawDecoder` etait pret dans le core mais aucun flux backend reel n utilisait encore un decodeur concret pour l export non destructif. Le pipeline export restait limite a `image::open`, donc inoperant sur les RAW pilotes.
+
+**Solution** : integration d un decodeur concret `rsraw` cote backend export, ajout de la commande Tauri `export_raw_edited`, limitation explicite du scope pilote (`arw`, `raf`, `dng`) avec erreurs dediees hors scope, et production d un rapport de compatibilite M4.3.
+
+#### Fichiers créés
+
+- `Docs/Maintenance WASM/RAPPORT-PILOTE-RAW.md` — scope pilote, protocole de validation et limites
+
+#### Fichiers modifiés
+
+- `src-tauri/src/services/export_pipeline.rs` — decodeur RAW concret + branchement pipeline + tests integration pilotes
+- `src-tauri/src/commands/export.rs` — nouvelle commande `export_raw_edited`
+- `src-tauri/src/lib.rs` — enregistrement commande `export_raw_edited`
+
+#### Critères de validation remplis
+
+- [x] Checkpoint 1 : pilote compile (`cd src-tauri && cargo check`)
+- [x] Checkpoint 2 : exports RAW pilotes valides (`cargo test export_pipeline` : 8/8)
+- [x] Checkpoint 3 : rapport compatibilite produit (`Docs/Maintenance WASM/RAPPORT-PILOTE-RAW.md`)
+
+#### Impact
+
+- Premier flux RAW backend operationnel en pilote controle (decodeur reel -> pipeline edits -> export fichier).
+- Les formats hors scope pilote sont explicitement rejetes pour eviter les faux positifs de compatibilite.
+
+---
+
+### 2026-03-13 — Maintenance WASM M4.2 : Abstraction decodeur RAW (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée**
+**Agent** : Copilot
+**Branche** : `phase/m4.2-abstraction-decodeur-raw`
+**Type** : Maintenance
+
+#### Résumé
+
+**Cause racine** : en sortie M4.1, le pipeline etait extensible cote transformations, mais il n existait aucun contrat stable pour brancher des decodeurs RAW concrets sans coupler le core a une implementation vendor.
+
+**Solution** : ajout d un module `raw_decoder` avec type intermediaire `LinearImage` et trait `RawDecoder`, puis integration au pipeline via `decode_raw_to_rgba8` et `execute_on_linear_image`, plus une suite de tests de contrat avec mock decodeur.
+
+#### Fichiers créés
+
+- `luminafast-image-core/src/raw_decoder.rs` — contrat decodeur RAW + validations image lineaire
+- `luminafast-image-core/tests/raw_decoder_contract.rs` — tests de contrat mock decodeur/pipeline
+
+#### Fichiers modifiés
+
+- `luminafast-image-core/src/lib.rs` — export public `LinearImage` / `RawDecoder`
+- `luminafast-image-core/src/pipeline.rs` — conversion lineaire->RGBA et execution pipeline depuis image lineaire
+- `luminafast-image-core/src/errors.rs` — erreur explicite `RawDecodeError`
+
+#### Critères de validation remplis
+
+- [x] Checkpoint 1 : trait decodeur defini (`RawDecoder`) + type `LinearImage`
+- [x] Checkpoint 2 : mock decodeur passe les tests (`raw_decoder_contract` : 5/5)
+- [x] Checkpoint 3 : pipeline compile avec abstraction (`cargo test` core : 26/26)
+
+#### Impact
+
+- Le core dispose maintenant d un point d extension decodeur RAW independant des crates vendor.
+- Le flux decodeur lineaire -> pipeline RGBA est verrouille avant la phase pilote M4.3.
+
+---
+
+### 2026-03-13 — Maintenance WASM M4.1 : Architecture pipeline RAW-ready (✅ COMPLÉTÉE)
+
+**Statut** : ✅ **Complétée**
+**Agent** : Copilot
+**Branche** : `phase/m4.1-architecture-pipeline-raw-ready`
+**Type** : Maintenance
+
+#### Résumé
+
+**Cause racine** : apres M3.3, le core image appliquait encore les transformations dans une fonction monolithique sans pipeline explicite. Cette structure ne separait pas clairement les etapes input/transform/output, rendant l extension vers des etapes RAW dediees plus risquee.
+
+**Solution** : ajout d un module `pipeline` avec trait `ImagePipelineStep`, pipeline compose extensible et validation RGBA centralisee, puis branchement de `apply_filters` sur une etape `FilterTransformStep` pour conserver strictement le contrat API v1.
+
+#### Fichiers créés
+
+- `luminafast-image-core/src/pipeline.rs` — architecture pipeline composee + tests unitaires dedies
+
+#### Fichiers modifiés
+
+- `luminafast-image-core/src/lib.rs` — export du module pipeline (`ImagePipeline`, `ImagePipelineStep`)
+- `luminafast-image-core/src/filters.rs` — application des filtres via pipeline interne
+- `luminafast-image-core/src/histogram.rs` — reusage validation RGBA centralisee
+
+#### Critères de validation remplis
+
+- [x] Checkpoint 1 : architecture pipeline codee (`ImagePipelineStep` + `ImagePipeline`)
+- [x] Checkpoint 2 : tests unitaires pipeline verts (`cd luminafast-image-core && cargo test` : 21/21)
+- [x] Checkpoint 3 : compat API v1 preservee (`luminafast-image-core/tests/api_contract.rs` : 5/5)
+
+#### Impact
+
+- Le core image est desormais structure en pipeline extensible, pret pour l abstraction decodeur de M4.2.
+- Les chemins backend/WASM conservent le meme contrat public `apply_filters` sans regression fonctionnelle.
 
 ---
 

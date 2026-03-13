@@ -12,7 +12,11 @@
 pub mod errors;
 pub mod filters;
 pub mod histogram;
+pub mod pipeline;
+pub mod raw_decoder;
 
 pub use errors::ProcessingError;
 pub use filters::{apply_filters, PixelFilters};
 pub use histogram::compute_histogram_from_pixels;
+pub use pipeline::{ImagePipeline, ImagePipelineStep};
+pub use raw_decoder::{LinearImage, RawDecoder};

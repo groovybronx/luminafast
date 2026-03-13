@@ -70,7 +70,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-03-13 (Maintenance WASM M3.3 complétée : contrat de parite preview/export avec seuil fixe et presets communs)
+> **Dernière mise à jour** : 2026-03-13 (Maintenance WASM M4.3 complétée : pilote RAW backend avec decodeur concret rsraw)
 >
 > ### Décisions Projet (validées par le propriétaire)
 
@@ -86,7 +86,7 @@
 
 **LuminaFast** est une application de gestion d'actifs numériques photographiques (Digital Asset Management) inspirée de l'architecture d'Adobe Lightroom Classic, avec des optimisations modernes (DuckDB, BLAKE3, Event Sourcing).
 
-### État actuel : Phases 0 à 3.5 complétées + Maintenance WASM M3.3 stabilisée
+### État actuel : Phases 0 à 3.5 complétées + Maintenance WASM M4.3 stabilisée
 
 **Pipeline d'import production-ready** :
 
@@ -105,7 +105,7 @@
 - **30-70%** : ingestion + hashing + EXIF
 - **70-100%** : previews
 
-**État actuel de l'application** (Phases 0 → 3.5 complétées + Maintenance WASM M3.3 stabilisée) :
+**État actuel de l'application** (Phases 0 → 3.5 complétées + Maintenance WASM M4.3 stabilisée) :
 
 - **Grille virtualisée avec lazy-loading** : `@tanstack/react-virtual` (10K+ images, 60fps) + IntersectionObserver (prefetch 100px)
 - **Collections & Smart Collections** : créations, renommages, suppressions, filtrage via stores dédiés (Phase 3.2)
@@ -298,7 +298,7 @@ LuminaFast/
 │   │   │   ├── discovery.rs         # Commandes ingestion + découverte (M.1.2: validations chemin async)
 │   │   │   ├── hashing.rs           # Commandes BLAKE3 batch (M.1.2: scan dossier async)
 │   │   │   ├── preview.rs           # Commandes génération previews RAW (M.1.2: init async du service)
-│   │   │   ├── export.rs            # Commande export non destructif (`export_image_edited`) (Maintenance WASM M3.2)
+│   │   │   ├── export.rs            # Commandes export non destructif (`export_image_edited`, `export_raw_edited`) (M3.2/M4.3)
 │   │   │   ├── __tests__/preview_performance.rs # Tests perf batch vs séquentiel
 │   │   │   ├── __tests__/preview_unit.rs        # Tests unitaires preview pyramide
 │   │   │   └── types.rs             # Types réponse partagés
@@ -348,17 +348,19 @@ LuminaFast/
 │   │   │   ├── preview.rs           # Service génération previews RAW (M.1.2: create/read/write async)
 │   │   │   │   └── tests.rs         # Tests preview pyramide (27 tests)
 │   │   │   ├── export_rendering.rs  # Service rendu export branché sur `luminafast-image-core` (Maintenance WASM M3.1)
-│   │   │   ├── export_pipeline.rs   # Pipeline non destructif events/snapshots -> export fichier (Maintenance WASM M3.2)
+│   │   │   ├── export_pipeline.rs   # Pipeline non destructif + pilote RAW backend (`rsraw`, scope arw/raf/dng) (M3.2/M4.3)
 │   │   │   ├── tests/
 │   │   │   │   └── parity_preview_export.rs # Contrat parite preview/export (Maintenance WASM M3.3)
 │   │   │   └── __tests__/           # Tests integration transversales
 │   └── icons/                      # Icônes d'application (16 fichiers)
-├── luminafast-image-core/           # Crate Rust partagee backend + WASM (Maintenance WASM M1.1-M2.1)
+├── luminafast-image-core/           # Crate Rust partagee backend + WASM (Maintenance WASM M1.1-M4.2)
 │   ├── Cargo.toml                   # Manifest crate core image
 │   └── src/
 │       ├── lib.rs                   # API publique (reexports)
 │       ├── errors.rs                # Erreurs de traitement image partagees
 │       ├── filters.rs               # Struct PixelFilters + apply_filters
+│       ├── pipeline.rs              # Pipeline compose extensible (M4.1)
+│       ├── raw_decoder.rs           # Contrat decodeur RAW + image lineaire (M4.2)
 │       └── histogram.rs             # compute_histogram_from_pixels
 ├── index.html                      # HTML racine
 ├── package.json                    # Dépendances npm + scripts tauri
@@ -787,7 +789,7 @@ Depuis la maintenance **M.3.2a (en cours)**, `LeftSidebar` délègue ses sous-pa
 | `blake3`                | ^1.5                              | Hachage cryptographique                      |
 | `rayon`                 | ^1.10                             | Parallélisation                              |
 | `tokio`                 | ^1.40                             | Runtime async                                |
-| `luminafast-image-core` | path (`../luminafast-image-core`) | Noyau image partage backend/WASM (M1.1-M2.1) |
+| `luminafast-image-core` | path (`../luminafast-image-core`) | Noyau image partage backend/WASM (M1.1-M4.1) |
 
 ### Développement
 
@@ -1464,11 +1466,11 @@ getAppliedEdits(imageId: number): EventDTO[]                   // Retrieve
 
 **Rust Tests** :
 
-- `luminafast-image-core` : 17/17 ✅ (algorithmes + contrat API)
+- `luminafast-image-core` : 26/26 ✅ (algorithmes + contrat API + pipeline M4.1 + contrat decodeur RAW M4.2)
 - `luminafast-wasm/src/lib.rs` : 2/2 ✅ (wrappers wasm-bindgen)
 - `src-tauri/src/services/export_rendering.rs` : 2/2 ✅ (rendu export backend via core partage)
 - `src-tauri/src/services/image_processing.rs` : 2/2 ✅ (wrapper legacy de compatibilite vers core)
-- `src-tauri/src/services/export_pipeline.rs` : 3/3 ✅ (pipeline export non destructif JPEG/TIFF)
+- `src-tauri/src/services/export_pipeline.rs` : 8/8 ✅ (pipeline export non destructif + pilote RAW backend)
 - `src-tauri/src/services/tests/parity_preview_export.rs` : 2/2 ✅ (parite preview/export via presets communs et seuil fixe)
 
 **Backend Export (M3.1)** :
@@ -1488,7 +1490,28 @@ getAppliedEdits(imageId: number): EventDTO[]                   // Retrieve
 - Le seuil de tolerance est fige a `delta moyen RGB <= 2` et documente dans `Docs/Maintenance WASM/PARITE-PREVIEW-EXPORT.md`.
 - Le test frontend `wasmRenderingService.test.ts` verrouille egalement les presets M3.3 et la normalisation UI -> core attendue.
 
-**Non-Régression** : Phases 1-4.1 à 100% ✅
+**Architecture Pipeline RAW-ready (M4.1)** :
+
+- `luminafast-image-core/src/pipeline.rs` introduit un pipeline compose (`ImagePipeline`) et un contrat d etape (`ImagePipelineStep`) pour separer clairement les transformations.
+- `luminafast-image-core/src/filters.rs` execute desormais les ajustements via une etape `FilterTransformStep` dans le pipeline, sans changer la signature publique `apply_filters`.
+- `luminafast-image-core/src/histogram.rs` reutilise la validation RGBA centralisee `validate_rgba_input`, ce qui aligne les preconditions du core sur une seule source.
+- Le contrat API v1 reste stable (tests `api_contract` verts), tout en preparant l insertion d une abstraction decodeur RAW en M4.2.
+
+**Abstraction Decodeur RAW (M4.2)** :
+
+- `luminafast-image-core/src/raw_decoder.rs` expose `LinearImage` (RGB lineaire f32) et le trait `RawDecoder` pour decoupler le core des decodeurs concrets.
+- `LinearImage::new` valide dimensions, cardinalite RGB et valeurs finies pour garantir un contrat strict en entree pipeline.
+- `luminafast-image-core/src/pipeline.rs` ajoute `decode_raw_to_rgba8` et `execute_on_linear_image` pour chaîner decodeur RAW -> conversion RGBA -> pipeline d ajustements.
+- `luminafast-image-core/tests/raw_decoder_contract.rs` verrouille un contrat minimal avec mock decodeur (cas nominal, erreurs explicites, et rejection decodeur invalide).
+
+**Pilote RAW Reel Backend (M4.3)** :
+
+- `src-tauri/src/services/export_pipeline.rs` integre un decodeur concret `rsraw` pour un scope pilote restreint (`arw`, `raf`, `dng`) avant application des edits non destructifs.
+- Les formats RAW hors scope pilote (`cr3`, `cr2`, `nef`, `orf`, `pef`, `rw2`) retournent une erreur explicite `RawFormatOutOfPilotScope` pour eviter les faux positifs de compatibilite.
+- `src-tauri/src/commands/export.rs` expose une commande dediee `export_raw_edited(image_id, output_path, format)` en plus de `export_image_edited`.
+- Le rapport de pilotage et de limites est formalise dans `Docs/Maintenance WASM/RAPPORT-PILOTE-RAW.md`.
+
+**Non-Régression** : Phases 1-4.3 à 100% ✅
 
 ---
 
@@ -1496,6 +1519,9 @@ getAppliedEdits(imageId: number): EventDTO[]                   // Retrieve
 
 | Date       | Phase                 | Modification                                                                                                | Raison                                                                        |
 | ---------- | --------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| 2026-03-13 | Maintenance WASM M4.3 | Pilote RAW backend (`rsraw`), commande `export_raw_edited`, tests integration export_pipeline 8/8, rapport | Valider un premier flux RAW reel sous scope controle avant suppression legacy |
+| 2026-03-13 | Maintenance WASM M4.2 | Contrat `RawDecoder` + `LinearImage`, conversion pipeline lineaire->RGBA, tests `raw_decoder_contract`      | Preparer M4.3 avec un point d extension decodeur stable et independant vendor |
+| 2026-03-13 | Maintenance WASM M4.1 | Introduction d un pipeline core compose (`pipeline.rs`) + branchement `apply_filters` via etape interne     | Preparer M4.2 (abstraction decodeur RAW) sans casser le contrat API v1        |
 | 2026-03-13 | Maintenance WASM M3.3 | Contrat de parite preview/export (tests backend buffer-a-buffer + presets communs frontend + rapport dedie) | Verrouiller Gate G4 avec une preuve automatisee de coherence preview/export   |
 | 2026-03-13 | Maintenance WASM M3.2 | Pipeline export non destructif (`export_pipeline`) + commande Tauri `export_image_edited` + DTO résultat    | Activer l'export final base sur events/snapshots avant contrat de parite M3.3 |
 | 2026-03-13 | Maintenance WASM M3.1 | Raccord backend export vers core partage (`export_rendering`) + deprecation `image_processing` local        | Supprimer la divergence algorithmique backend/WASM avant M3.2                 |

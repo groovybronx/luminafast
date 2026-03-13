@@ -1,16 +1,10 @@
 -- Fix Preview Schema Misalignment (MAINTENANCE-PHASE-2.3)
 -- Migration 007_fix_previews_schema
--- Date: 2026-03-13
---
--- Purpose: Align SQL schema with Rust struct definitions
--- Changes:
---   - Rename file_path → relative_path (store relative paths to cache dir)
---   - Add access_count (for Phase 6.1 LRU cache eviction)
---   - Add last_accessed (for Phase 6.1 LRU timestamp tracking)
---   - Add indexes on last_accessed and access_count (performance for LRU)
---   - Preserve existing preview_cache_metadata and preview_generation_log tables
-
--- ============================================================================
+-- AVERTISSEMENT :
+-- Cette migration n'est pas idempotente et suppose que la table 'previews' existe au lancement.
+-- Si la table de backup 'previews_backup_007' n'existe pas, l'INSERT échouera.
+-- En cas d'erreur en développement, il suffit de supprimer la base et de relancer toutes les migrations.
+-- (Aligné sur la logique des migrations précédentes)
 -- STEP 1: Backup existing previews table and recreate with new schema
 -- ============================================================================
 
@@ -21,7 +15,7 @@ ALTER TABLE previews RENAME TO previews_backup_007;
 CREATE TABLE previews (
     id INTEGER PRIMARY KEY,
     image_id INTEGER NOT NULL REFERENCES images(id) ON DELETE CASCADE,
-    source_hash TEXT NOT NULL, -- BLAKE3 hash of source file
+    source_hash TEXT NOT NULL, -- BLAKE3 hash of source file (unicité garantie par UNIQUE(image_id, preview_type))
     preview_type TEXT NOT NULL CHECK(preview_type IN ('thumbnail', 'standard', 'onetoone')),
     relative_path TEXT NOT NULL, -- CHANGED: Relative path to cache dir (e.g., 'thumbnail/hash.jpg')
     file_size INTEGER NOT NULL, -- Size of preview file in bytes

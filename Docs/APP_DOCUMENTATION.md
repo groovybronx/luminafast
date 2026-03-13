@@ -26,8 +26,9 @@
 - [11.1 Architecture du Catalogue](#111--architecture-du-catalogue)
 - [11.2 Configuration SQLite](#112--configuration-sqlite)
 - [11.3 Système de Migrations](#113--système-de-migrations)
-- [11.4 Types Rust](#114--types-rust)
-- [11.5 Tests Unitaires](#115--tests-unitaires)
+- [11.4 Preview Database Persistence & Access Tracking](#114--preview-database-persistence--access-tracking-phase-23-maintenance)
+- [11.5 Types Rust](#115--types-rust)
+- [11.6 Tests Unitaires](#116--tests-unitaires)
 
 12. [Outils de Qualité et CI/CD](#12-outils-de-qualité-et-cicd)
 
@@ -70,7 +71,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-03-13 (Maintenance WASM M5.3 complétée : garde-fous CI source unique — script + job `guard-single-source`, Gate G6 fermée)
+> **Dernière mise à jour** : 2026-03-13 (Phase 2.3 MAINTENANCE —Preview Database Alignment & LRU Foundation complétée)
 >
 > ### Décisions Projet (validées par le propriétaire)
 
@@ -883,11 +884,69 @@ Depuis la maintenance **M.3.2a (en cours)**, `LeftSidebar` délègue ses sous-pa
 
 ### 11.3 — Système de Migrations
 
-- **Automatique** : Migrations `001_initial`, `002_ingestion`, `003_previews` appliquées au démarrage via `execute_batch()`
+- **Automatique** : Migrations `001_initial`, `002_ingestion`, `003_previews`, `004_folders`, `005_...`, `006_...`, `007_fix_previews_schema` appliquées au démarrage via `execute_batch()`
 - **Idempotent** : Les migrations peuvent être réappliquées sans erreur
 - **Tracking** : Table `migrations` enregistre les versions appliquées
 - **Migration 003** : Table `previews` désormais activée (corrigée via BLOC 1)
+- **Migration 007** : Refactorisation schéma previews (Phase 2.3 MAINTENANCE) — voir section 11.4 ci-dessous
 - **Tests** : 11 tests unitaires valident le système complet
+
+### 11.4 — Preview Database Persistence & Access Tracking (Phase 2.3 MAINTENANCE)
+
+**Migration 007** (`src-tauri/migrations/007_fix_previews_schema.sql`) :
+
+- **Refactorisation schéma** : `file_path` (absolu) → `relative_path` (relatif à `$LUMINAFAST_CACHE_DIR/Previews.lrdata/`)
+- **New columns** :
+  - `access_count (INT DEFAULT 0)` : Nombre d'accès cumulés pour LRU tracking (Phase 6.1)
+  - `last_accessed (TIMESTAMP)` : Dernier accès pour pruning des previews stale
+- **Métadonnées préservées** : `preview_type`, `file_size`, `generation_time`, `jpeg_quality`, `width`, `height`
+- **Index optimisés** : `(last_accessed, access_count)` pour queries LRU future
+- **Purpose** : Eliminates dead code (`PreviewRecord`/`NewPreviewRecord` structs unused), enables Phase 6.1 LRU eviction
+
+**PreviewDbService** (`src-tauri/src/services/preview_db.rs`, 365 lignes) :
+
+Fournit le bridge persistence layer complet avec accès controlé à la table `previews` :
+
+- **`upsert_preview(image_id, relative_path, config)`** : Insert ou update entrée preview avec métadonnées
+- **`record_access(relative_path)`** : Incrémente `access_count`, met à jour `last_accessed_timestamp` (tracking LRU)
+- **`prune_stale_previews(days: i64)`** : Supprime entrées non accédées depuis N jours → économies storage
+- **`delete_previews_for_image(image_id)`** : Cleanup atomique lors suppression image
+- **`get_previews_for_image(image_id)`** : Requête optimisée avec index
+- **`get_cache_stats()`** → `{totalPreviews, cachedSize, accessedLast24h, accessedLast7d}` (monitoring)
+- **Validation de chemins** : Rejette paths hors bind `$LUMINAFAST_CACHE_DIR/Previews.lrdata/` (sécurité)
+
+**Commandes Tauri (Phase 2.3 MAINTENANCE)** :
+
+| Commande                  | Signature                 | Retour                                                                                  |
+| ------------------------- | ------------------------- | --------------------------------------------------------------------------------------- |
+| `get_preview_db_stats`    | `()`                      | `{totalPreviews: i64, cachedSizeBytes: i64, accessedLast24h: i64, accessedLast7d: i64}` |
+| `record_preview_access`   | `(relative_path: String)` | `{newAccessCount: i64}`                                                                 |
+| `prune_stale_previews_db` | `(days: i64)`             | `{deletedCount: i64, freedSize: i64}`                                                   |
+
+**Tests** (8 tests d'intégration, `src-tauri/src/services/tests/preview_db_integration.rs`) :
+
+- ✅ `test_upsert_preview_new` : insertion correcte avec tous les champs
+- ✅ `test_upsert_preview_update` : update sûre sans régression métadonnées
+- ✅ `test_record_access_increments_count` : access tracking fonctionne
+- ✅ `test_prune_stale_previews` : suppression correcte entrées anciennes
+- ✅ `test_get_previews_for_image` : requête par image_id sans champs inutiles
+- ✅ `test_cache_stats_accurate` : stats reporting complètes
+- ✅ `test_path_validation` : rejette chemins suspects (traversal)
+- ✅ `test_concurrent_access` : tokio::task::spawn concurrence DB safe
+
+**Intégration pipeline** :
+
+- ✅ Service appelé pendant `batch_ingest()` pour chaque image + preview généré
+- ✅ `record_preview_access()` déclenché par chaque acès preview ui (DevelopView, GridView)
+- ✅ Cleanup job async possible via `prune_stale_previews(days)` (config via setting futur)
+
+**Préparation Phase 6.1** :
+
+Fournit infrastructure LRU complète pour cache multiniveau Phase 6.1 :
+
+- `access_count` + `last_accessed` permettent ranking éviction selon polícy LRU
+- Index `(last_accessed, access_count)` optimise queries Phase 6.1 comme `SELECT * FROM previews WHERE last_accessed < NOW() - INTERVAL '7 days' ORDER BY access_count ASC LIMIT 100 FOR DELETE`
+- `prune_stale_previews` déjà implémenté → peut être appelé par scheduler Phase 6.1
 
 ---
 

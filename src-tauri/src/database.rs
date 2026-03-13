@@ -107,6 +107,9 @@ impl Database {
         // Run snapshots migration
         self.run_migration("006_snapshots")?;
 
+        // Run previews schema fix migration (Phase 2.3 MAINTENANCE)
+        self.run_migration("007_fix_previews_schema")?;
+
         Ok(())
     }
 
@@ -153,6 +156,7 @@ impl Database {
             }
             "005_event_sourcing" => include_str!("../migrations/005_event_sourcing.sql"),
             "006_snapshots" => include_str!("../migrations/006_snapshots.sql"),
+            "007_fix_previews_schema" => include_str!("../migrations/007_fix_previews_schema.sql"),
             _ => {
                 return Err(DatabaseError::MigrationFailed(format!(
                     "Unknown migration version: {}",

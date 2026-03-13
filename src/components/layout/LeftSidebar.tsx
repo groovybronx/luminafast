@@ -43,7 +43,7 @@ export const LeftSidebar = ({
     addImagesToCollection,
   } = useCollectionStore();
 
-  const { folderTree, loadFolderTree, setActiveFolder } = useFolderStore();
+  const { folderTree, loadFolderTree, setActiveFolder, clearActiveFolder } = useFolderStore();
 
   const ratingFilter = useUiStore((state) => state.ratingFilter);
   const flagFilter = useUiStore((state) => state.flagFilter);
@@ -72,6 +72,7 @@ export const LeftSidebar = ({
   const handleClear = () => {
     onSetFilterText('');
     clearActiveCollection();
+    clearActiveFolder();
   };
 
   const staticCollections = collections.filter((c) => c.collection_type === 'static');

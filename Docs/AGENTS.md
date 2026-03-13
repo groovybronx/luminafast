@@ -403,7 +403,7 @@ Avant d'écrire **tout test** (unitaire, intégration, E2E).
 
 **Backend** → `src-tauri/AGENTS.md`
 
-**CI/CD** → `.github/AGENTS.md`
+**CI/CD** → `.github/README.md`
 
 ---
 

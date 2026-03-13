@@ -150,6 +150,9 @@ pub fn run() {
             commands::preview::generate_previews_with_progress,
             commands::preview::benchmark_preview_generation,
             commands::preview::get_preview_config,
+            commands::preview::get_preview_db_stats,
+            commands::preview::prune_stale_previews_db,
+            commands::preview::record_preview_access,
             // Search commands (Phase 3.5)
             commands::search::search_images,
             // Event Sourcing commands

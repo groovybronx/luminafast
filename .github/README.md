@@ -1,7 +1,6 @@
 # LuminaFast Agents — CI/CD & Infrastructure
 
 > **Directives spécialisées pour GitHub Actions et infrastructure.**
-> Lisez d’abord `AGENTS.md` (racine) pour les règles absolues globales et le protocole général.
 
 ---
 

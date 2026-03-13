@@ -1,5 +1,3 @@
-#![allow(dead_code)] // Modèles preview planifiés pour la Phase 2.3
-
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -18,6 +16,14 @@ pub enum PreviewType {
 }
 
 impl PreviewType {
+    /// Retourne la représentation base de données (toujours minuscule)
+    pub fn to_db_string(self) -> &'static str {
+        match self {
+            PreviewType::Thumbnail => "thumbnail",
+            PreviewType::Standard => "standard",
+            PreviewType::OneToOne => "onetoone",
+        }
+    }
     pub fn default_size(&self) -> (u32, u32) {
         match self {
             PreviewType::Thumbnail => (240, 240),

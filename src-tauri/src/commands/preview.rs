@@ -1,12 +1,17 @@
+use crate::commands::catalog::AppState;
 use crate::models::preview::*;
 use crate::services::preview::PreviewService;
+use crate::services::preview_db::PreviewDbService;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, State};
 use tokio::sync::OnceCell;
 
 /// Instance globale du service preview
 static PREVIEW_SERVICE: OnceCell<Arc<PreviewService>> = OnceCell::const_new();
+
+/// Instance globale du service preview database (Phase 2.3 persistence)
+static PREVIEW_DB_SERVICE: OnceCell<Arc<PreviewDbService>> = OnceCell::const_new();
 
 /// Initialise le service preview (idempotent — multiple appels retournent OK)
 #[tauri::command]
@@ -30,11 +35,35 @@ pub async fn init_preview_service() -> Result<(), String> {
     Ok(())
 }
 
+/// Initialise le service preview_db avec la connexion DB depuis AppState
+/// Appelé par les commandes qui en ont besoin (lazy initialization)
+fn init_preview_db_service_if_needed(state: &State<'_, AppState>) -> Result<(), String> {
+    if PREVIEW_DB_SERVICE.get().is_some() {
+        return Ok(());
+    }
+
+    let db_arc = state.db.clone();
+    let db_service = PreviewDbService::new(db_arc);
+    let db_service_arc = Arc::new(db_service);
+    let _ = PREVIEW_DB_SERVICE.set(db_service_arc);
+
+    log::debug!("Service preview_db initialisé avec succès");
+    Ok(())
+}
+
 /// Récupère le service preview
 fn get_preview_service() -> Result<Arc<PreviewService>, String> {
     PREVIEW_SERVICE
         .get()
         .ok_or_else(|| "Service preview non initialisé".to_string())
+        .cloned()
+}
+
+/// Récupère le service preview_db
+fn get_preview_db_service() -> Result<Arc<PreviewDbService>, String> {
+    PREVIEW_DB_SERVICE
+        .get()
+        .ok_or_else(|| "Service preview_db non initialisé".to_string())
         .cloned()
 }
 
@@ -48,13 +77,39 @@ pub async fn generate_preview(
     let service = get_preview_service()?;
     let path = PathBuf::from(file_path);
 
-    service
+    let result = service
         .generate_preview(&path, preview_type, &source_hash)
         .await
-        .map_err(|e| format!("Erreur génération preview: {}", e))
+        .map_err(|e| format!("Erreur génération preview: {}", e))?;
+
+    // Persistence in database (Phase 2.3 MAINTENANCE-PHASE-2.3-PREVIEW-DB-ALIGNMENT)
+    if let Ok(db_service) = get_preview_db_service() {
+        let new_record = NewPreviewRecord {
+            source_hash: source_hash.clone(),
+            preview_type,
+            relative_path: result
+                .path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or(&format!("{}.jpg", source_hash))
+                .to_string(),
+            width: result.size.0,
+            height: result.size.1,
+            file_size: result.file_size,
+            jpeg_quality: preview_type.jpeg_quality(),
+        };
+
+        if let Err(e) = db_service.upsert_preview(new_record) {
+            log::warn!("Failed to persist preview to database: {}", e);
+            // Non-blocking: continue even if DB persistence fails
+        }
+    }
+
+    Ok(result)
 }
 
 /// Génère des previews en batch
+/// Note: Database persistence (Phase 2.3 MAINTENANCE) is deferred — use generate_preview() for individual persistence
 #[tauri::command]
 pub async fn generate_batch_previews(
     files: Vec<(String, String)>, // (path, hash)
@@ -79,6 +134,7 @@ pub async fn generate_preview_pyramid(
     source_hash: String,
 ) -> Result<Vec<PreviewResult>, String> {
     let service = get_preview_service()?;
+    let db_service = get_preview_db_service().ok();
     let path = PathBuf::from(file_path);
 
     let mut results = Vec::new();
@@ -93,6 +149,30 @@ pub async fn generate_preview_pyramid(
             .generate_preview(&path, preview_type, &source_hash)
             .await
             .map_err(|e| format!("Erreur génération preview {:?}: {}", preview_type, e))?;
+
+        // Persistence in database (Phase 2.3 MAINTENANCE-PHASE-2.3-PREVIEW-DB-ALIGNMENT)
+        if let Some(ref db_svc) = db_service {
+            let new_record = NewPreviewRecord {
+                source_hash: source_hash.clone(),
+                preview_type,
+                relative_path: result
+                    .path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or(&format!("{}_{:?}.jpg", source_hash, preview_type))
+                    .to_string(),
+                width: result.size.0,
+                height: result.size.1,
+                file_size: result.file_size,
+                jpeg_quality: preview_type.jpeg_quality(),
+            };
+
+            if let Err(e) = db_svc.upsert_preview(new_record) {
+                log::warn!("Failed to persist preview to database: {}", e);
+                // Non-blocking: continue even if DB persistence fails
+            }
+        }
+
         results.push(result);
     }
 
@@ -302,6 +382,52 @@ pub async fn get_preview_config() -> Result<PreviewConfig, String> {
     // Note: Le service n'expose pas directement sa config,
     // donc on retourne la config par défaut pour l'instant
     Ok(PreviewConfig::default())
+}
+
+/// Récupère les statistiques du cache depuis la base de données (Phase 2.3 MAINTENANCE)
+#[tauri::command]
+pub async fn get_preview_db_stats(state: State<'_, AppState>) -> Result<PreviewCacheInfo, String> {
+    init_preview_db_service_if_needed(&state)?;
+    let db_service = get_preview_db_service()?;
+    db_service
+        .get_cache_stats()
+        .map_err(|e| format!("Impossible de récupérer les stats du cache: {}", e))
+}
+
+/// Nettoie les previews obsolètes de la base de données (Phase 2.3 MAINTENANCE)
+/// Supprime les previews non accédées depuis days_old ET avec moins de min_access_count accès
+#[tauri::command]
+pub async fn prune_stale_previews_db(
+    days_old: i32,
+    min_access_count: u64,
+    state: State<'_, AppState>,
+) -> Result<u32, String> {
+    init_preview_db_service_if_needed(&state)?;
+    let db_service = get_preview_db_service()?;
+    db_service
+        .prune_stale_previews(days_old, min_access_count)
+        .map_err(|e| format!("Erreur lors du pruning: {}", e))
+}
+
+/// Enregistre un accès à une preview pour le LRU (Phase 2.3 MAINTENANCE)
+#[tauri::command]
+pub async fn record_preview_access(
+    source_hash: String,
+    preview_type: PreviewType,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    init_preview_db_service_if_needed(&state)?;
+    let db_service = get_preview_db_service()?;
+
+    let type_str = match preview_type {
+        PreviewType::Thumbnail => "thumbnail",
+        PreviewType::Standard => "standard",
+        PreviewType::OneToOne => "onetoone",
+    };
+
+    db_service
+        .record_access(&source_hash, type_str)
+        .map_err(|e| format!("Erreur lors de l'enregistrement d'accès: {}", e))
 }
 
 #[cfg(test)]

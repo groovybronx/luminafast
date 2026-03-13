@@ -1,0 +1,83 @@
+graph TD
+    %% Frontend Layer
+    subgraph Frontend["🎨 FRONTEND (React/TypeScript)"]
+        Toolbar["Toolbar.tsx<br/>Range Slider: 2-10"]
+        UIStore["uiStore.ts<br/>thumbnailSize: 1-10"]
+        GridView["GridView.tsx<br/>120-600px per side"]
+        CSS["library.css<br/>.thumbnail-size-1 to 10"]
+        PreviewRenderer["PreviewRenderer.tsx<br/>LazyLoad Thumbnail"]
+        PreviewService["previewService.ts<br/>invoke Tauri commands"]
+    end
+
+    %% Tauri/IPC Layer
+    subgraph Commands["⚙️ TAURI COMMANDS (IPC Bridge)"]
+        GenPreview["generate_preview()"]
+        GenPyramid["generate_preview_pyramid()"]
+        GenBatch["generate_batch_previews()"]
+    end
+
+    %% Backend Service Layer
+    subgraph Backend["🔧 BACKEND (Rust/Tauri)"]
+        PreviewSvc["PreviewService<br/>preview.rs:L12-22"]
+        GenThumb["generate_thumbnail()<br/>L354"]
+        GenStdPreview["generate_standard_preview()<br/>L647"]
+        GenNative["generate_native_preview()<br/>L683"]
+        CalcDim["calculate_resize_dimensions()<br/>L852-865"]
+    end
+
+    %% Configuration Layer
+    subgraph Config["⚙️ CONFIGURATION CONSTANTS"]
+        PreviewEnum["PreviewType Enum<br/>preview.rs:L9-17"]
+        Sizes["Dimension Map<br/>Thumbnail: 240x240<br/>Standard: 1440x1080<br/>OneToOne: 0x0 native"]
+        Quality["JPEG Quality<br/>Thumbnail: q75<br/>Standard: q85<br/>OneToOne: q90"]
+        MaxSize["File Size Limits<br/>Thumb: 50KB<br/>Std: 500KB<br/>Native: 2MB"]
+        SubDirs["Cache Subdirs<br/>'thumbnails'<br/>'standard'<br/>'native'"]
+    end
+
+    %% Output
+    subgraph Output["💾 CACHE & OUTPUT"]
+        CacheDir["CatalogDir<br/>{hash}/thumbnails<br/>{hash}/standard<br/>{hash}/native"]
+        ImageFiles["JPEG Files<br/>240×240.jpg<br/>1440×1080.jpg<br/>native.jpg"]
+    end
+
+    %% Connections
+    Toolbar -->|updates| UIStore
+    UIStore -->|triggers resize| GridView
+    GridView -->|renders| PreviewRenderer
+    PreviewRenderer -->|invoke via| PreviewService
+
+    PreviewService -->|calls| GenPreview
+    PreviewService -->|calls| GenPyramid
+    PreviewService -->|calls| GenBatch
+
+    GenPreview -->|routes to| GenThumb
+    GenPyramid -->|calls all 3| GenThumb
+    GenPyramid -->|calls all 3| GenStdPreview
+    GenPyramid -->|calls all 3| GenNative
+
+    GenThumb -->|uses config| Sizes
+    GenStdPreview -->|uses config| Sizes
+    GenNative -->|uses config| Sizes
+
+    GenThumb -->|respects| Quality
+    GenThumb -->|enforces| MaxSize
+    GenThumb -->|writes to| CacheDir
+
+    PreviewEnum -.->|defines types| PreviewSvc
+    CalcDim -->|computes| Sizes
+
+    CacheDir --> ImageFiles
+    ImageFiles -->|loaded by| PreviewService
+
+    %% Styling
+    classDef frontend fill:#4A90E2,stroke:#2E5C8A,color:#fff
+    classDef backend fill:#50C878,stroke:#2E7D4E,color:#fff
+    classDef config fill:#FFB84D,stroke:#B8860B,color:#000
+    classDef output fill:#9B59B6,stroke:#6C3A7C,color:#fff
+    classDef bridge fill:#E74C3C,stroke:#A93226,color:#fff
+
+    class Toolbar,UIStore,GridView,CSS,PreviewRenderer,PreviewService frontend
+    class GenPreview,GenPyramid,GenBatch bridge
+    class PreviewSvc,GenThumb,GenStdPreview,GenNative,CalcDim backend
+    class PreviewEnum,Sizes,Quality,MaxSize,SubDirs config
+    class CacheDir,ImageFiles output

@@ -164,17 +164,9 @@ AGENTS.md (racine) ← Vous êtes ici
     │   ├─ Session tracking
     │   └─ Tests unitaires/intégration
     │
-    ├─ .github/AGENTS.md (CI/CD)
-    │   ├─ Workflow philosophy
-    │   ├─ Path filtering
-    │   ├─ Jobs + timeouts
-    │   └─ Caching + artifacts
-    │
     └─ Docs/AGENTS.md (Documentation)
         ├─ Briefs structure
         ├─ CHANGELOG format
         ├─ Documentation cohérence
         └─ Gouvernance
 ```
-
-**→ Chaque sous-phase = lire ce fichier + AGENTS spécialisé(s) pertinent(s)**

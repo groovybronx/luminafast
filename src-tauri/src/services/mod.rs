@@ -10,6 +10,7 @@ pub mod ingestion;
 pub mod iptc;
 pub mod metrics;
 pub mod preview;
+pub mod preview_db;
 pub mod search;
 pub mod security;
 pub mod smart_query_parser;

@@ -85,6 +85,7 @@
 | 5 | 5.2 | Système de Tags Hiérarchique | ✅ Complétée | 2026-07-11 | Copilot |
 | 5 | 5.3 | Rating & Flagging Persistants | ✅ Complétée | 2026-07-11 | Copilot |
 | 5 | 5.4 | Sidecar XMP | ✅ Complétée | 2026-03-07 | Copilot |
+| 6 | 6.0.1 | Persistance Réelle des Settings (DB + Tauri + Store) | ✅ Complétée | 2026-03-13 | LuminaFast Documentation Sync |
 | 6 | 6.1 | Système de Cache Multiniveau | ⬜ En attente | — | — |
 | 6 | 6.2 | Intégration DuckDB (OLAP) | ⬜ En attente | — | — |
 | 6 | 6.3 | Virtualisation Avancée Grille | ⬜ En attente | — | — |
@@ -114,15 +115,76 @@
 
 ## Phase Actuelle
 
-> **Gate G6 fermée + Phase 2.3 MAINTENANCE complétée** — Préparation infrastructure Phase 6.1 (LRU cache access tracking)
+> **Phase 6.0.1 complétée : Settings Persistence (DB + Tauri + Store)**
 >
-> Duplication algorithmique retirée ✅ | Docs synchronisées ✅ | Preview DB persistence ajoutée ✅ | Garde-fous CI actifs ✅
+> - Paramètres utilisateur persistés en base SQLite (app_settings)
+> - Synchronisation complète Rust ↔️ Tauri ↔️ Store Zustand ↔️ UI
+> - Feedback UI (toast, spinner, error) et validation stricte
+> - Tests unitaires Rust & TypeScript (service, store, debounce, erreurs)
+> - Documentation synchronisée (section 11.4)
 >
-> Prochaine étape : Phase 6.1 (Cache multiniveau avec access tracking LRU) ou Phase 3.6 selon priorités.
+> Prochaine étape : Phase 6.1 (Cache multiniveau avec access tracking LRU)
 
 ---
 
 ---
+
+### 2026-03-13 — Phase 6.0.1 : Persistance Réelle des Settings (Complétée)
+
+**Statut** : ✅ **Complétée**
+**Agent** : LuminaFast Documentation Sync
+**Branche** : `phase/6.0-settings-framework`
+**Type** : Feature
+
+#### Résumé
+
+Implémentation complète de la persistance des paramètres utilisateur :
+
+- Migration SQL 008 (table `app_settings` single-row, JSON blob)
+- Service Rust CRUD (`settings.rs`), erreurs custom via thiserror
+- Commandes Tauri (`load_settings_from_db`, `save_settings_to_db`)
+- Service frontend `settingsService.ts` (validation, masking, invoke)
+- Store Zustand `settingsStore.ts` (loadFromDB, saveToDBDebounced)
+- Intégration UI (SettingsModal, feedback, toast)
+- Chargement auto au démarrage (`App.tsx`)
+- Tests unitaires Rust et TypeScript (service, store, debounce, erreurs)
+- Documentation section 11.4 ajoutée
+
+#### Fichiers créés
+
+- `src-tauri/migrations/008_app_settings_table.sql` — migration DB settings
+- `src-tauri/src/services/settings.rs` — logique CRUD settings
+- `src-tauri/src/commands/settings.rs` — commandes Tauri
+- `src/services/settingsService.ts` — service frontend
+- `src/__tests__/settingsService.test.ts` — tests validation service
+- `src/__tests__/settingsStore.integration.test.ts` — tests store intégration
+
+#### Fichiers modifiés
+
+- `src-tauri/src/lib.rs` — enregistrement commandes settings
+- `src-tauri/Cargo.toml` — dépendance thiserror
+- `src/stores/settingsStore.ts` — intégration actions DB
+- `src/components/settings/SettingsModal.tsx` — handler bouton, feedback UI
+- `src/App.tsx` — chargement settings au mount
+- `Docs/APP_DOCUMENTATION.md` — section 11.4 architecture persistence
+
+#### Critères de validation remplis
+
+- [x] Migration 008 appliquée et testée
+- [x] Service Rust CRUD + erreurs custom
+- [x] Commandes Tauri compilées et enregistrées
+- [x] Service TypeScript + validation
+- [x] Store Zustand intégré
+- [x] UI feedback (toast, spinner, error)
+- [x] Tests unitaires Rust et TS
+- [x] Documentation synchronisée
+
+#### Impact
+
+- Settings persistés en DB, chargés au démarrage, sauvegarde atomique
+- Feedback utilisateur fiable (succès/erreur)
+- Couverture tests complète (happy/error path)
+- Documentation à jour (section 11.4)
 
 ## 2026-03-13 — Phase 2.3 MAINTENANCE : Preview Database Alignment & LRU Foundation (Complétée)
 

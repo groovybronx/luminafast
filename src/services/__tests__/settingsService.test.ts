@@ -71,6 +71,22 @@ describe('settingsService', () => {
     });
   });
 
+  describe('validateLicenseKey', () => {
+    it('should accept empty key (optional field)', () => {
+      expect(settingsService.validateLicenseKey('')).toBe(true);
+    });
+
+    it('should accept uppercase alphanumeric keys with dashes', () => {
+      expect(settingsService.validateLicenseKey('ABCD-1234-EFGH')).toBe(true);
+      expect(settingsService.validateLicenseKey('PRO-2026-LICENSE-KEY')).toBe(true);
+    });
+
+    it('should reject invalid formats', () => {
+      expect(settingsService.validateLicenseKey('abc-123')).toBe(false);
+      expect(settingsService.validateLicenseKey('invalid_key!')).toBe(false);
+    });
+  });
+
   describe('validatePaths', () => {
     it('should pass validation with valid paths', async () => {
       const config = createTestConfig({
@@ -84,6 +100,19 @@ describe('settingsService', () => {
 
       const result = await settingsService.validatePaths(config);
       expect(result.valid).toBe(true);
+    });
+
+    it('should not throw on legacy payloads missing optional storage paths', async () => {
+      const legacy = createTestConfig() as unknown as Record<string, unknown>;
+      const storage = legacy.storage as Record<string, unknown>;
+
+      delete storage.previews_path;
+      delete storage.smart_previews_path;
+
+      const result = await settingsService.validatePaths(legacy as unknown as SettingsConfig);
+      expect(result.valid).toBe(true);
+      expect(result.errors['storage.previews_path']).toBeUndefined();
+      expect(result.errors['storage.smart_previews_path']).toBeUndefined();
     });
   });
 

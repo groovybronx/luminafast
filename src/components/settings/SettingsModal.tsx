@@ -114,10 +114,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 transition-opacity duration-200 animate-fade-in">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 transition-opacity duration-200 animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={onClose}
+    >
       <div
         ref={modalRef}
         className="bg-white dark:bg-neutral-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col relative scale-100 transition-transform duration-200 animate-scale-in"
+        onMouseDown={(event) => event.stopPropagation()}
       >
         {/* Bouton de fermeture en haut à droite */}
         <button

@@ -85,6 +85,7 @@
 | 5 | 5.2 | Système de Tags Hiérarchique | ✅ Complétée | 2026-07-11 | Copilot |
 | 5 | 5.3 | Rating & Flagging Persistants | ✅ Complétée | 2026-07-11 | Copilot |
 | 5 | 5.4 | Sidecar XMP | ✅ Complétée | 2026-03-07 | Copilot |
+| 6 | 6.0 | Settings Framework Professionnel (UI + validation runtime + raccourcis dynamiques) | ✅ Complétée | 2026-03-14 | Copilot |
 | 6 | 6.0.1 | Persistance Réelle des Settings (DB + Tauri + Store) | ✅ Complétée | 2026-03-13 | LuminaFast Documentation Sync |
 | 6 | 6.1 | Système de Cache Multiniveau | ⬜ En attente | — | — |
 | 6 | 6.2 | Intégration DuckDB (OLAP) | ⬜ En attente | — | — |
@@ -115,15 +116,13 @@
 
 ## Phase Actuelle
 
-> **Phase 6.0.1 complétée : Settings Persistence (DB + Tauri + Store)**
+> **Transition validée : Phase 6.0 complétée, passage vers Phase 6.1**
 >
-> - Paramètres utilisateur persistés en base SQLite (app_settings)
-> - Synchronisation complète Rust ↔️ Tauri ↔️ Store Zustand ↔️ UI
-> - Feedback UI (toast, spinner, error) et validation stricte
-> - Tests unitaires Rust & TypeScript (service, store, debounce, erreurs)
-> - Documentation synchronisée (section 11.4)
+> - Foundation settings livrée : persistance DB + validation runtime + UI catégories + store sync
+> - Raccourcis dynamiques livrés : fallback platform-aware Settings + export configurable via settings
+> - Vérifications de clôture exécutées : frontend settings/shortcuts/export + backend settings au vert
 >
-> Prochaine étape : Phase 6.1 (Cache multiniveau avec access tracking LRU)
+> Prochaine étape : démarrage Phase 6.1 (cache multiniveau LRU)
 
 ---
 
@@ -185,6 +184,61 @@ Implémentation complète de la persistance des paramètres utilisateur :
 - Feedback utilisateur fiable (succès/erreur)
 - Couverture tests complète (happy/error path)
 - Documentation à jour (section 11.4)
+
+### 2026-03-14 — Phase 6.0 : Stabilisation Settings + Raccourcis Dynamiques (Complétée)
+
+**Statut** : ✅ **Complétée**
+**Agent** : Copilot
+**Branche** : `phase/6.0-settings-framework-completion`
+**Type** : Feature + Stabilisation
+
+#### Résumé
+
+Correction structurante d'une régression d'interaction + finalisation du socle shortcuts de la phase 6.0 :
+
+- normalisation défensive des settings chargés depuis DB (résistance payloads legacy)
+- validation des paths settings via IPC backend sécurisée (`validate_settings_path`)
+- durcissement modal settings (fermeture backdrop, isolation raccourcis globaux modal ouvert)
+- ouverture auto DevTools au démarrage `npm run tauri:dev` (debug in-app)
+- raccourcis configurables à chaud depuis `settings.keyboard` dans `App.tsx`
+- capture clavier directe dans Settings > Keyboard (`Record shortcut`, cancel `Esc`)
+- intégration Browse native (dialog Tauri) dans Settings > Storage pour `catalogue_root`, `database_path`, `previews_path`, `smart_previews_path`
+- test d'intégration App du raccourci Export (keydown réel + format piloté par settings)
+- fallback Settings cross-platform normalisé : `Cmd+,` sur macOS, `Ctrl+,` sur Windows/Linux (App + profils keyboard)
+
+#### Fichiers créés
+
+- `src/lib/keyboardShortcuts.ts`
+- `src/lib/__tests__/keyboardShortcuts.test.ts`
+- `src/__tests__/App.exportShortcut.test.tsx`
+
+#### Fichiers modifiés
+
+- `src/components/settings/SettingsCategoryKeyboardShortcuts.tsx`
+- `src/components/settings/SettingsCategoryStorage.tsx`
+- `src/components/layout/TopNav.tsx`
+- `src/components/settings/SettingsModal.tsx`
+- `src/components/settings/__tests__/SettingsModal.test.tsx`
+- `src/components/settings/__tests__/SettingsCategoriesAdvanced.test.tsx`
+- `src/services/settingsService.ts`
+- `src/stores/settingsStore.ts`
+- `src/App.tsx`
+- `src/lib/keyboardShortcuts.ts`
+- `src/lib/__tests__/keyboardShortcuts.test.ts`
+- `src/__tests__/App.settingsShortcut.test.tsx`
+- `src-tauri/src/commands/settings.rs`
+- `src-tauri/src/lib.rs`
+- `package.json`
+
+#### Validation
+
+- Frontend ciblé : ✅ 14 tests passés, 0 échec
+- Frontend ciblé (browse + shortcut export) : ✅ 7 tests passés, 0 échec
+- Frontend ciblé (fallback cross-platform shortcuts) : ✅ 14 tests passés, 0 échec
+- Frontend ciblé (App intégration shortcuts settings/export + parser) : ✅ 10 tests passés, 0 échec
+- Frontend clôture 6.0 (settings/ui/store/services/shortcuts/export) : ✅ 61 tests passés, 0 échec
+- Backend settings : ✅ 8 tests passés, 0 échec
+- Erreurs TS/lint sur fichiers modifiés : ✅ aucune
 
 ## 2026-03-13 — Phase 2.3 MAINTENANCE : Preview Database Alignment & LRU Foundation (Complétée)
 

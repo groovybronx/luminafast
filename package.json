@@ -29,7 +29,7 @@
     "rust:fix": "npm run rust:fmt && npm run rust:clippy-fix",
     "wasm:build": "cd luminafast-wasm && wasm-pack build --target web --release",
     "wasm:build:dev": "cd luminafast-wasm && wasm-pack build --target web",
-    "tauri:dev": "npm run wasm:build:dev && tauri dev",
+    "tauri:dev": "npm run wasm:build:dev && TAURI_OPEN_DEVTOOLS=1 tauri dev",
     "tauri:build": "npm run wasm:build && tauri build",
     "clean": "rm -rf dist coverage src-tauri/target"
   },

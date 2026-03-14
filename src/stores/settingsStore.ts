@@ -55,6 +55,7 @@ const defaultSettings: SettingsConfig = {
     standard_quality: 85,
     native_percentage: 100,
     native_quality: 90,
+    export_format_default: 'jpeg',
     auto_generate: true,
     background_processing: true,
     parallel_workers: 4,
@@ -93,14 +94,75 @@ const defaultSettings: SettingsConfig = {
 
 type CategoryKey = keyof SettingsConfig;
 type CategoryValue<K extends CategoryKey> = SettingsConfig[K];
+type CategoryUpdate<K extends CategoryKey> =
+  CategoryValue<K> extends object ? Partial<CategoryValue<K>> : CategoryValue<K>;
 
 interface SettingsStore {
   settings: SettingsConfig;
-  update: <K extends CategoryKey>(category: K, updates: Partial<CategoryValue<K>>) => void;
+  update: <K extends CategoryKey>(category: K, updates: CategoryUpdate<K>) => void;
   resetToDefaults: () => void;
   getSettings: () => SettingsConfig;
   loadFromDB: () => Promise<void>;
   saveToDBDebounced: (config: SettingsConfig) => Promise<void>;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function normalizeKeyboard(value: unknown): SettingsConfig['keyboard'] {
+  const raw = toRecord(value);
+  const entries = Object.entries(raw).filter(([, entry]) => typeof entry === 'string');
+  return Object.fromEntries(entries) as SettingsConfig['keyboard'];
+}
+
+function normalizeSettingsConfig(value: unknown): SettingsConfig {
+  const root = toRecord(value);
+  const nowIso = new Date().toISOString();
+
+  const telemetryEnabled =
+    typeof root.telemetry_enabled === 'boolean'
+      ? root.telemetry_enabled
+      : defaultSettings.telemetry_enabled;
+
+  const lastUpdated =
+    typeof root.last_updated === 'string' && root.last_updated.trim() ? root.last_updated : nowIso;
+
+  return {
+    ...defaultSettings,
+    ...root,
+    storage: {
+      ...defaultSettings.storage,
+      ...toRecord(root.storage),
+    },
+    cache: {
+      ...defaultSettings.cache,
+      ...toRecord(root.cache),
+    },
+    preview: {
+      ...defaultSettings.preview,
+      ...toRecord(root.preview),
+    },
+    keyboard: normalizeKeyboard(root.keyboard),
+    user: {
+      ...defaultSettings.user,
+      ...toRecord(root.user),
+    },
+    ai: {
+      ...defaultSettings.ai,
+      ...toRecord(root.ai),
+    },
+    appearance: {
+      ...defaultSettings.appearance,
+      ...toRecord(root.appearance),
+    },
+    telemetry_enabled: telemetryEnabled,
+    last_updated: lastUpdated,
+  } as SettingsConfig;
 }
 
 export const useSettingsStore = create<SettingsStore>((set, get) => {
@@ -114,33 +176,26 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
     settings: defaultSettings,
     update: (category, updates) => {
       set((state) => {
-        if (category === 'last_updated' || category === 'telemetry_enabled') {
-          return {
-            settings: {
-              ...state.settings,
-              [category]: updates,
-              last_updated: new Date().toISOString(),
-            },
-          };
-        }
         const current = state.settings[category];
         if (typeof current === 'object' && current !== null) {
+          const objectUpdates = updates as Partial<CategoryValue<typeof category>>;
+
           return {
             settings: {
               ...state.settings,
               [category]: {
                 ...current,
-                ...updates,
+                ...objectUpdates,
               },
               last_updated: new Date().toISOString(),
             },
           };
         }
-        // fallback: assign directly (should not happen except for scalars)
+
         return {
           settings: {
             ...state.settings,
-            [category]: updates,
+            [category]: updates as CategoryValue<typeof category>,
             last_updated: new Date().toISOString(),
           },
         };
@@ -151,7 +206,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
     loadFromDB: async () => {
       try {
         const loaded = await settingsService.loadSettingsFromDB();
-        set({ settings: loaded });
+        const normalized = normalizeSettingsConfig(loaded);
+        set({ settings: normalized });
       } catch (error) {
         console.error('Failed to load settings from DB:', error);
         // Fallback to in-memory defaults

@@ -22,6 +22,7 @@ export interface PreviewConfig {
   standard_quality: number;
   native_percentage: 90 | 95 | 100;
   native_quality: number;
+  export_format_default?: 'jpeg' | 'tiff';
   auto_generate: boolean;
   background_processing: boolean;
   parallel_workers: number;

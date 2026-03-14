@@ -10,6 +10,13 @@ use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let should_open_devtools = std::env::var("TAURI_OPEN_DEVTOOLS")
+        .map(|value| {
+            let normalized = value.trim().to_ascii_lowercase();
+            normalized == "1" || normalized == "true" || normalized == "yes"
+        })
+        .unwrap_or(false);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
@@ -72,6 +79,11 @@ pub fn run() {
             });
 
             Ok(())
+        })
+        .on_page_load(move |window, _| {
+            if should_open_devtools && window.label() == "main" {
+                window.open_devtools();
+            }
         })
         .invoke_handler(tauri::generate_handler![
             // Catalog commands
@@ -187,6 +199,7 @@ pub fn run() {
             // Settings commands (Phase 6.0.1)
             commands::settings::load_settings_from_db,
             commands::settings::save_settings_to_db,
+            commands::settings::validate_settings_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

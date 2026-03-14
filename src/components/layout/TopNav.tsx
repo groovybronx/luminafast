@@ -42,7 +42,7 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onSetActiveView, onO
         className="flex items-center gap-1 px-2 py-1 hover:bg-zinc-800 rounded text-zinc-300 hover:text-blue-400 transition-colors"
         onClick={onOpenSettings}
         aria-label="Paramètres"
-        title="Paramètres (Cmd+,)"
+        title="Paramètres (Cmd+, sur macOS / Ctrl+, sur Windows/Linux)"
         type="button"
       >
         <SettingsIcon size={16} />

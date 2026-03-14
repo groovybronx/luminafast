@@ -11,15 +11,25 @@ const NATIVE_SIZES = [100, 95, 90];
 const SettingsCategoryPreview: React.FC = () => {
   const preview = useSettingsStore((s) => s.settings.preview);
   const update = useSettingsStore((s) => s.update);
+  const exportFormat = preview.export_format_default ?? 'jpeg';
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <SettingDropdown
-          label="Type de fichier"
-          value="JPEG"
-          options={[{ label: 'JPEG', value: 'JPEG' }]}
-          disabled
+          label="Format export par défaut"
+          value={exportFormat}
+          options={[
+            { label: 'JPEG', value: 'jpeg' },
+            { label: 'TIFF', value: 'tiff' },
+          ]}
+          onChange={(v: number | string) =>
+            update('preview', {
+              export_format_default: (String(v).toLowerCase() === 'tiff' ? 'tiff' : 'jpeg') as
+                | 'jpeg'
+                | 'tiff',
+            })
+          }
         />
         <SettingDropdown
           label="Taille thumbnail"

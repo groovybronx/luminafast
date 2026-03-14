@@ -152,18 +152,28 @@ export default function App() {
     ) => {
       // Build typed EventPayload based on event type
       let typedPayload: EventPayload;
-      if (eventType === 'RATING') typedPayload = { type: 'RATING', value: payload as number };
-      else if (eventType === 'FLAG') typedPayload = { type: 'FLAG', value: payload as FlagType };
-      else if (eventType === 'EDIT')
+      if (eventType === 'RATING') {
+        typedPayload = { type: 'RATING', value: payload as number };
+      } else if (eventType === 'FLAG') {
+        typedPayload = { type: 'FLAG', value: payload as FlagType };
+      } else if (eventType === 'EDIT') {
         typedPayload = { type: 'EDIT', value: payload as Partial<EditState> };
-      else if (eventType === 'ADD_TAG')
-        typedPayload = { type: 'ADD_TAG', value: payload as string };
-      else typedPayload = { type: 'REMOVE_TAG', value: payload as string };
+      } else if (eventType === 'ADD_TAG' || eventType === 'TagAdded') {
+        typedPayload = { type: 'TagAdded', value: payload as string };
+      } else if (eventType === 'REMOVE_TAG' || eventType === 'TagRemoved') {
+        typedPayload = { type: 'TagRemoved', value: payload as string };
+      } else {
+        throw new Error(`dispatchEvent: eventType non supporté : ${eventType}`);
+      }
 
+      // Harmonisation pour event sourcing : TagAdded/TagRemoved
+      let normalizedType = eventType;
+      if (eventType === 'ADD_TAG') normalizedType = 'TagAdded';
+      if (eventType === 'REMOVE_TAG') normalizedType = 'TagRemoved';
       const event: CatalogEvent = {
         id: safeID(),
         timestamp: Date.now(),
-        type: eventType as EventType,
+        type: normalizedType as EventType,
         payload: typedPayload,
         targets: selection,
       };
@@ -185,13 +195,18 @@ export default function App() {
             addLog(`Failed to update flag for image ${imageId}: ${err}`, 'error');
           });
         });
-      } else if (eventType === 'ADD_TAG' || eventType === 'REMOVE_TAG') {
+      } else if (
+        eventType === 'ADD_TAG' ||
+        eventType === 'REMOVE_TAG' ||
+        eventType === 'TagAdded' ||
+        eventType === 'TagRemoved'
+      ) {
         // Handle tags - build current tags for each image
         selection.forEach((imageId) => {
           const image = images.find((img) => img.id === imageId);
           if (image) {
             let newTags = [...image.state.tags];
-            if (eventType === 'ADD_TAG') {
+            if (eventType === 'ADD_TAG' || eventType === 'TagAdded') {
               newTags = [...new Set([...newTags, payload as string])];
             } else {
               newTags = newTags.filter((t) => t !== payload);
@@ -247,7 +262,7 @@ export default function App() {
         addLog(`Edit persisted to DB for ${selection.length} asset(s)`, 'sqlite');
       }
 
-      if (eventType !== 'EDIT' && eventType !== 'EDIT_COMMIT') {
+      if (eventType !== 'EDIT') {
         addLog(`SQLite sync queued for ${selection.length} asset(s) [${eventType}]`, 'sqlite');
       }
     },

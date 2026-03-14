@@ -119,7 +119,7 @@ Si blocage non-résolvable dans la sous-phase :
    - Description précise du problème
    - Cause racine identifiée
    - Options envisagées + pros/cons
-   - Impact sur planning
+  
 3. **Signaler au propriétaire** et attendre instructions
 
 ---

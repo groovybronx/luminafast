@@ -70,6 +70,8 @@ pub fn save_settings(
     conn: &rusqlite::Connection,
     config: &serde_json::Value,
 ) -> SettingsResult<()> {
+    validate_settings_schema(config)?;
+
     // Serialize to JSON string
     let json_str = serde_json::to_string(config).map_err(SettingsError::SerializeError)?;
 
@@ -87,6 +89,70 @@ pub fn save_settings(
 
     stmt.execute(rusqlite::params![&json_str])
         .map_err(|e| SettingsError::DbError(e.to_string()))?;
+
+    Ok(())
+}
+
+fn validate_settings_schema(config: &serde_json::Value) -> SettingsResult<()> {
+    let root = config.as_object().ok_or_else(|| {
+        SettingsError::ValidationError("Settings payload must be a JSON object".to_string())
+    })?;
+
+    for key in [
+        "storage",
+        "cache",
+        "preview",
+        "keyboard",
+        "user",
+        "ai",
+        "appearance",
+        "telemetry_enabled",
+        "last_updated",
+    ] {
+        if !root.contains_key(key) {
+            return Err(SettingsError::ValidationError(format!(
+                "Missing required key: {}",
+                key
+            )));
+        }
+    }
+
+    for key in [
+        "storage",
+        "cache",
+        "preview",
+        "keyboard",
+        "user",
+        "ai",
+        "appearance",
+    ] {
+        if !root.get(key).map(|v| v.is_object()).unwrap_or(false) {
+            return Err(SettingsError::ValidationError(format!(
+                "Key '{}' must be a JSON object",
+                key
+            )));
+        }
+    }
+
+    if !root
+        .get("telemetry_enabled")
+        .map(|v| v.is_boolean())
+        .unwrap_or(false)
+    {
+        return Err(SettingsError::ValidationError(
+            "telemetry_enabled must be a boolean".to_string(),
+        ));
+    }
+
+    if !root
+        .get("last_updated")
+        .map(|v| v.is_string())
+        .unwrap_or(false)
+    {
+        return Err(SettingsError::ValidationError(
+            "last_updated must be an ISO string".to_string(),
+        ));
+    }
 
     Ok(())
 }
@@ -149,7 +215,14 @@ mod tests {
                 "catalogue_root": "/updated",
                 "database_path": "/updated/catalog.db"
             },
-            "theme": "dark"
+            "cache": {},
+            "preview": {},
+            "keyboard": {},
+            "user": {},
+            "ai": {},
+            "appearance": {"theme": "dark"},
+            "telemetry_enabled": false,
+            "last_updated": "2026-03-14T00:00:00Z"
         });
 
         let result = save_settings(&conn, &new_config);
@@ -157,7 +230,7 @@ mod tests {
 
         // Verify persisted value
         let loaded = load_settings(&conn).expect("Failed to load after save");
-        assert_eq!(loaded["theme"], "dark");
+        assert_eq!(loaded["appearance"]["theme"], "dark");
         assert_eq!(loaded["storage"]["catalogue_root"], "/updated");
     }
 
@@ -166,14 +239,14 @@ mod tests {
         let conn = create_test_db();
 
         let empty_config = serde_json::json!("");
-        let _result = save_settings(&conn, &empty_config);
+        // Empty string is valid JSON but not a valid settings schema.
+        let invalid_result = save_settings(&conn, &empty_config);
+        assert!(invalid_result.is_err());
 
-        // Empty string is still valid JSON, but our validation should catch it
-        // (note: actual implementation depends on requirements)
-        // For now, we test that empty object works
+        // Empty object should fail schema validation because required keys are missing.
         let empty_object = serde_json::json!({});
         let result = save_settings(&conn, &empty_object);
-        assert!(result.is_ok());
+        assert!(result.is_err());
     }
 
     #[test]
@@ -181,17 +254,61 @@ mod tests {
         let conn = create_test_db();
 
         let original = serde_json::json!({
-            "complex": {
-                "nested": {
-                    "array": [1, 2, 3],
-                    "string": "test"
-                }
-            }
+            "storage": {"catalogue_root": "/catalog", "database_path": "/catalog.db"},
+            "cache": {"l1_limit_mb": 512},
+            "preview": {"thumbnail_size_px": 160},
+            "keyboard": {},
+            "user": {"email": "user@example.com"},
+            "ai": {"enabled": false},
+            "appearance": {"theme": "auto"},
+            "telemetry_enabled": false,
+            "last_updated": "2026-03-14T00:00:00Z"
         });
 
         save_settings(&conn, &original).expect("Save failed");
         let loaded = load_settings(&conn).expect("Load failed");
 
         assert_eq!(original, loaded);
+    }
+
+    #[test]
+    fn test_save_settings_rejects_wrong_telemetry_type() {
+        let conn = create_test_db();
+
+        let invalid = serde_json::json!({
+            "storage": {},
+            "cache": {},
+            "preview": {},
+            "keyboard": {},
+            "user": {},
+            "ai": {},
+            "appearance": {},
+            "telemetry_enabled": "false",
+            "last_updated": "2026-03-14T00:00:00Z"
+        });
+
+        let result = save_settings(&conn, &invalid);
+        assert!(result.is_err());
+        assert!(matches!(result, Err(SettingsError::ValidationError(_))));
+    }
+
+    #[test]
+    fn test_save_settings_rejects_missing_required_key() {
+        let conn = create_test_db();
+
+        let invalid = serde_json::json!({
+            "storage": {},
+            "cache": {},
+            "preview": {},
+            "keyboard": {},
+            "user": {},
+            "ai": {},
+            "telemetry_enabled": false,
+            "last_updated": "2026-03-14T00:00:00Z"
+        });
+
+        let result = save_settings(&conn, &invalid);
+        assert!(result.is_err());
+        assert!(matches!(result, Err(SettingsError::ValidationError(_))));
     }
 }

@@ -76,7 +76,7 @@
 > **Ce document est la source de vérité sur l'état actuel de l'application.**
 > Il DOIT être mis à jour après chaque sous-phase pour rester cohérent avec le code.
 >
-> **Dernière mise à jour** : 2026-03-13 (Phase 2.3 MAINTENANCE —Preview Database Alignment & LRU Foundation complétée)
+> **Dernière mise à jour** : 2026-03-14 (Phase 6.0 complétée — settings framework stabilisé, transition 6.1 prête)
 >
 > ### Décisions Projet (validées par le propriétaire)
 
@@ -196,11 +196,13 @@ LuminaFast/
 │   │   └── __tests__/             # Tests stores (4 fichiers)
 │   ├── lib/                        # Utilitaires et données mock
 │   │   ├── helpers.ts              # safeID()
+│   │   ├── keyboardShortcuts.ts    # Profils shortcuts + parser des combos clavier (Phase 6.0)
 │   │   ├── searchParser.ts         # parseSearchQuery() — parser Phase 3.5
 │   │   ├── filterUtils.ts          # editStateToPixelFilters(), hasNonNeutralFilters() — centralisation logique WASM (Maintenance)
 │   │   ├── mockData.ts             # generateImages, INITIAL_IMAGES (MockEvent supprimé)
 │   │   └── __tests__/             # Tests utilitaires
-│   │       └── filterUtils.test.ts # 18 tests conversion + détection filtres neutres (Maintenance)
+│   │       ├── filterUtils.test.ts # 18 tests conversion + détection filtres neutres (Maintenance)
+│   │       └── keyboardShortcuts.test.ts # Tests parser raccourcis clavier (Phase 6.0)
 │   ├── services/                   # Services TypeScript (Phase 1.2 + 2.2 + 3.3 + 3.5)
 │   │   ├── AGENTS.md               # Conventions services front + mocks
 │   │   ├── catalogService.ts       # Wrapper Tauri CRUD images + collections + folders
@@ -716,22 +718,31 @@ export interface CatalogEvent {
 
 Depuis la maintenance **M.3.1**, les raccourcis globaux sont gérés par `useAppShortcuts` (hook dédié) au lieu d’un listener inline dans `App.tsx`.
 
+Depuis la **Phase 6.0**, les raccourcis d'actions principales (`import`, `library`, `develop`, `settings`, `export`) sont **configurables à chaud** via `settings.keyboard` (sans redémarrage), avec parsing de combinaisons (`Cmd+`, `Ctrl+`, `Shift+`, `Alt+`) et fallback profil par défaut.
+
+Depuis la **Phase 6.0**, le fallback par défaut de l'action Settings est **platform-aware** : `Cmd+,` sur macOS et `Ctrl+,` sur Windows/Linux.
+
+Depuis la **Phase 6.0**, la catégorie Settings > Keyboard supporte l'enregistrement direct d'une combinaison via bouton **Record shortcut** (capture clavier + annulation `Esc`).
+
 Depuis la maintenance **M.3.2 (en cours)**, la grille charge les images via `get_all_images` sans jointure EXIF par défaut, et les métadonnées EXIF sont chargées à la demande via `useLazyImageMeta` + `imageDataService` (prefetch hover + chargement panneau droit).
 
 Depuis la maintenance **M.3.2a (en cours)**, `LeftSidebar` délègue ses sous-parties à des composants dédiés (`CollectionItem`, `SmartCollectionItem`, `NewCollectionInput`, `QuickFilters`) pour réduire la complexité et améliorer la testabilité.
 
-| Touche       | Action                    | Implémenté ? |
-| ------------ | ------------------------- | ------------ |
-| `G`          | Vue Bibliothèque (grille) | ✅           |
-| `D`          | Vue Développement         | ✅           |
-| `1-5`        | Attribuer une note        | ✅ (mock)    |
-| `0`          | Supprimer la note         | ✅ (mock)    |
-| `P`          | Flag "pick"               | ✅ (mock)    |
-| `X`          | Flag "reject"             | ✅ (mock)    |
-| `U`          | Supprimer le flag         | ✅ (mock)    |
-| `Shift+clic` | Sélection multiple        | ✅ (mock)    |
-| `Cmd+clic`   | Sélection multiple        | ✅ (mock)    |
-| Double-clic  | Ouvrir en mode Develop    | ✅           |
+| Touche       | Action                    | Implémenté ?      |
+| ------------ | ------------------------- | ----------------- |
+| `G`          | Vue Bibliothèque (grille) | ✅                |
+| `D`          | Vue Développement         | ✅                |
+| `Cmd+,`      | Ouvrir Settings           | ✅                |
+| `Ctrl+,`     | Ouvrir Settings           | ✅ (configurable) |
+| `Cmd+I`      | Ouvrir Import             | ✅ (configurable) |
+| `1-5`        | Attribuer une note        | ✅ (mock)         |
+| `0`          | Supprimer la note         | ✅ (mock)         |
+| `P`          | Flag "pick"               | ✅ (mock)         |
+| `X`          | Flag "reject"             | ✅ (mock)         |
+| `U`          | Supprimer le flag         | ✅ (mock)         |
+| `Shift+clic` | Sélection multiple        | ✅ (mock)         |
+| `Cmd+clic`   | Sélection multiple        | ✅ (mock)         |
+| Double-clic  | Ouvrir en mode Develop    | ✅                |
 
 ---
 
@@ -911,6 +922,7 @@ La persistance des paramètres utilisateur (settings) repose sur une architectur
 
 - `load_settings_from_db()` : charge le JSON depuis la DB, désérialise en `SettingsConfig`
 - `save_settings_to_db(config)` : sérialise le config en JSON, update la ligne unique
+- `validate_settings_path(path)` : valide un chemin settings via whitelist runtime backend (sécurité traversal)
 - Gestion d’erreur Rust via enum `SettingsError` (derive thiserror, pas de unwrap)
 - Toutes les erreurs converties en String pour IPC Tauri
 
@@ -919,6 +931,8 @@ La persistance des paramètres utilisateur (settings) repose sur une architectur
 - `settingsService.ts` : wrappers invoke Tauri, validation email/paths/shortcuts, masking API keys
 - `settingsStore.ts` : actions `loadFromDB`, `saveToDBDebounced` (debounce 1s, UX safe)
 - Chargement auto au mount (`App.tsx`), feedback UI (toast, spinner, error)
+- Settings > Storage : boutons Browse branchés au dialog natif Tauri (sélection dossier/fichier) avec mise à jour directe du store
+- App shortcut Export : format de sortie piloté par `settings.preview.export_format_default` (JPEG/TIFF)
 
 #### 11.4.4 — Validation & Sécurité
 

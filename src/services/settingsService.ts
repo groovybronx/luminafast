@@ -9,6 +9,21 @@ export interface ValidationResult {
   errors: Record<string, string>;
 }
 
+const PATH_VALIDATION_TIMEOUT_MS = 2000;
+
+function normalizePathValue(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+async function validatePathWithTimeout(path: string): Promise<void> {
+  const validationPromise = invoke<void>('validate_settings_path', { path });
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('Path validation timeout')), PATH_VALIDATION_TIMEOUT_MS);
+  });
+
+  await Promise.race([validationPromise, timeoutPromise]);
+}
+
 /**
  * Load settings from database via Tauri command
  *
@@ -59,6 +74,19 @@ export function validateEmail(email: string): boolean {
 }
 
 /**
+ * Validate license key format
+ *
+ * Accepted format: uppercase letters, digits, and dashes, between 10 and 64 chars.
+ * This is a local format check only, not server-side activation validation.
+ */
+export function validateLicenseKey(key: string): boolean {
+  if (!key) return true;
+
+  const licenseRegex = /^[A-Z0-9-]{10,64}$/;
+  return licenseRegex.test(key);
+}
+
+/**
  * Validate file paths exist and are writable
  *
  * Checks:
@@ -74,25 +102,70 @@ export function validateEmail(email: string): boolean {
 export async function validatePaths(config: SettingsConfig): Promise<ValidationResult> {
   const errors: Record<string, string> = {};
 
+  const pathChecks: Array<Promise<void>> = [];
+  const storage = (config as Partial<SettingsConfig>).storage as
+    | Partial<SettingsConfig['storage']>
+    | undefined;
+
+  const catalogueRoot = normalizePathValue(storage?.catalogue_root);
+  const databasePath = normalizePathValue(storage?.database_path);
+  const previewsPath = normalizePathValue(storage?.previews_path);
+  const smartPreviewsPath = normalizePathValue(storage?.smart_previews_path);
+
   // Validate catalogue_root
-  if (config.storage.catalogue_root) {
-    try {
-      // Note: Actual path validation would require a Tauri command
-      // For now, basic non-empty check
-      if (!config.storage.catalogue_root.trim()) {
-        errors['storage.catalogue_root'] = 'Catalogue root cannot be empty';
-      }
-    } catch (error) {
-      errors['storage.catalogue_root'] = `Path validation failed: ${String(error)}`;
+  if (catalogueRoot) {
+    if (!catalogueRoot.trim()) {
+      errors['storage.catalogue_root'] = 'Catalogue root cannot be empty';
+    } else {
+      pathChecks.push(
+        validatePathWithTimeout(catalogueRoot).catch((error: unknown) => {
+          errors['storage.catalogue_root'] =
+            error instanceof Error ? error.message : 'Path validation failed';
+        }),
+      );
     }
   }
 
   // Validate database_path
-  if (config.storage.database_path) {
-    if (!config.storage.database_path.trim()) {
+  if (databasePath) {
+    if (!databasePath.trim()) {
       errors['storage.database_path'] = 'Database path cannot be empty';
+    } else {
+      // Validate parent folder for database location.
+      const normalized = databasePath.replace(/\\/g, '/');
+      const lastSlash = normalized.lastIndexOf('/');
+      const parentPath = lastSlash > 0 ? normalized.slice(0, lastSlash) : normalized;
+
+      if (parentPath) {
+        pathChecks.push(
+          validatePathWithTimeout(parentPath).catch((error: unknown) => {
+            errors['storage.database_path'] =
+              error instanceof Error ? error.message : 'Database path validation failed';
+          }),
+        );
+      }
     }
   }
+
+  if (previewsPath.trim()) {
+    pathChecks.push(
+      validatePathWithTimeout(previewsPath).catch((error: unknown) => {
+        errors['storage.previews_path'] =
+          error instanceof Error ? error.message : 'Previews path validation failed';
+      }),
+    );
+  }
+
+  if (smartPreviewsPath.trim()) {
+    pathChecks.push(
+      validatePathWithTimeout(smartPreviewsPath).catch((error: unknown) => {
+        errors['storage.smart_previews_path'] =
+          error instanceof Error ? error.message : 'Smart previews path validation failed';
+      }),
+    );
+  }
+
+  await Promise.all(pathChecks);
 
   return {
     valid: Object.keys(errors).length === 0,
@@ -112,12 +185,25 @@ export function detectShortcutConflicts(shortcuts: Record<string, string>): stri
   const conflicts: string[] = [];
   const keyCombos = new Map<string, string[]>();
 
+  if (!shortcuts || typeof shortcuts !== 'object' || Array.isArray(shortcuts)) {
+    return conflicts;
+  }
+
   // Build map of keyCombos -> action names
   Object.entries(shortcuts).forEach(([action, combo]) => {
-    if (!keyCombos.has(combo)) {
-      keyCombos.set(combo, []);
+    if (typeof combo !== 'string') {
+      return;
     }
-    const actions = keyCombos.get(combo);
+
+    const normalizedCombo = combo.trim();
+    if (!normalizedCombo) {
+      return;
+    }
+
+    if (!keyCombos.has(normalizedCombo)) {
+      keyCombos.set(normalizedCombo, []);
+    }
+    const actions = keyCombos.get(normalizedCombo);
     if (actions) {
       actions.push(action);
     }

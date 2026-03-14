@@ -10,8 +10,14 @@ import { useSettingsStore } from './stores/settingsStore';
 import { useCatalog } from './hooks/useCatalog';
 import { useAppShortcuts } from './hooks/useAppShortcuts';
 import { CatalogService } from './services/catalogService';
+import { ExportService, type ExportFormat } from './services/exportService';
 import type { EventDTO } from './services/eventService';
 import type { AppShortcut } from './types/shortcuts';
+import {
+  getDefaultShortcutForCommand,
+  parseShortcutCombo,
+  type KeyboardShortcutCommand,
+} from './lib/keyboardShortcuts';
 import { AppInitializer } from './components/AppInitializer';
 import { GlobalStyles } from './components/shared/GlobalStyles';
 import { ArchitectureMonitor } from './components/shared/ArchitectureMonitor';
@@ -124,6 +130,8 @@ export default function App() {
   const sidebarOpen = useUiStore((state) => state.leftSidebarOpen);
   const comparisonMode = useUiStore((state) => state.comparisonMode);
   const setComparisonMode = useUiStore((state) => state.setComparisonMode);
+  const keyboardShortcuts = useSettingsStore((state) => state.settings.keyboard);
+  const previewSettings = useSettingsStore((state) => state.settings.preview);
 
   // Load settings from database on app start
   useEffect(() => {
@@ -273,6 +281,39 @@ export default function App() {
     }
   }, [setShowImport, addLog, syncAfterImport]);
 
+  const handleExportShortcut = useCallback(async () => {
+    const imageToExport = images.find((image) => image.id === selection[0]) ?? images[0];
+
+    if (!imageToExport) {
+      addLog('No image available to export', 'warning');
+      return;
+    }
+
+    try {
+      const preferredFormat: ExportFormat =
+        previewSettings.export_format_default === 'tiff' ? 'tiff' : 'jpeg';
+
+      const result = await ExportService.exportWithDialog({
+        imageId: imageToExport.id,
+        sourceFilename: imageToExport.filename,
+        format: preferredFormat,
+      });
+
+      if (!result) {
+        addLog('Export cancelled', 'info');
+        return;
+      }
+
+      addLog(
+        `Export completed: ${result.outputPath} (${result.width}x${result.height}, ${result.appliedEditEvents} edit events)`,
+        'sync',
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      addLog(`Export failed: ${message}`, 'error');
+    }
+  }, [images, selection, addLog, previewSettings.export_format_default]);
+
   useEffect(() => {
     if (filterText.length > 2) {
       const start = performance.now();
@@ -289,8 +330,8 @@ export default function App() {
     }
   }, [filteredImages, filterText, addLog, setActiveView]);
 
-  const shortcuts = useMemo<AppShortcut[]>(
-    () => [
+  const shortcuts = useMemo<AppShortcut[]>(() => {
+    const baseShortcuts: AppShortcut[] = [
       { key: '1', action: () => dispatchEvent('RATING', 1), description: 'Rating 1 star' },
       { key: '2', action: () => dispatchEvent('RATING', 2), description: 'Rating 2 stars' },
       { key: '3', action: () => dispatchEvent('RATING', 3), description: 'Rating 3 stars' },
@@ -300,13 +341,71 @@ export default function App() {
       { key: 'p', action: () => dispatchEvent('FLAG', 'pick'), description: 'Flag pick' },
       { key: 'x', action: () => dispatchEvent('FLAG', 'reject'), description: 'Flag reject' },
       { key: 'u', action: () => dispatchEvent('FLAG', null), description: 'Clear flag' },
-      { key: 'g', action: () => setActiveView('library'), description: 'Switch to library' },
-      { key: 'd', action: () => setActiveView('develop'), description: 'Switch to develop' },
-    ],
-    [dispatchEvent, setActiveView],
-  );
+    ];
 
-  useAppShortcuts(shortcuts);
+    const configurable: Array<{
+      command: KeyboardShortcutCommand;
+      action: () => void;
+      description: string;
+    }> = [
+      {
+        command: 'import',
+        action: () => setShowImport(true),
+        description: 'Open import modal',
+      },
+      {
+        command: 'library',
+        action: () => setActiveView('library'),
+        description: 'Switch to library',
+      },
+      {
+        command: 'develop',
+        action: () => setActiveView('develop'),
+        description: 'Switch to develop',
+      },
+      {
+        command: 'settings',
+        action: () => setSettingsOpen(true),
+        description: 'Open settings',
+      },
+      {
+        command: 'export',
+        action: () => {
+          void handleExportShortcut();
+        },
+        description: 'Export active selection',
+      },
+    ];
+
+    const configuredShortcuts = configurable.reduce<AppShortcut[]>((acc, entry) => {
+      const fallback = getDefaultShortcutForCommand(entry.command);
+      const combo = keyboardShortcuts[entry.command] ?? fallback;
+      const parsed = parseShortcutCombo(combo) ?? parseShortcutCombo(fallback);
+
+      if (!parsed) {
+        return acc;
+      }
+
+      acc.push({
+        ...parsed,
+        action: entry.action,
+        description: entry.description,
+      });
+
+      return acc;
+    }, []);
+
+    return [...baseShortcuts, ...configuredShortcuts];
+  }, [
+    dispatchEvent,
+    setShowImport,
+    setActiveView,
+    setSettingsOpen,
+    handleExportShortcut,
+    keyboardShortcuts,
+  ]);
+
+  useAppShortcuts(shortcuts, !settingsOpen);
 
   const activeImg = images.find((i) => i.id === selection[0]) ?? images[0];
 

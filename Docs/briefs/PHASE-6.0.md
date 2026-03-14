@@ -1,7 +1,8 @@
 # Phase 6.0 — Settings Framework Professionnel (Lightroom++)
 
-> **Statut** : ⬜ **En attente**
+> **Statut** : ✅ **Complétée**
 > **Durée estimée** : 7-10 jours
+> **Date de clôture** : 2026-03-14
 
 ## Objectif
 

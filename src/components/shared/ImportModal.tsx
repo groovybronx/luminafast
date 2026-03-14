@@ -152,7 +152,7 @@ export const ImportModal = ({ onClose, onImportComplete }: ImportModalProps) => 
             <div className="space-y-2">
               <div className="flex justify-between text-[10px] font-mono text-zinc-400 uppercase tracking-widest">
                 <span>{getStageText()}</span>
-                <span>{progress}%</span>
+                <span>{progress.toFixed(1)}%</span>
               </div>
               <div className="h-2 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
                 <div

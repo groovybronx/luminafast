@@ -1,4 +1,5 @@
 use super::catalog::AppState;
+use crate::services::security::{get_runtime_whitelist, validate_path};
 use crate::services::settings;
 use tauri::State;
 
@@ -53,6 +54,16 @@ pub async fn save_settings_to_db(
     let conn = db_guard.transaction_conn();
 
     settings::save_settings(conn, &config).map_err(|e| e.to_string())
+}
+
+/// IPC Command: Validate settings path against runtime security whitelist
+///
+/// This command checks for path traversal attempts and validates the given
+/// path is inside an allowed directory.
+#[tauri::command]
+pub async fn validate_settings_path(path: String) -> Result<(), String> {
+    let whitelist = get_runtime_whitelist();
+    validate_path(&path, &whitelist).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]

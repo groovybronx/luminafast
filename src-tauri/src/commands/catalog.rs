@@ -74,7 +74,7 @@ pub async fn backfill_images_folder_id(state: State<'_, AppState>) -> CommandRes
 #[tauri::command]
 pub async fn get_all_images(
     filter: Option<ImageFilter>,
-    #[allow(non_snake_case)] includeExif: Option<bool>,
+    include_exif: Option<bool>,
     state: State<'_, AppState>,
 ) -> CommandResult<Vec<ImageDTO>> {
     let mut db = state
@@ -82,7 +82,7 @@ pub async fn get_all_images(
         .lock()
         .map_err(|e| format!("Database lock poisoned: {}", e))?;
 
-    let include_exif = includeExif.unwrap_or(false);
+    let include_exif = include_exif.unwrap_or(false);
 
     let mut query = if include_exif {
         String::from(
